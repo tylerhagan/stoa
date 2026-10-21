@@ -64,25 +64,25 @@ Stoa.themeOrder = { "Bone", "Tide", "Graphite" }
 Stoa.space = { xs = 4, s = 8, m = 12, l = 16, xl = 24, xxl = 36 }
 Stoa.typeSize = { caption = 11, body = 12, label = 14, title = 20, display = 28, hero = 38 }
 
--- Fonts. Bundled files go in Media\Fonts; until they are added, Stoa falls back
--- to the game's own fonts so nothing breaks.
+-- Fonts. Bundled files go in Media\Fonts. Each kind tries its candidates in
+-- order, so a display face dropped in wins over the older one, and the game's
+-- own fonts always catch the rest. Scale evens out faces that run small.
 local MEDIA = "Interface\\AddOns\\Stoa\\Media\\Fonts\\"
+local DISPLAY = { MEDIA .. "Marcellus-Regular.ttf", 1 }
+local CORMORANT_SCALE = 1.2
 Stoa.fonts = {
-	serif = { MEDIA .. "CormorantGaramond-SemiBold.ttf", "Fonts\\FRIZQT__.TTF" },
-	italic = { MEDIA .. "CormorantGaramond-SemiBoldItalic.ttf", "Fonts\\FRIZQT__.TTF" },
-	sans = { MEDIA .. "Inter-SemiBold.ttf", STANDARD_TEXT_FONT },
+	serif = { DISPLAY, { MEDIA .. "CormorantGaramond-SemiBold.ttf", CORMORANT_SCALE }, { "Fonts\\FRIZQT__.TTF", 1 } },
+	-- Marcellus has no italic, so the upright stands in for it.
+	italic = { DISPLAY, { MEDIA .. "CormorantGaramond-SemiBoldItalic.ttf", CORMORANT_SCALE }, { "Fonts\\FRIZQT__.TTF", 1 } },
+	sans = { { MEDIA .. "Inter-SemiBold.ttf", 1 }, { STANDARD_TEXT_FONT, 1 } },
 }
-
--- Cormorant has a small x-height, so at the same size it reads smaller than
--- the game's fonts. The bundled serif is scaled up to match.
-local BUNDLED_SCALE = { serif = 1.2, italic = 1.2 }
 
 -- SetFont raises an error for a missing file, so each candidate is tried in a
 -- pcall and the first one that loads wins.
 function Stoa:SetFont(fontString, kind, size, flags)
-	for i, path in ipairs(self.fonts[kind] or self.fonts.sans) do
-		local scaled = i == 1 and size * (BUNDLED_SCALE[kind] or 1) or size
-		local ok, loaded = pcall(fontString.SetFont, fontString, path, scaled, flags or "")
+	for _, candidate in ipairs(self.fonts[kind] or self.fonts.sans) do
+		local path, scale = candidate[1], candidate[2]
+		local ok, loaded = pcall(fontString.SetFont, fontString, path, size * scale, flags or "")
 		if ok and loaded ~= false then
 			return
 		end
