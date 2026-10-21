@@ -36,7 +36,10 @@ The Halo, the Grimoire console and the click-cast frames come next.
 
 ## Install
 
-Copy this folder into `World of Warcraft/_forever_/Interface/AddOns/Stoa`.
+Copy this folder into the game's AddOns folder and name it exactly `Stoa`:
+
+- Beta: `World of Warcraft\_classic_beta_\Interface\AddOns\Stoa`
+- Live (from launch): check the Forever folder name in your install, e.g. `World of Warcraft\_forever_\Interface\AddOns\Stoa`
 
 ## Forever notes
 
