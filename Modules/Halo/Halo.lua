@@ -1,7 +1,7 @@
 -- Stoa: the Halo, the combat state.
 -- When combat starts the Grimoire console folds away and the Halo rises
 -- around your character: health on the left arc, mana on the right, your
--- spec's signature in the slot at its foot, your target above it and your
+-- spec's signature in the slot at its foot, your target beside it and your
 -- cast below. The top of the ring stays open so your name shows through. It fades out again once combat has been calm for a moment.
 --
 -- The Halo never takes the mouse, so it can't block clicks on the world.
@@ -11,6 +11,7 @@ local UI = Stoa.UI
 
 local Halo = Stoa:NewModule("Halo", {
 	hidePlayerFrame = true,
+	hideTargetFrame = true,
 	scale = 1,
 })
 
@@ -109,22 +110,28 @@ function Halo:BuildSignature(frame)
 	slot:Hide()
 end
 
+-- The target sits beside the Halo's upper left, clear of the nameplates
+-- that crowd the space above your head. Like the cast bar it is parented to
+-- UIParent, so it stays with you out of combat as well.
 function Halo:BuildTarget(frame)
-	local target = CreateFrame("Frame", nil, frame)
-	target:SetSize(200, 30)
-	target:SetPoint("BOTTOM", frame, "TOP", 0, 16)
+	local target = CreateFrame("Frame", nil, UIParent)
+	target:SetFrameStrata("LOW")
+	target:SetSize(200, 52)
+	target:SetPoint("BOTTOMRIGHT", frame, "LEFT", -28, 36)
 	self.target = target
 
-	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "CENTER")
-	name:SetPoint("TOP")
+	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "RIGHT")
+	name:SetPoint("TOPRIGHT")
 	name:SetWidth(200)
 	name:SetWordWrap(false)
 	local hp = UI.bar(target, 180, 3, "health")
-	hp:SetPoint("TOP", name, "BOTTOM", 0, -4)
+	hp:SetPoint("TOPRIGHT", name, "BOTTOMRIGHT", 0, -5)
 	-- Hostile targets get a word as well as a colour.
 	local cue = UI.caption(target, "")
-	cue:SetPoint("TOP", hp, "BOTTOM", 0, -4)
-	target.name, target.hp, target.cue = name, hp, cue
+	cue:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -5)
+	local health = UI.text(target, "sans", Stoa.typeSize.body, "muted", "LEFT")
+	health:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
+	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target:Hide()
 end
 
@@ -207,6 +214,7 @@ function Halo:UpdateTarget()
 	target.name:SetText(UnitName("target"))
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
+	target.health:SetText(UnitHealth("target"))
 
 	local hostile = UnitCanAttack("player", "target")
 	if Stoa:IsSecret(hostile) then hostile = false end
@@ -255,10 +263,12 @@ function Halo:SetShown(shown)
 	UI.fade(self.frame, shown and 1 or 0, shown and FADE_IN or FADE_OUT)
 end
 
--- Blizzard's player frame and cast bar repeat what the seal and Halo show.
-local function hideBlizzardPlayer()
-	for _, blizzard in ipairs({ PlayerFrame, PlayerCastingBarFrame }) do
-		if blizzard then blizzard:SetParent(UI.hidden) end
+-- Blizzard frames that repeat what the seal and Halo show.
+local function hideBlizzard(frames)
+	return function()
+		for _, blizzard in ipairs(frames) do
+			if blizzard then blizzard:SetParent(UI.hidden) end
+		end
 	end
 end
 
@@ -274,7 +284,14 @@ function Halo:OnEnable()
 	self.frame:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 1 or 0)
 
 	if self.db.hidePlayerFrame then
-		Stoa:AfterCombat(function() xpcall(hideBlizzardPlayer, geterrorhandler()) end)
+		Stoa:AfterCombat(function()
+			xpcall(hideBlizzard({ PlayerFrame, PlayerCastingBarFrame }), geterrorhandler())
+		end)
+	end
+	if self.db.hideTargetFrame then
+		Stoa:AfterCombat(function()
+			xpcall(hideBlizzard({ TargetFrame, FocusFrame }), geterrorhandler())
+		end)
 	end
 
 	Stoa:On("STOA_STATE_CHANGED", function(state)
@@ -291,7 +308,10 @@ function Halo:OnEnable()
 
 	Stoa:On("UNIT_HEALTH", function(unit)
 		if unit == "player" then self:UpdateHealth() end
-		if unit == "target" then UI.setUnitBar(self.target.hp, "target", "health") end
+		if unit == "target" then
+			UI.setUnitBar(self.target.hp, "target", "health")
+			self.target.health:SetText(UnitHealth("target"))
+		end
 	end)
 	Stoa:On("UNIT_MAXHEALTH", function(unit)
 		if unit == "player" then self:UpdateHealth() end
