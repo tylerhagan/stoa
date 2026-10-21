@@ -1,8 +1,8 @@
 -- Stoa: the Halo, the combat state.
 -- When combat starts the Grimoire console folds away and the Halo rises
 -- around your character: health on the left arc, mana on the right, your
--- spec's signature in the top slot, your target above it and your cast
--- below. It fades out again once combat has been calm for a moment.
+-- spec's signature in the slot at its foot, your target above it and your
+-- cast below. The top of the ring stays open so your name shows through. It fades out again once combat has been calm for a moment.
 --
 -- The Halo never takes the mouse, so it can't block clicks on the world.
 local _, ns = ...
@@ -23,7 +23,7 @@ local SIGNATURE_SIZE = 36
 -- the character knows is shown, so it fills in as you level.
 local SIGNATURES = {
 	PRIEST = {
-		RANGED = { 8092, 589 },        -- Mind Blast, Shadow Word: Pain
+		RANGED = { 8092, 589, 585 },   -- Mind Blast, Shadow Word: Pain, Smite
 		HEALER = { 17, 2061, 2050 },   -- Power Word: Shield, Flash Heal, Lesser Heal
 	},
 	PALADIN = {
@@ -89,7 +89,7 @@ end
 function Halo:BuildSignature(frame)
 	local slot = CreateFrame("Frame", nil, frame)
 	slot:SetSize(SIGNATURE_SIZE + 8, SIGNATURE_SIZE + 8)
-	slot:SetPoint("CENTER", frame, "TOP", 0, -2)
+	slot:SetPoint("CENTER", frame, "BOTTOM", 0, 8)
 	self.signature = slot
 
 	local ring = UI.circle(slot, "BORDER", 0, SIGNATURE_SIZE + 4, "accent")
@@ -106,16 +106,13 @@ function Halo:BuildSignature(frame)
 	cooldown:SetDrawEdge(false)
 	cooldown:SetHideCountdownNumbers(false)
 	slot.cooldown = cooldown
-
-	local label = UI.text(slot, "italic", Stoa.typeSize.label, "accent", "CENTER")
-	label:SetPoint("TOP", slot, "BOTTOM", 0, -2)
-	slot.label = label
+	slot:Hide()
 end
 
 function Halo:BuildTarget(frame)
 	local target = CreateFrame("Frame", nil, frame)
 	target:SetSize(200, 30)
-	target:SetPoint("BOTTOM", self.signature, "TOP", 0, 10)
+	target:SetPoint("BOTTOM", frame, "TOP", 0, 16)
 	self.target = target
 
 	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "CENTER")
@@ -131,9 +128,12 @@ function Halo:BuildTarget(frame)
 	target:Hide()
 end
 
+-- The cast bar is parented to UIParent rather than the Halo, so it shows for
+-- casts out of combat too, such as the pull, while the Halo is faded out.
 function Halo:BuildCast(frame)
-	local cast = UI.bar(frame, 200, 3, "accent")
-	cast:SetPoint("TOP", frame, "BOTTOM", 0, -18)
+	local cast = UI.bar(UIParent, 200, 3, "accent")
+	cast:SetFrameStrata("LOW")
+	cast:SetPoint("TOP", frame, "BOTTOM", 0, -40)
 	local spell = UI.text(cast, "italic", Stoa.typeSize.label, "text", "CENTER")
 	spell:SetPoint("BOTTOM", cast, "TOP", 0, 4)
 	cast.spell = spell
@@ -167,15 +167,15 @@ function Halo:UpdateSignature()
 		end
 	end
 
-	slot.label:SetText(role and Stoa.ROLE_LABELS[role] or "")
+	-- Until the spec's spell is learned the slot stays empty rather than
+	-- showing a blank ring.
 	if slot.spellID then
-		local texture = C_Spell.GetSpellTexture(slot.spellID)
-		slot.icon:SetTexture(texture)
-		slot.icon:Show()
+		slot.icon:SetTexture(C_Spell.GetSpellTexture(slot.spellID))
+		slot:Show()
 		self:UpdateCooldown()
 	else
-		slot.icon:SetTexture(nil)
 		slot.cooldown:Clear()
+		slot:Hide()
 	end
 end
 
