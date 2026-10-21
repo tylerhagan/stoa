@@ -57,17 +57,17 @@ local function build()
 	-- Social
 	local social = Stoa.modules.Social.db
 	header("Social")
-	checkbox(social, "acceptFriendInvites", "Accept invites from friends and guild", nil, true)
-	checkbox(social, "declineStrangerInvites", "Decline group invites from strangers", nil, false)
-	checkbox(social, "declineStrangerDuels", "Decline duels from strangers", nil, true)
-	checkbox(social, "declineStrangerGuildInvites", "Decline guild invites from strangers", nil, true)
+	checkbox(social, "acceptFriendInvites", "Accept friend and guild invites", nil, true)
+	checkbox(social, "declineStrangerInvites", "Decline stranger invites", nil, false)
+	checkbox(social, "declineStrangerDuels", "Decline stranger duels", nil, true)
+	checkbox(social, "declineStrangerGuildInvites", "Decline stranger guild invites", nil, true)
 
 	-- Auto-invite
 	local invite = Stoa.modules.AutoInvite.db
 	header("Auto-invite")
-	checkbox(invite, "enabled", "Invite when friends whisper \"inv\"", "Change the keywords with /stoa keywords <words>.", true)
-	checkbox(invite, "strangersToo", "Invite strangers who whisper too", nil, false)
-	checkbox(invite, "convertToRaid", "Convert to a raid when the party is full", nil, true)
+	checkbox(invite, "enabled", "Invite on whispered \"inv\"", "Friends and guild only. Change the keywords with /stoa keywords <words>.", true)
+	checkbox(invite, "strangersToo", "Invite strangers too", nil, false)
+	checkbox(invite, "convertToRaid", "Make a raid when full", nil, true)
 
 	Settings.RegisterAddOnCategory(category)
 end
