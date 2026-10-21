@@ -118,12 +118,16 @@ function ClickCast:Apply()
 end
 
 -- Unit frames call this once for each secure unit button they make.
+-- The raid header can make cells in combat, so everything here waits for
+-- combat to end.
 function Stoa:RegisterClickFrame(frame)
-	frame:RegisterForClicks("AnyUp")
-	frames[frame] = true
-	if Stoa:IsModuleEnabled("ClickCast") then
-		ClickCast:Apply()
-	end
+	Stoa:AfterCombat(function()
+		frame:RegisterForClicks("AnyUp")
+		frames[frame] = true
+		if Stoa:IsModuleEnabled("ClickCast") then
+			ClickCast:Apply()
+		end
+	end)
 end
 
 -- Binding page --------------------------------------------------------------
