@@ -97,14 +97,20 @@ function Halo:BuildSignature(frame)
 	ring:SetPoint("CENTER")
 	local gap = UI.circle(slot, "BORDER", 1, SIGNATURE_SIZE + 2, "panel")
 	gap:SetPoint("CENTER")
+	-- Spell icons carry a square frame of their own. Cropping into the art
+	-- before the circle mask fills the circle edge to edge, like CSS
+	-- object-fit: cover.
 	local icon = UI.circle(slot, "ARTWORK", 0, SIGNATURE_SIZE)
 	icon:SetPoint("CENTER")
+	icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
 	slot.icon = icon
 
 	local cooldown = CreateFrame("Cooldown", nil, slot, "CooldownFrameTemplate")
 	cooldown:SetAllPoints(icon)
 	cooldown:SetSwipeTexture(UI.CIRCLE_MASK)
 	cooldown:SetDrawEdge(false)
+	cooldown:SetDrawBling(false)
+	if cooldown.SetUseCircularEdge then cooldown:SetUseCircularEdge(true) end
 	cooldown:SetHideCountdownNumbers(false)
 	slot.cooldown = cooldown
 	slot:Hide()
@@ -183,6 +189,7 @@ function Halo:UpdateSignature()
 	-- showing a blank ring.
 	if slot.spellID then
 		slot.icon:SetTexture(C_Spell.GetSpellTexture(slot.spellID))
+		slot.icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
 		slot:Show()
 		self:UpdateCooldown()
 	else
