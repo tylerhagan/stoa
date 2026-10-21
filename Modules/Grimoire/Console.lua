@@ -23,102 +23,9 @@ local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30
 
-local CIRCLE_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
-local WHITE = "Interface\\Buttons\\WHITE8x8"
-
--- Helpers -------------------------------------------------------------------
-
-local themed = {}
-
--- Paints a texture or font string with a theme token now and on every theme
--- change.
-local function paint(region, token, alpha)
-	local entry = { region = region, token = token, alpha = alpha }
-	table.insert(themed, entry)
-	return region
-end
-
-local function applyTheme()
-	for _, entry in ipairs(themed) do
-		local r, g, b, a = Stoa:Color(entry.token)
-		a = entry.alpha or a
-		if entry.region.SetColorTexture then
-			entry.region:SetColorTexture(r, g, b, a)
-		elseif entry.region.SetStatusBarColor then
-			entry.region:SetStatusBarColor(r, g, b, a)
-		else
-			entry.region:SetTextColor(r, g, b, a)
-		end
-	end
-end
-
-local function circle(parent, layer, sublevel, size, token, alpha)
-	local tex = parent:CreateTexture(nil, layer, nil, sublevel)
-	tex:SetSize(size, size)
-	local mask = parent:CreateMaskTexture()
-	mask:SetTexture(CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-	mask:SetAllPoints(tex)
-	tex:AddMaskTexture(mask)
-	if token then paint(tex, token, alpha) end
-	return tex
-end
-
-local function line(parent, token, alpha)
-	local tex = parent:CreateTexture(nil, "BORDER")
-	tex:SetHeight(1)
-	paint(tex, token or "hairline", alpha)
-	return tex
-end
-
-local function text(parent, kind, size, token, justify)
-	local fs = parent:CreateFontString(nil, "OVERLAY")
-	Stoa:SetFont(fs, kind, size)
-	fs:SetJustifyH(justify or "LEFT")
-	paint(fs, token or "text")
-	return fs
-end
-
--- Small caps label, the console's section heading.
-local function caption(parent, label)
-	local fs = text(parent, "sans", Stoa.typeSize.caption, "muted")
-	fs:SetText(label:upper())
-	return fs
-end
-
-local function bar(parent, width, height, token)
-	local sb = CreateFrame("StatusBar", nil, parent)
-	sb:SetSize(width, height)
-	sb:SetStatusBarTexture(WHITE)
-	paint(sb, token)
-	local track = sb:CreateTexture(nil, "BACKGROUND")
-	track:SetAllPoints()
-	paint(track, "text", 0.08)
-	sb:SetMinMaxValues(0, 1)
-	sb:SetValue(1)
-	return sb
-end
-
--- Secret-safe unit display: StatusBar and FontString accept secret values,
--- so values go straight in and are never compared.
-local function setUnitBar(sb, unit, kind)
-	if kind == "health" then
-		sb:SetMinMaxValues(0, UnitHealthMax(unit))
-		sb:SetValue(UnitHealth(unit))
-	else
-		sb:SetMinMaxValues(0, UnitPowerMax(unit))
-		sb:SetValue(UnitPower(unit))
-	end
-end
-
-local function classColor(unit)
-	local _, classFile = UnitClass(unit)
-	if not Stoa:Theme().classTint or not classFile or Stoa:IsSecret(classFile) then
-		return Stoa:Color("text")
-	end
-	local color = RAID_CLASS_COLORS[classFile]
-	if not color then return Stoa:Color("text") end
-	return color.r, color.g, color.b
-end
+local UI = Stoa.UI
+local paint, circle, line, text, caption, bar = UI.paint, UI.circle, UI.line, UI.text, UI.caption, UI.bar
+local setUnitBar, classColor = UI.setUnitBar, UI.classColor
 
 -- Build ---------------------------------------------------------------------
 
@@ -169,9 +76,8 @@ function Console:Build()
 	self:BuildNotes(frame, space)
 	self:BuildFellowship(frame, space)
 
-	applyTheme()
+	UI.applyTheme()
 	Stoa:On("STOA_THEME_CHANGED", function()
-		applyTheme()
 		self:UpdateSeal()
 		self:UpdateFellowship()
 	end)

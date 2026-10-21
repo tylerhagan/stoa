@@ -9,7 +9,7 @@ Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a sma
 
 ## Status
 
-Foundations only. What works today:
+What works today:
 
 | Area | What it does |
 | --- | --- |
@@ -20,9 +20,12 @@ Foundations only. What works today:
 | Movers | `/stoa unlock` to drag Stoa frames; positions saved per character |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` get invited |
+| Grimoire console | Out of combat: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page and strips the action bar art. Folds to a spine in combat |
+| Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
+| Party cards | Large beside the Halo when you heal, compact on the left otherwise. Click to target, right click for the menu |
 | Settings | Options > AddOns > Stoa |
 
-The Halo, the Grimoire console and the click-cast frames come next.
+Click-casting, raid frames and the minimap come next.
 
 ## Commands
 

@@ -18,11 +18,15 @@ Core\Tokens.lua
 Core\Roles.lua
 Core\State.lua
 Core\Movers.lua
+Core\Widgets.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
+
+Modules\Halo\Halo.lua
+Modules\Halo\Party.lua
 
 Config\Settings.lua
