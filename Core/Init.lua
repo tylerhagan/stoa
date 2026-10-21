@@ -92,6 +92,9 @@ end)
 
 -- Slash command and addon compartment ---------------------------------------
 
+-- Modules add their own /stoa words here: Stoa.commands.word = function(rest).
+Stoa.commands = {}
+
 function Stoa:Print(...)
 	print("|cffd8b66aStoa|r", ...)
 end
@@ -110,6 +113,8 @@ SlashCmdList.STOA = function(input)
 		Stoa:CycleTheme()
 	elseif command == "state" then
 		Stoa:Print("State:", Stoa:GetState(), "· Role:", Stoa:GetRole())
+	elseif Stoa.commands[command] then
+		Stoa.commands[command](rest)
 	else
 		Stoa:OpenSettings()
 	end

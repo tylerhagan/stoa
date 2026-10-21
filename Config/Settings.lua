@@ -43,6 +43,7 @@ local function build()
 	end)
 	checkbox(Stoa.modules.Grimoire.db, "enabled", "Show the Grimoire console", "The ink console along the bottom of the screen. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Grimoire.db, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and Stoa's notes appear in chat. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Minimap.db, "enabled", "Style the minimap", "Rings in the theme colours, serif zone name, wheel to zoom. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Grimoire.db, "hideBarArt", "Hide action bar art", "Removes the gryphons and border so the bar sits on the ink. Takes effect after /reload.", true)
 
 	-- Halo
@@ -54,6 +55,15 @@ local function build()
 	checkbox(halo, "hideTargetFrame", "Hide Blizzard's target frame", "Stoa shows your target beside the Halo. Takes effect after /reload.", true)
 	checkbox(party, "enabled", "Show Stoa party cards", "Large beside the Halo when you heal, compact on the left otherwise. Takes effect after /reload.", true)
 	checkbox(party, "hideBlizzardParty", "Hide Blizzard's party frames", "Takes effect after /reload.", true)
+	local raid = Stoa.modules.Raid.db
+	checkbox(raid, "enabled", "Show Stoa raid frames", "A grid of compact cards, one column per group. Takes effect after /reload.", true)
+	checkbox(raid, "hideBlizzardRaid", "Hide Blizzard's raid frames", "Takes effect after /reload.", true)
+	checkbox(Stoa.modules.ClickCast.db, "enabled", "Click-casting", "Mouse bindings on Stoa's party and raid frames. Set them with /stoa clicks. Takes effect after /reload.", true)
+	if CreateSettingsButtonInitializer then
+		layout:AddInitializer(CreateSettingsButtonInitializer("Click bindings", "Open", function()
+			Stoa.modules.ClickCast:TogglePage()
+		end, "Fifteen bindings per role: five mouse buttons, plain, Shift and Ctrl.", true))
+	end
 
 	-- Roles
 	header("Roles for this character")
@@ -66,6 +76,13 @@ local function build()
 			Stoa:UpdateRole()
 		end)
 	end
+
+	-- Merchant
+	local merchant = Stoa.modules.Merchant.db
+	header("Merchants")
+	checkbox(merchant, "sellJunk", "Sell grey junk", nil, true)
+	checkbox(merchant, "autoRepair", "Repair gear", nil, true)
+	checkbox(merchant, "useGuildFunds", "Use guild funds when allowed", nil, true)
 
 	-- Social
 	local social = Stoa.modules.Social.db

@@ -13,6 +13,8 @@ local characterDefaults = {
 	-- Role for each dual-spec slot. "AUTO" means use the class default.
 	roles = { slot1 = "AUTO", slot2 = "AUTO" },
 	positions = {},
+	-- Click-cast bindings per role, filled from defaults on first use.
+	clicks = {},
 }
 
 function Stoa:InitializeDatabase()

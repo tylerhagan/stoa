@@ -131,7 +131,12 @@ function Halo:BuildTarget(frame)
 	cue:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -5)
 	local health = UI.text(target, "sans", Stoa.typeSize.body, "muted", "LEFT")
 	health:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
+	-- Threat, in words: tanks hear when they are losing it, everyone else
+	-- when they are taking it.
+	local threat = UI.caption(target, "")
+	threat:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
+	target.threat = threat
 	target:Hide()
 end
 
@@ -220,7 +225,28 @@ function Halo:UpdateTarget()
 	if Stoa:IsSecret(hostile) then hostile = false end
 	target.hp:SetStatusBarColor(Stoa:Color(hostile and "danger" or "health"))
 	target.cue:SetText(hostile and "HOSTILE" or "")
+	self:UpdateThreat()
 	target:Show()
+end
+
+local THREAT_WORDS = {
+	TANK = { [0] = "NO AGGRO", [1] = "NO AGGRO", [2] = "LOSING AGGRO", [3] = "HOLDING AGGRO" },
+	OTHER = { [2] = "NEAR AGGRO", [3] = "AGGRO ON YOU" },
+}
+
+function Halo:UpdateThreat()
+	local threat = self.target.threat
+	local status = UnitExists("target") and UnitThreatSituation("player", "target")
+	if not status or Stoa:IsSecret(status) then
+		threat:SetText("")
+		return
+	end
+	local isTank = Stoa:GetRole() == "TANK"
+	local words = isTank and THREAT_WORDS.TANK or THREAT_WORDS.OTHER
+	threat:SetText(words[status] or "")
+	-- Holding aggro as a tank is the calm case; everything else is a warning.
+	local calm = isTank and status == 3
+	threat:SetTextColor(Stoa:Color(calm and "muted" or "danger"))
 end
 
 -- Cast bar. Plain times drive it with GetTime; secret times use the client's
@@ -323,6 +349,10 @@ function Halo:OnEnable()
 		if unit == "player" then self:UpdatePower() end
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateTarget() end)
+	Stoa:On("UNIT_THREAT_SITUATION_UPDATE", function() self:UpdateThreat() end)
+	Stoa:On("UNIT_THREAT_LIST_UPDATE", function(unit)
+		if unit == "target" then self:UpdateThreat() end
+	end)
 
 	local function onCast(channel)
 		return function(unit)

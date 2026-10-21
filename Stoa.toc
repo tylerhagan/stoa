@@ -22,11 +22,17 @@ Core\Widgets.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
+Modules\QoL\Merchant.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
+Modules\Grimoire\Minimap.lua
 
 Modules\Halo\Halo.lua
 Modules\Halo\Party.lua
+
+Modules\Frames\ClickCast.lua
+Modules\Frames\Raid.lua
+Modules\Frames\Raid.xml
 
 Config\Settings.lua

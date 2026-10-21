@@ -1,7 +1,8 @@
 -- Stoa: party cards, after the Halo healer mockup.
 -- One card per party member, with yourself first. Healers get large cards
 -- beside the Halo; everyone else gets a compact column on the left.
--- Left click targets, right click opens the unit menu.
+-- Clicks follow the click-cast bindings (/stoa clicks); by default left
+-- click targets and right click opens the unit menu.
 --
 -- Cards are secure buttons, so they are only built, moved and resized out
 -- of combat. In combat Stoa only changes what they show and how bright they
@@ -40,6 +41,7 @@ function Party:BuildCard(index, unit)
 	card:SetAttribute("type2", "togglemenu")
 	card:RegisterForClicks("AnyUp")
 	card.unit = unit
+	Stoa:RegisterClickFrame(card)
 
 	local bg = card:CreateTexture(nil, "BACKGROUND")
 	bg:SetAllPoints()
@@ -91,6 +93,8 @@ function Party:Build()
 	local frame = CreateFrame("Frame", "StoaParty", UIParent)
 	frame:SetSize(200, 46)
 	frame:SetFrameStrata("LOW")
+	-- In a raid the raid grid takes over.
+	RegisterStateDriver(frame, "visibility", "[group:raid] hide; show")
 	self.frame = frame
 
 	self.cards = {}
