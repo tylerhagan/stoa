@@ -1,0 +1,32 @@
+-- Stoa: saved settings.
+-- StoaDB is account-wide (theme, module switches). StoaCharDB is per character
+-- (which role each spec slot plays, frame positions).
+local _, ns = ...
+local Stoa = ns.Stoa
+
+local accountDefaults = {
+	theme = "Bone",
+	modules = {},
+}
+
+local characterDefaults = {
+	-- Role for each dual-spec slot. "AUTO" means use the class default.
+	roles = { slot1 = "AUTO", slot2 = "AUTO" },
+	positions = {},
+}
+
+function Stoa:InitializeDatabase()
+	StoaDB = self:ApplyDefaults(StoaDB or {}, accountDefaults)
+	StoaCharDB = self:ApplyDefaults(StoaCharDB or {}, characterDefaults)
+
+	for name, module in pairs(self.modules) do
+		StoaDB.modules[name] = self:ApplyDefaults(StoaDB.modules[name] or {}, module.defaults)
+		if StoaDB.modules[name].enabled == nil then
+			StoaDB.modules[name].enabled = true
+		end
+		module.db = StoaDB.modules[name]
+	end
+
+	self.db = StoaDB
+	self.char = StoaCharDB
+end
