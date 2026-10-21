@@ -68,11 +68,11 @@ Stoa.typeSize = { caption = 11, body = 12, label = 14, title = 20, display = 28,
 -- order, so a display face dropped in wins over the older one, and the game's
 -- own fonts always catch the rest. Scale evens out faces that run small.
 local MEDIA = "Interface\\AddOns\\Stoa\\Media\\Fonts\\"
-local DISPLAY = { MEDIA .. "Marcellus-Regular.ttf", 1 }
+local DISPLAY = { MEDIA .. "TenorSans-Regular.ttf", 1 }
 local CORMORANT_SCALE = 1.2
 Stoa.fonts = {
 	serif = { DISPLAY, { MEDIA .. "CormorantGaramond-SemiBold.ttf", CORMORANT_SCALE }, { "Fonts\\FRIZQT__.TTF", 1 } },
-	-- Marcellus has no italic, so the upright stands in for it.
+	-- Tenor Sans has no italic, so the upright stands in for it.
 	italic = { DISPLAY, { MEDIA .. "CormorantGaramond-SemiBoldItalic.ttf", CORMORANT_SCALE }, { "Fonts\\FRIZQT__.TTF", 1 } },
 	sans = { { MEDIA .. "Inter-SemiBold.ttf", 1 }, { STANDARD_TEXT_FONT, 1 } },
 }
