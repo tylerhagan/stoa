@@ -5,12 +5,15 @@
 -- In combat it folds to a thin spine; hold Alt to peek.
 --
 -- The console sits on the BACKGROUND strata so Blizzard's action bars,
--- placed in its centre with Edit Mode, draw on top of it.
+-- placed in its centre with Edit Mode, draw on top of it. Housing.lua moves
+-- chat onto the left page.
 local _, ns = ...
 local Stoa = ns.Stoa
 
 local Console = Stoa:NewModule("Grimoire", {
 	height = 150,
+	houseChat = true,
+	hideBarArt = true,
 })
 
 local SPINE_HEIGHT = 22
@@ -403,7 +406,8 @@ end
 
 function Console:OnEnable()
 	self:Build()
-	Stoa.hasConsole = true
+	Stoa.notesInConsole = true
+	self:House()
 
 	self:UpdateSeal()
 	self:UpdateResources()

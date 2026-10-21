@@ -23,5 +23,6 @@ Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
 
 Modules\Grimoire\Console.lua
+Modules\Grimoire\Housing.lua
 
 Config\Settings.lua
