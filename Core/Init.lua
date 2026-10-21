@@ -64,7 +64,7 @@ local function initializeModules()
 	for _, name in ipairs(moduleOrder) do
 		local module = Stoa.modules[name]
 		if module.OnInitialize then
-			module:OnInitialize()
+			xpcall(module.OnInitialize, geterrorhandler(), module)
 		end
 	end
 end
@@ -72,9 +72,9 @@ end
 local function enableModules()
 	for _, name in ipairs(moduleOrder) do
 		local module = Stoa.modules[name]
+		-- One module failing must not stop the others from loading.
 		if module.OnEnable and Stoa:IsModuleEnabled(name) then
-			module:OnEnable()
-			module.enabled = true
+			module.enabled = xpcall(module.OnEnable, geterrorhandler(), module)
 		end
 	end
 end

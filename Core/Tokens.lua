@@ -73,12 +73,16 @@ Stoa.fonts = {
 	sans = { MEDIA .. "Inter-SemiBold.ttf", STANDARD_TEXT_FONT },
 }
 
+-- SetFont raises an error for a missing file, so each candidate is tried in a
+-- pcall and the first one that loads wins.
 function Stoa:SetFont(fontString, kind, size, flags)
 	for _, path in ipairs(self.fonts[kind] or self.fonts.sans) do
-		if fontString:SetFont(path, size, flags or "") then
+		local ok, loaded = pcall(fontString.SetFont, fontString, path, size, flags or "")
+		if ok and loaded ~= false then
 			return
 		end
 	end
+	fontString:SetFontObject(GameFontNormal)
 end
 
 -- Theme access --------------------------------------------------------------
