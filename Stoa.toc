@@ -1,0 +1,25 @@
+## Interface: 16001
+## Title: Stoa
+## Notes: A calm, two-state UI suite for WoW Forever: the Grimoire console out of combat, the Halo in combat.
+## Author: Tyler
+## Version: @project-version@
+## SavedVariables: StoaDB
+## SavedVariablesPerCharacter: StoaCharDB
+## IconTexture: Interface\Icons\Spell_Holy_PowerWordShield
+## AddonCompartmentFunc: Stoa_OnCompartmentClick
+## AddonCompartmentFuncOnEnter: Stoa_OnCompartmentEnter
+## AddonCompartmentFuncOnLeave: Stoa_OnCompartmentLeave
+## X-Game: Forever
+
+Core\Init.lua
+Core\Util.lua
+Core\Database.lua
+Core\Tokens.lua
+Core\Roles.lua
+Core\State.lua
+Core\Movers.lua
+
+Modules\QoL\Social.lua
+Modules\QoL\AutoInvite.lua
+
+Config\Settings.lua
