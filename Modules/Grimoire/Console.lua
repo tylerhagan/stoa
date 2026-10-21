@@ -153,6 +153,15 @@ function Console:Build()
 	local arch = circle(frame, "BACKGROUND", -7, ARCH_SIZE, "panel")
 	arch:SetPoint("CENTER", frame, "TOP")
 
+	-- When folded the arch fades away and this hairline closes the gap, so the
+	-- spine reads as one clean line.
+	local bridge = line(frame)
+	bridge:SetPoint("TOPLEFT", leftEdge, "TOPRIGHT")
+	bridge:SetPoint("TOPRIGHT", rightEdge, "TOPLEFT")
+	bridge:SetAlpha(0)
+	self.archParts = { archRing, arch }
+	self.bridge = bridge
+
 	self:BuildSeal(frame)
 	self:BuildNotes(frame, space)
 	self:BuildFellowship(frame, space)
@@ -359,6 +368,10 @@ function Console:SetOpen(open, instant)
 		for _, part in ipairs(self.resourceParts) do
 			part:SetAlpha(open and progress or 1 - progress)
 		end
+		for _, part in ipairs(self.archParts) do
+			part:SetAlpha(open and progress or 1 - progress)
+		end
+		self.bridge:SetAlpha(open and 1 - progress or progress)
 		local scale = self.seal:GetScale()
 		self.seal:SetScale(scale + (sealScale - scale) * progress)
 	end
