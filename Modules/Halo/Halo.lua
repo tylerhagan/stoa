@@ -221,11 +221,22 @@ function Halo:UpdateTarget()
 	UI.setUnitBar(target.hp, "target", "health")
 	target.health:SetText(UnitHealth("target"))
 
-	local hostile = UnitCanAttack("player", "target")
+	-- A dead target says so in words and steps back, rather than reading as
+	-- a hostile at zero.
+	local dead = UnitIsDead("target")
+	if Stoa:IsSecret(dead) then dead = false end
+	local hostile = not dead and UnitCanAttack("player", "target")
 	if Stoa:IsSecret(hostile) then hostile = false end
 	target.hp:SetStatusBarColor(Stoa:Color(hostile and "danger" or "health"))
-	target.cue:SetText(hostile and "HOSTILE" or "")
-	self:UpdateThreat()
+	target.cue:SetText(dead and "DEAD" or hostile and "HOSTILE" or "")
+	target.hp:SetShown(not dead)
+	target.health:SetShown(not dead)
+	target:SetAlpha(dead and 0.6 or 1)
+	if dead then
+		target.threat:SetText("")
+	else
+		self:UpdateThreat()
+	end
 	target:Show()
 end
 
@@ -334,10 +345,7 @@ function Halo:OnEnable()
 
 	Stoa:On("UNIT_HEALTH", function(unit)
 		if unit == "player" then self:UpdateHealth() end
-		if unit == "target" then
-			UI.setUnitBar(self.target.hp, "target", "health")
-			self.target.health:SetText(UnitHealth("target"))
-		end
+		if unit == "target" then self:UpdateTarget() end
 	end)
 	Stoa:On("UNIT_MAXHEALTH", function(unit)
 		if unit == "player" then self:UpdateHealth() end
