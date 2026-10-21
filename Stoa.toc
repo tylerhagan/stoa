@@ -22,4 +22,6 @@ Core\Movers.lua
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
 
+Modules\Grimoire\Console.lua
+
 Config\Settings.lua

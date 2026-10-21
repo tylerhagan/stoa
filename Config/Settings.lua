@@ -41,6 +41,7 @@ local function build()
 	dropdown(Stoa.db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. All three are colour-blind safe.", "Bone", themes, function(_, value)
 		Stoa:SetTheme(value)
 	end)
+	checkbox(Stoa.modules.Grimoire.db, "enabled", "Show the Grimoire console", "The ink console along the bottom of the screen. Takes effect after /reload.", true)
 
 	-- Roles
 	header("Roles for this character")

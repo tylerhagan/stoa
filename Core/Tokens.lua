@@ -68,8 +68,8 @@ Stoa.typeSize = { caption = 10, body = 12, label = 14, title = 20, display = 28,
 -- to the game's own fonts so nothing breaks.
 local MEDIA = "Interface\\AddOns\\Stoa\\Media\\Fonts\\"
 Stoa.fonts = {
-	serif = { MEDIA .. "CormorantGaramond-SemiBold.ttf", "Fonts\\MORPHEUS.TTF" },
-	italic = { MEDIA .. "CormorantGaramond-SemiBoldItalic.ttf", "Fonts\\MORPHEUS.TTF" },
+	serif = { MEDIA .. "CormorantGaramond-SemiBold.ttf", "Fonts\\FRIZQT__.TTF" },
+	italic = { MEDIA .. "CormorantGaramond-SemiBoldItalic.ttf", "Fonts\\FRIZQT__.TTF" },
 	sans = { MEDIA .. "Inter-SemiBold.ttf", STANDARD_TEXT_FONT },
 }
 
