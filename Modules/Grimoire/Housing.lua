@@ -132,7 +132,17 @@ local function setTabArt(tab, selected)
 	art.holder:SetFrameLevel(math.max(tab:GetFrameLevel() - (selected and 1 or 2), 0))
 end
 
+-- Blizzard nudges a tab's words up or down as it's selected; pin them
+-- centred in the tab's body, below its border.
+local function anchorText(tab)
+	local text = tabText(tab)
+	if not (text and tab.stoaArt) then return end
+	text:ClearAllPoints()
+	text:SetPoint("CENTER", tab, "CENTER", 0, -3)
+end
+
 local function colourTab(tab, selected)
+	anchorText(tab)
 	if selected == nil then selected = isSelected(tab) end
 	local text = tabText(tab)
 	if text then
@@ -147,9 +157,7 @@ local function sizeTab(tab)
 	local text = tabText(tab)
 	tab:SetHeight(tabRise())
 	if text then
-		text:ClearAllPoints()
-		-- Centred in the tab's body, below its border.
-		text:SetPoint("CENTER", tab, "CENTER", 0, -3)
+		anchorText(tab)
 		local width = text:GetStringWidth()
 		if type(width) == "number" and width > 0 then
 			tab:SetWidth(width + TAB_TEXT_PAD * 2)
@@ -266,6 +274,13 @@ function Console:House()
 		-- Renaming or re-docking a tab resizes it; put it back on the edge.
 		for _, name in ipairs({ "FCF_SetWindowName", "FCFDock_UpdateTabs" }) do
 			if _G[name] then hooksecurefunc(name, function() safely(styleTabs) end) end
+		end
+		for _, name in ipairs({ "PanelTemplates_SelectTab", "PanelTemplates_DeselectTab", "PanelTemplates_TabResize" }) do
+			if _G[name] then
+				hooksecurefunc(name, function(tab)
+					if tab and tab.stoaArt then anchorText(tab) end
+				end)
+			end
 		end
 		Stoa:On("STOA_THEME_CHANGED", function() safely(styleTabs) end)
 	end
