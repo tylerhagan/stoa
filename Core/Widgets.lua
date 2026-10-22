@@ -228,6 +228,27 @@ function UI.roundBorder(frame, file, size, outset)
 	}
 end
 
+-- A rounded panel with a hairline edge behind a whole frame, for windows
+-- Stoa restyles. Square where slicing isn't available.
+function UI.roundPanel(frame, alpha)
+	local bg = sliced(frame, "BACKGROUND", "CardFill.tga")
+	if bg then
+		bg:SetDrawLayer("BACKGROUND", -8)
+		UI.tint(bg, "panel", alpha or 0.96)
+	else
+		bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+		bg:SetAllPoints()
+		UI.paint(bg, "panel", alpha or 0.96)
+	end
+	local edge = UI.roundBorder(frame, "CardEdge.tga", 1)
+	for _, tex in ipairs(edge.edges) do
+		UI.tint(tex, "hairline")
+		tex:Show()
+	end
+	UI.applyTheme()
+	return bg
+end
+
 function UI.unitCard(card, styleName)
 	local bg = sliced(card, "BACKGROUND", "CardFill.tga")
 	if bg then
