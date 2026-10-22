@@ -27,6 +27,39 @@ local function placeChat()
 	if FCF_SetWindowAlpha then FCF_SetWindowAlpha(chat, 0) end
 end
 
+-- Chat tabs as plain words: Blizzard's tab art goes, the selected tab reads
+-- in the accent and the rest in muted bone, in Stoa's caption type.
+local function tabText(tab)
+	return tab.Text or (tab.GetFontString and tab:GetFontString())
+end
+
+local function colourTab(tab, selected)
+	local text = tabText(tab)
+	if not text then return end
+	if selected == nil then
+		selected = SELECTED_CHAT_FRAME and tab:GetID() == SELECTED_CHAT_FRAME:GetID()
+	end
+	text:SetTextColor(Stoa:Color(selected and "accent" or "muted"))
+end
+
+local function styleTabs()
+	for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
+		local tab = _G["ChatFrame" .. i .. "Tab"]
+		if tab and not tab.stoaStyled then
+			tab.stoaStyled = true
+			for _, region in ipairs({ tab:GetRegions() }) do
+				if region:IsObjectType("Texture") then region:SetAlpha(0) end
+			end
+			local text = tabText(tab)
+			if text then
+				Stoa:SetFont(text, "sans", Stoa.typeSize.caption + 1)
+				text:SetShadowOffset(0, 0)
+			end
+		end
+		if tab then colourTab(tab) end
+	end
+end
+
 local function actionBar()
 	return MainActionBar or MainMenuBar
 end
@@ -52,7 +85,10 @@ function Console:House()
 	local db = self.db
 
 	local function apply()
-		if db.houseChat then safely(placeChat) end
+		if db.houseChat then
+			safely(placeChat)
+			safely(styleTabs)
+		end
 		if db.hideBarArt then safely(hideBarArt) end
 	end
 
@@ -68,6 +104,17 @@ function Console:House()
 	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", apply)
 	if EventRegistry then
 		EventRegistry:RegisterCallback("EditMode.Exit", apply, self)
+	end
+
+	if db.houseChat then
+		-- Blizzard recolours tabs on every selection and new window.
+		if FCFTab_UpdateColors then
+			hooksecurefunc("FCFTab_UpdateColors", function(tab, selected)
+				if tab.stoaStyled then colourTab(tab, selected) end
+			end)
+		end
+		if FCF_OpenNewWindow then hooksecurefunc("FCF_OpenNewWindow", function() safely(styleTabs) end) end
+		Stoa:On("STOA_THEME_CHANGED", function() safely(styleTabs) end)
 	end
 
 	local bar = actionBar()

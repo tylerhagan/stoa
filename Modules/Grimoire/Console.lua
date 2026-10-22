@@ -23,16 +23,17 @@ local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 92
 
 -- The leather panel art: a repeating leather tile for the panel, a gold
--- top edge along it, and the medallion around the seal. The panel's open
--- height sets the scale; texel sizes below are in the art's own pixels.
+-- top edge along it, and the medallion around the seal, all cut from one
+-- painting and drawn at one scale so the medallion's flares run straight
+-- into the edge's lines. Texel sizes below are in the painting's pixels;
+-- the top of the panel is texel 37 of the edge strip and 129 of the
+-- medallion, and the leather starts 17 texels down, under the gold lines.
 local ART_HEIGHT = 136
-local ART_SCALE = ART_HEIGHT / 127
+local ART_SCALE = 0.556
 local LEATHER_W, LEATHER_H = 1024, 256
--- The edge strip is 64 texels tall with the top of the panel at texel 37;
--- the leather starts under its gold lines, 20 texels down.
-local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 20
-local MEDALLION_SCALE = 0.556
-local MEDALLION_WIDTH, MEDALLION_LINE = 512, 132
+local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 17
+local MEDALLION_WIDTH, MEDALLION_LINE = 512, 129
+local MEDALLION_SCALE = ART_SCALE
 -- How far either side of centre the medallion's flares reach.
 local MEDALLION_REACH = 207 * MEDALLION_SCALE
 local FOLD_SECONDS = 0.3
