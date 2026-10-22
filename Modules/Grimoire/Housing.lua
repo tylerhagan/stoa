@@ -132,21 +132,24 @@ local function setTabArt(tab, selected)
 	art.holder:SetFrameLevel(tab:GetFrameLevel() + (selected and 2 or 1))
 end
 
--- Blizzard nudges a tab's words up or down as it's selected; pin them
--- centred in the tab's body, below its border.
+-- With the art, a tab's words are Stoa's own label on the art's frame,
+-- copied from Blizzard's (which stays, hidden, for Blizzard's code and for
+-- sizing). Blizzard's own would be clipped by the dock's scroll frame, and
+-- nudged up or down as the tab is selected.
 local function anchorText(tab)
 	local text = tabText(tab)
-	if not (text and tab.stoaArt) then return end
+	local art = tab.stoaArt
+	if not (text and art) then return end
 	-- A selected tab is a disabled button, which can swap its font back.
 	Stoa:SetFont(text, "sans", Stoa.typeSize.caption + 1)
-	text:ClearAllPoints()
-	text:SetPoint("CENTER", tab, "CENTER", 0, -3)
+	text:SetAlpha(0)
+	art.label:SetText(text:GetText() or "")
 end
 
 local function colourTab(tab, selected)
 	anchorText(tab)
 	if selected == nil then selected = isSelected(tab) end
-	local text = tabText(tab)
+	local text = tab.stoaArt and tab.stoaArt.label or tabText(tab)
 	if text then
 		local hover = not selected and tab.stoaHover
 		text:SetTextColor(Stoa:Color((selected and "accent") or (hover and "text") or "muted"))
@@ -181,13 +184,11 @@ local function artTab(tab)
 		lines = capped(holder, 2, true),
 	}
 	tab.stoaArt = art
-	-- The words move onto the holder too: a docked tab's own words get
-	-- clipped by the dock's scroll frame once the tab is selected.
-	local text = tabText(tab)
-	if text then
-		text:SetParent(holder)
-		text:SetDrawLayer("ARTWORK")
-	end
+	local label = holder:CreateFontString(nil, "ARTWORK")
+	Stoa:SetFont(label, "sans", Stoa.typeSize.caption + 1)
+	label:SetShadowOffset(0, 0)
+	label:SetPoint("CENTER", tab, "CENTER", 0, -3)
+	art.label = label
 	Console.tabArt = Console.tabArt or {}
 	for _, layer in ipairs({ art.base, art.lines }) do
 		for _, tex in ipairs(layer.parts) do
