@@ -32,7 +32,9 @@ local ART_HEIGHT = 136
 local ART_SCALE = 0.556
 local LEATHER_W, LEATHER_H = 1024, 256
 local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 17
-local MEDALLION_WIDTH, MEDALLION_LINE = 512, 129
+local MEDALLION_WIDTH, MEDALLION_LINE = 512, 257
+-- The ring's centre row in the medallion texture; the seal sits on it.
+local MEDALLION_CENTRE = 253.5
 local MEDALLION_SCALE = ART_SCALE
 -- How far either side of centre the medallion's flares reach.
 local MEDALLION_REACH = 207 * MEDALLION_SCALE
@@ -158,7 +160,7 @@ function Console:BuildArt(frame)
 	gold(edge, "EdgeLines", -4)
 
 	local medallion = layer("Medallion", -3)
-	medallion:SetSize(MEDALLION_WIDTH * MEDALLION_SCALE, 256 * MEDALLION_SCALE)
+	medallion:SetSize(MEDALLION_WIDTH * MEDALLION_SCALE, 512 * MEDALLION_SCALE)
 	medallion:SetPoint("TOP", frame, "TOP", 0, MEDALLION_LINE * MEDALLION_SCALE)
 	gold(medallion, "MedallionLines", -2)
 	return parts
@@ -171,7 +173,7 @@ function Console:BuildSeal(frame)
 	local size = art and ART_SEAL_SIZE or SEAL_SIZE
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
-	seal:SetPoint("CENTER", frame, "TOP", 0, art and 3 or 6)
+	seal:SetPoint("CENTER", frame, "TOP", 0, art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or 6)
 	self.seal = seal
 
 	if not art then
