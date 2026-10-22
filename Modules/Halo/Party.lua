@@ -405,7 +405,7 @@ function Party:UpdateAll()
 end
 
 -- Tank watch ----------------------------------------------------------------
--- For healers: one line over the Halo naming who you're keeping alive, with
+-- For healers: a card beside the Halo's upper left naming who you're keeping alive, with
 -- a health word, a thin bar with their shields, and your buffs on them.
 -- It watches your focus if you have a friendly one, else the group's tank.
 -- It shows with the Halo in combat, and in the /stoa test preview.
@@ -441,7 +441,8 @@ function Party:BuildWatch()
 	UI.roundPanel(watch, 0.92)
 	local halo = _G.StoaHalo
 	if halo then
-		watch:SetPoint("BOTTOM", halo, "TOP", 0, 14)
+		-- Upper left of the Halo; the target has the space over your head.
+		watch:SetPoint("BOTTOMRIGHT", halo, "LEFT", -28, 36)
 	else
 		watch:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
 	end

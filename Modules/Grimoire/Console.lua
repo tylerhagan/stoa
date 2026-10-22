@@ -168,39 +168,6 @@ function Console:BuildArt(frame)
 	return parts
 end
 
--- A leather tab standing on the console's top edge, cut from the edge's
--- own art (Media/Textures/ResourceTabOpen, from Tools/art). The tab frame
--- is the tab's body; the art spills past it into the edge and fillets.
-local RESOURCE_TAB = { size = 128, x0 = 32, foot = 84, rise = 70, cap = 52 }
-
-local function edgeTab(parent, width)
-	local s = ART_SCALE
-	local t = RESOURCE_TAB
-	local tab = CreateFrame("Frame", nil, parent)
-	tab:SetSize(width, t.rise * s)
-	for sublevel, file in ipairs({ "ResourceTabOpen", "ResourceTabOpenLines" }) do
-		local parts = {}
-		for i = 1, 3 do
-			local tex = tab:CreateTexture(nil, "BACKGROUND", nil, sublevel)
-			tex:SetTexture(UI.MEDIA .. "Textures\\" .. file)
-			tex:SetHeight(t.size * s)
-			if sublevel == 2 then UI.tint(tex, "accent") end
-			parts[i] = tex
-		end
-		local left, middle, right = parts[1], parts[2], parts[3]
-		left:SetWidth(t.cap * s)
-		right:SetWidth(t.cap * s)
-		left:SetTexCoord(0, t.cap / t.size, 0, 1)
-		middle:SetTexCoord(0.5, 0.5 + 1 / t.size, 0, 1)
-		right:SetTexCoord(1 - t.cap / t.size, 1, 0, 1)
-		left:SetPoint("TOPLEFT", tab, "BOTTOMLEFT", -t.x0 * s, t.foot * s)
-		right:SetPoint("TOPRIGHT", tab, "BOTTOMRIGHT", t.x0 * s, t.foot * s)
-		middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
-		middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
-	end
-	return tab
-end
-
 function Console:BuildSeal(frame)
 	-- With the leather art the seal sits in the art's arch, a size larger,
 	-- and the arch's own gold ring stands in for the seal's outer rings.
@@ -253,7 +220,7 @@ function Console:BuildSeal(frame)
 	self.roleText = role
 
 	if art then
-		self:BuildResourceTabs(frame)
+		self:BuildResources(frame)
 		return
 	end
 
@@ -278,34 +245,34 @@ function Console:BuildSeal(frame)
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
 end
 
--- With the art: health and mana each on a leather tab standing on the edge
--- either side of the medallion. The number sits nearest the seal, the
--- caption at the outer end, the bar along the foot filling towards the seal.
-local RESOURCE_TAB_WIDTH = 190
-local RESOURCE_PAD = 14
+-- With the art: health and mana sit down in the leather either side of
+-- the medallion, _ O _, a little above the ring's foot. The number sits
+-- nearest the seal, the caption at the outer end, and the bar fills
+-- towards the seal.
+local RESOURCE_WIDTH = 170
+local RING_RADIUS = 122.5 * ART_SCALE
+local RESOURCE_Y = -38
 
-function Console:BuildResourceTabs(frame)
-	local gap = MEDALLION_REACH + 22
+function Console:BuildResources(frame)
+	local gap = RING_RADIUS + 22
 	local function resource(side, token, label)
-		local tab = edgeTab(frame, RESOURCE_TAB_WIDTH)
 		local inner = side == "left" and "RIGHT" or "LEFT"
 		local outer = side == "left" and "LEFT" or "RIGHT"
 		local sign = side == "left" and -1 or 1
-		tab:SetPoint("BOTTOM" .. inner, frame, "TOP", sign * gap, 0)
-		local barFrame = bar(tab, RESOURCE_TAB_WIDTH - RESOURCE_PAD * 2, 3, token)
-		barFrame:SetPoint("BOTTOM", 0, 7)
+		local barFrame = bar(frame, RESOURCE_WIDTH, 3, token)
+		barFrame:SetPoint(inner, frame, "TOP", sign * gap, RESOURCE_Y)
 		if side == "left" then barFrame:SetReverseFill(true) end
-		local number = text(tab, "serif", Stoa.typeSize.title, token == "health" and "text" or "mana", inner)
-		number:SetPoint("BOTTOM" .. inner, barFrame, "TOP" .. inner, 0, 3)
-		local cap = caption(tab, label)
+		local number = text(frame, "serif", Stoa.typeSize.title, token == "health" and "text" or "mana", inner)
+		number:SetPoint("BOTTOM" .. inner, barFrame, "TOP" .. inner, 0, 4)
+		local cap = caption(frame, label)
 		cap:SetPoint("BOTTOM" .. outer, barFrame, "TOP" .. outer, 0, 5)
-		return tab, barFrame, number
+		return barFrame, number, cap
 	end
-	local healthTab, health, healthText = resource("left", "health", "Health")
-	local manaTab, mana, manaText = resource("right", "mana", "Mana")
+	local health, healthText, healthCap = resource("left", "health", "Health")
+	local mana, manaText, manaCap = resource("right", "mana", "Mana")
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
-	self.resourceParts = { healthTab, manaTab }
+	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
 end
 
 function Console:BuildNotes(frame, space)

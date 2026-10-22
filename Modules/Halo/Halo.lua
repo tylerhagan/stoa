@@ -149,16 +149,19 @@ function Halo:BuildSignature(frame)
 	slot:Hide()
 end
 
--- The target sits beside the Halo's upper left, clear of the nameplates
--- that crowd the space above your head. Like the cast bar it is parented to
--- UIParent, so it stays with you out of combat as well. It's a secure unit
--- button, so right click opens the unit menu (focus, invite, inspect, trade)
--- like Blizzard's target frame; the game shows and hides it with the target.
+-- The target sits over your head, above the Halo's open top, as in the
+-- mockups: name, a wide bar, health and the hostile and threat words, and
+-- a centred row of auras. Like the cast bar it is parented to UIParent, so
+-- it stays with you out of combat as well. It's a secure unit button, so
+-- right click opens the unit menu (focus, invite, inspect, trade) like
+-- Blizzard's target frame; the game shows and hides it with the target.
+local TARGET_WIDTH = 240
+
 function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
-	target:SetSize(200, 52)
-	target:SetPoint("BOTTOMRIGHT", frame, "LEFT", -28, 36)
+	target:SetSize(TARGET_WIDTH, 52)
+	target:SetPoint("BOTTOM", frame, "TOP", 0, 34)
 	target:SetAttribute("unit", "target")
 	target:SetAttribute("type1", "target")
 	target:SetAttribute("type2", "togglemenu")
@@ -171,21 +174,21 @@ function Halo:BuildTarget(frame)
 	RegisterUnitWatch(target)
 	self.target = target
 
-	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	name:SetPoint("TOPRIGHT")
-	name:SetWidth(200)
+	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "CENTER")
+	name:SetPoint("TOP")
+	name:SetWidth(TARGET_WIDTH)
 	name:SetWordWrap(false)
-	local hp = UI.bar(target, 180, 3, "health")
-	hp:SetPoint("TOPRIGHT", name, "BOTTOMRIGHT", 0, -5)
+	local hp = UI.bar(target, TARGET_WIDTH - 20, 3, "health")
+	hp:SetPoint("TOP", name, "BOTTOM", 0, -5)
+	local health = UI.text(target, "sans", Stoa.typeSize.body, "muted", "LEFT")
+	health:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
 	-- Hostile targets get a word as well as a colour.
 	local cue = UI.caption(target, "")
 	cue:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -5)
-	local health = UI.text(target, "sans", Stoa.typeSize.body, "muted", "LEFT")
-	health:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
 	-- Threat, in words: tanks hear when they are losing it, everyone else
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
-	threat:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
+	threat:SetPoint("TOP", hp, "BOTTOM", 0, -5)
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target.threat = threat
 
@@ -196,11 +199,7 @@ function Halo:BuildTarget(frame)
 	for i = 1, AURA_COUNT do
 		local icon = CreateFrame("Frame", nil, target)
 		icon:SetSize(AURA_SIZE, AURA_SIZE)
-		if i == 1 then
-			icon:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -36)
-		else
-			icon:SetPoint("RIGHT", target.auras[i - 1], "LEFT", -4, 0)
-		end
+		if i > 1 then icon:SetPoint("LEFT", target.auras[i - 1], "RIGHT", 4, 0) end
 		local tex = icon:CreateTexture(nil, "ARTWORK")
 		tex:SetAllPoints()
 		tex:SetTexCoord(0.07, 0.93, 0.07, 0.93)
@@ -362,6 +361,10 @@ function Halo:UpdateTargetAuras()
 			collect("HELPFUL")
 		end
 	end
+	-- The row centres under the bar however many there are.
+	local shown = math.min(#found, AURA_COUNT)
+	icons[1]:ClearAllPoints()
+	icons[1]:SetPoint("TOPLEFT", self.target.hp, "BOTTOM", -(shown * (AURA_SIZE + 4) - 4) / 2, -22)
 	for i, icon in ipairs(icons) do
 		local aura = found[i]
 		if aura then

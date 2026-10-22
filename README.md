@@ -23,8 +23,8 @@ What works today:
 | Grimoire console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page, with leather tabs standing on its top edge, and keeps bags and the game menu in its bottom-right corner. Strips the action bar art. Folds to a spine in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
 | Reminders | Missing self-buffs as words: aura, seal and Righteous Fury for paladins, Inner Fire and Shadowform for priests. Under the Halo in combat, beside your role on the console out of it |
-| Tank watch | For healers, over the Halo in combat: your focus or the group's tank, with a health word, shields and your buffs on them |
-| Target | Beside the Halo in and out of combat: name, health, a HOSTILE cue and threat in words |
+| Tank watch | For healers, beside the Halo's upper left in combat: your focus or the group's tank, with a health word, shields and your buffs on them |
+| Target | Over your head, above the Halo, in and out of combat: name, health, a HOSTILE cue, threat in words and auras. Right click for the unit menu |
 | Party cards | Name and health percent, a thick health bar with shields on its end, and word pips for your buffs, Weakened Soul, dispels and low health. Rounded cards. A row under the Halo when you heal, with a grid of your click bindings on the left; a column on the left otherwise |
 | Raid frames | The same cards, one row per group under the Halo when you heal, one column per group on the left otherwise, for 10, 20 and 40 |
 | Click-casting | Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. `/stoa clicks` to edit |
