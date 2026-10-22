@@ -20,12 +20,16 @@ What works today:
 | Movers | `/stoa unlock` to drag Stoa frames; positions saved per character |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` get invited |
-| Grimoire console | Out of combat: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page and strips the action bar art. Folds to a spine in combat |
+| Grimoire console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page, with leather tabs standing on its top edge, and keeps bags and the game menu in its bottom-right corner. Strips the action bar art. Folds to a spine in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
-| Target | Beside the Halo in and out of combat: name, health, a HOSTILE cue and threat in words |
+| Reminders | Missing self-buffs as words: aura, seal and Righteous Fury for paladins, Inner Fire and Shadowform for priests. Under the Halo in combat, beside your role on the console out of it |
+| Tank watch | For healers, beside the Halo's upper left in combat: your focus or the group's tank, with a health word, shields and your buffs on them |
+| Target | On a card at the Halo's upper right, opposite the tank watch, in and out of combat: name, health, a HOSTILE cue, threat in words and auras. Right click for the unit menu |
 | Party cards | Name and health percent, a thick health bar with shields on its end, and word pips for your buffs, Weakened Soul, dispels and low health. Rounded cards. A row under the Halo when you heal, with a grid of your click bindings on the left; a column on the left otherwise |
 | Raid frames | The same cards, one row per group under the Halo when you heal, one column per group on the left otherwise, for 10, 20 and 40 |
 | Click-casting | Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. `/stoa clicks` to edit |
+| Action bars | Rounded-square icons with a hairline edge like the party cards, dim sockets for empty slots, Stoa type on keys and counts |
+| Blizzard windows | Quest, gossip, merchant, trainer, bags and tooltips on dark rounded panels, with light quest text in Stoa's type, dark rounded buttons, a quiet close cross and plain-word tabs |
 | Minimap | Theme-coloured rings, serif zone name, wheel to zoom |
 | Merchants | Sells grey junk and repairs, from guild funds when allowed |
 | Settings | Options > AddOns > Stoa |
@@ -39,6 +43,7 @@ Fonts are the main gap: see below.
 | `/stoa` | Open settings |
 | `/stoa unlock` | Toggle frame moving |
 | `/stoa reset` | Put moved frames back in their default spots |
+| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows) and reload |
 | `/stoa theme` | Cycle Bone, Tide, Graphite |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa state` | Print the current state and role |

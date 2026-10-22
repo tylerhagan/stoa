@@ -71,6 +71,17 @@ function UI.text(parent, kind, size, token, justify)
 end
 
 -- Small caps label, the section heading used everywhere.
+-- Words that float over the game world rather than sit on a panel: a fine
+-- outline plus a dark shadow, so they hold up over snow and bright sky.
+function UI.legible(fs)
+	if not (fs and fs.GetFont) then return fs end
+	local path, size = fs:GetFont()
+	if path and size then pcall(fs.SetFont, fs, path, size, "OUTLINE") end
+	fs:SetShadowColor(0, 0, 0, 0.9)
+	fs:SetShadowOffset(1, -1)
+	return fs
+end
+
 function UI.caption(parent, label)
 	local fs = UI.text(parent, "sans", Stoa.typeSize.caption, "muted")
 	fs:SetText(label:upper())
@@ -226,6 +237,27 @@ function UI.roundBorder(frame, file, size, outset)
 		end,
 		Clear = function() tex:Hide() end,
 	}
+end
+
+-- A rounded panel with a hairline edge behind a whole frame, for windows
+-- Stoa restyles. Square where slicing isn't available.
+function UI.roundPanel(frame, alpha)
+	local bg = sliced(frame, "BACKGROUND", "CardFill.tga")
+	if bg then
+		bg:SetDrawLayer("BACKGROUND", -8)
+		UI.tint(bg, "panel", alpha or 0.96)
+	else
+		bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+		bg:SetAllPoints()
+		UI.paint(bg, "panel", alpha or 0.96)
+	end
+	local edge = UI.roundBorder(frame, "CardEdge.tga", 1)
+	for _, tex in ipairs(edge.edges) do
+		UI.tint(tex, "hairline")
+		tex:Show()
+	end
+	UI.applyTheme()
+	return bg
 end
 
 function UI.unitCard(card, styleName)

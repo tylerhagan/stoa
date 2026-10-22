@@ -404,6 +404,147 @@ function Party:UpdateAll()
 	end
 end
 
+-- Tank watch ----------------------------------------------------------------
+-- For healers: a card beside the Halo's upper left naming who you're keeping alive, with
+-- a health word, a thin bar with their shields, and your buffs on them.
+-- It watches your focus if you have a friendly one, else the group's tank.
+-- It shows with the Halo in combat, and in the /stoa test preview.
+
+local WATCH_WIDTH = 220
+local WATCH_PAD = 9
+local HURT_HEALTH = 0.7
+
+local function watchedUnit()
+	if UnitExists("focus") and not flag(UnitCanAttack("player", "focus")) then return "focus" end
+	if not IsInGroup() then return nil end
+	local prefix, count = "party", 4
+	if IsInRaid() then prefix, count = "raid", GetNumGroupMembers() end
+	local mainTank
+	for i = 1, count do
+		local unit = prefix .. i
+		if UnitExists(unit) and not flag(UnitIsUnit(unit, "player")) then
+			local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
+			if not Stoa:IsSecret(role) and role == "TANK" then return unit end
+			if not mainTank and GetPartyAssignment and flag(GetPartyAssignment("MAINTANK", unit)) then
+				mainTank = unit
+			end
+		end
+	end
+	return mainTank
+end
+
+function Party:BuildWatch()
+	local watch = CreateFrame("Frame", "StoaTankWatch", UIParent)
+	watch:SetFrameStrata("LOW")
+	-- On a card like the party's, so it reads over snow and sky alike.
+	watch:SetSize(WATCH_WIDTH + WATCH_PAD * 2, 64)
+	UI.roundPanel(watch, 0.92)
+	local halo = _G.StoaHalo
+	if halo then
+		-- Upper left of the Halo; the target has the space over your head.
+		watch:SetPoint("BOTTOMRIGHT", halo, "LEFT", -28, 36)
+	else
+		watch:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
+	end
+	watch:SetAlpha(0)
+	watch:EnableMouse(false)
+
+	local label = UI.caption(watch, "Watching")
+	label:SetPoint("TOPLEFT", WATCH_PAD, -WATCH_PAD)
+	local word = UI.caption(watch, "")
+	word:SetPoint("TOPRIGHT", -WATCH_PAD, -WATCH_PAD)
+	local name = UI.text(watch, "serif", Stoa.typeSize.label + 2, "text", "LEFT")
+	name:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -3)
+	name:SetWidth(WATCH_WIDTH - 50)
+	name:SetWordWrap(false)
+	local percent = UI.text(watch, "serif", Stoa.typeSize.label + 2, "text", "RIGHT")
+	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -3)
+	local hp = UI.bar(watch, WATCH_WIDTH, 3, "health")
+	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
+	hp:SetClipsChildren(true)
+	local absorb = CreateFrame("StatusBar", nil, hp)
+	absorb:SetStatusBarTexture(UI.WHITE)
+	absorb:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
+	absorb:SetSize(WATCH_WIDTH, 3)
+	absorb:SetStatusBarColor(Stoa:Color("shield"))
+	local buffs = UI.text(watch, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	buffs:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
+
+	watch.name, watch.percent, watch.word, watch.hp = name, percent, word, hp
+	watch.absorb, watch.buffs = absorb, buffs
+	self.watch = watch
+	Stoa:RegisterMover("tankwatch", watch, "Tank watch")
+end
+
+-- Fills the watch from sample data, for the /stoa test preview.
+function Party:PreviewWatch()
+	local watch = self.watch
+	watch.name:SetText("Brunhok")
+	watch.name:SetTextColor(Stoa:Color("text"))
+	watch.percent:SetText("62")
+	watch.word:SetText("HURT")
+	watch.word:SetTextColor(Stoa:Color("accent"))
+	watch.hp:SetMinMaxValues(0, 100)
+	watch.hp:SetValue(62)
+	watch.hp:SetStatusBarColor(Stoa:Color("health"))
+	watch.absorb:SetMinMaxValues(0, 100)
+	watch.absorb:SetValue(14)
+	watch.buffs:SetText("SHIELD 12  ·  RENEW")
+end
+
+function Party:UpdateWatch()
+	local watch = self.watch
+	if not watch then return end
+	local healer = Stoa:GetRole() == "HEALER"
+	local previewing = Stoa.previewing and healer
+	local unit = healer and watchedUnit()
+	self.watchedUnit = unit
+
+	local shown = previewing or (unit and Stoa:GetState() == Stoa.STATE_COMBAT)
+	if not shown then
+		if watch.shown then UI.fade(watch, 0, 0.3) end
+		watch.shown = false
+		return
+	end
+	if not watch.shown then UI.fade(watch, 1, 0.2) end
+	watch.shown = true
+	if previewing and not unit then
+		self:PreviewWatch()
+		return
+	end
+
+	watch.name:SetText(UnitName(unit))
+	watch.name:SetTextColor(UI.classColor(unit))
+	UI.setUnitBar(watch.hp, unit, "health")
+
+	local fraction = healthFraction(unit)
+	local word, token
+	if not flag(UnitIsConnected(unit)) then
+		word, token = "OFFLINE", "muted"
+	elseif flag(UnitIsDeadOrGhost(unit)) then
+		word, token = "DEAD", "muted"
+	elseif fraction then
+		if fraction < LOW_HEALTH then word, token = "LOW", "danger"
+		elseif fraction < HURT_HEALTH then word, token = "HURT", "accent"
+		else word, token = "STEADY", "muted" end
+	end
+	watch.word:SetText(word or "")
+	if token then watch.word:SetTextColor(Stoa:Color(token)) end
+	setPercent(watch.percent, unit, fraction)
+	local low = word == "LOW"
+	watch.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
+	watch.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+
+	watch.absorb:SetMinMaxValues(0, UnitHealthMax(unit))
+	watch.absorb:SetValue(UnitGetTotalAbsorbs and UnitGetTotalAbsorbs(unit) or 0)
+
+	local pips = {}
+	self:AuraPips(unit, pips)
+	local words = {}
+	for i, pip in ipairs(pips) do words[i] = pip[1] end
+	watch.buffs:SetText(table.concat(words, "  ·  "))
+end
+
 local function cardFor(self, unit)
 	for _, card in ipairs(self.cards) do
 		if card.unit == unit then return card end
@@ -421,7 +562,9 @@ end
 
 function Party:OnEnable()
 	self:Build()
+	self:BuildWatch()
 	self:UpdateAll()
+	self:UpdateWatch()
 
 	if self.db.hideBlizzardParty then
 		Stoa:AfterCombat(function() xpcall(hideBlizzardParty, geterrorhandler()) end)
@@ -433,10 +576,17 @@ function Party:OnEnable()
 	Stoa:On("STOA_STATE_CHANGED", function()
 		self:UpdateAll()
 		self:UpdateGrid()
+		self:UpdateWatch()
 	end)
-	Stoa:On("STOA_PREVIEW_CHANGED", function() self:UpdateGrid() end)
+	Stoa:On("STOA_PREVIEW_CHANGED", function()
+		self:UpdateGrid()
+		self:UpdateWatch()
+	end)
+	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateWatch() end)
+	Stoa:On("PLAYER_FOCUS_CHANGED", function() self:UpdateWatch() end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function()
 		self:UpdateAll()
+		self:UpdateWatch()
 		self:UpdateGrid()
 		-- The healer row re-centres on the cards in it.
 		Stoa:AfterCombat(function() self:Layout() end)
@@ -453,6 +603,9 @@ function Party:OnEnable()
 		Stoa:On(event, function(unit)
 			local card = cardFor(self, unit)
 			if card then self:UpdateCard(card) end
+			if unit and self.watchedUnit and flag(UnitIsUnit(unit, self.watchedUnit)) then
+				self:UpdateWatch()
+			end
 		end)
 	end
 
@@ -465,5 +618,6 @@ function Party:OnEnable()
 	end)
 	C_Timer.NewTicker(1, function()
 		if self.frame:IsVisible() then self:UpdateAll() end
+		self:UpdateWatch()
 	end)
 end

@@ -36,4 +36,7 @@ Modules\Frames\Raid.lua
 Modules\Frames\Raid.xml
 Modules\Frames\Preview.lua
 
+Modules\Skins\ActionBars.lua
+Modules\Skins\Windows.lua
+
 Config\Settings.lua

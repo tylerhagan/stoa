@@ -42,8 +42,12 @@ local function build()
 		Stoa:SetTheme(value)
 	end)
 	checkbox(Stoa.modules.Grimoire.db, "enabled", "Show the Grimoire console", "The ink console along the bottom of the screen. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Grimoire.db, "art", "Leather console", "Dress the console in tooled leather, its lines in your theme's accent. Off gives the plain ink panel. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Grimoire.db, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and Stoa's notes appear in chat. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Minimap.db, "enabled", "Style the minimap", "Rings in the theme colours, serif zone name, wheel to zoom. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.ActionBars.db, "enabled", "Rounded action buttons", "Rounded-square icons with a hairline edge, dim sockets for empty slots. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Windows.db, "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on Stoa's dark panels with light text. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Grimoire.db, "houseMenu", "Bags and menu in the console corner", "Moves the bag slots and game menu off the action bar row into the console's bottom-right corner, quiet until you mouse over them. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Grimoire.db, "hideBarArt", "Hide action bar art", "Removes the gryphons and border so the bar sits on the ink. Takes effect after /reload.", true)
 
 	-- Halo
@@ -112,4 +116,19 @@ function Stoa:OpenSettings()
 		return
 	end
 	Settings.OpenToCategory(category:GetID())
+end
+
+-- /stoa safe: if a Stoa skin ever breaks Blizzard's own UI, this turns off
+-- every piece that reaches into Blizzard frames and reloads. Each can be
+-- turned back on in Options > AddOns > Stoa.
+Stoa.commands.safe = function()
+	local m = Stoa.modules
+	if m.Grimoire then
+		m.Grimoire.db.houseChat = false
+		m.Grimoire.db.houseMenu = false
+		m.Grimoire.db.hideBarArt = false
+	end
+	if m.ActionBars then m.ActionBars.db.enabled = false end
+	if m.Windows then m.Windows.db.enabled = false end
+	ReloadUI()
 end

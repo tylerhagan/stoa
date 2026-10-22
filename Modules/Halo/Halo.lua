@@ -19,6 +19,8 @@ local SIZE = 300
 local FADE_IN = 0.2
 local FADE_OUT = 0.5
 local SIGNATURE_SIZE = 36
+local AURA_SIZE = 22
+local AURA_COUNT = 8
 
 -- Signature spells: the one cooldown each spec lives around. The first
 -- spell the character knows is shown; only spells with a cooldown are
@@ -32,6 +34,22 @@ local SIGNATURES = {
 		MELEE = { 35395, 20271 },       -- Crusader Strike, Judgement
 		TANK = { 31935, 20925, 20271 }, -- Avenger's Shield, Holy Shield, Judgement
 		HEALER = { 20473, 20216, 633 }, -- Holy Shock, Divine Favor, Lay on Hands
+	},
+}
+
+-- Self-buffs each class keeps up, by role. A reminder shows as a word
+-- when the buff is missing (and the spell is known); seals only matter in
+-- a fight, since they don't last between pulls. Matched by name, with
+-- spell IDs only to check the spell is learned.
+local REMINDERS = {
+	PALADIN = {
+		{ word = "NO AURA", suffix = " Aura", spell = 465 },             -- Devotion Aura
+		{ word = "NO SEAL", prefix = "Seal of ", combat = true, show = true },
+		{ word = "NO FURY", name = "Righteous Fury", spell = 25780, roles = { TANK = true } },
+	},
+	PRIEST = {
+		{ word = "NO INNER FIRE", name = "Inner Fire", spell = 588 },
+		{ word = "NO SHADOWFORM", name = "Shadowform", spell = 15473, roles = { RANGED = true } },
 	},
 }
 
@@ -52,7 +70,9 @@ local function arc(parent, side, token)
 	local track = sb:CreateTexture(nil, "BACKGROUND")
 	track:SetAllPoints()
 	track:SetTexture(file)
-	UI.tint(track, "text", 0.1)
+	-- A dark track, so the arc reads over snow and bright sky as well as
+	-- over dark ground.
+	UI.tint(track, "panel", 0.55)
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
 	return sb
@@ -78,6 +98,9 @@ function Halo:Build()
 	healthText:SetPoint("BOTTOMRIGHT", frame, "BOTTOM", -SIZE * 0.3, 6)
 	local manaText = UI.text(frame, "serif", Stoa.typeSize.title, "mana", "LEFT")
 	manaText:SetPoint("BOTTOMLEFT", frame, "BOTTOM", SIZE * 0.3, 6)
+	-- The numbers are what you read mid-fight, so they get a fine outline.
+	Stoa:SetFont(healthText, "serif", Stoa.typeSize.title, "OUTLINE")
+	Stoa:SetFont(manaText, "serif", Stoa.typeSize.title, "OUTLINE")
 	self.healthText, self.manaText = healthText, manaText
 
 	self:BuildSignature(frame)
@@ -86,6 +109,15 @@ function Halo:Build()
 
 	UI.applyTheme()
 	Stoa:RegisterMover("halo", frame, "Halo")
+
+	-- Everything here floats over the world, so its words are made legible
+	-- over snow and bright sky.
+	local function shade(region)
+		for _, child in ipairs({ region:GetRegions() }) do
+			if child.IsObjectType and child:IsObjectType("FontString") then UI.legible(child) end
+		end
+	end
+	for _, region in ipairs({ frame, self.target, self.cast }) do shade(region) end
 end
 
 function Halo:BuildSignature(frame)
@@ -117,34 +149,83 @@ function Halo:BuildSignature(frame)
 	slot:Hide()
 end
 
--- The target sits beside the Halo's upper left, clear of the nameplates
--- that crowd the space above your head. Like the cast bar it is parented to
--- UIParent, so it stays with you out of combat as well.
+-- The target sits at the Halo's upper right, opposite the tank watch, on a
+-- card: name, a bar, health and the hostile and threat words, and a row
+-- of auras under it. Like the cast bar it is parented to UIParent, so
+-- it stays with you out of combat as well. It's a secure unit button, so
+-- right click opens the unit menu (focus, invite, inspect, trade) like
+-- Blizzard's target frame; the game shows and hides it with the target.
+local TARGET_WIDTH = 240
+local TARGET_PAD = 9
+
 function Halo:BuildTarget(frame)
-	local target = CreateFrame("Frame", nil, UIParent)
+	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
-	target:SetSize(200, 52)
-	target:SetPoint("BOTTOMRIGHT", frame, "LEFT", -28, 36)
+	target:SetSize(TARGET_WIDTH, 68)
+	-- Over your head it fought with the game's own nameplate.
+	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 28, 36)
+	target:SetAttribute("unit", "target")
+	target:SetAttribute("type1", "target")
+	target:SetAttribute("type2", "togglemenu")
+	target:RegisterForClicks("AnyUp")
+	target:SetScript("OnEnter", function(button)
+		GameTooltip_SetDefaultAnchor(GameTooltip, button)
+		GameTooltip:SetUnit("target")
+	end)
+	target:SetScript("OnLeave", GameTooltip_Hide)
+	RegisterUnitWatch(target)
 	self.target = target
 
-	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	name:SetPoint("TOPRIGHT")
-	name:SetWidth(200)
+	-- On a card like the tank watch opposite, so it reads over snow and sky.
+	UI.roundPanel(target, 0.92)
+	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "LEFT")
+	name:SetPoint("TOPLEFT", TARGET_PAD, -TARGET_PAD)
+	name:SetWidth(TARGET_WIDTH - TARGET_PAD * 2 - 60)
 	name:SetWordWrap(false)
-	local hp = UI.bar(target, 180, 3, "health")
-	hp:SetPoint("TOPRIGHT", name, "BOTTOMRIGHT", 0, -5)
 	-- Hostile targets get a word as well as a colour.
 	local cue = UI.caption(target, "")
-	cue:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -5)
+	cue:SetPoint("TOPRIGHT", -TARGET_PAD, -TARGET_PAD - 3)
+	local hp = UI.bar(target, TARGET_WIDTH - TARGET_PAD * 2, 4, "health")
+	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -6)
 	local health = UI.text(target, "sans", Stoa.typeSize.body, "muted", "LEFT")
 	health:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
 	-- Threat, in words: tanks hear when they are losing it, everyone else
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
-	threat:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
+	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -5)
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target.threat = threat
-	target:Hide()
+
+	-- Auras: on a friend, their buffs, yours first; on an enemy, the
+	-- debuffs you put there. Rounded icons with a sweep for time left.
+	target.auras = {}
+	local mask = UI.MEDIA .. "Textures\\ButtonMask"
+	for i = 1, AURA_COUNT do
+		local icon = CreateFrame("Frame", nil, target)
+		icon:SetSize(AURA_SIZE, AURA_SIZE)
+		if i > 1 then icon:SetPoint("LEFT", target.auras[i - 1], "RIGHT", 4, 0) end
+		local tex = icon:CreateTexture(nil, "ARTWORK")
+		tex:SetAllPoints()
+		tex:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+		local m = icon:CreateMaskTexture()
+		m:SetAllPoints()
+		m:SetTexture(mask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		tex:AddMaskTexture(m)
+		icon.texture = tex
+		local cooldown = CreateFrame("Cooldown", nil, icon, "CooldownFrameTemplate")
+		cooldown:SetAllPoints()
+		cooldown:SetSwipeTexture(mask)
+		cooldown:SetDrawEdge(false)
+		cooldown:SetDrawBling(false)
+		cooldown:SetHideCountdownNumbers(true)
+		cooldown:SetReverse(true)
+		icon.cooldown = cooldown
+		local count = UI.text(icon, "sans", Stoa.typeSize.caption, "text", "RIGHT")
+		count:SetPoint("BOTTOMRIGHT", 2, -2)
+		icon.count = count
+		icon:Hide()
+		target.auras[i] = icon
+	end
 end
 
 -- The cast bar is parented to UIParent rather than the Halo, so it shows for
@@ -158,6 +239,11 @@ function Halo:BuildCast(frame)
 	cast.spell = spell
 	cast:Hide()
 	self.cast = cast
+
+	-- Missing self-buffs, and your seal, under the cast bar.
+	local reminders = UI.caption(frame, "")
+	reminders:SetPoint("TOP", frame, "BOTTOM", 0, -50)
+	self.reminders = reminders
 end
 
 -- Updates -------------------------------------------------------------------
@@ -220,10 +306,8 @@ end
 
 function Halo:UpdateTarget()
 	local target = self.target
-	if not UnitExists("target") then
-		target:Hide()
-		return
-	end
+	-- Showing and hiding is the unit watch's job, as the frame is secure.
+	if not UnitExists("target") then return end
 	target.name:SetText(UnitName("target"))
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
@@ -240,12 +324,69 @@ function Halo:UpdateTarget()
 	target.hp:SetShown(not dead)
 	target.health:SetShown(not dead)
 	target:SetAlpha(dead and 0.6 or 1)
+	self:UpdateTargetAuras()
 	if dead then
 		target.threat:SetText("")
 	else
 		self:UpdateThreat()
 	end
-	target:Show()
+end
+
+-- Fills the target's aura icons. Values can be secret in combat; textures
+-- and counts still take them, and the sweep is skipped if the times can't
+-- be read.
+function Halo:UpdateTargetAuras()
+	local icons = self.target.auras
+	if not icons then return end
+	local hostile = UnitCanAttack("player", "target")
+	if Stoa:IsSecret(hostile) then hostile = false end
+	local found, seen = {}, {}
+	local function collect(filter)
+		if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
+		for i = 1, 40 do
+			if #found >= AURA_COUNT then return end
+			local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, filter)
+			if not ok or not aura then return end
+			-- Your own buffs come first, so skip them on the second pass.
+			local id = aura.auraInstanceID
+			if Stoa:IsSecret(id) then id = nil end
+			local key = id or (filter .. i)
+			if not seen[key] then
+				seen[key] = true
+				found[#found + 1] = aura
+			end
+		end
+	end
+	if UnitExists("target") then
+		if hostile then
+			collect("HARMFUL|PLAYER")
+		else
+			collect("HELPFUL|PLAYER")
+			collect("HELPFUL")
+		end
+	end
+	-- The row hangs under the card, from its inner edge.
+	icons[1]:ClearAllPoints()
+	icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", 0, -6)
+	for i, icon in ipairs(icons) do
+		local aura = found[i]
+		if aura then
+			icon.texture:SetTexture(aura.icon)
+			pcall(function()
+				local n = aura.applications
+				icon.count:SetText(n and n > 1 and n or "")
+			end)
+			icon.cooldown:Clear()
+			pcall(function()
+				if aura.duration and aura.duration > 0 then
+					icon.cooldown:SetCooldown(aura.expirationTime - aura.duration, aura.duration)
+				end
+			end)
+			icon:Show()
+		else
+			icon:Hide()
+		end
+	end
 end
 
 local THREAT_WORDS = {
@@ -268,16 +409,86 @@ function Halo:UpdateThreat()
 	threat:SetTextColor(Stoa:Color(calm and "muted" or "danger"))
 end
 
+-- Reminders ----------------------------------------------------------------
+
+-- Your own buff names, or nil when any of them is hidden (secret) and a
+-- missing buff can't be told from an unreadable one.
+local function ownBuffNames()
+	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return nil end
+	local names = {}
+	for i = 1, 40 do
+		local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
+		if not ok then return nil end
+		if not aura then break end
+		if Stoa:IsSecret(aura.name) then return nil end
+		names[#names + 1] = aura.name
+	end
+	return names
+end
+
+local function matching(names, rule)
+	for _, name in ipairs(names) do
+		if rule.name and name == rule.name then return name end
+		if rule.prefix and name:sub(1, #rule.prefix) == rule.prefix then return name end
+		if rule.suffix and name:sub(-#rule.suffix) == rule.suffix then return name end
+	end
+end
+
+-- Missing buffs as words, plus the seal you're running, shortened.
+function Halo:Reminders()
+	local _, classFile = UnitClass("player")
+	local rules = REMINDERS[classFile]
+	if not rules then return {}, nil end
+	local names = ownBuffNames()
+	if not names then return {}, nil end
+	local role = Stoa:GetRole()
+	local inCombat = Stoa:GetState() == Stoa.STATE_COMBAT
+	local missing, active = {}, nil
+	for _, rule in ipairs(rules) do
+		local applies = (not rule.roles or rule.roles[role])
+			and (not rule.spell or knows(rule.spell))
+			and (not rule.combat or inCombat)
+		if applies then
+			local found = matching(names, rule)
+			if not found then
+				missing[#missing + 1] = rule.word
+			elseif rule.show and rule.prefix then
+				active = found:sub(#rule.prefix + 1):upper()
+			end
+		end
+	end
+	return missing, active
+end
+
+function Halo:UpdateReminders()
+	local missing, active = self:Reminders()
+	local line = self.reminders
+	local parts = {}
+	local r, g, b = Stoa:Color("danger")
+	local warn = string.format("|cff%02x%02x%02x", r * 255, g * 255, b * 255)
+	for _, word in ipairs(missing) do parts[#parts + 1] = warn .. word .. "|r" end
+	if active then parts[#parts + 1] = active end
+	line:SetText(table.concat(parts, "  ·  "))
+	-- The console shows what's missing out of combat.
+	Stoa.missingBuffs = missing
+	Stoa:Fire("STOA_REMINDERS_CHANGED")
+end
+
 -- Cast bar. Plain times drive it with GetTime; secret times use the client's
 -- duration object when there is one.
 function Halo:StartCast(channel)
 	local cast = self.cast
-	local name, _, _, startMS, endMS = (channel and UnitChannelInfo or UnitCastingInfo)("player")
+	local name, text, _, startMS, endMS = (channel and UnitChannelInfo or UnitCastingInfo)("player")
 	if not name then
 		self:StopCast()
 		return
 	end
-	cast.spell:SetText(name)
+	-- The display text is what Blizzard's own bar shows ("Opening" rather
+	-- than the internal "Opening - No Text").
+	local label = name
+	if text and not Stoa:IsSecret(text) and text ~= "" then label = text end
+	if not Stoa:IsSecret(label) then label = label:gsub(" %- No Text$", "") end
+	cast.spell:SetText(label)
 	cast:SetScript("OnUpdate", nil)
 
 	if not Stoa:IsSecret(startMS) and not Stoa:IsSecret(endMS) then
@@ -341,12 +552,21 @@ function Halo:OnEnable()
 
 	Stoa:On("STOA_STATE_CHANGED", function(state)
 		self:SetShown(state == Stoa.STATE_COMBAT)
+		self:UpdateReminders()
 	end)
-	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSignature() end)
+	Stoa:On("STOA_ROLE_CHANGED", function()
+		self:UpdateSignature()
+		self:UpdateReminders()
+	end)
+	Stoa:On("UNIT_AURA", function(unit)
+		if unit == "player" then self:UpdateReminders() end
+		if unit == "target" then self:UpdateTargetAuras() end
+	end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		self:UpdateHealth()
 		self:UpdatePower()
 		self:UpdateSignature()
+		self:UpdateReminders()
 	end)
 	Stoa:On("SPELLS_CHANGED", function() self:UpdateSignature() end)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", function() self:UpdateCooldown() end)
