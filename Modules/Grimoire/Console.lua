@@ -106,7 +106,7 @@ end
 
 -- Where the pages start: clear of the leather's gold border when it's on.
 function Console:PageInset()
-	if self.db.art then return 52, -14, 18 end
+	if self.db.art then return 52, -24, 17 end
 	return Stoa.space.xxl, -Stoa.space.xl, 20
 end
 
