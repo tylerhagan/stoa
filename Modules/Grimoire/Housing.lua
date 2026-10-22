@@ -239,6 +239,70 @@ local function hideBarArt()
 	end
 end
 
+-- Bags and the game menu leave the action bar row for the console's
+-- bottom-right corner: bags, a gap, then the menu, a size down and quiet
+-- until the mouse is over them. Bag slots take the action buttons' rounded
+-- sockets.
+local MENU_SCALE = 0.8
+local MENU_BOTTOM = 12
+local MENU_GAP = 14
+local MENU_REST_ALPHA = 0.55
+local BAG_SLOTS = {
+	"MainMenuBarBackpackButton", "CharacterBag0Slot", "CharacterBag1Slot",
+	"CharacterBag2Slot", "CharacterBag3Slot", "CharacterReagentBag0Slot",
+}
+
+local function menuFrames()
+	return MicroMenuContainer or MicroMenu, BagsBar
+end
+
+local function placeMenu()
+	local menu, bags = menuFrames()
+	local inset = Console:PageInset()
+	if menu then
+		menu:ClearAllPoints()
+		menu:SetScale(MENU_SCALE)
+		menu:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -inset / MENU_SCALE, MENU_BOTTOM / MENU_SCALE)
+	end
+	if bags then
+		bags:ClearAllPoints()
+		bags:SetScale(MENU_SCALE)
+		if menu then
+			bags:SetPoint("BOTTOMRIGHT", menu, "BOTTOMLEFT", -MENU_GAP, 0)
+		else
+			bags:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -inset / MENU_SCALE, MENU_BOTTOM / MENU_SCALE)
+		end
+	end
+	local bars = Stoa.modules.ActionBars
+	if bars and bars.db and bars.db.enabled then
+		for _, name in ipairs(BAG_SLOTS) do
+			local slot = _G[name]
+			if slot then
+				xpcall(bars.Skin, geterrorhandler(), bars, slot)
+				if slot.IconBorder then slot.IconBorder:SetAlpha(0) end
+			end
+		end
+	end
+end
+
+-- Rests dim, brightens while the mouse is over either row.
+local function watchMenu()
+	local menu, bags = menuFrames()
+	if not (menu or bags) or not MouseIsOver then return end
+	local lit
+	local function update()
+		local over = (menu and menu:IsVisible() and MouseIsOver(menu))
+			or (bags and bags:IsVisible() and MouseIsOver(bags))
+		if over == lit then return end
+		lit = over
+		local alpha = over and 1 or MENU_REST_ALPHA
+		if menu then menu:SetAlpha(alpha) end
+		if bags then bags:SetAlpha(alpha) end
+	end
+	update()
+	C_Timer.NewTicker(0.15, update)
+end
+
 -- Runs fn now, or after combat if it can't run yet. Each step is guarded so a
 -- renamed Blizzard frame costs one feature, not the console.
 local function safely(fn)
@@ -256,6 +320,7 @@ function Console:House()
 			safely(styleTabs)
 		end
 		if db.hideBarArt then safely(hideBarArt) end
+		if db.houseMenu then safely(placeMenu) end
 	end
 
 	if db.houseChat then
@@ -265,6 +330,7 @@ function Console:House()
 	end
 
 	apply()
+	if db.houseMenu then watchMenu() end
 	Stoa:On("PLAYER_ENTERING_WORLD", apply)
 	Stoa:On("UI_SCALE_CHANGED", apply)
 	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", apply)

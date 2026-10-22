@@ -14,6 +14,7 @@ local Console = Stoa:NewModule("Grimoire", {
 	height = 150,
 	houseChat = true,
 	hideBarArt = true,
+	houseMenu = true,
 	art = true,
 })
 
