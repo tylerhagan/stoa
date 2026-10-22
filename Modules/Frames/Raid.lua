@@ -11,7 +11,7 @@ local Raid = Stoa:NewModule("Raid", {
 	hideBlizzardRaid = true,
 })
 
-local CELL_WIDTH, CELL_HEIGHT, GAP = 88, 36, 4
+local CELL_WIDTH, CELL_HEIGHT, GAP = 100, 44, 4
 
 local LAYOUTS = {
 	HEALER = { "TOPLEFT", UIParent, "CENTER", 170, 110 },
@@ -34,19 +34,20 @@ function UI.raidCell(cell)
 	cell.stripe = stripe
 
 	local name = UI.text(cell, "serif", Stoa.typeSize.body, "text", "CENTER")
-	name:SetPoint("TOPLEFT", 4, -8)
-	name:SetPoint("TOPRIGHT", -4, -8)
+	name:SetPoint("TOPLEFT", 4, -7)
+	name:SetPoint("TOPRIGHT", -4, -7)
 	name:SetWordWrap(false)
 	cell.name = name
 
 	local status = UI.caption(cell, "")
-	status:SetPoint("TOP", name, "BOTTOM", 0, -1)
+	status:SetPoint("TOP", name, "BOTTOM", 0, -2)
 	cell.status = status
 
 	local hp = UI.bar(cell, 10, 3, "health")
-	hp:SetPoint("BOTTOMLEFT", 4, 4)
-	hp:SetPoint("BOTTOMRIGHT", -4, 4)
+	hp:SetPoint("BOTTOMLEFT", 5, 7)
+	hp:SetPoint("BOTTOMRIGHT", -5, 7)
 	cell.hp = hp
+	UI.unitDetails(cell)
 	UI.applyTheme()
 end
 
@@ -124,7 +125,7 @@ function Raid:OnEnable()
 	end
 
 	local party = Stoa.modules.Party
-	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_CONNECTION" }) do
+	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_CONNECTION", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED" }) do
 		Stoa:On(event, function(unit)
 			if not unit or not IsInRaid() then return end
 			eachCellFor(unit, function(cell) party:UpdateCard(cell) end)

@@ -70,9 +70,15 @@ function Party:BuildCard(index, unit)
 	card.status = status
 
 	local hp = UI.bar(card, 10, 4, "health")
-	hp:SetPoint("BOTTOMLEFT", 10, 7)
-	hp:SetPoint("BOTTOMRIGHT", -8, 7)
+	hp:SetPoint("BOTTOMLEFT", 10, 8)
+	hp:SetPoint("BOTTOMRIGHT", -8, 8)
 	card.hp = hp
+
+	-- Large (healer) cards also show how much health is missing.
+	local healthText = UI.text(card, "sans", Stoa.typeSize.body, "muted", "RIGHT")
+	healthText:SetPoint("BOTTOMRIGHT", hp, "TOPRIGHT", 0, 3)
+	card.healthText = healthText
+	UI.unitDetails(card)
 
 	card:SetScript("OnEnter", function(button)
 		GameTooltip_SetDefaultAnchor(GameTooltip, button)
@@ -121,6 +127,7 @@ function Party:Layout()
 		card:ClearAllPoints()
 		card:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -(i - 1) * (layout.height + layout.gap))
 		Stoa:SetFont(card.name, "serif", big and Stoa.typeSize.title - 4 or Stoa.typeSize.label)
+		card.healthText:SetShown(big)
 		card.hp:SetHeight(big and 5 or 4)
 	end
 end
@@ -142,16 +149,71 @@ function Party:UpdateCard(card)
 	UI.setUnitBar(card.hp, unit, "health")
 
 	local status = ""
+	local gone = false
 	if not flag(UnitIsConnected(unit)) then
-		status = "OFFLINE"
+		status, gone = "OFFLINE", true
 	elseif flag(UnitIsDeadOrGhost(unit)) then
-		status = "DEAD"
+		status, gone = "DEAD", true
 	else
 		local role = UnitGroupRolesAssigned(unit)
 		if not Stoa:IsSecret(role) then status = ROLE_GLYPHS[role] or "" end
 	end
+
+	local dispel = not gone and self:DispelFor(unit)
+	if dispel then status = dispel.word end
 	card.status:SetText(status)
+	if dispel then
+		card.dispel:Set(Stoa:Color(dispel.token))
+	else
+		card.dispel:Clear()
+	end
+
+	self:UpdateHealthText(card, gone)
+	self:UpdateAbsorb(card)
 	self:UpdateRange(card)
+end
+
+-- Missing health, the number a healer reads. Out of combat it can be worked
+-- out; when values are secret the plain health is shown instead.
+function Party:UpdateHealthText(card, gone)
+	local text = card.healthText
+	if not text or gone then
+		if text then text:SetText("") end
+		return
+	end
+	local health, max = UnitHealth(card.unit), UnitHealthMax(card.unit)
+	if Stoa:IsSecret(health) or Stoa:IsSecret(max) then
+		text:SetText(health)
+	elseif max > health then
+		text:SetText("-" .. (AbbreviateNumbers and AbbreviateNumbers(max - health) or (max - health)))
+	else
+		text:SetText("")
+	end
+end
+
+-- Shields as a thin line under the health bar, out of the same maximum.
+function Party:UpdateAbsorb(card)
+	if not card.absorb or not UnitGetTotalAbsorbs then return end
+	card.absorb:SetMinMaxValues(0, UnitHealthMax(card.unit))
+	card.absorb:SetValue(UnitGetTotalAbsorbs(card.unit) or 0)
+end
+
+local DISPEL_CUES = {
+	Magic = { word = "MAGIC", token = "magic" },
+	Disease = { word = "DISEASE", token = "disease" },
+	Curse = { word = "CURSE", token = "accent" },
+	Poison = { word = "POISON", token = "danger" },
+}
+
+-- The first debuff you can remove, if any. The RAID filter asks the game
+-- for debuffs this character can dispel.
+function Party:DispelFor(unit)
+	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return nil end
+	local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, 1, "HARMFUL|RAID")
+	if not ok or not aura then return nil end
+	local kind = aura.dispelName
+	if Stoa:IsSecret(kind) then kind = nil end
+	return DISPEL_CUES[kind] or { word = "DISPEL", token = "accent" }
 end
 
 -- Range can be secret; newer clients let a secret boolean set alpha directly.
@@ -210,7 +272,7 @@ function Party:OnEnable()
 		local card = cardFor(self, unit)
 		if card then self:UpdateCard(card) end
 	end)
-	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS" }) do
+	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED" }) do
 		Stoa:On(event, function(unit)
 			local card = cardFor(self, unit)
 			if card then self:UpdateCard(card) end

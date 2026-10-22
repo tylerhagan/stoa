@@ -125,3 +125,49 @@ end
 -- A hidden parent for Blizzard frames Stoa replaces.
 UI.hidden = CreateFrame("Frame")
 UI.hidden:Hide()
+
+-- A 2 px border drawn with four textures, for cues like a dispellable debuff.
+-- Hidden until set.
+function UI.border(frame, size)
+	size = size or 2
+	local edges = {}
+	for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+		local tex = frame:CreateTexture(nil, "OVERLAY")
+		tex:SetColorTexture(1, 1, 1)
+		if side == "TOP" or side == "BOTTOM" then
+			tex:SetPoint(side .. "LEFT")
+			tex:SetPoint(side .. "RIGHT")
+			tex:SetHeight(size)
+		else
+			tex:SetPoint("TOP" .. side)
+			tex:SetPoint("BOTTOM" .. side)
+			tex:SetWidth(size)
+		end
+		tex:Hide()
+		edges[#edges + 1] = tex
+	end
+	return {
+		Set = function(_, r, g, b)
+			for _, tex in ipairs(edges) do
+				tex:SetVertexColor(r, g, b)
+				tex:Show()
+			end
+		end,
+		Clear = function()
+			for _, tex in ipairs(edges) do tex:Hide() end
+		end,
+	}
+end
+
+-- The healer details every unit card shares: a shield line under the health
+-- bar and a dispel border. Cards made with this get them filled in by
+-- Party:UpdateCard.
+function UI.unitDetails(card)
+	local absorb = UI.bar(card, 10, 2, "shield")
+	absorb.track:Hide()
+	absorb:SetPoint("TOPLEFT", card.hp, "BOTTOMLEFT", 0, -1)
+	absorb:SetPoint("TOPRIGHT", card.hp, "BOTTOMRIGHT", 0, -1)
+	absorb:SetValue(0)
+	card.absorb = absorb
+	card.dispel = UI.border(card)
+end

@@ -7,13 +7,14 @@ local Stoa = ns.Stoa
 
 local SAMPLE = {
 	{ name = "Thalindra", class = "PRIEST", role = "H", health = 0.92 },
-	{ name = "Brunhok", class = "WARRIOR", role = "T", health = 0.64 },
-	{ name = "Velaris", class = "MAGE", role = "D", health = 0.38, far = true },
+	{ name = "Brunhok", class = "WARRIOR", role = "T", health = 0.64, absorb = 0.25, missing = "-1.2K" },
+	{ name = "Velaris", class = "MAGE", role = "D", health = 0.38, far = true, missing = "-940" },
+	{ name = "Seren", class = "HUNTER", role = "D", health = 0.71, dispel = "MAGIC", missing = "-410" },
 	{ name = "Kaelith", class = "ROGUE", status = "DEAD", health = 0 },
 	{ name = "Orsun", class = "PALADIN", status = "OFFLINE", health = 1 },
 }
 
-local CELL_WIDTH, CELL_HEIGHT, GAP, GROUPS = 88, 36, 4, 4
+local CELL_WIDTH, CELL_HEIGHT, GAP, GROUPS = 100, 44, 4, 4
 
 local active = false
 local raidPreview
@@ -24,8 +25,16 @@ local function fill(card, sample)
 	if color then card.stripe:SetVertexColor(color.r, color.g, color.b) end
 	card.hp:SetMinMaxValues(0, 1)
 	card.hp:SetValue(sample.health)
-	card.status:SetText(sample.status or sample.role or "")
+	card.status:SetText(sample.dispel or sample.status or sample.role or "")
 	card:SetAlpha(sample.far and 0.45 or (sample.status and 0.7 or 1))
+	if card.healthText then card.healthText:SetText(sample.missing or "") end
+	if card.absorb then
+		card.absorb:SetMinMaxValues(0, 1)
+		card.absorb:SetValue(sample.absorb or 0)
+	end
+	if card.dispel then
+		if sample.dispel then card.dispel:Set(Stoa:Color("magic")) else card.dispel:Clear() end
+	end
 end
 
 local function showParty()
