@@ -9,6 +9,14 @@ local Merchant = Stoa:NewModule("Merchant", {
 	useGuildFunds = true,
 })
 
+-- Money as gold, silver and copper. The coin helper moved between clients,
+-- so each home is tried before a plain text fallback.
+local function money(copper)
+	local format = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetCoinTextureString
+	if format then return format(copper) end
+	return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
+end
+
 local function junkValue()
 	local total = 0
 	for bag = 0, NUM_BAG_SLOTS or 4 do
@@ -38,21 +46,21 @@ local function sellJunk()
 			end
 		end
 	end
-	Stoa:Note("merchant", ("Sold junk for %s."):format(GetCoinTextureString(value)))
+	Stoa:Note("merchant", ("Sold junk for %s."):format(money(value)))
 end
 
 local function repair(db)
-	if not CanMerchantRepair() then return end
+	if not (CanMerchantRepair and CanMerchantRepair()) then return end
 	local cost, needed = GetRepairAllCost()
 	if not needed or cost == 0 then return end
 	if db.useGuildFunds and IsInGuild() and CanGuildBankRepair and CanGuildBankRepair() then
 		RepairAllItems(true)
-		Stoa:Note("merchant", ("Repaired for %s from the guild bank."):format(GetCoinTextureString(cost)))
+		Stoa:Note("merchant", ("Repaired for %s from the guild bank."):format(money(cost)))
 	elseif GetMoney() >= cost then
 		RepairAllItems()
-		Stoa:Note("merchant", ("Repaired for %s."):format(GetCoinTextureString(cost)))
+		Stoa:Note("merchant", ("Repaired for %s."):format(money(cost)))
 	else
-		Stoa:Note("merchant", ("Repairs cost %s, more than you carry."):format(GetCoinTextureString(cost)))
+		Stoa:Note("merchant", ("Repairs cost %s, more than you carry."):format(money(cost)))
 	end
 end
 
