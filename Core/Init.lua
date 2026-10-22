@@ -64,7 +64,7 @@ local function initializeModules()
 	for _, name in ipairs(moduleOrder) do
 		local module = Stoa.modules[name]
 		if module.OnInitialize then
-			module:OnInitialize()
+			xpcall(module.OnInitialize, geterrorhandler(), module)
 		end
 	end
 end
@@ -72,9 +72,9 @@ end
 local function enableModules()
 	for _, name in ipairs(moduleOrder) do
 		local module = Stoa.modules[name]
+		-- One module failing must not stop the others from loading.
 		if module.OnEnable and Stoa:IsModuleEnabled(name) then
-			module:OnEnable()
-			module.enabled = true
+			module.enabled = xpcall(module.OnEnable, geterrorhandler(), module)
 		end
 	end
 end
@@ -91,6 +91,9 @@ Stoa:On("PLAYER_LOGIN", function()
 end)
 
 -- Slash command and addon compartment ---------------------------------------
+
+-- Modules add their own /stoa words here: Stoa.commands.word = function(rest).
+Stoa.commands = {}
 
 function Stoa:Print(...)
 	print("|cffd8b66aStoa|r", ...)
@@ -110,6 +113,8 @@ SlashCmdList.STOA = function(input)
 		Stoa:CycleTheme()
 	elseif command == "state" then
 		Stoa:Print("State:", Stoa:GetState(), "· Role:", Stoa:GetRole())
+	elseif Stoa.commands[command] then
+		Stoa.commands[command](rest)
 	else
 		Stoa:OpenSettings()
 	end

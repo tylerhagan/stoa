@@ -9,7 +9,7 @@ Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a sma
 
 ## Status
 
-Foundations only. What works today:
+What works today:
 
 | Area | What it does |
 | --- | --- |
@@ -20,9 +20,17 @@ Foundations only. What works today:
 | Movers | `/stoa unlock` to drag Stoa frames; positions saved per character |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` get invited |
+| Grimoire console | Out of combat: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page and strips the action bar art. Folds to a spine in combat |
+| Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
+| Target | Beside the Halo in and out of combat: name, health, a HOSTILE cue and threat in words |
+| Party cards | Large beside the Halo when you heal, compact on the left otherwise |
+| Raid frames | A grid of compact cards, one column per group, for 10, 20 and 40 |
+| Click-casting | Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. `/stoa clicks` to edit |
+| Minimap | Theme-coloured rings, serif zone name, wheel to zoom |
+| Merchants | Sells grey junk and repairs, from guild funds when allowed |
 | Settings | Options > AddOns > Stoa |
 
-The Halo, the Grimoire console and the click-cast frames come next.
+Fonts are the main gap: see below.
 
 ## Commands
 
@@ -33,6 +41,7 @@ The Halo, the Grimoire console and the click-cast frames come next.
 | `/stoa theme` | Cycle Bone, Tide, Graphite |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa state` | Print the current state and role |
+| `/stoa clicks` | Edit click-cast bindings for your current role |
 
 ## Install
 
@@ -47,4 +56,4 @@ Forever runs the modern client, so Stoa follows Midnight-era rules: unit values 
 
 ## Fonts
 
-The design uses Cormorant Garamond and Inter (both SIL Open Font License). Drop the `.ttf` files named in `Core/Tokens.lua` into `Media/Fonts`. Until then Stoa falls back to the game's fonts.
+The design uses Tenor Sans for names and numbers and Inter SemiBold (18pt cut) for labels, both SIL Open Font License. Drop `TenorSans-Regular.ttf` and `Inter-SemiBold.ttf` into `Media/Fonts`; Cormorant Garamond still works as a fallback. Until then Stoa falls back to the game's fonts.

@@ -27,11 +27,11 @@ function Stoa:IsTrusted(guid, name)
 	return false
 end
 
--- A short note for the margin of the Grimoire console. Until the console
--- exists, notes go to chat.
+-- A short note for the margin of the Grimoire console. When the console is
+-- off, or chat has taken its left page, notes go to chat.
 function Stoa:Note(kind, text)
 	self:Fire("STOA_NOTE", kind, text)
-	if not self.hasConsole then
+	if not self.notesInConsole then
 		self:Print(text)
 	end
 end
