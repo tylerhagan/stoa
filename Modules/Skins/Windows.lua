@@ -19,6 +19,20 @@ local function strip(frame)
 	end
 end
 
+-- Strips the plain frames inside a window too, down a few levels, leaving
+-- buttons, bars and edit boxes (and their icons) alone.
+local KEEP = { Button = true, CheckButton = true, StatusBar = true, EditBox = true, Cooldown = true }
+local function stripInside(frame, depth)
+	if not (frame and frame.GetChildren) or depth <= 0 then return end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		local kind = child.GetObjectType and child:GetObjectType()
+		if not KEEP[kind] then
+			strip(child)
+			stripInside(child, depth - 1)
+		end
+	end
+end
+
 local function hide(frame)
 	if frame and frame.SetAlpha then frame:SetAlpha(0) end
 end
@@ -173,8 +187,7 @@ local function dressTrainer()
 	local frame = ClassTrainerFrame
 	if not frame then return end
 	Windows:Dress(frame)
-	strip(frame.BottomInset)
-	if frame.BottomInset then hide(frame.BottomInset.NineSlice) end
+	stripInside(frame, 4)
 end
 
 local function dressBags()

@@ -1,8 +1,8 @@
--- Stoa: round, quiet action buttons.
+-- Stoa: quiet, rounded action buttons.
 -- Blizzard's own buttons keep doing the work; Stoa only redraws them. The
--- square slot art goes, icons are masked round inside a hairline ring, an
--- empty slot is a dim socket, and cooldowns sweep in a circle. Key labels
--- and counts use Stoa's type.
+-- square slot art goes, icons get the party cards' rounded corners inside a
+-- hairline edge, and an empty slot is a dim socket. Key labels and counts
+-- use Stoa's type.
 --
 -- Only textures and fonts change, which is allowed on secure buttons; it
 -- all happens out of combat at load.
@@ -28,15 +28,17 @@ local function hideSquareArt(button)
 	if normal then normal:SetAlpha(0) end
 end
 
-local function roundMask(button)
-	local mask = button.IconMask
-	if not mask then
-		mask = button:CreateMaskTexture()
-		mask:SetAllPoints()
-		local icon = button.icon or button.Icon
-		if icon then icon:AddMaskTexture(mask) end
+local MASK = UI.MEDIA .. "Textures\\ButtonMask"
+
+-- Swaps Blizzard's icon mask for Stoa's rounded square.
+local function roundMask(button, icon)
+	local mask = button:CreateMaskTexture()
+	mask:SetAllPoints()
+	mask:SetTexture(MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	if icon then
+		if button.IconMask then pcall(icon.RemoveMaskTexture, icon, button.IconMask) end
+		icon:AddMaskTexture(mask)
 	end
-	mask:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 	return mask
 end
 
@@ -47,29 +49,20 @@ function Bars:Skin(button)
 
 	local icon = button.icon or button.Icon
 	if icon then icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
-	local mask = roundMask(button)
+	local mask = roundMask(button, icon)
 
-	-- Highlight, pressed and checked states follow the round shape.
+	-- Highlight, pressed and checked states follow the rounded shape.
 	for _, getter in ipairs({ "GetHighlightTexture", "GetPushedTexture", "GetCheckedTexture" }) do
 		local tex = button[getter] and button[getter](button)
 		if tex then pcall(tex.AddMaskTexture, tex, mask) end
 	end
 
-	-- The socket: a hairline ring with a dark disc, seen through an empty slot.
-	local ring = UI.circle(button, "BACKGROUND", -8, 10, "hairline")
-	ring:ClearAllPoints()
-	ring:SetPoint("TOPLEFT", -1, 1)
-	ring:SetPoint("BOTTOMRIGHT", 1, -1)
-	local socket = UI.circle(button, "BACKGROUND", -7, 10, "panel")
-	socket:ClearAllPoints()
-	socket:SetPoint("TOPLEFT", 0, 0)
-	socket:SetPoint("BOTTOMRIGHT", 0, 0)
+	-- The socket: a dark rounded square with a hairline edge, seen through
+	-- an empty slot and framing a full one.
+	UI.roundPanel(button, 0.9)
 
 	local cooldown = button.cooldown or button.Cooldown
-	if cooldown then
-		if cooldown.SetSwipeTexture then cooldown:SetSwipeTexture(UI.CIRCLE_MASK) end
-		if cooldown.SetUseCircularEdge then cooldown:SetUseCircularEdge(true) end
-	end
+	if cooldown and cooldown.SetSwipeTexture then cooldown:SetSwipeTexture(MASK) end
 
 	local hotkey = button.HotKey
 	if hotkey then
