@@ -22,15 +22,15 @@ local ARCH_SIZE = 220
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 92
 
--- The leather panel art. Each piece is 256 texels tall with the panel
--- running from texel 129 to the bottom; it bleeds off the screen's sides and
--- bottom. The console's open height is the panel's, and the art scales with it.
+-- The leather panel art: a repeating leather tile for the panel, a gold
+-- top edge along it, and the medallion around the seal. The panel's open
+-- height sets the scale; texel sizes below are in the art's own pixels.
 local ART_HEIGHT = 136
-local ART_TEXELS, ART_TOP = 256, 129
-local ART_SCALE = ART_HEIGHT / (ART_TEXELS - ART_TOP)
--- The medallion around the seal: a full ring on the top line, scaled so
--- its leather disc just holds the seal. Its ring centre sits 132 texels
--- down, on the line.
+local ART_SCALE = ART_HEIGHT / 127
+local LEATHER_W, LEATHER_H = 1024, 256
+-- The edge strip is 64 texels tall with the top of the panel at texel 37;
+-- the leather starts under its gold lines, 20 texels down.
+local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 20
 local MEDALLION_SCALE = 0.556
 local MEDALLION_WIDTH, MEDALLION_LINE = 512, 132
 -- How far either side of centre the medallion's flares reach.
@@ -121,32 +121,45 @@ function Console:OpenHeight()
 	return self.db.art and ART_HEIGHT or self.db.height
 end
 
--- Lays the leather along the console: a plain stretch from edge to edge
--- with the medallion over its centre. Each piece is a leather
--- base with a line layer on top tinted in the theme's accent.
+-- Lays the leather along the console: the tile repeating edge to edge
+-- (not stretched, so the grain keeps its size), the gold edge on top and
+-- the medallion over the centre. Gold layers take the theme accent.
 function Console:BuildArt(frame)
 	local parts = {}
-
-	local function piece(file, sublevel, scale)
-		local base = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel)
-		base:SetTexture(UI.MEDIA .. "Textures\\Console" .. file)
-		local lines = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel + 1)
-		lines:SetTexture(UI.MEDIA .. "Textures\\Console" .. file .. "Lines")
+	local function layer(file, sublevel)
+		local tex = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel)
+		tex:SetTexture(UI.MEDIA .. "Textures\\Console" .. file)
+		parts[#parts + 1] = tex
+		return tex
+	end
+	local function gold(base, file, sublevel)
+		local lines = layer(file, sublevel)
 		lines:SetAllPoints(base)
 		UI.tint(lines, "accent")
-		base:SetHeight(ART_TEXELS * (scale or ART_SCALE))
-		parts[#parts + 1] = base
-		parts[#parts + 1] = lines
-		return base
 	end
 
-	local fill = piece("Fill", -5)
-	fill:SetPoint("BOTTOMLEFT")
-	fill:SetPoint("BOTTOMRIGHT")
+	local leather = layer("Leather", -6)
+	leather:SetTexture(UI.MEDIA .. "Textures\\ConsoleLeather", "REPEAT", "REPEAT")
+	leather:SetPoint("TOPLEFT", 0, -LEATHER_TOP * ART_SCALE)
+	leather:SetPoint("BOTTOMRIGHT")
+	local function tileLeather()
+		local width, height = leather:GetWidth(), leather:GetHeight()
+		if not width or width <= 0 then return end
+		leather:SetTexCoord(0, width / ART_SCALE / LEATHER_W, 0, math.min(height / ART_SCALE / LEATHER_H, 1))
+	end
+	tileLeather()
+	frame:HookScript("OnSizeChanged", tileLeather)
 
-	local medallion = piece("Centre", -3, MEDALLION_SCALE)
-	medallion:SetWidth(MEDALLION_WIDTH * MEDALLION_SCALE)
+	local edge = layer("Edge", -5)
+	edge:SetHeight(EDGE_H * ART_SCALE)
+	edge:SetPoint("TOPLEFT", 0, EDGE_TOP * ART_SCALE)
+	edge:SetPoint("TOPRIGHT", 0, EDGE_TOP * ART_SCALE)
+	gold(edge, "EdgeLines", -4)
+
+	local medallion = layer("Medallion", -3)
+	medallion:SetSize(MEDALLION_WIDTH * MEDALLION_SCALE, 256 * MEDALLION_SCALE)
 	medallion:SetPoint("TOP", frame, "TOP", 0, MEDALLION_LINE * MEDALLION_SCALE)
+	gold(medallion, "MedallionLines", -2)
 	return parts
 end
 
