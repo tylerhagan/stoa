@@ -114,6 +114,7 @@ function ClickCast:Apply()
 		for frame in pairs(frames) do
 			applyTo(frame, bindings)
 		end
+		Stoa:Fire("STOA_CLICKS_CHANGED")
 	end)
 end
 
@@ -145,7 +146,7 @@ end
 
 function ClickCast:BuildPage()
 	local page = CreateFrame("Frame", "StoaClickCastPage", UIParent)
-	page:SetSize(720, 330)
+	page:SetSize(720, 380)
 	page:SetPoint("CENTER")
 	page:SetFrameStrata("DIALOG")
 	page:EnableMouse(true)

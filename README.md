@@ -23,8 +23,8 @@ What works today:
 | Grimoire console | Out of combat: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page and strips the action bar art. Folds to a spine in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
 | Target | Beside the Halo in and out of combat: name, health, a HOSTILE cue and threat in words |
-| Party cards | Large beside the Halo when you heal, compact on the left otherwise |
-| Raid frames | A grid of compact cards, one column per group, for 10, 20 and 40 |
+| Party cards | Name and health percent, a thick health bar with shields on its end, and word pips for your buffs, Weakened Soul, dispels and low health. Rounded cards. A row under the Halo when you heal, with a grid of your click bindings on the left; a column on the left otherwise |
+| Raid frames | The same cards, one row per group under the Halo when you heal, one column per group on the left otherwise, for 10, 20 and 40 |
 | Click-casting | Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. `/stoa clicks` to edit |
 | Minimap | Theme-coloured rings, serif zone name, wheel to zoom |
 | Merchants | Sells grey junk and repairs, from guild funds when allowed |
@@ -38,10 +38,12 @@ Fonts are the main gap: see below.
 | --- | --- |
 | `/stoa` | Open settings |
 | `/stoa unlock` | Toggle frame moving |
+| `/stoa reset` | Put moved frames back in their default spots |
 | `/stoa theme` | Cycle Bone, Tide, Graphite |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa state` | Print the current state and role |
 | `/stoa clicks` | Edit click-cast bindings for your current role |
+| `/stoa test` | Show sample party cards without a group; `/stoa test raid` for a raid grid |
 
 ## Install
 
