@@ -171,7 +171,7 @@ local function trayWanted(self)
 		if _G[name] and _G[name]:IsShown() then return true end
 	end
 	for _, bar in ipairs(self.trayArea or {}) do
-		if bar:IsVisible() and MouseIsOver(bar) then return true end
+		if bar:IsVisible() and bar:IsMouseOver() then return true end
 	end
 	return false
 end

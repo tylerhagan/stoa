@@ -268,11 +268,11 @@ end
 -- Rests dim, brightens while the mouse is over either row.
 local function watchMenu()
 	local menu, bags = menuFrames()
-	if not (menu or bags) or not MouseIsOver then return end
+	if not (menu or bags) then return end
 	local lit
 	local function update()
-		local over = (menu and menu:IsVisible() and MouseIsOver(menu))
-			or (bags and bags:IsVisible() and MouseIsOver(bags))
+		local over = (menu and menu:IsVisible() and menu:IsMouseOver())
+			or (bags and bags:IsVisible() and bags:IsMouseOver())
 		if over == lit then return end
 		lit = over
 		local alpha = over and 1 or MENU_REST_ALPHA
