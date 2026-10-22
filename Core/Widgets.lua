@@ -71,6 +71,17 @@ function UI.text(parent, kind, size, token, justify)
 end
 
 -- Small caps label, the section heading used everywhere.
+-- Words that float over the game world rather than sit on a panel: a fine
+-- outline plus a dark shadow, so they hold up over snow and bright sky.
+function UI.legible(fs)
+	if not (fs and fs.GetFont) then return fs end
+	local path, size = fs:GetFont()
+	if path and size then pcall(fs.SetFont, fs, path, size, "OUTLINE") end
+	fs:SetShadowColor(0, 0, 0, 0.9)
+	fs:SetShadowOffset(1, -1)
+	return fs
+end
+
 function UI.caption(parent, label)
 	local fs = UI.text(parent, "sans", Stoa.typeSize.caption, "muted")
 	fs:SetText(label:upper())

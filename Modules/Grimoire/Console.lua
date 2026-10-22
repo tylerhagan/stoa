@@ -258,6 +258,10 @@ function Console:BuildSeal(frame)
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
+	-- With the art these sit above the line, over the world.
+	if art then
+		for _, fs in ipairs({ healthText, healthCap, manaText, manaCap, self.roleText }) do UI.legible(fs) end
+	end
 end
 
 function Console:BuildNotes(frame, space)
