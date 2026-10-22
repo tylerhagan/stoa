@@ -1,8 +1,9 @@
 -- Stoa: raid frames for 10, 20 and the odd 40.
--- A grid of compact cards, one column per group, built on Blizzard's secure
--- group header so it fills and sorts itself, even in combat. Cards share
--- the party cards' look and the click-cast bindings. Healers get the grid
--- beside the Halo; everyone else on the left.
+-- One row of cards per group, after the Disc raid mockup, built on
+-- Blizzard's secure group header so it fills and sorts itself, even in
+-- combat. Cards are the party cards in a smaller cut, with the same
+-- click-cast bindings. Healers get the grid under the Halo; everyone else
+-- on the left.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -11,44 +12,22 @@ local Raid = Stoa:NewModule("Raid", {
 	hideBlizzardRaid = true,
 })
 
-local CELL_WIDTH, CELL_HEIGHT, GAP = 100, 44, 4
+-- The size also lives in Raid.xml, which the header builds cells from.
+local CELL_WIDTH, CELL_HEIGHT, GAP = 168, 58, 6
+Stoa.RAID_CELL = { width = CELL_WIDTH, height = CELL_HEIGHT, gap = GAP }
+
+local GRID_WIDTH = 5 * CELL_WIDTH + 4 * GAP
 
 local LAYOUTS = {
-	HEALER = { "TOPLEFT", UIParent, "CENTER", 170, 110 },
-	OTHER = { "TOPLEFT", UIParent, "LEFT", 36, 200 },
+	HEALER = { "TOP", "StoaHalo", "BOTTOM", 0, -52 },
+	OTHER = { "TOPLEFT", UIParent, "LEFT", 36, 260 },
 }
 
 local cells = {}
 
 -- Draws a raid cell. Shared with the /stoa test preview.
 function UI.raidCell(cell)
-	local bg = cell:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	UI.paint(bg, "panel", 0.85)
-
-	local stripe = cell:CreateTexture(nil, "ARTWORK")
-	stripe:SetPoint("TOPLEFT")
-	stripe:SetPoint("TOPRIGHT")
-	stripe:SetHeight(2)
-	stripe:SetColorTexture(1, 1, 1)
-	cell.stripe = stripe
-
-	local name = UI.text(cell, "serif", Stoa.typeSize.body, "text", "CENTER")
-	name:SetPoint("TOPLEFT", 4, -7)
-	name:SetPoint("TOPRIGHT", -4, -7)
-	name:SetWordWrap(false)
-	cell.name = name
-
-	local status = UI.caption(cell, "")
-	status:SetPoint("TOP", name, "BOTTOM", 0, -2)
-	cell.status = status
-
-	local hp = UI.bar(cell, 10, 3, "health")
-	hp:SetPoint("BOTTOMLEFT", 5, 7)
-	hp:SetPoint("BOTTOMRIGHT", -5, 7)
-	cell.hp = hp
-	UI.unitDetails(cell)
-	UI.applyTheme()
+	UI.unitCard(cell, "raid")
 end
 
 -- Called from the XML template for every cell the header makes. The header
@@ -74,7 +53,7 @@ end
 
 function Raid:Build()
 	local holder = CreateFrame("Frame", "StoaRaid", UIParent)
-	holder:SetSize(CELL_WIDTH, CELL_HEIGHT)
+	holder:SetSize(GRID_WIDTH, CELL_HEIGHT)
 	holder:SetFrameStrata("LOW")
 	self.holder = holder
 
@@ -87,9 +66,6 @@ function Raid:Build()
 	header:SetAttribute("showPlayer", true)
 	header:SetAttribute("groupBy", "GROUP")
 	header:SetAttribute("groupingOrder", "1,2,3,4,5,6,7,8")
-	header:SetAttribute("point", "TOP")
-	header:SetAttribute("yOffset", -GAP)
-	header:SetAttribute("columnAnchorPoint", "LEFT")
 	header:SetAttribute("columnSpacing", GAP)
 	header:SetAttribute("unitsPerColumn", 5)
 	header:SetAttribute("maxColumns", 8)
@@ -100,11 +76,33 @@ function Raid:Build()
 	Stoa:RegisterMover("raid", holder, "Raid")
 end
 
+-- Healers read a group as a row under the Halo; everyone else gets a
+-- column per group on the left, a size smaller. Out of combat only.
 function Raid:Place()
-	if Stoa.char.positions.raid then return end
 	local role = Stoa:GetRole()
+	local header = self.header
+	if role == "HEALER" then
+		header:SetAttribute("point", "LEFT")
+		header:SetAttribute("xOffset", GAP)
+		header:SetAttribute("yOffset", 0)
+		header:SetAttribute("columnAnchorPoint", "TOP")
+		self.holder:SetScale(1)
+	else
+		header:SetAttribute("point", "TOP")
+		header:SetAttribute("xOffset", 0)
+		header:SetAttribute("yOffset", -GAP)
+		header:SetAttribute("columnAnchorPoint", "LEFT")
+		self.holder:SetScale(0.8)
+	end
+	if Stoa.char.positions.raid then return end
+	local point, relative, relativePoint, x, y = unpack(LAYOUTS[role] or LAYOUTS.OTHER)
+	if type(relative) == "string" then relative = _G[relative] end
 	self.holder:ClearAllPoints()
-	self.holder:SetPoint(unpack(LAYOUTS[role] or LAYOUTS.OTHER))
+	if relative then
+		self.holder:SetPoint(point, relative, relativePoint, x, y)
+	else
+		self.holder:SetPoint("TOP", UIParent, "CENTER", 0, -260)
+	end
 end
 
 local function eachCellFor(unit, fn)
@@ -135,6 +133,17 @@ function Raid:OnEnable()
 		for cell in pairs(cells) do
 			if cell.unit then party:UpdateCard(cell) end
 		end
+	end)
+	local function updateAll()
+		for cell in pairs(cells) do
+			if cell.unit and cell:IsVisible() then party:UpdateCard(cell) end
+		end
+	end
+	Stoa:On("PLAYER_TARGET_CHANGED", updateAll)
+	Stoa:On("STOA_THEME_CHANGED", updateAll)
+	-- Buff timers count down.
+	C_Timer.NewTicker(1, function()
+		if IsInRaid() then updateAll() end
 	end)
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		Stoa:AfterCombat(function() self:Place() end)

@@ -114,6 +114,7 @@ function ClickCast:Apply()
 		for frame in pairs(frames) do
 			applyTo(frame, bindings)
 		end
+		Stoa:Fire("STOA_CLICKS_CHANGED")
 	end)
 end
 

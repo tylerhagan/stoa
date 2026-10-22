@@ -18,15 +18,16 @@ local Party = Stoa:NewModule("Party", {
 local UNITS = { "player", "party1", "party2", "party3", "party4" }
 local WORLD_ALPHA = 0.75
 local OUT_OF_RANGE_ALPHA = 0.45
+local GONE_ALPHA = 0.42
 
--- Card size and spot per role. Positions are UIParent offsets; a position
--- dragged with /stoa unlock wins over these.
+-- Card size and spot per role. Healers get a row of cards just under the
+-- Halo, where their eyes already are, with the click bindings spelled out
+-- beneath. Everyone else gets a column on the left. A position dragged with
+-- /stoa unlock wins over these.
 local LAYOUTS = {
-	HEALER = { width = 200, height = 46, gap = 6, point = { "TOPLEFT", UIParent, "CENTER", 190, 110 } },
-	OTHER = { width = 190, height = 38, gap = 5, point = { "TOPLEFT", UIParent, "LEFT", 36, 160 } },
+	HEALER = { width = 176, height = 70, gap = 8, style = "party", row = true, legend = true },
+	OTHER = { width = 184, height = 58, gap = 6, style = "compact", point = { "TOPLEFT", UIParent, "LEFT", 36, 180 } },
 }
-
-local ROLE_GLYPHS = { TANK = "T", HEALER = "H", DAMAGER = "D" }
 
 local function layoutFor(role)
 	return LAYOUTS[role] or LAYOUTS.OTHER
@@ -40,45 +41,10 @@ function Party:BuildCard(index, unit)
 	card:SetAttribute("type1", "target")
 	card:SetAttribute("type2", "togglemenu")
 	card:RegisterForClicks("AnyUp")
+	card:SetSize(176, 70)
 	card.unit = unit
 	Stoa:RegisterClickFrame(card)
-
-	local bg = card:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	UI.paint(bg, "panel", 0.85)
-	local edge = UI.line(card)
-	edge:SetPoint("TOPLEFT")
-	edge:SetPoint("TOPRIGHT")
-
-	-- A class stripe on the left edge, the card's only strong colour.
-	local stripe = card:CreateTexture(nil, "ARTWORK")
-	stripe:SetPoint("TOPLEFT")
-	stripe:SetPoint("BOTTOMLEFT")
-	stripe:SetWidth(3)
-	stripe:SetColorTexture(1, 1, 1)
-	card.stripe = stripe
-
-	local name = UI.text(card, "serif", Stoa.typeSize.label, "text")
-	name:SetPoint("TOPLEFT", 10, -6)
-	name:SetPoint("RIGHT", -28, 0)
-	name:SetWordWrap(false)
-	card.name = name
-
-	-- Words, not just colour, for anything that matters.
-	local status = UI.caption(card, "")
-	status:SetPoint("TOPRIGHT", -8, -7)
-	card.status = status
-
-	local hp = UI.bar(card, 10, 4, "health")
-	hp:SetPoint("BOTTOMLEFT", 10, 8)
-	hp:SetPoint("BOTTOMRIGHT", -8, 8)
-	card.hp = hp
-
-	-- Large (healer) cards also show how much health is missing.
-	local healthText = UI.text(card, "sans", Stoa.typeSize.body, "muted", "RIGHT")
-	healthText:SetPoint("BOTTOMRIGHT", hp, "TOPRIGHT", 0, 3)
-	card.healthText = healthText
-	UI.unitDetails(card)
+	UI.unitCard(card, "party")
 
 	card:SetScript("OnEnter", function(button)
 		GameTooltip_SetDefaultAnchor(GameTooltip, button)
@@ -97,7 +63,7 @@ end
 
 function Party:Build()
 	local frame = CreateFrame("Frame", "StoaParty", UIParent)
-	frame:SetSize(200, 46)
+	frame:SetSize(176, 70)
 	frame:SetFrameStrata("LOW")
 	-- In a raid the raid grid takes over.
 	RegisterStateDriver(frame, "visibility", "[group:raid] hide; show")
@@ -107,94 +73,238 @@ function Party:Build()
 	for i, unit in ipairs(UNITS) do
 		self.cards[i] = self:BuildCard(i, unit)
 	end
+
+	-- What each click does, under the healer row.
+	local legend = UI.text(frame, "serif", Stoa.typeSize.body, "text", "CENTER")
+	legend:SetPoint("TOP", frame, "BOTTOM", 0, -10)
+	self.legend = legend
+
 	UI.applyTheme()
 	self:Layout()
 	Stoa:RegisterMover("party", frame, "Party")
 end
 
--- Sizes and stacks the cards for the current role. Out of combat only.
+-- How many cards show: you plus your party, or all five in the preview.
+function Party:VisibleCount()
+	if self.cards and self.cards[1].preview then return #UNITS end
+	return math.max(1, math.min(#UNITS, GetNumGroupMembers and GetNumGroupMembers() or 1))
+end
+
+-- Sizes and places the cards for the current role. Out of combat only.
 function Party:Layout()
 	local layout = layoutFor(Stoa:GetRole())
 	local frame = self.frame
+	local count = self:VisibleCount()
+	local halo = _G.StoaHalo
 	if not Stoa.char.positions.party then
 		frame:ClearAllPoints()
-		frame:SetPoint(unpack(layout.point))
+		if layout.row and halo then
+			frame:SetPoint("TOP", halo, "BOTTOM", 0, -52)
+		elseif layout.row then
+			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
+		else
+			frame:SetPoint(unpack(layout.point))
+		end
 	end
-	frame:SetSize(layout.width, layout.height)
-	local big = layout.height >= 40
+	-- A row is as wide as the cards in it, so it stays centred.
+	if layout.row then
+		frame:SetSize(count * layout.width + (count - 1) * layout.gap, layout.height)
+	else
+		frame:SetSize(layout.width, layout.height)
+	end
 	for i, card in ipairs(self.cards) do
 		card:SetSize(layout.width, layout.height)
 		card:ClearAllPoints()
-		card:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -(i - 1) * (layout.height + layout.gap))
-		Stoa:SetFont(card.name, "serif", big and Stoa.typeSize.title - 4 or Stoa.typeSize.label)
-		card.healthText:SetShown(big)
-		card.hp:SetHeight(big and 5 or 4)
+		if layout.row then
+			card:SetPoint("TOPLEFT", frame, "TOPLEFT", (i - 1) * (layout.width + layout.gap), 0)
+		else
+			card:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -(i - 1) * (layout.height + layout.gap))
+		end
+		UI.styleCard(card, layout.style)
 	end
+	self.legend:SetShown(layout.legend and true or false)
+	self:UpdateLegend()
+	self:UpdateAll()
+end
+
+local LEGEND_BUTTONS = { ["1"] = "Left", ["2"] = "Right", ["3"] = "Wheel", ["4"] = "Thumb 1", ["5"] = "Thumb 2" }
+local LEGEND_ORDER = { "1", "2", "3", "4", "5", "shift-1", "shift-2", "shift-3", "shift-4", "shift-5" }
+local LEGEND_MAX = 5
+
+-- Spells only: target and menu need no reminding.
+function Party:UpdateLegend()
+	if not self.legend:IsShown() then return end
+	local clickCast = Stoa.modules.ClickCast
+	local bindings = clickCast and clickCast.Bindings and clickCast:Bindings() or {}
+	local r, g, b = Stoa:Color("muted")
+	local muted = string.format("|cff%02x%02x%02x", r * 255, g * 255, b * 255)
+	local parts = {}
+	for _, key in ipairs(LEGEND_ORDER) do
+		local action = bindings[key]
+		if action and action ~= "target" and action ~= "menu" and #parts < LEGEND_MAX then
+			local shift, button = key:match("^(shift%-)(%d)$")
+			local label = shift and ("Shift-" .. LEGEND_BUTTONS[button]:lower()) or LEGEND_BUTTONS[key]
+			parts[#parts + 1] = muted .. label:upper() .. "|r  " .. action
+		end
+	end
+	self.legend:SetText(table.concat(parts, "     "))
 end
 
 -- Updates -------------------------------------------------------------------
+
+local LOW_HEALTH = 0.35
 
 local function flag(value)
 	if Stoa:IsSecret(value) then return false end
 	return value and true or false
 end
 
+-- Health as a 0 to 1 fraction when it can be worked out, else nil. In
+-- combat health can be secret, and then low health isn't flagged.
+local function healthFraction(unit)
+	local health, max = UnitHealth(unit), UnitHealthMax(unit)
+	if Stoa:IsSecret(health) or Stoa:IsSecret(max) or not max or max <= 0 then return nil end
+	return health / max
+end
+
+-- The percent in the card's corner. Newer clients hand out a percent that
+-- is safe to show even when it's secret; otherwise it's worked out, and
+-- failing both the plain health is shown.
+local function setPercent(fs, unit, fraction)
+	if fraction then
+		fs:SetText(math.floor(fraction * 100 + 0.5))
+		return
+	end
+	if UnitHealthPercent and CurveConstants and CurveConstants.ScaleTo100 then
+		local ok = pcall(function()
+			fs:SetFormattedText("%d", UnitHealthPercent(unit, true, CurveConstants.ScaleTo100))
+		end)
+		if ok then return end
+	end
+	fs:SetText(UnitHealth(unit))
+end
+
 function Party:UpdateCard(card)
 	local unit = card.unit
 	-- Cards showing the /stoa test preview keep their sample data.
-	if card.preview or not UnitExists(unit) then return end
+	if card.preview or not unit or not UnitExists(unit) then return end
 
 	card.name:SetText(UnitName(unit))
-	card.stripe:SetVertexColor(UI.classColor(unit))
+	card.name:SetTextColor(UI.classColor(unit))
 	UI.setUnitBar(card.hp, unit, "health")
 
-	local status = ""
-	local gone = false
+	local gone
 	if not flag(UnitIsConnected(unit)) then
-		status, gone = "OFFLINE", true
+		gone = "OFFLINE"
 	elseif flag(UnitIsDeadOrGhost(unit)) then
-		status, gone = "DEAD", true
-	else
-		local role = UnitGroupRolesAssigned(unit)
-		if not Stoa:IsSecret(role) then status = ROLE_GLYPHS[role] or "" end
+		gone = "DEAD"
 	end
 
+	local pips = {}
+	local fraction = healthFraction(unit)
+	local low = not gone and fraction and fraction < LOW_HEALTH
 	local dispel = not gone and self:DispelFor(unit)
-	if dispel then status = dispel.word end
-	card.status:SetText(status)
-	if dispel then
-		card.dispel:Set(Stoa:Color(dispel.token))
-	else
-		card.dispel:Clear()
-	end
 
-	self:UpdateHealthText(card, gone)
+	if gone then
+		card.percent:SetText("·")
+		card.hp:SetValue(0)
+		pips[1] = { gone }
+	else
+		setPercent(card.percent, unit, fraction)
+		if dispel then pips[#pips + 1] = { dispel.word, dispel.token } end
+		if low then pips[#pips + 1] = { "LOW", "danger" } end
+		self:AuraPips(unit, pips)
+	end
+	UI.setPips(card, pips)
+
+	-- Bar and percent turn amber when low, and the border says why.
+	local r, g, b = Stoa:Color(low and "danger" or "health")
+	card.hp:SetStatusBarColor(r, g, b)
+	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+
+	card.glow:Clear()
+	if dispel then
+		local dr, dg, db = Stoa:Color(dispel.token)
+		card.state:Set(dr, dg, db)
+		card.glow:Set(dr, dg, db, 0.22)
+	elseif low then
+		card.state:Set(Stoa:Color("danger"))
+	elseif flag(UnitIsUnit(unit, "target")) then
+		card.state:Set(Stoa:Color("text"))
+	else
+		card.state:Clear()
+	end
+	card.gone = gone
+
 	self:UpdateAbsorb(card)
 	self:UpdateRange(card)
 end
 
--- Missing health, the number a healer reads. Out of combat it can be worked
--- out; when values are secret the plain health is shown instead.
-function Party:UpdateHealthText(card, gone)
-	local text = card.healthText
-	if not text or gone then
-		if text then text:SetText("") end
-		return
-	end
-	local health, max = UnitHealth(card.unit), UnitHealthMax(card.unit)
-	if Stoa:IsSecret(health) or Stoa:IsSecret(max) then
-		text:SetText(health)
-	elseif max > health then
-		text:SetText("-" .. (AbbreviateNumbers and AbbreviateNumbers(max - health) or (max - health)))
-	else
-		text:SetText("")
+-- Your own buffs worth tracking on a card, as short words. Timers show
+-- once there's under half a minute left.
+local OWN_BUFFS = {
+	["Power Word: Shield"] = { "SHIELD", "shield" },
+	["Renew"] = { "RENEW" },
+	["Prayer of Mending"] = { "MENDING" },
+	["Fear Ward"] = { "WARD" },
+	["Power Infusion"] = { "INFUSION" },
+	["Inner Fire"] = { "INNER FIRE" },
+	["Blessing of Protection"] = { "PROTECTION" },
+	["Blessing of Freedom"] = { "FREEDOM" },
+	["Blessing of Sacrifice"] = { "SACRIFICE" },
+}
+-- Debuffs from anyone that change what you can cast on them.
+local LOCKOUTS = {
+	["Weakened Soul"] = "WS",
+	["Forbearance"] = "FORB",
+}
+local MAX_PIPS = 3
+
+local function timeLeft(aura)
+	local expires = aura.expirationTime
+	if Stoa:IsSecret(expires) or not expires or expires == 0 then return nil end
+	local left = expires - GetTime()
+	if left > 0 and left < 30 then return math.floor(left + 0.5) end
+end
+
+local function scan(unit, filter, fn)
+	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
+	for i = 1, 40 do
+		local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, filter)
+		if not ok or not aura then return end
+		local name = aura.name
+		if not Stoa:IsSecret(name) and fn(name, aura) then return end
 	end
 end
 
--- Shields as a thin line under the health bar, out of the same maximum.
+function Party:AuraPips(unit, pips)
+	scan(unit, "HELPFUL|PLAYER", function(name, aura)
+		local cue = OWN_BUFFS[name]
+		if cue then
+			local left = timeLeft(aura)
+			pips[#pips + 1] = { left and (cue[1] .. " " .. left) or cue[1], cue[2] }
+		end
+		return #pips >= MAX_PIPS
+	end)
+	if #pips >= MAX_PIPS then return end
+	scan(unit, "HARMFUL", function(name, aura)
+		local word = LOCKOUTS[name]
+		if word then
+			local left = timeLeft(aura)
+			pips[#pips + 1] = { left and (word .. " " .. left) or word }
+		end
+		return #pips >= MAX_PIPS
+	end)
+end
+
+-- Shields fill the empty end of the health bar, out of the same maximum.
 function Party:UpdateAbsorb(card)
-	if not card.absorb or not UnitGetTotalAbsorbs then return end
+	if not card.absorb then return end
 	card.absorb:SetMinMaxValues(0, UnitHealthMax(card.unit))
+	if card.gone or not UnitGetTotalAbsorbs then
+		card.absorb:SetValue(0)
+		return
+	end
 	card.absorb:SetValue(UnitGetTotalAbsorbs(card.unit) or 0)
 end
 
@@ -217,10 +327,16 @@ function Party:DispelFor(unit)
 end
 
 -- Range can be secret; newer clients let a secret boolean set alpha directly.
+-- The dead and offline stay dim whatever their range.
 function Party:UpdateRange(card)
 	if card.preview then return end
 	local unit = card.unit
-	if unit == "player" or not UnitExists(unit) then
+	if not unit or not UnitExists(unit) then return end
+	if card.gone then
+		card:SetAlpha(GONE_ALPHA)
+		return
+	end
+	if unit == "player" or flag(UnitIsUnit(unit, "player")) then
 		card:SetAlpha(1)
 		return
 	end
@@ -266,7 +382,17 @@ function Party:OnEnable()
 		Stoa:AfterCombat(function() self:Layout() end)
 	end)
 	Stoa:On("STOA_STATE_CHANGED", function() self:UpdateAll() end)
-	Stoa:On("GROUP_ROSTER_UPDATE", function() self:UpdateAll() end)
+	Stoa:On("GROUP_ROSTER_UPDATE", function()
+		self:UpdateAll()
+		-- The healer row re-centres on the cards in it.
+		Stoa:AfterCombat(function() self:Layout() end)
+	end)
+	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateAll() end)
+	Stoa:On("STOA_THEME_CHANGED", function()
+		self:UpdateAll()
+		self:UpdateLegend()
+	end)
+	Stoa:On("STOA_CLICKS_CHANGED", function() self:UpdateLegend() end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function() self:UpdateAll() end)
 	Stoa:On("UNIT_CONNECTION", function(unit)
 		local card = cardFor(self, unit)
@@ -279,10 +405,14 @@ function Party:OnEnable()
 		end)
 	end
 
-	-- Range has no event, so it's checked a few times a second.
+	-- Range has no event, so it's checked a few times a second; buff timers
+	-- count down once a second.
 	C_Timer.NewTicker(0.3, function()
 		for _, card in ipairs(self.cards) do
 			self:UpdateRange(card)
 		end
+	end)
+	C_Timer.NewTicker(1, function()
+		if self.frame:IsVisible() then self:UpdateAll() end
 	end)
 end

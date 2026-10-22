@@ -78,3 +78,9 @@ Stoa:On("PLAYER_REGEN_DISABLED", function()
 		Stoa:Print("Frames locked for combat.")
 	end
 end)
+
+-- /stoa reset puts every moved frame back in its default spot.
+Stoa.commands.reset = function()
+	wipe(Stoa.char.positions)
+	Stoa:Print("Frame positions reset. /reload to see the defaults.")
+end

@@ -126,30 +126,34 @@ end
 UI.hidden = CreateFrame("Frame")
 UI.hidden:Hide()
 
--- A 2 px border drawn with four textures, for cues like a dispellable debuff.
+-- A border drawn with four textures, for cues like a dispellable debuff.
+-- outset pushes it outside the frame, for a soft halo around a border.
 -- Hidden until set.
-function UI.border(frame, size)
-	size = size or 2
+function UI.border(frame, size, outset)
+	size, outset = size or 2, outset or 0
 	local edges = {}
 	for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
 		local tex = frame:CreateTexture(nil, "OVERLAY")
 		tex:SetColorTexture(1, 1, 1)
 		if side == "TOP" or side == "BOTTOM" then
-			tex:SetPoint(side .. "LEFT")
-			tex:SetPoint(side .. "RIGHT")
+			local y = side == "TOP" and outset or -outset
+			tex:SetPoint(side .. "LEFT", -outset, y)
+			tex:SetPoint(side .. "RIGHT", outset, y)
 			tex:SetHeight(size)
 		else
-			tex:SetPoint("TOP" .. side)
-			tex:SetPoint("BOTTOM" .. side)
+			local x = side == "LEFT" and -outset or outset
+			tex:SetPoint("TOP" .. side, x, outset)
+			tex:SetPoint("BOTTOM" .. side, x, -outset)
 			tex:SetWidth(size)
 		end
 		tex:Hide()
 		edges[#edges + 1] = tex
 	end
 	return {
-		Set = function(_, r, g, b)
+		edges = edges,
+		Set = function(_, r, g, b, a)
 			for _, tex in ipairs(edges) do
-				tex:SetVertexColor(r, g, b)
+				tex:SetVertexColor(r, g, b, a or 1)
 				tex:Show()
 			end
 		end,
@@ -159,15 +163,134 @@ function UI.border(frame, size)
 	}
 end
 
--- The healer details every unit card shares: a shield line under the health
--- bar and a dispel border. Cards made with this get them filled in by
--- Party:UpdateCard.
-function UI.unitDetails(card)
-	local absorb = UI.bar(card, 10, 2, "shield")
+-- Unit cards ------------------------------------------------------------------
+-- Party cards and raid cells share one card, after the Halo healer mockup:
+-- name and health percent on top, a thick health bar with shields laid on
+-- its empty end, and a row of word pips for your own buffs and dispels.
+-- Party:UpdateCard fills them in.
+
+UI.CARD_STYLES = {
+	party = { pad = 9, name = 16, bar = 12, pip = 15, pipFont = 10, gap = 6 },
+	compact = { pad = 7, name = 14, bar = 8, pip = 13, pipFont = 9, gap = 5 },
+	raid = { pad = 7, name = 15, bar = 9, pip = 13, pipFont = 9, gap = 5 },
+}
+
+local MAX_PIPS = 3
+
+local function makePip(card)
+	local pip = CreateFrame("Frame", nil, card)
+	local bg = pip:CreateTexture(nil, "BACKGROUND")
+	bg:SetAllPoints()
+	bg:SetColorTexture(1, 1, 1)
+	pip.bg = bg
+	local text = pip:CreateFontString(nil, "OVERLAY")
+	text:SetPoint("CENTER", 0, 0)
+	pip.text = text
+	pip:Hide()
+	return pip
+end
+
+function UI.unitCard(card, styleName)
+	local bg = card:CreateTexture(nil, "BACKGROUND")
+	bg:SetAllPoints()
+	UI.paint(bg, "panel")
+
+	-- A hairline frame always, and a stronger border for states: a dispel,
+	-- low health or your target. Dispels also get a soft halo outside.
+	local frameEdge = UI.border(card, 1)
+	for _, tex in ipairs(frameEdge.edges) do
+		tex:SetDrawLayer("BORDER")
+		UI.tint(tex, "hairline")
+		tex:Show()
+	end
+	card.state = UI.border(card, 2)
+	card.glow = UI.border(card, 3, 3)
+	-- Kept for older callers: a dispel border is the state border.
+	card.dispel = card.state
+
+	-- Not painted: the name takes its class colour on every update.
+	local name = card:CreateFontString(nil, "OVERLAY")
+	name:SetJustifyH("LEFT")
+	name:SetWordWrap(false)
+	card.name = name
+
+	local percent = UI.text(card, "serif", Stoa.typeSize.label, "text", "RIGHT")
+	card.percent = percent
+
+	local hp = UI.bar(card, 10, 10, "health")
+	card.hp = hp
+
+	-- Shields sit on the empty end of the health bar, starting where health
+	-- stops. The bar clips them so a big shield never spills past the card.
+	local absorb = UI.bar(hp, 10, 10, "shield")
 	absorb.track:Hide()
-	absorb:SetPoint("TOPLEFT", card.hp, "BOTTOMLEFT", 0, -1)
-	absorb:SetPoint("TOPRIGHT", card.hp, "BOTTOMRIGHT", 0, -1)
+	absorb:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
+	absorb:SetPoint("BOTTOMLEFT", hp:GetStatusBarTexture(), "BOTTOMRIGHT")
 	absorb:SetValue(0)
+	if hp.SetClipsChildren then hp:SetClipsChildren(true) end
 	card.absorb = absorb
-	card.dispel = UI.border(card)
+
+	card.pips = {}
+	for i = 1, MAX_PIPS do card.pips[i] = makePip(card) end
+
+	UI.styleCard(card, styleName)
+	UI.applyTheme()
+end
+
+-- Lays out a card's insides for a style. Out of combat for party cards,
+-- since the sizes follow the role.
+function UI.styleCard(card, styleName)
+	local style = UI.CARD_STYLES[styleName] or UI.CARD_STYLES.party
+	card.style = style
+	local pad = style.pad
+
+	Stoa:SetFont(card.name, "serif", style.name)
+	card.name:ClearAllPoints()
+	card.name:SetPoint("TOPLEFT", pad, -pad + 1)
+	card.name:SetPoint("RIGHT", card.percent, "LEFT", -6, 0)
+	Stoa:SetFont(card.percent, "serif", style.name)
+	card.percent:ClearAllPoints()
+	card.percent:SetPoint("TOPRIGHT", -pad, -pad + 1)
+
+	card.hp:ClearAllPoints()
+	card.hp:SetPoint("TOPLEFT", pad, -(pad + style.name + 3))
+	card.hp:SetPoint("TOPRIGHT", -pad, -(pad + style.name + 3))
+	card.hp:SetHeight(style.bar)
+	card.absorb:SetWidth(math.max(1, (card:GetWidth() or 100) - pad * 2))
+
+	for i, pip in ipairs(card.pips) do
+		pip:ClearAllPoints()
+		if i == 1 then
+			pip:SetPoint("TOPLEFT", card.hp, "BOTTOMLEFT", 0, -style.gap)
+		else
+			pip:SetPoint("LEFT", card.pips[i - 1], "RIGHT", 4, 0)
+		end
+		pip:SetHeight(style.pip)
+		Stoa:SetFont(pip.text, "sans", style.pipFont)
+	end
+end
+
+-- Fills the pip row. Each pip is { text, fill } where fill is a theme token
+-- for a solid chip (dark text on it), or nil for a quiet chip.
+function UI.setPips(card, list)
+	for i, pip in ipairs(card.pips) do
+		local entry = list and list[i]
+		if entry then
+			pip.text:SetText(entry[1])
+			if entry[2] then
+				local r, g, b = Stoa:Color(entry[2])
+				pip.bg:SetVertexColor(r, g, b, 1)
+				pip.text:SetTextColor(Stoa:Color("panel"))
+				pip.text:SetAlpha(1)
+			else
+				local r, g, b = Stoa:Color("text")
+				pip.bg:SetVertexColor(r, g, b, 0.08)
+				pip.text:SetTextColor(Stoa:Color(entry[3] or "muted"))
+			end
+			pip:SetWidth(math.ceil(pip.text:GetStringWidth()) + 10)
+			pip:Show()
+		else
+			pip:Hide()
+		end
+	end
 end

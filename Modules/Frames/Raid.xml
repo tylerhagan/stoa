@@ -2,7 +2,7 @@
 	<!-- One raid cell. The size has to live here: the group header makes
 	     cells from this template in secure code. -->
 	<Button name="StoaRaidButtonTemplate" inherits="SecureUnitButtonTemplate" virtual="true">
-		<Size x="100" y="44"/>
+		<Size x="168" y="58"/>
 		<Scripts>
 			<OnLoad function="StoaRaidButton_OnLoad"/>
 		</Scripts>

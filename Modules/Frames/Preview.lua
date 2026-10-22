@@ -6,35 +6,64 @@ local _, ns = ...
 local Stoa = ns.Stoa
 
 local SAMPLE = {
-	{ name = "Thalindra", class = "PRIEST", role = "H", health = 0.92 },
-	{ name = "Brunhok", class = "WARRIOR", role = "T", health = 0.64, absorb = 0.25, missing = "-1.2K" },
-	{ name = "Velaris", class = "MAGE", role = "D", health = 0.38, far = true, missing = "-940" },
-	{ name = "Seren", class = "HUNTER", role = "D", health = 0.71, dispel = "MAGIC", missing = "-410" },
-	{ name = "Kaelith", class = "ROGUE", status = "DEAD", health = 0 },
-	{ name = "Orsun", class = "PALADIN", status = "OFFLINE", health = 1 },
+	{ name = "Brunhok", class = "WARRIOR", health = 0.62, absorb = 0.18, pips = { { "SHIELD", "shield" }, { "WS 11" }, { "RENEW 9" } } },
+	{ name = "Thalindra", class = "PRIEST", health = 0.95, pips = { { "INNER FIRE" } } },
+	{ name = "Seren", class = "ROGUE", health = 0.71, dispel = "magic", pips = { { "MAGIC", "magic" } } },
+	{ name = "Velaris", class = "MAGE", health = 0.78, absorb = 0.1, target = true, pips = { { "WS 4" } } },
+	{ name = "Orsun", class = "HUNTER", health = 0.28, far = true },
+	{ name = "Kaelith", class = "WARLOCK", status = "DEAD", health = 0 },
+	{ name = "Aldren", class = "PALADIN", status = "OFFLINE", health = 1 },
+	{ name = "Mirelle", class = "DRUID", health = 1 },
+	{ name = "Tovan", class = "SHAMAN", health = 0.84, pips = { { "DISEASE", "disease" } }, dispel = "disease" },
 }
 
-local CELL_WIDTH, CELL_HEIGHT, GAP, GROUPS = 100, 44, 4, 4
+local LOW_HEALTH = 0.35
+local GROUPS = 4
 
 local active = false
 local raidPreview
 
+-- Fills a card with a sample the same way Party:UpdateCard fills a real one.
 local function fill(card, sample)
+	local UI = Stoa.UI
 	card.name:SetText(sample.name)
-	local color = RAID_CLASS_COLORS[sample.class]
-	if color then card.stripe:SetVertexColor(color.r, color.g, color.b) end
+	local color = Stoa:Theme().classTint and RAID_CLASS_COLORS[sample.class]
+	if color then
+		card.name:SetTextColor(color.r, color.g, color.b)
+	else
+		card.name:SetTextColor(Stoa:Color("text"))
+	end
+	local low = not sample.status and sample.health < LOW_HEALTH
 	card.hp:SetMinMaxValues(0, 1)
-	card.hp:SetValue(sample.health)
-	card.status:SetText(sample.dispel or sample.status or sample.role or "")
-	card:SetAlpha(sample.far and 0.45 or (sample.status and 0.7 or 1))
-	if card.healthText then card.healthText:SetText(sample.missing or "") end
-	if card.absorb then
-		card.absorb:SetMinMaxValues(0, 1)
-		card.absorb:SetValue(sample.absorb or 0)
+	card.hp:SetValue(sample.status and 0 or sample.health)
+	card.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
+	card.absorb:SetMinMaxValues(0, 1)
+	card.absorb:SetValue(sample.absorb or 0)
+	card.percent:SetText(sample.status and "·" or math.floor(sample.health * 100 + 0.5))
+	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+
+	local pips = {}
+	if sample.status then
+		pips[1] = { sample.status }
+	else
+		for _, pip in ipairs(sample.pips or {}) do pips[#pips + 1] = pip end
+		if low then table.insert(pips, 1, { "LOW", "danger" }) end
 	end
-	if card.dispel then
-		if sample.dispel then card.dispel:Set(Stoa:Color("magic")) else card.dispel:Clear() end
+	UI.setPips(card, pips)
+
+	card.glow:Clear()
+	if sample.dispel then
+		local r, g, b = Stoa:Color(sample.dispel)
+		card.state:Set(r, g, b)
+		card.glow:Set(r, g, b, 0.22)
+	elseif low then
+		card.state:Set(Stoa:Color("danger"))
+	elseif sample.target then
+		card.state:Set(Stoa:Color("text"))
+	else
+		card.state:Clear()
 	end
+	card:SetAlpha(sample.status and 0.42 or (sample.far and 0.45 or 1))
 end
 
 local function showParty()
@@ -50,9 +79,10 @@ local function showParty()
 			UnregisterUnitWatch(card)
 		end
 		card.preview = true
-		fill(card, SAMPLE[i])
 		card:Show()
 	end
+	party:Layout()
+	for i, card in ipairs(party.cards) do fill(card, SAMPLE[i]) end
 end
 
 local function hideParty()
@@ -66,10 +96,9 @@ local function hideParty()
 			card:Hide()
 			RegisterUnitWatch(card)
 		end
-		party:UpdateCard(card)
 	end
 	RegisterStateDriver(party.frame, "visibility", "[group:raid] hide; show")
-	party:UpdateAll()
+	party:Layout()
 end
 
 -- The raid preview is plain frames drawn by the same code as real cells,
@@ -85,14 +114,23 @@ local function showRaid()
 		for group = 1, GROUPS do
 			for slot = 1, 5 do
 				local cell = CreateFrame("Button", nil, raidPreview)
-				cell:SetSize(CELL_WIDTH, CELL_HEIGHT)
-				cell:SetPoint("TOPLEFT", (group - 1) * (CELL_WIDTH + GAP), -(slot - 1) * (CELL_HEIGHT + GAP))
+				cell:SetSize(Stoa.RAID_CELL.width, Stoa.RAID_CELL.height)
+				cell.group, cell.slot = group, slot
 				Stoa.UI.raidCell(cell)
-				local sample = SAMPLE[(group + slot) % #SAMPLE + 1]
-				fill(cell, sample)
 				table.insert(raidPreview.cells, cell)
 			end
 		end
+	end
+	-- Same arrangement as the real grid: rows of groups for healers,
+	-- columns for everyone else.
+	local size = Stoa.RAID_CELL
+	local rows = Stoa:GetRole() == "HEALER"
+	for i, cell in ipairs(raidPreview.cells) do
+		local across, down = cell.slot - 1, cell.group - 1
+		if not rows then across, down = down, across end
+		cell:ClearAllPoints()
+		cell:SetPoint("TOPLEFT", across * (size.width + size.gap), -down * (size.height + size.gap))
+		fill(cell, SAMPLE[(i - 1) % #SAMPLE + 1])
 	end
 	raidPreview:Show()
 end
