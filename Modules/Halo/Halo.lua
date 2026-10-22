@@ -20,17 +20,18 @@ local FADE_IN = 0.2
 local FADE_OUT = 0.5
 local SIGNATURE_SIZE = 36
 
--- Signature spells: the one button each spec lives around. The first spell
--- the character knows is shown, so it fills in as you level.
+-- Signature spells: the one cooldown each spec lives around. The first
+-- spell the character knows is shown; only spells with a cooldown are
+-- listed, so the slot stays empty until there's a timer worth watching.
 local SIGNATURES = {
 	PRIEST = {
-		RANGED = { 8092, 589, 585 },   -- Mind Blast, Shadow Word: Pain, Smite
-		HEALER = { 17, 2061, 2050 },   -- Power Word: Shield, Flash Heal, Lesser Heal
+		RANGED = { 8092 },              -- Mind Blast
+		HEALER = { 17 },                -- Power Word: Shield
 	},
 	PALADIN = {
-		MELEE = { 20271, 35395, 20154 }, -- Judgement, Crusader Strike, Seal of Righteousness
-		TANK = { 31935, 20925, 20271 },  -- Avenger's Shield, Holy Shield, Judgement
-		HEALER = { 20473, 19750, 635 },  -- Holy Shock, Flash of Light, Holy Light
+		MELEE = { 35395, 20271 },       -- Crusader Strike, Judgement
+		TANK = { 31935, 20925, 20271 }, -- Avenger's Shield, Holy Shield, Judgement
+		HEALER = { 20473, 20216, 633 }, -- Holy Shock, Divine Favor, Lay on Hands
 	},
 }
 
