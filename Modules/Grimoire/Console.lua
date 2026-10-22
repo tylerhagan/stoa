@@ -28,8 +28,9 @@ local ART_SEAL_SIZE = 92
 -- into the edge's lines. Texel sizes below are in the painting's pixels;
 -- the top of the panel is texel 37 of the edge strip and 129 of the
 -- medallion, and the leather starts 17 texels down, under the gold lines.
-local ART_HEIGHT = 136
+local ART_HEIGHT = 176
 local ART_SCALE = 0.556
+Console.ART_SCALE = ART_SCALE
 local LEATHER_W, LEATHER_H = 1024, 256
 local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 17
 local MEDALLION_WIDTH, MEDALLION_LINE = 512, 257
@@ -148,7 +149,7 @@ function Console:BuildArt(frame)
 	local function tileLeather()
 		local width, height = leather:GetWidth(), leather:GetHeight()
 		if not width or width <= 0 then return end
-		leather:SetTexCoord(0, width / ART_SCALE / LEATHER_W, 0, math.min(height / ART_SCALE / LEATHER_H, 1))
+		leather:SetTexCoord(0, width / ART_SCALE / LEATHER_W, 0, height / ART_SCALE / LEATHER_H)
 	end
 	tileLeather()
 	frame:HookScript("OnSizeChanged", tileLeather)
@@ -396,6 +397,9 @@ function Console:SetOpen(open, instant)
 			part:SetAlpha(open and progress or 1 - progress)
 		end
 		self.bridge:SetAlpha(open and 1 - progress or progress)
+		for _, part in ipairs(self.tabArt or {}) do
+			part:SetAlpha(open and progress or 1 - progress)
+		end
 		for _, part in ipairs(self.flatParts) do
 			part:SetAlpha(open and 1 - progress or progress)
 		end
