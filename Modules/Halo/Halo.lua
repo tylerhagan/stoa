@@ -315,16 +315,19 @@ function Halo:UpdateTargetAuras()
 	if not icons then return end
 	local hostile = UnitCanAttack("player", "target")
 	if Stoa:IsSecret(hostile) then hostile = false end
-	local found = {}
+	local found, seen = {}, {}
 	local function collect(filter)
 		if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
 		for i = 1, 40 do
 			if #found >= AURA_COUNT then return end
 			local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, filter)
 			if not ok or not aura then return end
+			-- Your own buffs come first, so skip them on the second pass.
 			local id = aura.auraInstanceID
-			if not found[id or ("i" .. i .. filter)] then
-				found[id or ("i" .. i .. filter)] = true
+			if Stoa:IsSecret(id) then id = nil end
+			local key = id or (filter .. i)
+			if not seen[key] then
+				seen[key] = true
 				found[#found + 1] = aura
 			end
 		end
