@@ -131,13 +131,13 @@ local GRID_COLUMNS = {
 	{ id = "4", label = "Thumb 1" }, { id = "5", label = "Thumb 2" },
 }
 local GRID_ROWS = { { prefix = "", label = "None" }, { prefix = "shift-", label = "Shift" }, { prefix = "ctrl-", label = "Ctrl" } }
-local GRID_LABEL_WIDTH, GRID_CELL_WIDTH, GRID_ROW_HEIGHT = 56, 112, 28
+local GRID_LABEL_WIDTH, GRID_CELL_WIDTH, GRID_ROW_HEIGHT = 60, 132, 32
 
 -- Long spell names cut down to fit a cell.
 local SHORT_NAMES = {
 	["^Power Word: "] = "PW: ",
 	["^Blessing of "] = "B. of ",
-	["^Prayer of "] = "Prayer of ",
+	["^Prayer of Mending$"] = "Mending",
 	["^target$"] = "Target",
 	["^menu$"] = "Menu",
 }
@@ -164,7 +164,7 @@ function Party:BuildGrid()
 	local function cell(row, col, kind)
 		local x = col == 0 and 0 or GRID_LABEL_WIDTH + (col - 1) * GRID_CELL_WIDTH
 		local y = -20 - row * GRID_ROW_HEIGHT
-		local fs = kind == "caption" and UI.caption(grid, "") or UI.text(grid, "sans", Stoa.typeSize.body, "text")
+		local fs = kind == "caption" and UI.caption(grid, "") or UI.text(grid, "serif", Stoa.typeSize.label, "text")
 		fs:SetPoint("LEFT", grid, "TOPLEFT", x + 6, y - GRID_ROW_HEIGHT / 2)
 		fs:SetWidth((col == 0 and GRID_LABEL_WIDTH or GRID_CELL_WIDTH) - 10)
 		fs:SetWordWrap(false)
