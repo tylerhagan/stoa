@@ -43,6 +43,128 @@ local function titleOf(frame)
 	if frame.GetTitleText then return frame:GetTitleText() end
 end
 
+-- Buttons ------------------------------------------------------------------
+
+-- Blizzard's red panel buttons become dark rounded keys with light words;
+-- the edge warms to the accent under the mouse. Textures only, so this is
+-- fine on secure buttons too.
+local PANEL_PARTS = { "Left", "Middle", "Right", "LeftSeparator", "RightSeparator" }
+
+local function isPanelButton(button)
+	return button.Left and button.Middle and button.Right
+end
+
+local function plainTextures(button)
+	for _, key in ipairs(PANEL_PARTS) do hide(button[key]) end
+	for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
+		local tex = button[getter] and button[getter](button)
+		if tex then tex:SetAlpha(0) end
+	end
+end
+
+local function dressButton(button)
+	if not button or button.stoaDressed then return end
+	button.stoaDressed = true
+	plainTextures(button)
+	-- Blizzard puts the art back on some state changes.
+	button:HookScript("OnShow", plainTextures)
+	button:HookScript("OnEnable", plainTextures)
+	button:HookScript("OnDisable", plainTextures)
+	UI.roundPanel(button, 0.95)
+	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
+	local text = button.GetFontString and button:GetFontString()
+	if text then
+		Stoa:SetFont(text, "sans", Stoa.typeSize.body)
+		text:SetShadowOffset(0, 0)
+	end
+	local function colour(over)
+		if text then
+			local enabled = not button.IsEnabled or button:IsEnabled()
+			text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+		end
+		if over then glow:Set(Stoa:Color("accent")) else glow:Clear() end
+	end
+	button:HookScript("OnEnter", function() colour(true) end)
+	button:HookScript("OnLeave", function() colour(false) end)
+	button:HookScript("OnShow", function() colour(false) end)
+	button.stoaColour = colour
+	colour(false)
+end
+
+-- The close X: just a quiet cross, warming to the accent under the mouse.
+local function dressClose(button)
+	if not button or button.stoaDressed then return end
+	button.stoaDressed = true
+	plainTextures(button)
+	button:HookScript("OnShow", plainTextures)
+	local cross = button:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(cross, "sans", Stoa.typeSize.title)
+	cross:SetPoint("CENTER", 0, 1)
+	cross:SetText("×")
+	cross:SetTextColor(Stoa:Color("muted"))
+	button:HookScript("OnEnter", function() cross:SetTextColor(Stoa:Color("accent")) end)
+	button:HookScript("OnLeave", function() cross:SetTextColor(Stoa:Color("muted")) end)
+end
+
+-- Every red button inside a window, however deep.
+local function dressButtonsIn(frame, depth)
+	if not (frame and frame.GetChildren) or depth <= 0 then return end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		if child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
+			dressButton(child)
+		end
+		dressButtonsIn(child, depth - 1)
+	end
+end
+
+-- Window tabs (merchant's Merchant/Buyback) as plain words, the selected one
+-- in the accent. Blizzard disables the selected tab.
+local function colourTabs(frame)
+	for _, tab in ipairs(frame.stoaTabs or {}) do
+		local text = tab.Text or (tab.GetFontString and tab:GetFontString())
+		if text then
+			local selected = tab.IsEnabled and not tab:IsEnabled()
+			text:SetTextColor(Stoa:Color(selected and "accent" or "muted"))
+		end
+	end
+end
+
+local function dressTabs(frame)
+	local name = frame.GetName and frame:GetName()
+	local tabs = frame.Tabs
+	if not tabs and name then
+		tabs = {}
+		for i = 1, 6 do
+			local tab = _G[name .. "Tab" .. i]
+			if tab then tabs[#tabs + 1] = tab end
+		end
+	end
+	if not tabs or #tabs == 0 then return end
+	frame.stoaTabs = tabs
+	for _, tab in ipairs(tabs) do
+		strip(tab)
+		for _, key in ipairs({ "Left", "Middle", "Right", "LeftActive", "MiddleActive", "RightActive", "LeftHighlight", "MiddleHighlight", "RightHighlight" }) do
+			hide(tab[key])
+		end
+		local text = tab.Text or (tab.GetFontString and tab:GetFontString())
+		if text then
+			Stoa:SetFont(text, "sans", Stoa.typeSize.body)
+			text:SetShadowOffset(0, 0)
+		end
+	end
+	colourTabs(frame)
+	frame:HookScript("OnShow", function() colourTabs(frame) end)
+end
+
+local hookedTabs
+local function hookTabs()
+	if hookedTabs or not PanelTemplates_UpdateTabs then return end
+	hookedTabs = true
+	hooksecurefunc("PanelTemplates_UpdateTabs", function(frame)
+		if frame and frame.stoaTabs then colourTabs(frame) end
+	end)
+end
+
 -- The common window: no portrait, no stone border, a Stoa panel and title.
 function Windows:Dress(frame)
 	if not frame or frame.stoaDressed then return end
@@ -65,6 +187,12 @@ function Windows:Dress(frame)
 		Stoa:SetFont(title, "serif", Stoa.typeSize.label + 2)
 		title:SetTextColor(Stoa:Color("text"))
 	end
+
+	local name = frame.GetName and frame:GetName()
+	dressClose(frame.CloseButton or (name and _G[name .. "CloseButton"]))
+	dressButtonsIn(frame, 5)
+	dressTabs(frame)
+	hookTabs()
 end
 
 -- Quest text ----------------------------------------------------------------
@@ -217,4 +345,10 @@ function Windows:OnEnable()
 		end)
 	end
 	Stoa:On("STOA_THEME_CHANGED", function() UI.applyTheme() end)
+	-- Quest and gossip buttons are made when a panel first opens.
+	for _, frame in ipairs({ QuestFrame, GossipFrame, MerchantFrame }) do
+		if frame then
+			frame:HookScript("OnShow", function() guarded(function() dressButtonsIn(frame, 5) end) end)
+		end
+	end
 end
