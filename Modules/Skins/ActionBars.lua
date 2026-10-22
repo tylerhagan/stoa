@@ -10,7 +10,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Bars = Stoa:NewModule("ActionBars")
+local Bars = Stoa:NewModule("ActionBars", { tray = true })
 
 local PREFIXES = {
 	"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
@@ -93,8 +93,133 @@ function Bars:SkinAll()
 	end
 end
 
+-- Tray ----------------------------------------------------------------------
+-- Out of combat only your main bar shows in the console; the other rows
+-- that sit in it rest hidden and come up while the mouse is over the bar
+-- area. Combat brings every row up at once, and so do holding a spell or
+-- item on the cursor (to place it) and Edit Mode.
+--
+-- Only alpha changes, which is allowed on secure bars at any time. Which
+-- rows count as the tray is worked out from where they sit, out of combat.
+
+local TRAY_BARS = {
+	"MultiBarBottomLeft", "MultiBarBottomRight", "MultiBarRight", "MultiBarLeft",
+	"MultiBar5", "MultiBar6", "MultiBar7", "PetActionBar", "StanceBar",
+}
+local MAIN_BARS = { "MainActionBar", "MainMenuBar" }
+local TRAY_FADE_IN, TRAY_FADE_OUT = 0.12, 0.4
+
+-- The height under which a bar counts as part of the console.
+local function consoleTop()
+	local console = Stoa.modules.Grimoire
+	if console and console.enabled and console.OpenHeight then
+		return console:OpenHeight() + 8
+	end
+	return UIParent:GetHeight() * 0.22
+end
+
+local function bottomOf(frame)
+	local bottom = frame:GetBottom()
+	if not bottom then return nil end
+	return bottom * frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+end
+
+function Bars:FindTray()
+	local top = consoleTop()
+	local tray, area = {}, {}
+	for _, name in ipairs(TRAY_BARS) do
+		local bar = _G[name]
+		local bottom = bar and bar:IsShown() and bottomOf(bar)
+		if bottom and bottom < top then
+			table.insert(tray, bar)
+			table.insert(area, bar)
+		elseif bar and self.tray then
+			-- No longer in the console: give it back its full alpha.
+			for _, old in ipairs(self.tray) do
+				if old == bar then bar:SetAlpha(1) end
+			end
+		end
+	end
+	for _, name in ipairs(MAIN_BARS) do
+		if _G[name] then table.insert(area, _G[name]) break end
+	end
+	self.tray, self.trayArea = tray, area
+	self.trayLit = nil
+	self:UpdateTray()
+end
+
+-- One fader for the whole tray, kept off Blizzard's own frames.
+local trayFader = CreateFrame("Frame")
+local function fadeTray(bars, to, seconds)
+	local from, start = {}, GetTime()
+	for i, bar in ipairs(bars) do from[i] = bar:GetAlpha() end
+	trayFader:SetScript("OnUpdate", function(fader)
+		local progress = math.min((GetTime() - start) / seconds, 1)
+		for i, bar in ipairs(bars) do
+			bar:SetAlpha(from[i] + (to - from[i]) * progress)
+		end
+		if progress >= 1 then fader:SetScript("OnUpdate", nil) end
+	end)
+end
+
+local function trayWanted(self)
+	if not self.db.tray then return true end
+	if InCombatLockdown() or Stoa:GetState() == Stoa.STATE_COMBAT then return true end
+	if GetCursorInfo() then return true end
+	if EditModeManagerFrame and EditModeManagerFrame:IsShown() then return true end
+	for _, name in ipairs({ "SpellBookFrame", "PlayerSpellsFrame" }) do
+		if _G[name] and _G[name]:IsShown() then return true end
+	end
+	for _, bar in ipairs(self.trayArea or {}) do
+		if bar:IsVisible() and MouseIsOver(bar) then return true end
+	end
+	return false
+end
+
+function Bars:UpdateTray()
+	if not self.tray then return end
+	local lit = trayWanted(self)
+	if lit == self.trayLit then return end
+	-- Combat shows the rows straight away rather than fading them in.
+	local instant = lit and InCombatLockdown()
+	self.trayLit = lit
+	for _, bar in ipairs(self.tray) do
+		if instant then
+			trayFader:SetScript("OnUpdate", nil)
+			bar:SetAlpha(1)
+		end
+	end
+	if not instant then
+		fadeTray(self.tray, lit and 1 or 0, lit and TRAY_FADE_IN or TRAY_FADE_OUT)
+	end
+end
+
+function Bars:StartTray()
+	local function find()
+		Stoa:AfterCombat(function() xpcall(self.FindTray, geterrorhandler(), self) end)
+	end
+	Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(0.5, find) end)
+	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", find)
+	Stoa:On("UI_SCALE_CHANGED", find)
+	if EventRegistry then
+		EventRegistry:RegisterCallback("EditMode.Exit", find, self)
+	end
+	Stoa:On("PLAYER_REGEN_DISABLED", function() self:UpdateTray() end)
+	Stoa:On("STOA_STATE_CHANGED", function() self:UpdateTray() end)
+	C_Timer.NewTicker(0.1, function() self:UpdateTray() end)
+	find()
+end
+
+-- The settings checkbox turns the tray on and off without a reload.
+function Bars:SetTray(on)
+	self.db.tray = on
+	self.trayLit = nil
+	self:UpdateTray()
+end
+
 function Bars:OnEnable()
 	Stoa:AfterCombat(function() self:SkinAll() end)
+	self:StartTray()
 	-- Hotkey colours follow the theme.
 	Stoa:On("STOA_THEME_CHANGED", function()
 		for _, prefix in ipairs(PREFIXES) do
