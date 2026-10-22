@@ -63,7 +63,7 @@ local function fill(card, sample)
 	else
 		card.state:Clear()
 	end
-	card:SetAlpha(sample.status and 0.42 or (sample.far and 0.45 or 1))
+	card:SetAlpha(sample.status and 0.42 or (sample.far and 0.6 or 1))
 end
 
 local function showParty()

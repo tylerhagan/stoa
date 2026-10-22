@@ -17,7 +17,7 @@ local Party = Stoa:NewModule("Party", {
 
 local UNITS = { "player", "party1", "party2", "party3", "party4" }
 local WORLD_ALPHA = 0.75
-local OUT_OF_RANGE_ALPHA = 0.45
+local OUT_OF_RANGE_ALPHA = 0.6
 local GONE_ALPHA = 0.42
 
 -- Card size and spot per role. Healers get a row of cards just under the
