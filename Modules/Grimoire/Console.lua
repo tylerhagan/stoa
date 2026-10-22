@@ -315,7 +315,16 @@ end
 function Console:UpdateSeal()
 	SetPortraitTexture(self.portrait, "player")
 	local role = Stoa:GetRole()
-	self.roleText:SetText(role and Stoa.ROLE_LABELS[role] or "")
+	local label = role and Stoa.ROLE_LABELS[role] or ""
+	-- A missing self-buff (Inner Fire, an aura, Righteous Fury) shows beside
+	-- the role, in the warning colour, so it's caught before the pull.
+	local missing = Stoa.missingBuffs
+	if missing and #missing > 0 then
+		local r, g, b = Stoa:Color("danger")
+		local words = table.concat(missing, " · "):lower():gsub("^%l", string.upper)
+		label = string.format("%s  |cff%02x%02x%02x%s|r", label, r * 255, g * 255, b * 255, words)
+	end
+	self.roleText:SetText(label)
 end
 
 function Console:UpdateResources()
@@ -447,6 +456,7 @@ function Console:OnEnable()
 
 	Stoa:On("STOA_NOTE", function(kind, message) self:AddNote(kind, message) end)
 	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSeal() end)
+	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen()) end)
 	Stoa:On("STOA_PEEK_CHANGED", function() self:SetOpen(shouldBeOpen()) end)
 

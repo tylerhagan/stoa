@@ -35,6 +35,22 @@ local SIGNATURES = {
 	},
 }
 
+-- Self-buffs each class keeps up, by role. A reminder shows as a word
+-- when the buff is missing (and the spell is known); seals only matter in
+-- a fight, since they don't last between pulls. Matched by name, with
+-- spell IDs only to check the spell is learned.
+local REMINDERS = {
+	PALADIN = {
+		{ word = "NO AURA", suffix = " Aura", spell = 465 },             -- Devotion Aura
+		{ word = "NO SEAL", prefix = "Seal of ", combat = true, show = true },
+		{ word = "NO FURY", name = "Righteous Fury", spell = 25780, roles = { TANK = true } },
+	},
+	PRIEST = {
+		{ word = "NO INNER FIRE", name = "Inner Fire", spell = 588 },
+		{ word = "NO SHADOWFORM", name = "Shadowform", spell = 15473, roles = { RANGED = true } },
+	},
+}
+
 local function knows(spellID)
 	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
 	return IsSpellKnown and IsSpellKnown(spellID) or false
@@ -158,6 +174,11 @@ function Halo:BuildCast(frame)
 	cast.spell = spell
 	cast:Hide()
 	self.cast = cast
+
+	-- Missing self-buffs, and your seal, under the cast bar.
+	local reminders = UI.caption(frame, "")
+	reminders:SetPoint("TOP", frame, "BOTTOM", 0, -50)
+	self.reminders = reminders
 end
 
 -- Updates -------------------------------------------------------------------
@@ -268,6 +289,71 @@ function Halo:UpdateThreat()
 	threat:SetTextColor(Stoa:Color(calm and "muted" or "danger"))
 end
 
+-- Reminders ----------------------------------------------------------------
+
+-- Your own buff names, or nil when any of them is hidden (secret) and a
+-- missing buff can't be told from an unreadable one.
+local function ownBuffNames()
+	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return nil end
+	local names = {}
+	for i = 1, 40 do
+		local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
+		if not ok then return nil end
+		if not aura then break end
+		if Stoa:IsSecret(aura.name) then return nil end
+		names[#names + 1] = aura.name
+	end
+	return names
+end
+
+local function matching(names, rule)
+	for _, name in ipairs(names) do
+		if rule.name and name == rule.name then return name end
+		if rule.prefix and name:sub(1, #rule.prefix) == rule.prefix then return name end
+		if rule.suffix and name:sub(-#rule.suffix) == rule.suffix then return name end
+	end
+end
+
+-- Missing buffs as words, plus the seal you're running, shortened.
+function Halo:Reminders()
+	local _, classFile = UnitClass("player")
+	local rules = REMINDERS[classFile]
+	if not rules then return {}, nil end
+	local names = ownBuffNames()
+	if not names then return {}, nil end
+	local role = Stoa:GetRole()
+	local inCombat = Stoa:GetState() == Stoa.STATE_COMBAT
+	local missing, active = {}, nil
+	for _, rule in ipairs(rules) do
+		local applies = (not rule.roles or rule.roles[role])
+			and (not rule.spell or knows(rule.spell))
+			and (not rule.combat or inCombat)
+		if applies then
+			local found = matching(names, rule)
+			if not found then
+				missing[#missing + 1] = rule.word
+			elseif rule.show and rule.prefix then
+				active = found:sub(#rule.prefix + 1):upper()
+			end
+		end
+	end
+	return missing, active
+end
+
+function Halo:UpdateReminders()
+	local missing, active = self:Reminders()
+	local line = self.reminders
+	local parts = {}
+	local r, g, b = Stoa:Color("danger")
+	local warn = string.format("|cff%02x%02x%02x", r * 255, g * 255, b * 255)
+	for _, word in ipairs(missing) do parts[#parts + 1] = warn .. word .. "|r" end
+	if active then parts[#parts + 1] = active end
+	line:SetText(table.concat(parts, "  ·  "))
+	-- The console shows what's missing out of combat.
+	Stoa.missingBuffs = missing
+	Stoa:Fire("STOA_REMINDERS_CHANGED")
+end
+
 -- Cast bar. Plain times drive it with GetTime; secret times use the client's
 -- duration object when there is one.
 function Halo:StartCast(channel)
@@ -341,12 +427,20 @@ function Halo:OnEnable()
 
 	Stoa:On("STOA_STATE_CHANGED", function(state)
 		self:SetShown(state == Stoa.STATE_COMBAT)
+		self:UpdateReminders()
 	end)
-	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSignature() end)
+	Stoa:On("STOA_ROLE_CHANGED", function()
+		self:UpdateSignature()
+		self:UpdateReminders()
+	end)
+	Stoa:On("UNIT_AURA", function(unit)
+		if unit == "player" then self:UpdateReminders() end
+	end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		self:UpdateHealth()
 		self:UpdatePower()
 		self:UpdateSignature()
+		self:UpdateReminders()
 	end)
 	Stoa:On("SPELLS_CHANGED", function() self:UpdateSignature() end)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", function() self:UpdateCooldown() end)
