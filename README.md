@@ -29,7 +29,7 @@ What works today:
 | Raid frames | The same cards, one row per group under the Halo when you heal, one column per group on the left otherwise, for 10, 20 and 40 |
 | Click-casting | Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. `/stoa clicks` to edit |
 | Action bars | Rounded-square icons with a hairline edge like the party cards, dim sockets for empty slots, Stoa type on keys and counts |
-| Blizzard windows | Quest, gossip, merchant, trainer and bags on dark rounded panels, with light quest text in Stoa's type, dark rounded buttons, a quiet close cross and plain-word tabs |
+| Blizzard windows | Quest, gossip, merchant, trainer, bags and tooltips on dark rounded panels, with light quest text in Stoa's type, dark rounded buttons, a quiet close cross and plain-word tabs |
 | Minimap | Theme-coloured rings, serif zone name, wheel to zoom |
 | Merchants | Sells grey junk and repairs, from guild funds when allowed |
 | Settings | Options > AddOns > Stoa |

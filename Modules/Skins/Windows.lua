@@ -326,6 +326,48 @@ local function dressBags()
 	end
 end
 
+-- Tooltips: the same dark rounded panel, a thin health bar, and the
+-- default spot lifted to sit above the console's right corner instead of
+-- over it.
+local TOOLTIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2", "EmbeddedItemTooltip" }
+local TOOLTIP_GAP = 16
+
+local function dressTooltip(tip)
+	if not tip or tip.stoaDressed then return end
+	tip.stoaDressed = true
+	hide(tip.NineSlice)
+	UI.roundPanel(tip, 0.96)
+	-- Blizzard re-applies its backdrop style each time a tooltip shows.
+	tip:HookScript("OnShow", function(self) hide(self.NineSlice) end)
+end
+
+local function dressTooltips()
+	for _, name in ipairs(TOOLTIPS) do dressTooltip(_G[name]) end
+	local bar = GameTooltipStatusBar
+	if bar then
+		bar:SetStatusBarTexture(UI.WHITE)
+		bar:SetHeight(3)
+		bar:ClearAllPoints()
+		bar:SetPoint("TOPLEFT", GameTooltip, "BOTTOMLEFT", 8, -3)
+		bar:SetPoint("TOPRIGHT", GameTooltip, "BOTTOMRIGHT", -8, -3)
+		hooksecurefunc(bar, "SetStatusBarColor", function(self)
+			if self.stoaColouring then return end
+			self.stoaColouring = true
+			self:SetStatusBarColor(Stoa:Color("health"))
+			self.stoaColouring = false
+		end)
+	end
+	if GameTooltip_SetDefaultAnchor then
+		hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
+			if tooltip:GetOwner() ~= parent then return end
+			local console = Stoa.modules.Grimoire
+			local floor = console and console.db and console.db.enabled ~= false and console.OpenHeight and console:OpenHeight() or 0
+			tooltip:ClearAllPoints()
+			tooltip:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -Stoa.space.xxl, floor + TOOLTIP_GAP)
+		end)
+	end
+end
+
 local function guarded(fn)
 	xpcall(fn, geterrorhandler())
 end
@@ -336,6 +378,7 @@ function Windows:OnEnable()
 	guarded(dressGossip)
 	guarded(dressMerchant)
 	guarded(dressBags)
+	guarded(dressTooltips)
 	-- The trainer window loads with its own addon the first time it opens.
 	if ClassTrainerFrame then
 		guarded(dressTrainer)
