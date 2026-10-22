@@ -408,7 +408,8 @@ end
 -- For healers: a card beside the Halo's upper left naming who you're keeping alive, with
 -- a health word, a thin bar with their shields, and your buffs on them.
 -- It watches your focus if you have a friendly one, else the group's tank.
--- It shows with the Halo in combat, and in the /stoa test preview.
+-- It shows with the Halo in combat, and in the /stoa test preview. Your
+-- click-casting bindings work on it in combat.
 
 local WATCH_WIDTH = 220
 local WATCH_PAD = 9
@@ -474,6 +475,47 @@ function Party:BuildWatch()
 	watch.absorb, watch.buffs = absorb, buffs
 	self.watch = watch
 	Stoa:RegisterMover("tankwatch", watch, "Tank watch")
+	self:BuildWatchClicks(watch)
+end
+
+-- Your click-casting bindings work on the watch card just as on the party
+-- cards. The card itself fades, so the clicks live on a secure button laid
+-- over it that the game shows only in combat while its unit exists. Its
+-- unit can only change out of combat.
+function Party:BuildWatchClicks(watch)
+	local clicker = CreateFrame("Button", "StoaTankWatchClicks", UIParent, "SecureUnitButtonTemplate")
+	clicker:SetFrameStrata("LOW")
+	clicker:SetFrameLevel(watch:GetFrameLevel() + 5)
+	clicker:SetAllPoints(watch)
+	clicker:SetAttribute("type1", "target")
+	clicker:SetAttribute("type2", "togglemenu")
+	clicker:RegisterForClicks("AnyUp")
+	clicker:SetScript("OnEnter", function(button)
+		local unit = button:GetAttribute("unit")
+		if unit and UnitExists(unit) then
+			GameTooltip_SetDefaultAnchor(GameTooltip, button)
+			GameTooltip:SetUnit(unit)
+		end
+	end)
+	clicker:SetScript("OnLeave", GameTooltip_Hide)
+	clicker:Hide()
+	self.clicker = clicker
+	Stoa:RegisterClickFrame(clicker)
+end
+
+-- false means nobody: the button stays hidden.
+function Party:SetClickUnit(unit)
+	if self.clickUnit == unit or not self.clicker or InCombatLockdown() then return end
+	self.clickUnit = unit
+	local clicker = self.clicker
+	UnregisterStateDriver(clicker, "visibility")
+	if unit then
+		clicker:SetAttribute("unit", unit)
+		RegisterStateDriver(clicker, "visibility", "[combat,@" .. unit .. ",exists] show; hide")
+	else
+		clicker:SetAttribute("unit", nil)
+		clicker:Hide()
+	end
 end
 
 -- Fills the watch from sample data, for the /stoa test preview.
@@ -498,7 +540,14 @@ function Party:UpdateWatch()
 	local healer = Stoa:GetRole() == "HEALER"
 	local previewing = Stoa.previewing and healer
 	local unit = healer and watchedUnit()
+	-- In combat the card keeps showing whoever its clicks are set to, so
+	-- what you see is always who you heal. A new focus takes over after.
+	if InCombatLockdown() and self.clickUnit ~= nil then
+		unit = self.clickUnit or nil
+		if unit and not UnitExists(unit) then unit = nil end
+	end
 	self.watchedUnit = unit
+	self:SetClickUnit(healer and watchedUnit() or false)
 
 	local shown = previewing or (unit and Stoa:GetState() == Stoa.STATE_COMBAT)
 	if not shown then
