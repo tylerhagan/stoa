@@ -251,7 +251,7 @@ end
 -- towards the seal.
 local RESOURCE_WIDTH = 170
 local RING_RADIUS = 122.5 * ART_SCALE
-local RESOURCE_Y = -38
+local RESOURCE_Y = -44
 
 function Console:BuildResources(frame)
 	local gap = RING_RADIUS + 22
