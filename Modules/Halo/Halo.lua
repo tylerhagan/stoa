@@ -470,12 +470,17 @@ end
 -- duration object when there is one.
 function Halo:StartCast(channel)
 	local cast = self.cast
-	local name, _, _, startMS, endMS = (channel and UnitChannelInfo or UnitCastingInfo)("player")
+	local name, text, _, startMS, endMS = (channel and UnitChannelInfo or UnitCastingInfo)("player")
 	if not name then
 		self:StopCast()
 		return
 	end
-	cast.spell:SetText(name)
+	-- The display text is what Blizzard's own bar shows ("Opening" rather
+	-- than the internal "Opening - No Text").
+	local label = name
+	if text and not Stoa:IsSecret(text) and text ~= "" then label = text end
+	if not Stoa:IsSecret(label) then label = label:gsub(" %- No Text$", "") end
+	cast.spell:SetText(label)
 	cast:SetScript("OnUpdate", nil)
 
 	if not Stoa:IsSecret(startMS) and not Stoa:IsSecret(endMS) then
