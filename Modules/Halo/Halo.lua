@@ -137,12 +137,24 @@ end
 
 -- The target sits beside the Halo's upper left, clear of the nameplates
 -- that crowd the space above your head. Like the cast bar it is parented to
--- UIParent, so it stays with you out of combat as well.
+-- UIParent, so it stays with you out of combat as well. It's a secure unit
+-- button, so right click opens the unit menu (focus, invite, inspect, trade)
+-- like Blizzard's target frame; the game shows and hides it with the target.
 function Halo:BuildTarget(frame)
-	local target = CreateFrame("Frame", nil, UIParent)
+	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
 	target:SetSize(200, 52)
 	target:SetPoint("BOTTOMRIGHT", frame, "LEFT", -28, 36)
+	target:SetAttribute("unit", "target")
+	target:SetAttribute("type1", "target")
+	target:SetAttribute("type2", "togglemenu")
+	target:RegisterForClicks("AnyUp")
+	target:SetScript("OnEnter", function(button)
+		GameTooltip_SetDefaultAnchor(GameTooltip, button)
+		GameTooltip:SetUnit("target")
+	end)
+	target:SetScript("OnLeave", GameTooltip_Hide)
+	RegisterUnitWatch(target)
 	self.target = target
 
 	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "RIGHT")
@@ -197,7 +209,6 @@ function Halo:BuildTarget(frame)
 		icon:Hide()
 		target.auras[i] = icon
 	end
-	target:Hide()
 end
 
 -- The cast bar is parented to UIParent rather than the Halo, so it shows for
@@ -278,10 +289,8 @@ end
 
 function Halo:UpdateTarget()
 	local target = self.target
-	if not UnitExists("target") then
-		target:Hide()
-		return
-	end
+	-- Showing and hiding is the unit watch's job, as the frame is secure.
+	if not UnitExists("target") then return end
 	target.name:SetText(UnitName("target"))
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
@@ -304,7 +313,6 @@ function Halo:UpdateTarget()
 	else
 		self:UpdateThreat()
 	end
-	target:Show()
 end
 
 -- Fills the target's aura icons. Values can be secret in combat; textures
