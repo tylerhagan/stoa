@@ -28,7 +28,13 @@ local ART_SEAL_SIZE = 92
 local ART_HEIGHT = 136
 local ART_TEXELS, ART_TOP = 256, 129
 local ART_SCALE = ART_HEIGHT / (ART_TEXELS - ART_TOP)
-local ART_CENTRE = 512
+-- The medallion around the seal: a full ring on the top line, scaled so
+-- its leather disc just holds the seal. Its ring centre sits 132 texels
+-- down, on the line.
+local MEDALLION_SCALE = 0.556
+local MEDALLION_WIDTH, MEDALLION_LINE = 512, 132
+-- How far either side of centre the medallion's flares reach.
+local MEDALLION_REACH = 207 * MEDALLION_SCALE
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30
@@ -115,36 +121,32 @@ function Console:OpenHeight()
 	return self.db.art and ART_HEIGHT or self.db.height
 end
 
--- Lays the leather pieces along the console: the arch in the centre and a
--- plain stretch out to each screen edge. Each piece is a leather
+-- Lays the leather along the console: a plain stretch from edge to edge
+-- with the medallion over its centre. Each piece is a leather
 -- base with a line layer on top tinted in the theme's accent.
 function Console:BuildArt(frame)
 	local parts = {}
-	local height = ART_TEXELS * ART_SCALE
 
-	local function piece(file, sublevel)
+	local function piece(file, sublevel, scale)
 		local base = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel)
 		base:SetTexture(UI.MEDIA .. "Textures\\Console" .. file)
 		local lines = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel + 1)
 		lines:SetTexture(UI.MEDIA .. "Textures\\Console" .. file .. "Lines")
 		lines:SetAllPoints(base)
 		UI.tint(lines, "accent")
-		base:SetHeight(height)
+		base:SetHeight(ART_TEXELS * (scale or ART_SCALE))
 		parts[#parts + 1] = base
 		parts[#parts + 1] = lines
 		return base
 	end
 
-	local centre = piece("Centre", -3)
-	centre:SetWidth(ART_CENTRE * ART_SCALE)
-	centre:SetPoint("BOTTOM")
+	local fill = piece("Fill", -5)
+	fill:SetPoint("BOTTOMLEFT")
+	fill:SetPoint("BOTTOMRIGHT")
 
-	local leftFill = piece("Fill", -5)
-	leftFill:SetPoint("BOTTOMLEFT")
-	leftFill:SetPoint("BOTTOMRIGHT", centre, "BOTTOMLEFT")
-	local rightFill = piece("Fill", -5)
-	rightFill:SetPoint("BOTTOMLEFT", centre, "BOTTOMRIGHT")
-	rightFill:SetPoint("BOTTOMRIGHT")
+	local medallion = piece("Centre", -3, MEDALLION_SCALE)
+	medallion:SetWidth(MEDALLION_WIDTH * MEDALLION_SCALE)
+	medallion:SetPoint("TOP", frame, "TOP", 0, MEDALLION_LINE * MEDALLION_SCALE)
 	return parts
 end
 
@@ -155,7 +157,7 @@ function Console:BuildSeal(frame)
 	local size = art and ART_SEAL_SIZE or SEAL_SIZE
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
-	seal:SetPoint("CENTER", frame, "TOP", 0, art and 4 or 6)
+	seal:SetPoint("CENTER", frame, "TOP", 0, art and 3 or 6)
 	self.seal = seal
 
 	if not art then
@@ -178,14 +180,23 @@ function Console:BuildSeal(frame)
 	-- Health on the left, filling towards the seal; mana on the right.
 	local health = bar(frame, 150, 3, "health")
 	health:SetReverseFill(true)
-	health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
+	-- Beside the seal; with the art, clear of the medallion and under the line.
+	if art then
+		health:SetPoint("RIGHT", frame, "TOP", -(MEDALLION_REACH + 16), -36)
+	else
+		health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
+	end
 	local healthText = text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
 	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 4)
 	local healthCap = caption(frame, "Health")
 	healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
 
 	local mana = bar(frame, 150, 3, "mana")
-	mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
+	if art then
+		mana:SetPoint("LEFT", frame, "TOP", MEDALLION_REACH + 16, -36)
+	else
+		mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
+	end
 	local manaText = text(frame, "serif", Stoa.typeSize.title, "mana")
 	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 4)
 	local manaCap = caption(frame, "Mana")
