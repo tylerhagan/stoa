@@ -348,9 +348,11 @@ end
 
 function Party:UpdateAll()
 	self.frame:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 1 or WORLD_ALPHA)
-	-- The bindings line only shows under cards: in a party, or the preview.
+	-- The bindings line only shows under cards in a fight. Out of combat
+	-- the console's arch rises into that spot, and it isn't needed there.
 	local cards = self.cards[1].preview or (IsInGroup() and not IsInRaid())
-	self.legend:SetShown(layoutFor(Stoa:GetRole()).legend and cards and true or false)
+	local combat = Stoa:GetState() == Stoa.STATE_COMBAT
+	self.legend:SetShown(layoutFor(Stoa:GetRole()).legend and cards and combat and true or false)
 	for _, card in ipairs(self.cards) do
 		self:UpdateCard(card)
 	end
