@@ -19,6 +19,8 @@ local SIZE = 300
 local FADE_IN = 0.2
 local FADE_OUT = 0.5
 local SIGNATURE_SIZE = 36
+local AURA_SIZE = 22
+local AURA_COUNT = 8
 
 -- Signature spells: the one cooldown each spec lives around. The first
 -- spell the character knows is shown; only spells with a cooldown are
@@ -160,6 +162,41 @@ function Halo:BuildTarget(frame)
 	threat:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target.threat = threat
+
+	-- Auras: on a friend, their buffs, yours first; on an enemy, the
+	-- debuffs you put there. Rounded icons with a sweep for time left.
+	target.auras = {}
+	local mask = UI.MEDIA .. "Textures\\ButtonMask"
+	for i = 1, AURA_COUNT do
+		local icon = CreateFrame("Frame", nil, target)
+		icon:SetSize(AURA_SIZE, AURA_SIZE)
+		if i == 1 then
+			icon:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -36)
+		else
+			icon:SetPoint("RIGHT", target.auras[i - 1], "LEFT", -4, 0)
+		end
+		local tex = icon:CreateTexture(nil, "ARTWORK")
+		tex:SetAllPoints()
+		tex:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+		local m = icon:CreateMaskTexture()
+		m:SetAllPoints()
+		m:SetTexture(mask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		tex:AddMaskTexture(m)
+		icon.texture = tex
+		local cooldown = CreateFrame("Cooldown", nil, icon, "CooldownFrameTemplate")
+		cooldown:SetAllPoints()
+		cooldown:SetSwipeTexture(mask)
+		cooldown:SetDrawEdge(false)
+		cooldown:SetDrawBling(false)
+		cooldown:SetHideCountdownNumbers(true)
+		cooldown:SetReverse(true)
+		icon.cooldown = cooldown
+		local count = UI.text(icon, "sans", Stoa.typeSize.caption, "text", "RIGHT")
+		count:SetPoint("BOTTOMRIGHT", 2, -2)
+		icon.count = count
+		icon:Hide()
+		target.auras[i] = icon
+	end
 	target:Hide()
 end
 
@@ -261,12 +298,64 @@ function Halo:UpdateTarget()
 	target.hp:SetShown(not dead)
 	target.health:SetShown(not dead)
 	target:SetAlpha(dead and 0.6 or 1)
+	self:UpdateTargetAuras()
 	if dead then
 		target.threat:SetText("")
 	else
 		self:UpdateThreat()
 	end
 	target:Show()
+end
+
+-- Fills the target's aura icons. Values can be secret in combat; textures
+-- and counts still take them, and the sweep is skipped if the times can't
+-- be read.
+function Halo:UpdateTargetAuras()
+	local icons = self.target.auras
+	if not icons then return end
+	local hostile = UnitCanAttack("player", "target")
+	if Stoa:IsSecret(hostile) then hostile = false end
+	local found = {}
+	local function collect(filter)
+		if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
+		for i = 1, 40 do
+			if #found >= AURA_COUNT then return end
+			local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, filter)
+			if not ok or not aura then return end
+			local id = aura.auraInstanceID
+			if not found[id or ("i" .. i .. filter)] then
+				found[id or ("i" .. i .. filter)] = true
+				found[#found + 1] = aura
+			end
+		end
+	end
+	if UnitExists("target") then
+		if hostile then
+			collect("HARMFUL|PLAYER")
+		else
+			collect("HELPFUL|PLAYER")
+			collect("HELPFUL")
+		end
+	end
+	for i, icon in ipairs(icons) do
+		local aura = found[i]
+		if aura then
+			icon.texture:SetTexture(aura.icon)
+			pcall(function()
+				local n = aura.applications
+				icon.count:SetText(n and n > 1 and n or "")
+			end)
+			icon.cooldown:Clear()
+			pcall(function()
+				if aura.duration and aura.duration > 0 then
+					icon.cooldown:SetCooldown(aura.expirationTime - aura.duration, aura.duration)
+				end
+			end)
+			icon:Show()
+		else
+			icon:Hide()
+		end
+	end
 end
 
 local THREAT_WORDS = {
@@ -435,6 +524,7 @@ function Halo:OnEnable()
 	end)
 	Stoa:On("UNIT_AURA", function(unit)
 		if unit == "player" then self:UpdateReminders() end
+		if unit == "target" then self:UpdateTargetAuras() end
 	end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		self:UpdateHealth()

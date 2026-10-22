@@ -245,6 +245,26 @@ local function placeMenu()
 	end
 end
 
+-- Bags open above the console rather than over it. Blizzard stacks bag
+-- windows up from the screen's bottom-right corner; the ones it pins to the
+-- screen are lifted clear of the console, and the rest follow them.
+local BAG_LIFT_GAP = 16
+
+local function liftBags()
+	local floor = Console:OpenHeight() + BAG_LIFT_GAP
+	local frames = { ContainerFrameCombinedBags }
+	for i = 1, 13 do frames[#frames + 1] = _G["ContainerFrame" .. i] end
+	for _, bag in ipairs(frames) do
+		if bag and bag:IsShown() and bag:GetNumPoints() == 1 then
+			local point, relativeTo, relativePoint, x, y = bag:GetPoint(1)
+			local onScreen = relativeTo == nil or relativeTo == UIParent
+			if onScreen and point and point:find("^BOTTOM") and type(y) == "number" and y < floor then
+				bag:SetPoint(point, relativeTo or UIParent, relativePoint, x, floor)
+			end
+		end
+	end
+end
+
 -- Rests dim, brightens while the mouse is over either row.
 local function watchMenu()
 	local menu, bags = menuFrames()
@@ -290,7 +310,14 @@ function Console:House()
 	end
 
 	apply()
-	if db.houseMenu then watchMenu() end
+	if db.houseMenu then
+		watchMenu()
+		if UpdateContainerFrameAnchors then
+			hooksecurefunc("UpdateContainerFrameAnchors", function()
+				if not InCombatLockdown() then xpcall(liftBags, geterrorhandler()) end
+			end)
+		end
+	end
 	Stoa:On("PLAYER_ENTERING_WORLD", apply)
 	Stoa:On("UI_SCALE_CHANGED", apply)
 	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", apply)
