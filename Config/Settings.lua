@@ -117,3 +117,18 @@ function Stoa:OpenSettings()
 	end
 	Settings.OpenToCategory(category:GetID())
 end
+
+-- /stoa safe: if a Stoa skin ever breaks Blizzard's own UI, this turns off
+-- every piece that reaches into Blizzard frames and reloads. Each can be
+-- turned back on in Options > AddOns > Stoa.
+Stoa.commands.safe = function()
+	local m = Stoa.modules
+	if m.Grimoire then
+		m.Grimoire.db.houseChat = false
+		m.Grimoire.db.houseMenu = false
+		m.Grimoire.db.hideBarArt = false
+	end
+	if m.ActionBars then m.ActionBars.db.enabled = false end
+	if m.Windows then m.Windows.db.enabled = false end
+	ReloadUI()
+end
