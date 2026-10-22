@@ -126,10 +126,10 @@ local function setTabArt(tab, selected)
 			tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind .. "Lines")
 		end
 	end
-	-- Below the tab's own words, with the open tab in front so its border
-	-- reads over its neighbours'.
+	-- Over the tab, with the open tab in front so its border reads over its
+	-- neighbours'. The holder takes no mouse, so clicks still reach the tab.
 	art.holder:SetFrameStrata(tab:GetFrameStrata())
-	art.holder:SetFrameLevel(math.max(tab:GetFrameLevel() - (selected and 1 or 2), 0))
+	art.holder:SetFrameLevel(tab:GetFrameLevel() + (selected and 2 or 1))
 end
 
 -- Blizzard nudges a tab's words up or down as it's selected; pin them
@@ -137,6 +137,8 @@ end
 local function anchorText(tab)
 	local text = tabText(tab)
 	if not (text and tab.stoaArt) then return end
+	-- A selected tab is a disabled button, which can swap its font back.
+	Stoa:SetFont(text, "sans", Stoa.typeSize.caption + 1)
 	text:ClearAllPoints()
 	text:SetPoint("CENTER", tab, "CENTER", 0, -3)
 end
@@ -179,6 +181,13 @@ local function artTab(tab)
 		lines = capped(holder, 2, true),
 	}
 	tab.stoaArt = art
+	-- The words move onto the holder too: a docked tab's own words get
+	-- clipped by the dock's scroll frame once the tab is selected.
+	local text = tabText(tab)
+	if text then
+		text:SetParent(holder)
+		text:SetDrawLayer("ARTWORK")
+	end
 	Console.tabArt = Console.tabArt or {}
 	for _, layer in ipairs({ art.base, art.lines }) do
 		for _, tex in ipairs(layer.parts) do
