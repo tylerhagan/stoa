@@ -20,7 +20,7 @@ What works today:
 | Movers | `/stoa unlock` to drag Stoa frames; positions saved per character |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` get invited |
-| Grimoire console | Out of combat: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page and strips the action bar art. Folds to a spine in combat |
+| Grimoire console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page and strips the action bar art. Folds to a spine in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
 | Target | Beside the Halo in and out of combat: name, health, a HOSTILE cue and threat in words |
 | Party cards | Name and health percent, a thick health bar with shields on its end, and word pips for your buffs, Weakened Soul, dispels and low health. Rounded cards. A row under the Halo when you heal, with a grid of your click bindings on the left; a column on the left otherwise |

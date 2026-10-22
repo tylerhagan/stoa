@@ -11,7 +11,7 @@ local Stoa = ns.Stoa
 local Console = Stoa.modules.Grimoire
 
 local CHAT_WIDTH = 440
-local CHAT_BOTTOM = 28
+local CHAT_BOTTOM = 20
 local CHAT_TOP_PAD = 16
 local CHAT_TAB_HEIGHT = 22
 
@@ -19,8 +19,8 @@ local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
 	chat:ClearAllPoints()
-	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", Stoa.space.xxl, CHAT_BOTTOM)
-	chat:SetSize(CHAT_WIDTH, Console.db.height - CHAT_BOTTOM - CHAT_TOP_PAD - CHAT_TAB_HEIGHT)
+	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), CHAT_BOTTOM)
+	chat:SetSize(CHAT_WIDTH, Console:OpenHeight() - CHAT_BOTTOM - CHAT_TOP_PAD - CHAT_TAB_HEIGHT)
 	-- The ink panel is the background, so the chat window's own goes.
 	if FCF_SetWindowAlpha then FCF_SetWindowAlpha(chat, 0) end
 end

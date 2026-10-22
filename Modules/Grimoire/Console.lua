@@ -14,11 +14,21 @@ local Console = Stoa:NewModule("Grimoire", {
 	height = 150,
 	houseChat = true,
 	hideBarArt = true,
+	art = true,
 })
 
 local SPINE_HEIGHT = 22
 local ARCH_SIZE = 220
 local SEAL_SIZE = 76
+local ART_SEAL_SIZE = 92
+
+-- The leather panel art. Each piece is 256 texels tall with the bar itself
+-- running from texel 129 to 252; the console's open height is the bar's
+-- height, and everything else scales with it.
+local ART_HEIGHT = 136
+local ART_SCALE = ART_HEIGHT / 123
+local ART_TEXELS, ART_BAR_BOTTOM = 256, 252
+local ART_CAP, ART_CENTRE = 128, 512
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30
@@ -37,7 +47,7 @@ function Console:Build()
 	frame:SetFrameStrata("BACKGROUND")
 	frame:SetPoint("BOTTOMLEFT")
 	frame:SetPoint("BOTTOMRIGHT")
-	frame:SetHeight(db.height)
+	frame:SetHeight(self:OpenHeight())
 	self.frame = frame
 
 	-- Ink panel and its top hairlines. The top line is split around the arch
@@ -71,6 +81,17 @@ function Console:Build()
 	bridge:SetAlpha(0)
 	self.archParts = { archRing, arch }
 	self.bridge = bridge
+	-- Parts drawn only while the console is folded, when the art is on.
+	self.flatParts = {}
+
+	if db.art then
+		-- The leather panel replaces the drawn panel, lines and arch while
+		-- open; folded, the drawn spine takes over again.
+		archRing:Hide()
+		arch:Hide()
+		self.archParts = self:BuildArt(frame)
+		self.flatParts = { bg, leftEdge, rightEdge, inner }
+	end
 
 	self:BuildSeal(frame)
 	self:BuildNotes(frame, space)
@@ -83,20 +104,77 @@ function Console:Build()
 	end)
 end
 
+-- Where the pages start: clear of the leather's gold border when it's on.
+function Console:PageInset()
+	if self.db.art then return 52, -14, 18 end
+	return Stoa.space.xxl, -Stoa.space.xl, 20
+end
+
+-- The console's height when open.
+function Console:OpenHeight()
+	return self.db.art and ART_HEIGHT or self.db.height
+end
+
+-- Lays the leather pieces along the console: an end cap each side, the
+-- arch in the centre and a plain stretch between. Each piece is a leather
+-- base with a line layer on top tinted in the theme's accent.
+function Console:BuildArt(frame)
+	local parts = {}
+	local height = ART_TEXELS * ART_SCALE
+	local drop = (ART_TEXELS - ART_BAR_BOTTOM) * ART_SCALE
+
+	local function piece(file, sublevel)
+		local base = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel)
+		base:SetTexture(UI.MEDIA .. "Textures\\Console" .. file)
+		local lines = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel + 1)
+		lines:SetTexture(UI.MEDIA .. "Textures\\Console" .. file .. "Lines")
+		lines:SetAllPoints(base)
+		UI.tint(lines, "accent")
+		base:SetHeight(height)
+		parts[#parts + 1] = base
+		parts[#parts + 1] = lines
+		return base
+	end
+
+	local left = piece("Left", -5)
+	left:SetWidth(ART_CAP * ART_SCALE)
+	left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, -drop)
+	local right = piece("Right", -5)
+	right:SetWidth(ART_CAP * ART_SCALE)
+	right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -drop)
+	local centre = piece("Centre", -3)
+	centre:SetWidth(ART_CENTRE * ART_SCALE)
+	centre:SetPoint("BOTTOM", frame, "BOTTOM", 0, -drop)
+
+	local leftFill = piece("Fill", -5)
+	leftFill:SetPoint("BOTTOMLEFT", left, "BOTTOMRIGHT")
+	leftFill:SetPoint("BOTTOMRIGHT", centre, "BOTTOMLEFT")
+	local rightFill = piece("Fill", -5)
+	rightFill:SetPoint("BOTTOMLEFT", centre, "BOTTOMRIGHT")
+	rightFill:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+	return parts
+end
+
 function Console:BuildSeal(frame)
+	-- With the leather art the seal sits in the art's arch, a size larger,
+	-- and the arch's own gold ring stands in for the seal's outer rings.
+	local art = self.db.art
+	local size = art and ART_SEAL_SIZE or SEAL_SIZE
 	local seal = CreateFrame("Frame", nil, frame)
-	seal:SetSize(SEAL_SIZE + 12, SEAL_SIZE + 12)
-	seal:SetPoint("CENTER", frame, "TOP", 0, 6)
+	seal:SetSize(size + 12, size + 12)
+	seal:SetPoint("CENTER", frame, "TOP", 0, art and 4 or 6)
 	self.seal = seal
 
-	local outer = circle(seal, "BORDER", 0, SEAL_SIZE + 12, "hairline")
-	outer:SetPoint("CENTER")
-	local gap = circle(seal, "BORDER", 1, SEAL_SIZE + 10, "panel")
-	gap:SetPoint("CENTER")
-	local ring = circle(seal, "BORDER", 2, SEAL_SIZE + 4, "accent")
+	if not art then
+		local outer = circle(seal, "BORDER", 0, size + 12, "hairline")
+		outer:SetPoint("CENTER")
+		local gap = circle(seal, "BORDER", 1, size + 10, "panel")
+		gap:SetPoint("CENTER")
+	end
+	local ring = circle(seal, "BORDER", 2, size + 4, "accent")
 	ring:SetPoint("CENTER")
 
-	local portrait = circle(seal, "ARTWORK", 0, SEAL_SIZE)
+	local portrait = circle(seal, "ARTWORK", 0, size)
 	portrait:SetPoint("CENTER")
 	self.portrait = portrait
 
@@ -126,8 +204,9 @@ function Console:BuildSeal(frame)
 end
 
 function Console:BuildNotes(frame, space)
+	local inset, top, rowGap = self:PageInset()
 	local page = CreateFrame("Frame", nil, frame)
-	page:SetPoint("TOPLEFT", space.xxl, -space.xl)
+	page:SetPoint("TOPLEFT", inset, top)
 	page:SetSize(420, 110)
 	self.leftPage = page
 
@@ -140,7 +219,7 @@ function Console:BuildNotes(frame, space)
 	self.notes = {}
 	for i = 1, MAX_NOTES do
 		local fs = text(page, "italic", Stoa.typeSize.label, "text")
-		fs:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6 - (i - 1) * 20)
+		fs:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6 - (i - 1) * rowGap)
 		fs:SetPoint("RIGHT", page, "RIGHT")
 		fs:SetWordWrap(false)
 		self.notes[i] = fs
@@ -149,8 +228,9 @@ function Console:BuildNotes(frame, space)
 end
 
 function Console:BuildFellowship(frame, space)
+	local inset, top, rowGap = self:PageInset()
 	local page = CreateFrame("Frame", nil, frame)
-	page:SetPoint("TOPRIGHT", -space.xxl, -space.xl)
+	page:SetPoint("TOPRIGHT", -inset, top)
 	page:SetSize(470, 110)
 	self.rightPage = page
 
@@ -165,7 +245,7 @@ function Console:BuildFellowship(frame, space)
 	for i = 1, 4 do
 		local row = CreateFrame("Frame", nil, page)
 		row:SetSize(280, 18)
-		row:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6 - (i - 1) * 20)
+		row:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6 - (i - 1) * rowGap)
 		local name = text(row, "serif", Stoa.typeSize.label, "text")
 		name:SetPoint("LEFT")
 		name:SetWidth(110)
@@ -262,7 +342,7 @@ end
 -- The console is not a secure frame, so it can resize in combat.
 
 function Console:SetOpen(open, instant)
-	local target = open and self.db.height or SPINE_HEIGHT
+	local target = open and self:OpenHeight() or SPINE_HEIGHT
 	local frame = self.frame
 	local from = frame:GetHeight()
 	local start = GetTime()
@@ -281,6 +361,9 @@ function Console:SetOpen(open, instant)
 			part:SetAlpha(open and progress or 1 - progress)
 		end
 		self.bridge:SetAlpha(open and 1 - progress or progress)
+		for _, part in ipairs(self.flatParts) do
+			part:SetAlpha(open and 1 - progress or progress)
+		end
 		local scale = self.seal:GetScale()
 		self.seal:SetScale(scale + (sealScale - scale) * progress)
 	end
