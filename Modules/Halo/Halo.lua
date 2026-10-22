@@ -149,8 +149,8 @@ function Halo:BuildSignature(frame)
 	slot:Hide()
 end
 
--- The target sits over your head, above the Halo's open top, as in the
--- mockups: name, a wide bar, health and the hostile and threat words, and
+-- The target sits at the Halo's upper right, opposite the tank watch:
+-- name, a wide bar, health and the hostile and threat words, and
 -- a centred row of auras. Like the cast bar it is parented to UIParent, so
 -- it stays with you out of combat as well. It's a secure unit button, so
 -- right click opens the unit menu (focus, invite, inspect, trade) like
@@ -161,7 +161,8 @@ function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
 	target:SetSize(TARGET_WIDTH, 52)
-	target:SetPoint("BOTTOM", frame, "TOP", 0, 34)
+	-- Over your head it fought with the game's own nameplate.
+	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 28, 36)
 	target:SetAttribute("unit", "target")
 	target:SetAttribute("type1", "target")
 	target:SetAttribute("type2", "togglemenu")
