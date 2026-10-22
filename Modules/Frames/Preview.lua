@@ -148,10 +148,14 @@ function Stoa:TogglePreview(kind)
 		hideParty()
 		hideRaid()
 		active = false
+		self.previewing = nil
+		self:Fire("STOA_PREVIEW_CHANGED")
 		self:Print("Preview hidden.")
 		return
 	end
 	active = true
+	self.previewing = kind == "raid" and "raid" or "party"
+	self:Fire("STOA_PREVIEW_CHANGED")
 	if kind == "raid" then
 		showRaid()
 		self:Print("Showing a sample raid. /stoa test to hide it; /stoa unlock to move it.")
@@ -168,6 +172,8 @@ Stoa.commands.test = function(rest) Stoa:TogglePreview(rest:lower()) end
 Stoa:On("PLAYER_REGEN_DISABLED", function()
 	if not active then return end
 	active = false
+	Stoa.previewing = nil
+	Stoa:Fire("STOA_PREVIEW_CHANGED")
 	hideRaid()
 	Stoa:AfterCombat(hideParty)
 end)

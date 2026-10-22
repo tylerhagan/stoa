@@ -16,7 +16,7 @@ local Party = Stoa:NewModule("Party", {
 })
 
 local UNITS = { "player", "party1", "party2", "party3", "party4" }
-local WORLD_ALPHA = 0.75
+local WORLD_ALPHA = 1
 local OUT_OF_RANGE_ALPHA = 0.6
 local GONE_ALPHA = 0.42
 
@@ -25,7 +25,7 @@ local GONE_ALPHA = 0.42
 -- beneath. Everyone else gets a column on the left. A position dragged with
 -- /stoa unlock wins over these.
 local LAYOUTS = {
-	HEALER = { width = 176, height = 70, gap = 8, style = "party", row = true, legend = true },
+	HEALER = { width = 176, height = 70, gap = 8, style = "party", row = true, grid = true },
 	OTHER = { width = 184, height = 58, gap = 6, style = "compact", point = { "TOPLEFT", UIParent, "LEFT", 36, 180 } },
 }
 
@@ -74,10 +74,7 @@ function Party:Build()
 		self.cards[i] = self:BuildCard(i, unit)
 	end
 
-	-- What each click does, under the healer row.
-	local legend = UI.text(frame, "serif", Stoa.typeSize.body, "text", "CENTER")
-	legend:SetPoint("TOP", frame, "BOTTOM", 0, -10)
-	self.legend = legend
+	self:BuildGrid()
 
 	UI.applyTheme()
 	self:Layout()
@@ -123,29 +120,83 @@ function Party:Layout()
 		UI.styleCard(card, layout.style)
 	end
 	self:UpdateAll()
-	self:UpdateLegend()
+	self:UpdateGrid()
 end
 
-local LEGEND_BUTTONS = { ["1"] = "Left", ["2"] = "Right", ["3"] = "Wheel", ["4"] = "Thumb 1", ["5"] = "Thumb 2" }
-local LEGEND_ORDER = { "1", "2", "3", "4", "5", "shift-1", "shift-2", "shift-3", "shift-4", "shift-5" }
-local LEGEND_MAX = 5
+-- The click grid: what every click does, laid out like the mockup's left
+-- wing. Healers only, and only while there are cards to click.
 
--- Spells only: target and menu need no reminding.
-function Party:UpdateLegend()
-	local clickCast = Stoa.modules.ClickCast
-	local bindings = clickCast and clickCast.Bindings and clickCast:Bindings() or {}
-	local r, g, b = Stoa:Color("muted")
-	local muted = string.format("|cff%02x%02x%02x", r * 255, g * 255, b * 255)
-	local parts = {}
-	for _, key in ipairs(LEGEND_ORDER) do
-		local action = bindings[key]
-		if action and action ~= "target" and action ~= "menu" and #parts < LEGEND_MAX then
-			local shift, button = key:match("^(shift%-)(%d)$")
-			local label = shift and ("Shift-" .. LEGEND_BUTTONS[button]:lower()) or LEGEND_BUTTONS[key]
-			parts[#parts + 1] = muted .. label:upper() .. "|r  " .. action
+local GRID_COLUMNS = {
+	{ id = "1", label = "Left" }, { id = "2", label = "Right" }, { id = "3", label = "Wheel" },
+	{ id = "4", label = "Thumb 1" }, { id = "5", label = "Thumb 2" },
+}
+local GRID_ROWS = { { prefix = "", label = "None" }, { prefix = "shift-", label = "Shift" }, { prefix = "ctrl-", label = "Ctrl" } }
+local GRID_LABEL_WIDTH, GRID_CELL_WIDTH, GRID_ROW_HEIGHT = 56, 112, 28
+
+-- Long spell names cut down to fit a cell.
+local SHORT_NAMES = {
+	["^Power Word: "] = "PW: ",
+	["^Blessing of "] = "B. of ",
+	["^Prayer of "] = "Prayer of ",
+	["^target$"] = "Target",
+	["^menu$"] = "Menu",
+}
+local function shortName(action)
+	if not action then return "·" end
+	for pattern, short in pairs(SHORT_NAMES) do
+		action = action:gsub(pattern, short)
+	end
+	return action
+end
+
+function Party:BuildGrid()
+	local grid = CreateFrame("Frame", "StoaClickGrid", UIParent)
+	local width = GRID_LABEL_WIDTH + #GRID_COLUMNS * GRID_CELL_WIDTH
+	grid:SetSize(width, 20 + GRID_ROW_HEIGHT * (#GRID_ROWS + 1))
+	grid:SetFrameStrata("LOW")
+	grid:SetPoint("TOPLEFT", UIParent, "LEFT", 60, -40)
+	grid:Hide()
+	self.grid = grid
+
+	local title = UI.caption(grid, "Your hands · click-cast on any card")
+	title:SetPoint("TOPLEFT")
+
+	local function cell(row, col, kind)
+		local x = col == 0 and 0 or GRID_LABEL_WIDTH + (col - 1) * GRID_CELL_WIDTH
+		local y = -20 - row * GRID_ROW_HEIGHT
+		local fs = kind == "caption" and UI.caption(grid, "") or UI.text(grid, "sans", Stoa.typeSize.body, "text")
+		fs:SetPoint("LEFT", grid, "TOPLEFT", x + 6, y - GRID_ROW_HEIGHT / 2)
+		fs:SetWidth((col == 0 and GRID_LABEL_WIDTH or GRID_CELL_WIDTH) - 10)
+		fs:SetWordWrap(false)
+		return fs
+	end
+
+	for col, column in ipairs(GRID_COLUMNS) do
+		cell(0, col, "caption"):SetText(column.label:upper())
+	end
+	grid.cells = {}
+	for row, mod in ipairs(GRID_ROWS) do
+		local line = UI.line(grid)
+		line:SetPoint("TOPLEFT", 0, -20 - row * GRID_ROW_HEIGHT)
+		line:SetPoint("TOPRIGHT", 0, -20 - row * GRID_ROW_HEIGHT)
+		cell(row, 0, "caption"):SetText(mod.label:upper())
+		for col, column in ipairs(GRID_COLUMNS) do
+			grid.cells[mod.prefix .. column.id] = cell(row, col)
 		end
 	end
-	self.legend:SetText(table.concat(parts, "     "))
+	Stoa:RegisterMover("clickgrid", grid, "Click grid")
+end
+
+function Party:UpdateGrid()
+	local grid = self.grid
+	local clickCast = Stoa.modules.ClickCast
+	local bindings = clickCast and clickCast.Bindings and clickCast:Bindings() or {}
+	for key, fs in pairs(grid.cells) do
+		fs:SetText(shortName(bindings[key]))
+	end
+	local cards = Stoa.previewing or IsInGroup()
+	grid:SetShown(layoutFor(Stoa:GetRole()).grid and cards and true or false)
+	grid:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 1 or 0.8)
 end
 
 -- Updates -------------------------------------------------------------------
@@ -348,11 +399,6 @@ end
 
 function Party:UpdateAll()
 	self.frame:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 1 or WORLD_ALPHA)
-	-- The bindings line only shows under cards in a fight. Out of combat
-	-- the console's arch rises into that spot, and it isn't needed there.
-	local cards = self.cards[1].preview or (IsInGroup() and not IsInRaid())
-	local combat = Stoa:GetState() == Stoa.STATE_COMBAT
-	self.legend:SetShown(layoutFor(Stoa:GetRole()).legend and cards and combat and true or false)
 	for _, card in ipairs(self.cards) do
 		self:UpdateCard(card)
 	end
@@ -384,18 +430,20 @@ function Party:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		Stoa:AfterCombat(function() self:Layout() end)
 	end)
-	Stoa:On("STOA_STATE_CHANGED", function() self:UpdateAll() end)
+	Stoa:On("STOA_STATE_CHANGED", function()
+		self:UpdateAll()
+		self:UpdateGrid()
+	end)
+	Stoa:On("STOA_PREVIEW_CHANGED", function() self:UpdateGrid() end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function()
 		self:UpdateAll()
+		self:UpdateGrid()
 		-- The healer row re-centres on the cards in it.
 		Stoa:AfterCombat(function() self:Layout() end)
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateAll() end)
-	Stoa:On("STOA_THEME_CHANGED", function()
-		self:UpdateAll()
-		self:UpdateLegend()
-	end)
-	Stoa:On("STOA_CLICKS_CHANGED", function() self:UpdateLegend() end)
+	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateAll() end)
+	Stoa:On("STOA_CLICKS_CHANGED", function() self:UpdateGrid() end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function() self:UpdateAll() end)
 	Stoa:On("UNIT_CONNECTION", function(unit)
 		local card = cardFor(self, unit)

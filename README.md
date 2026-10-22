@@ -23,7 +23,7 @@ What works today:
 | Grimoire console | Out of combat: portrait seal, health and mana, fellowship and who is online. Holds chat on its left page and strips the action bar art. Folds to a spine in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
 | Target | Beside the Halo in and out of combat: name, health, a HOSTILE cue and threat in words |
-| Party cards | Name and health percent, a thick health bar with shields on its end, and word pips for your buffs, Weakened Soul, dispels and low health. A row under the Halo with your click bindings spelled out when you heal; a column on the left otherwise |
+| Party cards | Name and health percent, a thick health bar with shields on its end, and word pips for your buffs, Weakened Soul, dispels and low health. Rounded cards. A row under the Halo when you heal, with a grid of your click bindings on the left; a column on the left otherwise |
 | Raid frames | The same cards, one row per group under the Halo when you heal, one column per group on the left otherwise, for 10, 20 and 40 |
 | Click-casting | Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. `/stoa clicks` to edit |
 | Minimap | Theme-coloured rings, serif zone name, wheel to zoom |

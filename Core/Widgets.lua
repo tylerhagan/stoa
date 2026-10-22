@@ -190,21 +190,64 @@ local function makePip(card)
 	return pip
 end
 
+-- Rounded card pieces: one small image each, nine-sliced so the corners
+-- keep their shape at any size. Clients without slicing get square ones.
+local CARD_SLICE = 12
+
+local function sliced(parent, layer, file, outset)
+	if not parent.CreateTexture then return nil end
+	local tex = parent:CreateTexture(nil, layer)
+	if not tex.SetTextureSliceMargins then
+		tex:Hide()
+		return nil
+	end
+	tex:SetTexture(UI.MEDIA .. "Textures\\" .. file)
+	tex:SetTextureSliceMargins(CARD_SLICE, CARD_SLICE, CARD_SLICE, CARD_SLICE)
+	if tex.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
+		tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+	end
+	outset = outset or 0
+	tex:SetPoint("TOPLEFT", -outset, outset)
+	tex:SetPoint("BOTTOMRIGHT", outset, -outset)
+	return tex
+end
+
+-- A rounded border with the same Set and Clear as UI.border, falling back
+-- to it where slicing isn't available.
+function UI.roundBorder(frame, file, size, outset)
+	local tex = sliced(frame, "OVERLAY", file, outset)
+	if not tex then return UI.border(frame, size, outset) end
+	tex:Hide()
+	return {
+		edges = { tex },
+		Set = function(_, r, g, b, a)
+			tex:SetVertexColor(r, g, b, a or 1)
+			tex:Show()
+		end,
+		Clear = function() tex:Hide() end,
+	}
+end
+
 function UI.unitCard(card, styleName)
-	local bg = card:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	UI.paint(bg, "panel")
+	local bg = sliced(card, "BACKGROUND", "CardFill.tga")
+	if bg then
+		UI.tint(bg, "panel", 0.96)
+	else
+		bg = card:CreateTexture(nil, "BACKGROUND")
+		bg:SetAllPoints()
+		UI.paint(bg, "panel", 0.96)
+	end
 
 	-- A hairline frame always, and a stronger border for states: a dispel,
 	-- low health or your target. Dispels also get a soft halo outside.
-	local frameEdge = UI.border(card, 1)
+	local frameEdge = UI.roundBorder(card, "CardEdge.tga", 1)
 	for _, tex in ipairs(frameEdge.edges) do
 		tex:SetDrawLayer("BORDER")
 		UI.tint(tex, "hairline")
 		tex:Show()
 	end
-	card.state = UI.border(card, 2)
-	card.glow = UI.border(card, 3, 3)
+	card.state = UI.roundBorder(card, "CardState.tga", 2)
+	card.glow = UI.roundBorder(card, "CardGlow.tga", 3, 3)
 	-- Kept for older callers: a dispel border is the state border.
 	card.dispel = card.state
 
