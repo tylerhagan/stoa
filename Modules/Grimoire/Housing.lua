@@ -46,35 +46,33 @@ local function placeChat()
 end
 
 -- With the art the tab row stands on the console's top edge.
-local function placeDock()
-	local dock = GeneralDockManager
-	if not (artOn() and dock) then return end
-	dock:ClearAllPoints()
-	dock:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight())
-	dock:SetSize(CHAT_WIDTH, tabRise())
-end
+-- Chat tabs ------------------------------------------------------------------
+-- With the leather art, Stoa draws its own tabs standing on the console's
+-- top edge, one per docked chat window, and Blizzard's tab row is only made
+-- invisible. Blizzard's tabs are never reshaped: its chat code runs through
+-- them on every update and breaks if they change under it. Stoa's tabs
+-- only read the dock and pass clicks on: left selects the window, right
+-- opens Blizzard's tab menu, middle pops a window back in.
+--
+-- The selected tab opens into the console, its gold border running up and
+-- round it; the rest sit behind the edge, dimmer, with the border across
+-- their foot. Its words read in the accent and the rest in muted bone.
+local TAB_GAP = 2
 
--- Chat tabs. Blizzard's tab art goes. With the leather art each tab is cut
--- from the console's own top edge: the selected tab opens into the console,
--- its gold border running up and round it; the rest sit behind the edge,
--- dimmer, with the border running across their foot. Without the art they
--- are plain words. Either way the selected tab reads in the accent and the
--- rest in muted bone.
-local function tabText(tab)
-	return tab.Text or (tab.GetFontString and tab:GetFontString())
-end
+local strip, tabs = nil, {}
 
-local function isSelected(tab)
-	return SELECTED_CHAT_FRAME and tab:GetID() == SELECTED_CHAT_FRAME:GetID()
+local function blizzardTab(chatFrame)
+	local name = chatFrame and chatFrame.GetName and chatFrame:GetName()
+	return name and _G[name .. "Tab"]
 end
 
 -- Left cap, stretched middle and right cap of one texture file.
-local function capped(holder, sublevel, gold)
+local function capped(tab, sublevel, gold)
 	local s = Console.ART_SCALE
 	local size, cap = TAB_ART.size, TAB_ART.cap
 	local parts = {}
 	for i = 1, 3 do
-		local tex = holder:CreateTexture(nil, "BACKGROUND", nil, sublevel)
+		local tex = tab:CreateTexture(nil, "BACKGROUND", nil, sublevel)
 		tex:SetHeight(size * s)
 		if gold then
 			UI.tint(tex, "accent")
@@ -88,143 +86,105 @@ local function capped(holder, sublevel, gold)
 	left:SetTexCoord(0, cap / size, 0, 1)
 	middle:SetTexCoord((size / 2) / size, (size / 2 + 1) / size, 0, 1)
 	right:SetTexCoord(1 - cap / size, 1, 0, 1)
+	left:SetPoint("TOPLEFT", tab, "BOTTOMLEFT", -TAB_ART.x0 * s, TAB_ART.foot * s)
+	right:SetPoint("TOPRIGHT", tab, "BOTTOMRIGHT", TAB_ART.x0 * s, TAB_ART.foot * s)
 	middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
 	middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
-	return { parts = parts }
+	return parts
 end
 
-local function placeTabArt(tab)
-	local art = tab.stoaArt
-	if not art then return end
-	local s = Console.ART_SCALE
-	-- Where the tab's foot should be against where it is, in case the dock
-	-- holds its tabs off its bottom edge.
-	local drift = 0
-	local bottom = tab:GetBottom()
-	if bottom and Console.frame and Console.frame:GetTop() then
-		drift = bottom * tab:GetEffectiveScale() / UIParent:GetEffectiveScale() - Console:OpenHeight()
+local function paintTab(tab)
+	local kind = tab.selected and "Open" or "Closed"
+	if tab.kind ~= kind then
+		tab.kind = kind
+		for _, tex in ipairs(tab.base) do tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind) end
+		for _, tex in ipairs(tab.lines) do tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind .. "Lines") end
 	end
-	for _, layer in ipairs({ art.base, art.lines }) do
-		local left, right = layer.parts[1], layer.parts[3]
-		left:ClearAllPoints()
-		right:ClearAllPoints()
-		left:SetPoint("TOPLEFT", tab, "BOTTOMLEFT", -TAB_ART.x0 * s, TAB_ART.foot * s - drift)
-		right:SetPoint("TOPRIGHT", tab, "BOTTOMRIGHT", TAB_ART.x0 * s, TAB_ART.foot * s - drift)
-	end
+	-- The open tab sits in front, so its border reads over its neighbours'.
+	tab:SetFrameLevel(strip:GetFrameLevel() + (tab.selected and 3 or 1))
+	local token = (tab.selected and "accent") or (tab:IsMouseOver() and "text") or "muted"
+	tab.label:SetTextColor(Stoa:Color(token))
 end
 
-local function setTabArt(tab, selected)
-	local art = tab.stoaArt
-	if not art then return end
-	local kind = selected and "Open" or "Closed"
-	if art.kind ~= kind then
-		art.kind = kind
-		for _, tex in ipairs(art.base.parts) do
-			tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind)
-		end
-		for _, tex in ipairs(art.lines.parts) do
-			tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind .. "Lines")
-		end
-	end
-	-- Over the tab, with the open tab in front so its border reads over its
-	-- neighbours'. The holder takes no mouse, so clicks still reach the tab.
-	art.holder:SetFrameStrata(tab:GetFrameStrata())
-	art.holder:SetFrameLevel(tab:GetFrameLevel() + (selected and 2 or 1))
-end
-
--- With the art, a tab's words are Stoa's own label on the art's frame,
--- copied from Blizzard's (which stays, hidden, for Blizzard's code and for
--- sizing). Blizzard's own would be clipped by the dock's scroll frame, and
--- nudged up or down as the tab is selected.
-local function anchorText(tab)
-	local text = tabText(tab)
-	local art = tab.stoaArt
-	if not (text and art) then return end
-	-- A selected tab is a disabled button, which can swap its font back.
-	Stoa:SetFont(text, "sans", Stoa.typeSize.caption + 1)
-	text:SetAlpha(0)
-	art.label:SetText(text:GetText() or "")
-end
-
-local function colourTab(tab, selected)
-	anchorText(tab)
-	if selected == nil then selected = isSelected(tab) end
-	local text = tab.stoaArt and tab.stoaArt.label or tabText(tab)
-	if text then
-		local hover = not selected and tab.stoaHover
-		text:SetTextColor(Stoa:Color((selected and "accent") or (hover and "text") or "muted"))
-	end
-	setTabArt(tab, selected)
-end
-
-local function sizeTab(tab)
-	if not tab.stoaArt then return end
-	local text = tabText(tab)
+local function makeTab()
+	local tab = CreateFrame("Button", nil, strip)
 	tab:SetHeight(tabRise())
-	if text then
-		anchorText(tab)
-		local width = text:GetStringWidth()
-		if type(width) == "number" and width > 0 then
-			tab:SetWidth(width + TAB_TEXT_PAD * 2)
-		end
-	end
-	placeTabArt(tab)
-end
-
-local function artTab(tab)
-	-- The art spills past the tab, and docked tabs live in a scroll frame
-	-- that clips, so it hangs off its own frame and follows the tab.
-	local holder = CreateFrame("Frame", nil, UIParent)
-	holder:SetShown(tab:IsShown())
-	tab:HookScript("OnShow", function() holder:Show() end)
-	tab:HookScript("OnHide", function() holder:Hide() end)
-	local art = {
-		holder = holder,
-		base = capped(holder, 1),
-		lines = capped(holder, 2, true),
-	}
-	tab.stoaArt = art
-	local label = holder:CreateFontString(nil, "ARTWORK")
+	tab:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
+	tab.base = capped(tab, 1)
+	tab.lines = capped(tab, 2, true)
+	local label = tab:CreateFontString(nil, "ARTWORK")
 	Stoa:SetFont(label, "sans", Stoa.typeSize.caption + 1)
 	label:SetShadowOffset(0, 0)
-	label:SetPoint("CENTER", tab, "CENTER", 0, -3)
-	art.label = label
-	Console.tabArt = Console.tabArt or {}
-	for _, layer in ipairs({ art.base, art.lines }) do
-		for _, tex in ipairs(layer.parts) do
-			table.insert(Console.tabArt, tex)
+	label:SetPoint("CENTER", 0, -3)
+	tab.label = label
+	tab:SetScript("OnClick", function(self, button)
+		local blizzard = blizzardTab(self.chatFrame)
+		if blizzard and FCF_Tab_OnClick then
+			xpcall(FCF_Tab_OnClick, geterrorhandler(), blizzard, button)
 		end
-	end
-	tab:HookScript("OnEnter", function() tab.stoaHover = true; colourTab(tab) end)
-	tab:HookScript("OnLeave", function() tab.stoaHover = false; colourTab(tab) end)
+	end)
+	tab:SetScript("OnEnter", paintTab)
+	tab:SetScript("OnLeave", paintTab)
+	return tab
 end
 
-local function styleTabs()
-	placeDock()
-	for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
-		local tab = _G["ChatFrame" .. i .. "Tab"]
-		if tab and not tab.stoaStyled then
-			tab.stoaStyled = true
-			for _, region in ipairs({ tab:GetRegions() }) do
-				if region:IsObjectType("Texture") then region:SetAlpha(0) end
-			end
-			local text = tabText(tab)
-			if text then
-				Stoa:SetFont(text, "sans", Stoa.typeSize.caption + 1)
-				text:SetShadowOffset(0, 0)
-			end
-			if artOn() then artTab(tab) end
-		end
-		if tab then
-			sizeTab(tab)
-			colourTab(tab)
+local function dockedWindows()
+	local dock = GENERAL_CHAT_DOCK
+	if not (dock and FCFDock_GetChatFrames) then return {} end
+	local list = {}
+	for _, chatFrame in ipairs(FCFDock_GetChatFrames(dock)) do
+		local blizzard = blizzardTab(chatFrame)
+		if blizzard and (chatFrame:IsShown() or blizzard:IsShown()) then
+			list[#list + 1] = chatFrame
 		end
 	end
-	if artOn() then
-		-- Tabs stay up rather than fading out when the mouse leaves chat.
-		CHAT_FRAME_TAB_SELECTED_NOMOUSE_ALPHA = 1
-		CHAT_FRAME_TAB_NORMAL_NOMOUSE_ALPHA = 1
+	return list
+end
+
+-- Rebuilds the strip from the dock: which windows, their names, which one
+-- is selected.
+local function refreshTabs()
+	if not strip then return end
+	local selected = FCFDock_GetSelectedWindow and FCFDock_GetSelectedWindow(GENERAL_CHAT_DOCK)
+	local x = 0
+	local windows = dockedWindows()
+	for i, chatFrame in ipairs(windows) do
+		local tab = tabs[i] or makeTab()
+		tabs[i] = tab
+		tab.chatFrame = chatFrame
+		local blizzard = blizzardTab(chatFrame)
+		local text = blizzard and blizzard.GetText and blizzard:GetText()
+		tab.label:SetText(text or "")
+		local width = tab.label:GetStringWidth()
+		if type(width) ~= "number" then width = 40 end
+		tab:SetWidth(width + TAB_TEXT_PAD * 2)
+		tab:ClearAllPoints()
+		tab:SetPoint("BOTTOMLEFT", strip, "BOTTOMLEFT", x, 0)
+		x = x + tab:GetWidth() + TAB_GAP
+		tab.selected = chatFrame == selected
+		paintTab(tab)
+		tab:Show()
 	end
+	for i = #windows + 1, #tabs do tabs[i]:Hide() end
+end
+
+local function buildTabs()
+	if strip then return end
+	strip = CreateFrame("Frame", "StoaChatTabs", UIParent)
+	-- Above the chat frames, so these take the clicks rather than
+	-- Blizzard's invisible tabs underneath.
+	strip:SetFrameStrata("MEDIUM")
+	strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight())
+	strip:SetSize(CHAT_WIDTH, tabRise())
+	Console.tabArt = Console.tabArt or {}
+	table.insert(Console.tabArt, strip)
+	-- Blizzard's tab row stays where it is, working, just unseen.
+	if GeneralDockManager then GeneralDockManager:SetAlpha(0) end
+	refreshTabs()
+end
+
+local function safeRefresh()
+	xpcall(refreshTabs, geterrorhandler())
 end
 
 local function actionBar()
@@ -318,7 +278,122 @@ function Console:House()
 	local function apply()
 		if db.houseChat then
 			safely(placeChat)
-			safely(styleTabs)
+			if artOn() then safely(buildTabs) end
+		end
+		if db.hideBarArt then safely(hideBarArt) end
+		if db.houseMenu then safely(placeMenu) end
+	end
+
+	if db.houseChat then
+		-- Notes now arrive in chat, so the notes page steps aside.
+		self.leftPage:Hide()
+		Stoa.notesInConsole = false
+	end
+
+	apply()
+	if db.houseMenu then watchMenu() end
+	Stoa:On("PLAYER_ENTERING_WORLD", apply)
+	Stoa:On("UI_SCALE_CHANGED", apply)
+	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", apply)
+	if EventRegistry then
+		EventRegistry:RegisterCallback("EditMode.Exit", apply, self)
+	end
+
+	if db.houseChat and db.art then
+		-- Read-only hooks: Stoa's tabs follow the dock, nothing is changed.
+		for _, name in ipairs({ "FCFDock_UpdateTabs", "FCFDock_SelectWindow", "FCF_SetWindowName", "FCF_OpenNewWindow", "FCF_Close", "FCF_DockFrame", "FCF_UnDockFrame" }) do
+			if _G[name] then hooksecurefunc(name, safeRefresh) end
+		end
+		Stoa:On("STOA_THEME_CHANGED", safeRefresh)
+	end
+
+	local bar = actionBar()
+	if not bar then return end
+	for _, key in ipairs({ "EndCaps", "BorderArt", "Background" }) do
+		local art = bar[key]
+		if art and art.Hide then art:Hide() end
+	end
+end
+
+-- Bags and the game menu leave the action bar row for the console's
+-- bottom-right corner: bags, a gap, then the menu, a size down and quiet
+-- until the mouse is over them. Bag slots take the action buttons' rounded
+-- sockets.
+local MENU_SCALE = 0.8
+local MENU_BOTTOM = 12
+local MENU_GAP = 14
+local MENU_REST_ALPHA = 0.55
+local BAG_SLOTS = {
+	"MainMenuBarBackpackButton", "CharacterBag0Slot", "CharacterBag1Slot",
+	"CharacterBag2Slot", "CharacterBag3Slot", "CharacterReagentBag0Slot",
+}
+
+local function menuFrames()
+	return MicroMenuContainer or MicroMenu, BagsBar
+end
+
+local function placeMenu()
+	local menu, bags = menuFrames()
+	local inset = Console:PageInset()
+	if menu then
+		menu:ClearAllPoints()
+		menu:SetScale(MENU_SCALE)
+		menu:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -inset / MENU_SCALE, MENU_BOTTOM / MENU_SCALE)
+	end
+	if bags then
+		bags:ClearAllPoints()
+		bags:SetScale(MENU_SCALE)
+		if menu then
+			bags:SetPoint("BOTTOMRIGHT", menu, "BOTTOMLEFT", -MENU_GAP, 0)
+		else
+			bags:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -inset / MENU_SCALE, MENU_BOTTOM / MENU_SCALE)
+		end
+	end
+	local bars = Stoa.modules.ActionBars
+	if bars and bars.db and bars.db.enabled then
+		for _, name in ipairs(BAG_SLOTS) do
+			local slot = _G[name]
+			if slot then
+				xpcall(bars.Skin, geterrorhandler(), bars, slot)
+				if slot.IconBorder then slot.IconBorder:SetAlpha(0) end
+			end
+		end
+	end
+end
+
+-- Rests dim, brightens while the mouse is over either row.
+local function watchMenu()
+	local menu, bags = menuFrames()
+	if not (menu or bags) or not MouseIsOver then return end
+	local lit
+	local function update()
+		local over = (menu and menu:IsVisible() and MouseIsOver(menu))
+			or (bags and bags:IsVisible() and MouseIsOver(bags))
+		if over == lit then return end
+		lit = over
+		local alpha = over and 1 or MENU_REST_ALPHA
+		if menu then menu:SetAlpha(alpha) end
+		if bags then bags:SetAlpha(alpha) end
+	end
+	update()
+	C_Timer.NewTicker(0.15, update)
+end
+
+-- Runs fn now, or after combat if it can't run yet. Each step is guarded so a
+-- renamed Blizzard frame costs one feature, not the console.
+local function safely(fn)
+	Stoa:AfterCombat(function()
+		xpcall(fn, geterrorhandler())
+	end)
+end
+
+function Console:House()
+	local db = self.db
+
+	local function apply()
+		if db.houseChat then
+			safely(placeChat)
+			if artOn() then safely(buildTabs) end
 		end
 		if db.hideBarArt then safely(hideBarArt) end
 		if db.houseMenu then safely(placeMenu) end
