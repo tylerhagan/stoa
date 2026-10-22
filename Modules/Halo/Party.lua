@@ -23,7 +23,7 @@ local OUT_OF_RANGE_ALPHA = 0.45
 -- dragged with /stoa unlock wins over these.
 local LAYOUTS = {
 	HEALER = { width = 200, height = 46, gap = 6, point = { "TOPLEFT", UIParent, "CENTER", 190, 110 } },
-	OTHER = { width = 160, height = 32, gap = 4, point = { "TOPLEFT", UIParent, "LEFT", 36, 160 } },
+	OTHER = { width = 190, height = 38, gap = 5, point = { "TOPLEFT", UIParent, "LEFT", 36, 160 } },
 }
 
 local ROLE_GLYPHS = { TANK = "T", HEALER = "H", DAMAGER = "D" }
@@ -54,7 +54,7 @@ function Party:BuildCard(index, unit)
 	local stripe = card:CreateTexture(nil, "ARTWORK")
 	stripe:SetPoint("TOPLEFT")
 	stripe:SetPoint("BOTTOMLEFT")
-	stripe:SetWidth(2)
+	stripe:SetWidth(3)
 	stripe:SetColorTexture(1, 1, 1)
 	card.stripe = stripe
 
@@ -120,8 +120,8 @@ function Party:Layout()
 		card:SetSize(layout.width, layout.height)
 		card:ClearAllPoints()
 		card:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -(i - 1) * (layout.height + layout.gap))
-		Stoa:SetFont(card.name, "serif", big and Stoa.typeSize.label or Stoa.typeSize.body)
-		card.hp:SetHeight(big and 4 or 3)
+		Stoa:SetFont(card.name, "serif", big and Stoa.typeSize.title - 4 or Stoa.typeSize.label)
+		card.hp:SetHeight(big and 5 or 4)
 	end
 end
 
