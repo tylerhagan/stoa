@@ -122,9 +122,8 @@ function Party:Layout()
 		end
 		UI.styleCard(card, layout.style)
 	end
-	self.legend:SetShown(layout.legend and true or false)
-	self:UpdateLegend()
 	self:UpdateAll()
+	self:UpdateLegend()
 end
 
 local LEGEND_BUTTONS = { ["1"] = "Left", ["2"] = "Right", ["3"] = "Wheel", ["4"] = "Thumb 1", ["5"] = "Thumb 2" }
@@ -133,7 +132,6 @@ local LEGEND_MAX = 5
 
 -- Spells only: target and menu need no reminding.
 function Party:UpdateLegend()
-	if not self.legend:IsShown() then return end
 	local clickCast = Stoa.modules.ClickCast
 	local bindings = clickCast and clickCast.Bindings and clickCast:Bindings() or {}
 	local r, g, b = Stoa:Color("muted")
@@ -350,6 +348,9 @@ end
 
 function Party:UpdateAll()
 	self.frame:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 1 or WORLD_ALPHA)
+	-- The bindings line only shows under cards: in a party, or the preview.
+	local cards = self.cards[1].preview or (IsInGroup() and not IsInRaid())
+	self.legend:SetShown(layoutFor(Stoa:GetRole()).legend and cards and true or false)
 	for _, card in ipairs(self.cards) do
 		self:UpdateCard(card)
 	end

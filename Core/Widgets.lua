@@ -170,9 +170,9 @@ end
 -- Party:UpdateCard fills them in.
 
 UI.CARD_STYLES = {
-	party = { pad = 9, name = 16, bar = 12, pip = 15, pipFont = 10, gap = 6 },
-	compact = { pad = 7, name = 14, bar = 8, pip = 13, pipFont = 9, gap = 5 },
-	raid = { pad = 7, name = 15, bar = 9, pip = 13, pipFont = 9, gap = 5 },
+	party = { pad = 9, name = 16, bar = 12, pip = 16, pipFont = 11, gap = 6 },
+	compact = { pad = 7, name = 14, bar = 8, pip = 14, pipFont = 10, gap = 5 },
+	raid = { pad = 7, name = 15, bar = 9, pip = 14, pipFont = 10, gap = 5 },
 }
 
 local MAX_PIPS = 3
@@ -281,11 +281,10 @@ function UI.setPips(card, list)
 				local r, g, b = Stoa:Color(entry[2])
 				pip.bg:SetVertexColor(r, g, b, 1)
 				pip.text:SetTextColor(Stoa:Color("panel"))
-				pip.text:SetAlpha(1)
 			else
 				local r, g, b = Stoa:Color("text")
-				pip.bg:SetVertexColor(r, g, b, 0.08)
-				pip.text:SetTextColor(Stoa:Color(entry[3] or "muted"))
+				pip.bg:SetVertexColor(r, g, b, 0.14)
+				pip.text:SetTextColor(Stoa:Color(entry[3] or "text"))
 			end
 			pip:SetWidth(math.ceil(pip.text:GetStringWidth()) + 10)
 			pip:Show()

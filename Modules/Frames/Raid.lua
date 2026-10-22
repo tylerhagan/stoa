@@ -2,7 +2,7 @@
 -- One row of cards per group, after the Disc raid mockup, built on
 -- Blizzard's secure group header so it fills and sorts itself, even in
 -- combat. Cards are the party cards in a smaller cut, with the same
--- click-cast bindings. Healers get the grid under the Halo; everyone else
+-- click-cast bindings. Healers get the grid beside the Halo; everyone else
 -- on the left.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -19,7 +19,9 @@ Stoa.RAID_CELL = { width = CELL_WIDTH, height = CELL_HEIGHT, gap = GAP }
 local GRID_WIDTH = 5 * CELL_WIDTH + 4 * GAP
 
 local LAYOUTS = {
-	HEALER = { "TOP", "StoaHalo", "BOTTOM", 0, -52 },
+	-- Beside the Halo on the right, mirroring the target on the left: under
+	-- it there is no room for four rows above the console.
+	HEALER = { "TOPLEFT", "StoaHalo", "RIGHT", 70, 130 },
 	OTHER = { "TOPLEFT", UIParent, "LEFT", 36, 260 },
 }
 
@@ -76,7 +78,7 @@ function Raid:Build()
 	Stoa:RegisterMover("raid", holder, "Raid")
 end
 
--- Healers read a group as a row under the Halo; everyone else gets a
+-- Healers read a group as a row beside the Halo; everyone else gets a
 -- column per group on the left, a size smaller. Out of combat only.
 function Raid:Place()
 	local role = Stoa:GetRole()
