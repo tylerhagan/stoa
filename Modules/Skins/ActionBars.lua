@@ -206,7 +206,15 @@ function Bars:StartTray()
 	end
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:UpdateTray() end)
 	Stoa:On("STOA_STATE_CHANGED", function() self:UpdateTray() end)
-	C_Timer.NewTicker(0.1, function() self:UpdateTray() end)
+	-- If the tray ever errors it stops, rather than repeating ten times a
+	-- second; the rows are left showing.
+	local ticker
+	ticker = C_Timer.NewTicker(0.1, function()
+		if not xpcall(self.UpdateTray, geterrorhandler(), self) then
+			ticker:Cancel()
+			for _, bar in ipairs(self.tray or {}) do bar:SetAlpha(1) end
+		end
+	end)
 	find()
 end
 
