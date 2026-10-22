@@ -411,6 +411,7 @@ end
 -- It shows with the Halo in combat, and in the /stoa test preview.
 
 local WATCH_WIDTH = 220
+local WATCH_PAD = 9
 local HURT_HEALTH = 0.7
 
 local function watchedUnit()
@@ -435,7 +436,9 @@ end
 function Party:BuildWatch()
 	local watch = CreateFrame("Frame", "StoaTankWatch", UIParent)
 	watch:SetFrameStrata("LOW")
-	watch:SetSize(WATCH_WIDTH, 44)
+	-- On a card like the party's, so it reads over snow and sky alike.
+	watch:SetSize(WATCH_WIDTH + WATCH_PAD * 2, 64)
+	UI.roundPanel(watch, 0.92)
 	local halo = _G.StoaHalo
 	if halo then
 		watch:SetPoint("BOTTOM", halo, "TOP", 0, 14)
@@ -446,9 +449,9 @@ function Party:BuildWatch()
 	watch:EnableMouse(false)
 
 	local label = UI.caption(watch, "Watching")
-	label:SetPoint("TOPLEFT")
+	label:SetPoint("TOPLEFT", WATCH_PAD, -WATCH_PAD)
 	local word = UI.caption(watch, "")
-	word:SetPoint("TOPRIGHT")
+	word:SetPoint("TOPRIGHT", -WATCH_PAD, -WATCH_PAD)
 	local name = UI.text(watch, "serif", Stoa.typeSize.label + 2, "text", "LEFT")
 	name:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -3)
 	name:SetWidth(WATCH_WIDTH - 50)
@@ -463,7 +466,7 @@ function Party:BuildWatch()
 	absorb:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
 	absorb:SetSize(WATCH_WIDTH, 3)
 	absorb:SetStatusBarColor(Stoa:Color("shield"))
-	local buffs = UI.text(watch, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	local buffs = UI.text(watch, "sans", Stoa.typeSize.caption, "text", "LEFT")
 	buffs:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
 
 	watch.name, watch.percent, watch.word, watch.hp = name, percent, word, hp
