@@ -104,6 +104,18 @@ function Halo:Build()
 
 	UI.applyTheme()
 	Stoa:RegisterMover("halo", frame, "Halo")
+
+	-- Everything here floats over the world, so its words get a soft dark
+	-- shadow to read over snow and bright sky.
+	local function shade(region)
+		for _, child in ipairs({ region:GetRegions() }) do
+			if child.IsObjectType and child:IsObjectType("FontString") then
+				child:SetShadowColor(0, 0, 0, 0.9)
+				child:SetShadowOffset(1, -1)
+			end
+		end
+	end
+	for _, region in ipairs({ frame, self.target, self.cast }) do shade(region) end
 end
 
 function Halo:BuildSignature(frame)
