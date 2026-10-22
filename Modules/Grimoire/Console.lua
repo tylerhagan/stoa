@@ -168,6 +168,39 @@ function Console:BuildArt(frame)
 	return parts
 end
 
+-- A leather tab standing on the console's top edge, cut from the edge's
+-- own art (Media/Textures/ResourceTabOpen, from Tools/art). The tab frame
+-- is the tab's body; the art spills past it into the edge and fillets.
+local RESOURCE_TAB = { size = 128, x0 = 32, foot = 84, rise = 70, cap = 52 }
+
+local function edgeTab(parent, width)
+	local s = ART_SCALE
+	local t = RESOURCE_TAB
+	local tab = CreateFrame("Frame", nil, parent)
+	tab:SetSize(width, t.rise * s)
+	for sublevel, file in ipairs({ "ResourceTabOpen", "ResourceTabOpenLines" }) do
+		local parts = {}
+		for i = 1, 3 do
+			local tex = tab:CreateTexture(nil, "BACKGROUND", nil, sublevel)
+			tex:SetTexture(UI.MEDIA .. "Textures\\" .. file)
+			tex:SetHeight(t.size * s)
+			if sublevel == 2 then UI.tint(tex, "accent") end
+			parts[i] = tex
+		end
+		local left, middle, right = parts[1], parts[2], parts[3]
+		left:SetWidth(t.cap * s)
+		right:SetWidth(t.cap * s)
+		left:SetTexCoord(0, t.cap / t.size, 0, 1)
+		middle:SetTexCoord(0.5, 0.5 + 1 / t.size, 0, 1)
+		right:SetTexCoord(1 - t.cap / t.size, 1, 0, 1)
+		left:SetPoint("TOPLEFT", tab, "BOTTOMLEFT", -t.x0 * s, t.foot * s)
+		right:SetPoint("TOPRIGHT", tab, "BOTTOMRIGHT", t.x0 * s, t.foot * s)
+		middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
+		middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+	end
+	return tab
+end
+
 function Console:BuildSeal(frame)
 	-- With the leather art the seal sits in the art's arch, a size larger,
 	-- and the arch's own gold ring stands in for the seal's outer rings.
@@ -211,57 +244,68 @@ function Console:BuildSeal(frame)
 	portrait:SetPoint("CENTER")
 	self.portrait = portrait
 
+	-- Without the art the role sits under the seal. With it, the role and
+	-- any missing self-buffs go on the right page (see BuildFellowship), so
+	-- nothing floats over the world.
 	local role = text(seal, "italic", Stoa.typeSize.label, "accent", "CENTER")
-	-- With the art the medallion's ring fills the space under the seal, so
-	-- the role sits over it instead.
-	if art then
-		role:SetPoint("BOTTOM", seal, "TOP", 0, 18)
-	else
-		role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
-	end
+	role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
+	role:SetShown(not art)
 	self.roleText = role
+
+	if art then
+		self:BuildResourceTabs(frame)
+		return
+	end
 
 	-- Health on the left, filling towards the seal; mana on the right.
 	local health = bar(frame, 150, 3, "health")
 	health:SetReverseFill(true)
-	-- Beside the seal; with the art, above the line clear of the medallion's
-	-- flares, leaving the panel below to the action bars.
-	if art then
-		health:SetPoint("RIGHT", frame, "TOP", -(MEDALLION_REACH + 12), 12)
-	else
-		health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
-	end
+	health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
 	local healthText = text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
 	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 4)
 	local healthCap = caption(frame, "Health")
-	if art then
-		healthCap:SetPoint("BOTTOMLEFT", health, "TOPLEFT", 0, 5)
-	else
-		healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
-	end
+	healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
 
 	local mana = bar(frame, 150, 3, "mana")
-	if art then
-		mana:SetPoint("LEFT", frame, "TOP", MEDALLION_REACH + 12, 12)
-	else
-		mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
-	end
+	mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
 	local manaText = text(frame, "serif", Stoa.typeSize.title, "mana")
 	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 4)
 	local manaCap = caption(frame, "Mana")
-	if art then
-		manaCap:SetPoint("BOTTOMRIGHT", mana, "TOPRIGHT", 0, 5)
-	else
-		manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
-	end
+	manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
 
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
-	-- With the art these sit above the line, over the world.
-	if art then
-		for _, fs in ipairs({ healthText, healthCap, manaText, manaCap, self.roleText }) do UI.legible(fs) end
+end
+
+-- With the art: health and mana each on a leather tab standing on the edge
+-- either side of the medallion. The number sits nearest the seal, the
+-- caption at the outer end, the bar along the foot filling towards the seal.
+local RESOURCE_TAB_WIDTH = 190
+local RESOURCE_PAD = 14
+
+function Console:BuildResourceTabs(frame)
+	local gap = MEDALLION_REACH + 22
+	local function resource(side, token, label)
+		local tab = edgeTab(frame, RESOURCE_TAB_WIDTH)
+		local inner = side == "left" and "RIGHT" or "LEFT"
+		local outer = side == "left" and "LEFT" or "RIGHT"
+		local sign = side == "left" and -1 or 1
+		tab:SetPoint("BOTTOM" .. inner, frame, "TOP", sign * gap, 0)
+		local barFrame = bar(tab, RESOURCE_TAB_WIDTH - RESOURCE_PAD * 2, 3, token)
+		barFrame:SetPoint("BOTTOM", 0, 7)
+		if side == "left" then barFrame:SetReverseFill(true) end
+		local number = text(tab, "serif", Stoa.typeSize.title, token == "health" and "text" or "mana", inner)
+		number:SetPoint("BOTTOM" .. inner, barFrame, "TOP" .. inner, 0, 3)
+		local cap = caption(tab, label)
+		cap:SetPoint("BOTTOM" .. outer, barFrame, "TOP" .. outer, 0, 5)
+		return tab, barFrame, number
 	end
+	local healthTab, health, healthText = resource("left", "health", "Health")
+	local manaTab, mana, manaText = resource("right", "mana", "Mana")
+	self.health, self.healthText = health, healthText
+	self.mana, self.manaText = mana, manaText
+	self.resourceParts = { healthTab, manaTab }
 end
 
 function Console:BuildNotes(frame, space)
@@ -288,50 +332,80 @@ function Console:BuildNotes(frame, space)
 	self.noteLog = {}
 end
 
+-- The right page: three short columns about you, out of combat.
+--   Ready: your role, any self-buff you're missing, gear wear and bag room.
+--   Journey: level and experience, with the rested part marked.
+--   Company: your party, or who's online when you travel alone.
+local COLUMN_WIDTH = 170
+local COLUMN_GAP = 36
+
+local function column(page, index, label)
+	local x = (index - 1) * (COLUMN_WIDTH + COLUMN_GAP)
+	local heading = caption(page, label)
+	heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
+	local rule = line(page)
+	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
+	rule:SetWidth(COLUMN_WIDTH)
+	return rule
+end
+
 function Console:BuildFellowship(frame, space)
 	local inset, top, rowGap = self:PageInset()
 	local page = CreateFrame("Frame", nil, frame)
 	page:SetPoint("TOPRIGHT", -inset, top)
-	page:SetSize(470, 110)
+	page:SetSize(COLUMN_WIDTH * 3 + COLUMN_GAP * 2, 110)
 	self.rightPage = page
 
-	-- Fellowship: up to four party members.
-	local heading = caption(page, "Fellowship")
-	heading:SetPoint("TOPLEFT")
-	local rule = line(page)
-	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
-	rule:SetWidth(280)
+	-- Ready.
+	local ready = column(page, 1, "Ready")
+	local role = text(page, "serif", Stoa.typeSize.title, "accent")
+	role:SetPoint("TOPLEFT", ready, "BOTTOMLEFT", 0, -6)
+	local note = text(page, "italic", Stoa.typeSize.label, "danger")
+	note:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -3)
+	note:SetWidth(COLUMN_WIDTH)
+	note:SetWordWrap(false)
+	local kit = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
+	kit:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -4)
+	self.roleWord, self.roleNote, self.kit = role, note, kit
 
+	-- Journey.
+	local journey = column(page, 2, "Journey")
+	local level = text(page, "serif", Stoa.typeSize.title, "text")
+	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, -6)
+	local xp = bar(page, COLUMN_WIDTH, 3, "accent")
+	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, -6)
+	-- Rested experience shows as a dimmer stretch beyond what you've earned.
+	local rested = bar(page, COLUMN_WIDTH, 3, "accent")
+	rested:SetAllPoints(xp)
+	rested:SetAlpha(0.35)
+	rested.track:Hide()
+	xp:SetFrameLevel(rested:GetFrameLevel() + 1)
+	local xpNote = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
+	xpNote:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -5)
+	self.levelText, self.xpBar, self.restedBar, self.xpNote = level, xp, rested, xpNote
+
+	-- Company.
+	local company = column(page, 3, "Company")
 	self.members = {}
 	for i = 1, 4 do
 		local row = CreateFrame("Frame", nil, page)
-		row:SetSize(280, 18)
-		row:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6 - (i - 1) * rowGap)
+		row:SetSize(COLUMN_WIDTH, 18)
+		row:SetPoint("TOPLEFT", company, "BOTTOMLEFT", 0, -6 - (i - 1) * rowGap)
 		local name = text(row, "serif", Stoa.typeSize.label, "text")
 		name:SetPoint("LEFT")
-		name:SetWidth(110)
+		name:SetWidth(90)
 		name:SetWordWrap(false)
-		local hp = bar(row, 160, 3, "health")
-		hp:SetPoint("LEFT", name, "RIGHT", 10, 0)
+		local hp = bar(row, COLUMN_WIDTH - 98, 3, "health")
+		hp:SetPoint("LEFT", name, "RIGHT", 8, 0)
 		row.name, row.hp, row.unit = name, hp, "party" .. i
 		self.members[i] = row
 	end
 	self.alone = text(page, "italic", Stoa.typeSize.label, "muted")
-	self.alone:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6)
+	self.alone:SetPoint("TOPLEFT", company, "BOTTOMLEFT", 0, -6)
 	self.alone:SetText("Travelling alone")
-
-	-- Friends and guild online.
-	local socialHeading = caption(page, "Friends and guild")
-	socialHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 310, 0)
-	local socialRule = line(page)
-	socialRule:SetPoint("TOPLEFT", socialHeading, "BOTTOMLEFT", 0, -6)
-	socialRule:SetPoint("RIGHT", page, "RIGHT")
-	local count = text(page, "serif", Stoa.typeSize.hero, "text")
-	count:SetPoint("TOPLEFT", socialRule, "BOTTOMLEFT", 0, -6)
-	local sub = text(page, "italic", Stoa.typeSize.label, "muted")
-	sub:SetPoint("TOPLEFT", count, "BOTTOMLEFT", 0, -2)
-	sub:SetText("online now")
-	self.onlineCount = count
+	local online = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
+	online:SetPoint("TOPLEFT", self.alone, "BOTTOMLEFT", 0, -4)
+	self.onlineCount = online
 end
 
 -- Updates -------------------------------------------------------------------
@@ -349,6 +423,15 @@ function Console:UpdateSeal()
 		label = string.format("%s  |cff%02x%02x%02x%s|r", label, r * 255, g * 255, b * 255, words)
 	end
 	self.roleText:SetText(label)
+	if self.roleWord then
+		self.roleWord:SetText(role and Stoa.ROLE_LABELS[role] or "")
+		local note = ""
+		if missing and #missing > 0 then
+			note = (table.concat(missing, " · "):lower():gsub("^%l", string.upper))
+		end
+		self.roleNote:SetText(note)
+		self.roleNote:SetShown(note ~= "")
+	end
 end
 
 function Console:UpdateResources()
@@ -372,6 +455,7 @@ function Console:UpdateFellowship()
 		end
 	end
 	self.alone:SetShown(not any)
+	self.onlineCount:SetShown(not any)
 end
 
 function Console:UpdateOnline()
@@ -383,7 +467,60 @@ function Console:UpdateOnline()
 		-- The guild count includes you.
 		guild = math.max((online or 1) - 1, 0)
 	end
-	self.onlineCount:SetText(friends + (bnetOnline or 0) + guild)
+	local total = friends + (bnetOnline or 0) + guild
+	self.onlineCount:SetText(total == 1 and "1 friend online" or (total .. " friends online"))
+end
+
+-- Gear wear (the most worn piece) and free bag slots.
+local GEAR_SLOTS = { 1, 3, 5, 6, 7, 8, 9, 10, 16, 17, 18 }
+
+function Console:UpdateKit()
+	if not self.kit then return end
+	local lowest
+	if GetInventoryItemDurability then
+		for _, slot in ipairs(GEAR_SLOTS) do
+			local current, max = GetInventoryItemDurability(slot)
+			if current and max and max > 0 then
+				local fraction = current / max
+				if not lowest or fraction < lowest then lowest = fraction end
+			end
+		end
+	end
+	local free = 0
+	local getFree = C_Container and C_Container.GetContainerNumFreeSlots or GetContainerNumFreeSlots
+	if getFree then
+		for bag = 0, 4 do free = free + (getFree(bag) or 0) end
+	end
+	local parts = {}
+	if lowest then parts[#parts + 1] = "Gear " .. math.floor(lowest * 100 + 0.5) .. "%" end
+	parts[#parts + 1] = free .. " bag " .. (free == 1 and "slot" or "slots") .. " free"
+	self.kit:SetText(table.concat(parts, "  ·  "))
+	-- Worn gear or full bags read in the warning colour.
+	local warn = (lowest and lowest < 0.25) or free <= 2
+	self.kit:SetTextColor(Stoa:Color(warn and "danger" or "muted"))
+end
+
+function Console:UpdateJourney()
+	if not self.levelText then return end
+	local level = UnitLevel("player")
+	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel()
+	self.levelText:SetText("Level " .. level)
+	local atMax = maxLevel and level >= maxLevel
+	self.xpBar:SetShown(not atMax)
+	if atMax then
+		self.xpNote:SetText("")
+		return
+	end
+	local xp, xpMax = UnitXP("player"), UnitXPMax("player")
+	if not xpMax or xpMax <= 0 then return end
+	local rested = GetXPExhaustion and GetXPExhaustion() or 0
+	self.xpBar:SetMinMaxValues(0, xpMax)
+	self.xpBar:SetValue(xp)
+	self.restedBar:SetMinMaxValues(0, xpMax)
+	self.restedBar:SetValue(math.min(xp + rested, xpMax))
+	local note = math.floor(xp / xpMax * 100) .. "% to " .. (level + 1)
+	if rested > 0 then note = note .. "  ·  rested " .. math.floor(rested / xpMax * 100) .. "%" end
+	self.xpNote:SetText(note)
 end
 
 function Console:AddNote(_, message)
@@ -475,6 +612,8 @@ function Console:OnEnable()
 	self:UpdateResources()
 	self:UpdateFellowship()
 	self:UpdateOnline()
+	self:UpdateKit()
+	self:UpdateJourney()
 	self:RenderNotes()
 	self:SetOpen(shouldBeOpen(), true)
 
@@ -516,6 +655,12 @@ function Console:OnEnable()
 	end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function() self:UpdateFellowship() end)
 
+	for _, event in ipairs({ "PLAYER_XP_UPDATE", "UPDATE_EXHAUSTION", "PLAYER_LEVEL_UP" }) do
+		Stoa:On(event, function() self:UpdateJourney() end)
+	end
+	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
+		Stoa:On(event, function() self:UpdateKit() end)
+	end
 	Stoa:On("FRIENDLIST_UPDATE", function() self:UpdateOnline() end)
 	Stoa:On("BN_FRIEND_INFO_CHANGED", function() self:UpdateOnline() end)
 	Stoa:On("GUILD_ROSTER_UPDATE", function() self:UpdateOnline() end)

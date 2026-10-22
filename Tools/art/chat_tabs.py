@@ -5,8 +5,13 @@ import sys, math
 from PIL import Image
 import numpy as np
 tex_dir = sys.argv[1]
+# Optional: output prefix and tab height in texture rows. "ResourceTab 70"
+# cuts the taller open tab that holds health and mana.
+PREFIX = sys.argv[2] if len(sys.argv) > 2 else "ChatTab"
+RISE = int(sys.argv[3]) if len(sys.argv) > 3 else 46
 W, H = 128, 128
-YT, YC = 24, 70          # tab top, console top
+YT = 24 if RISE <= 46 else 14   # tab top
+YC = YT + RISE                   # console top
 X0, X1 = 32, 96          # tab sides
 RC, RF = 16, 9           # corner radius, fillet radius
 EDGE0 = 37               # edge texture row where the leather starts
@@ -120,8 +125,11 @@ d, xx, yy = depth(True)
 g, a, gold = profile(d)
 a = shadow_only_outside(d, a, yy) * foot_fade(yy)
 gold = gold * foot_fade(yy)
-save("ChatTabOpen", g, a)
-save("ChatTabOpenLines", *gold_out(gold))
+save(PREFIX + "Open", g, a)
+save(PREFIX + "OpenLines", *gold_out(gold))
+
+if PREFIX != "ChatTab":
+    sys.exit(0)
 
 # Closed: a dimmer tab body, the console's edge laid over its foot.
 d, xx, yy = depth(False)
