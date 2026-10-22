@@ -175,8 +175,28 @@ function Console:BuildSeal(frame)
 	local size = art and ART_SEAL_SIZE or SEAL_SIZE
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
-	seal:SetPoint("CENTER", frame, "TOP", 0, art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or 6)
+	local sealY = art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or 6
+	seal:SetPoint("CENTER", frame, "TOP", 0, sealY)
 	self.seal = seal
+
+	-- Click the seal to target yourself; right click for your unit menu.
+	-- It's a secure button, so it's pinned to the screen where the open seal
+	-- sits rather than to the console (which folds in combat), and steps
+	-- away in combat when the console folds.
+	local button = CreateFrame("Button", "StoaSealButton", UIParent, "SecureUnitButtonTemplate")
+	button:SetSize(size, size)
+	button:SetPoint("CENTER", UIParent, "BOTTOM", 0, self:OpenHeight() + sealY)
+	button:SetFrameStrata("LOW")
+	button:SetAttribute("unit", "player")
+	button:SetAttribute("type1", "target")
+	button:SetAttribute("type2", "togglemenu")
+	button:RegisterForClicks("AnyUp")
+	button:SetScript("OnEnter", function(self)
+		GameTooltip_SetDefaultAnchor(GameTooltip, self)
+		GameTooltip:SetUnit("player")
+	end)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	RegisterStateDriver(button, "visibility", "[combat] hide; show")
 
 	if not art then
 		local outer = circle(seal, "BORDER", 0, size + 12, "hairline")
