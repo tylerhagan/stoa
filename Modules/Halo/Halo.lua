@@ -70,7 +70,9 @@ local function arc(parent, side, token)
 	local track = sb:CreateTexture(nil, "BACKGROUND")
 	track:SetAllPoints()
 	track:SetTexture(file)
-	UI.tint(track, "text", 0.1)
+	-- A dark track, so the arc reads over snow and bright sky as well as
+	-- over dark ground.
+	UI.tint(track, "panel", 0.55)
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
 	return sb
@@ -96,6 +98,9 @@ function Halo:Build()
 	healthText:SetPoint("BOTTOMRIGHT", frame, "BOTTOM", -SIZE * 0.3, 6)
 	local manaText = UI.text(frame, "serif", Stoa.typeSize.title, "mana", "LEFT")
 	manaText:SetPoint("BOTTOMLEFT", frame, "BOTTOM", SIZE * 0.3, 6)
+	-- The numbers are what you read mid-fight, so they get a fine outline.
+	Stoa:SetFont(healthText, "serif", Stoa.typeSize.title, "OUTLINE")
+	Stoa:SetFont(manaText, "serif", Stoa.typeSize.title, "OUTLINE")
 	self.healthText, self.manaText = healthText, manaText
 
 	self:BuildSignature(frame)
