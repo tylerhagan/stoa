@@ -174,33 +174,48 @@ function Console:BuildSeal(frame)
 	self.portrait = portrait
 
 	local role = text(seal, "italic", Stoa.typeSize.label, "accent", "CENTER")
-	role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
+	-- With the art the medallion's ring fills the space under the seal, so
+	-- the role sits over it instead.
+	if art then
+		role:SetPoint("BOTTOM", seal, "TOP", 0, 18)
+	else
+		role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
+	end
 	self.roleText = role
 
 	-- Health on the left, filling towards the seal; mana on the right.
 	local health = bar(frame, 150, 3, "health")
 	health:SetReverseFill(true)
-	-- Beside the seal; with the art, clear of the medallion and under the line.
+	-- Beside the seal; with the art, above the line clear of the medallion's
+	-- flares, leaving the panel below to the action bars.
 	if art then
-		health:SetPoint("RIGHT", frame, "TOP", -(MEDALLION_REACH + 16), -36)
+		health:SetPoint("RIGHT", frame, "TOP", -(MEDALLION_REACH + 12), 12)
 	else
 		health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
 	end
 	local healthText = text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
 	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 4)
 	local healthCap = caption(frame, "Health")
-	healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
+	if art then
+		healthCap:SetPoint("BOTTOMLEFT", health, "TOPLEFT", 0, 5)
+	else
+		healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
+	end
 
 	local mana = bar(frame, 150, 3, "mana")
 	if art then
-		mana:SetPoint("LEFT", frame, "TOP", MEDALLION_REACH + 16, -36)
+		mana:SetPoint("LEFT", frame, "TOP", MEDALLION_REACH + 12, 12)
 	else
 		mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
 	end
 	local manaText = text(frame, "serif", Stoa.typeSize.title, "mana")
 	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 4)
 	local manaCap = caption(frame, "Mana")
-	manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
+	if art then
+		manaCap:SetPoint("BOTTOMRIGHT", mana, "TOPRIGHT", 0, 5)
+	else
+		manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
+	end
 
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
