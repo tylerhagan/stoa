@@ -42,6 +42,7 @@ Fonts are the main gap: see below.
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa state` | Print the current state and role |
 | `/stoa clicks` | Edit click-cast bindings for your current role |
+| `/stoa test` | Show sample party cards without a group; `/stoa test raid` for a raid grid |
 
 ## Install
 

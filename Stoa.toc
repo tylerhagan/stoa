@@ -34,5 +34,6 @@ Modules\Halo\Party.lua
 Modules\Frames\ClickCast.lua
 Modules\Frames\Raid.lua
 Modules\Frames\Raid.xml
+Modules\Frames\Preview.lua
 
 Config\Settings.lua

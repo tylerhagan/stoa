@@ -145,7 +145,7 @@ end
 
 function ClickCast:BuildPage()
 	local page = CreateFrame("Frame", "StoaClickCastPage", UIParent)
-	page:SetSize(720, 330)
+	page:SetSize(720, 380)
 	page:SetPoint("CENTER")
 	page:SetFrameStrata("DIALOG")
 	page:EnableMouse(true)

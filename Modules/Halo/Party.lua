@@ -134,7 +134,8 @@ end
 
 function Party:UpdateCard(card)
 	local unit = card.unit
-	if not UnitExists(unit) then return end
+	-- Cards showing the /stoa test preview keep their sample data.
+	if card.preview or not UnitExists(unit) then return end
 
 	card.name:SetText(UnitName(unit))
 	card.stripe:SetVertexColor(UI.classColor(unit))
@@ -155,6 +156,7 @@ end
 
 -- Range can be secret; newer clients let a secret boolean set alpha directly.
 function Party:UpdateRange(card)
+	if card.preview then return end
 	local unit = card.unit
 	if unit == "player" or not UnitExists(unit) then
 		card:SetAlpha(1)

@@ -20,9 +20,8 @@ local LAYOUTS = {
 
 local cells = {}
 
--- Called from the XML template for every cell the header makes. The header
--- may make cells in combat, so this only draws; bindings follow after.
-function StoaRaidButton_OnLoad(cell)
+-- Draws a raid cell. Shared with the /stoa test preview.
+function UI.raidCell(cell)
 	local bg = cell:CreateTexture(nil, "BACKGROUND")
 	bg:SetAllPoints()
 	UI.paint(bg, "panel", 0.85)
@@ -48,7 +47,13 @@ function StoaRaidButton_OnLoad(cell)
 	hp:SetPoint("BOTTOMLEFT", 4, 4)
 	hp:SetPoint("BOTTOMRIGHT", -4, 4)
 	cell.hp = hp
+	UI.applyTheme()
+end
 
+-- Called from the XML template for every cell the header makes. The header
+-- may make cells in combat, so this only draws; bindings follow after.
+function StoaRaidButton_OnLoad(cell)
+	UI.raidCell(cell)
 	cell:SetScript("OnAttributeChanged", function(self, key, value)
 		if key == "unit" then
 			self.unit = value
@@ -62,7 +67,6 @@ function StoaRaidButton_OnLoad(cell)
 	end)
 	cell:SetScript("OnLeave", GameTooltip_Hide)
 
-	UI.applyTheme()
 	cells[cell] = true
 	Stoa:RegisterClickFrame(cell)
 end
