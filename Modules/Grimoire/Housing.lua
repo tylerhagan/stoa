@@ -118,10 +118,9 @@ local function makeTab()
 	label:SetPoint("CENTER", 0, -3)
 	tab.label = label
 	tab:SetScript("OnClick", function(self, button)
+		-- Click Blizzard's own tab, so its own handler does the work.
 		local blizzard = blizzardTab(self.chatFrame)
-		if blizzard and FCF_Tab_OnClick then
-			xpcall(FCF_Tab_OnClick, geterrorhandler(), blizzard, button)
-		end
+		if blizzard then blizzard:Click(button) end
 	end)
 	tab:SetScript("OnEnter", paintTab)
 	tab:SetScript("OnLeave", paintTab)
