@@ -22,13 +22,13 @@ local ARCH_SIZE = 220
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 92
 
--- The leather panel art. Each piece is 256 texels tall with the bar itself
--- running from texel 129 to 252; the console's open height is the bar's
--- height, and everything else scales with it.
+-- The leather panel art. Each piece is 256 texels tall with the panel
+-- running from texel 129 to the bottom; it bleeds off the screen's sides and
+-- bottom. The console's open height is the panel's, and the art scales with it.
 local ART_HEIGHT = 136
-local ART_SCALE = ART_HEIGHT / 123
-local ART_TEXELS, ART_BAR_BOTTOM = 256, 252
-local ART_CAP, ART_CENTRE = 128, 512
+local ART_TEXELS, ART_TOP = 256, 129
+local ART_SCALE = ART_HEIGHT / (ART_TEXELS - ART_TOP)
+local ART_CENTRE = 512
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30
@@ -104,9 +104,9 @@ function Console:Build()
 	end)
 end
 
--- Where the pages start: clear of the leather's gold border when it's on.
+-- Where the pages start: below the leather's gold top border when it's on.
 function Console:PageInset()
-	if self.db.art then return 52, -24, 17 end
+	if self.db.art then return Stoa.space.xxl, -26, 20 end
 	return Stoa.space.xxl, -Stoa.space.xl, 20
 end
 
@@ -115,13 +115,12 @@ function Console:OpenHeight()
 	return self.db.art and ART_HEIGHT or self.db.height
 end
 
--- Lays the leather pieces along the console: an end cap each side, the
--- arch in the centre and a plain stretch between. Each piece is a leather
+-- Lays the leather pieces along the console: the arch in the centre and a
+-- plain stretch out to each screen edge. Each piece is a leather
 -- base with a line layer on top tinted in the theme's accent.
 function Console:BuildArt(frame)
 	local parts = {}
 	local height = ART_TEXELS * ART_SCALE
-	local drop = (ART_TEXELS - ART_BAR_BOTTOM) * ART_SCALE
 
 	local function piece(file, sublevel)
 		local base = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel)
@@ -136,22 +135,16 @@ function Console:BuildArt(frame)
 		return base
 	end
 
-	local left = piece("Left", -5)
-	left:SetWidth(ART_CAP * ART_SCALE)
-	left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, -drop)
-	local right = piece("Right", -5)
-	right:SetWidth(ART_CAP * ART_SCALE)
-	right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -drop)
 	local centre = piece("Centre", -3)
 	centre:SetWidth(ART_CENTRE * ART_SCALE)
-	centre:SetPoint("BOTTOM", frame, "BOTTOM", 0, -drop)
+	centre:SetPoint("BOTTOM")
 
 	local leftFill = piece("Fill", -5)
-	leftFill:SetPoint("BOTTOMLEFT", left, "BOTTOMRIGHT")
+	leftFill:SetPoint("BOTTOMLEFT")
 	leftFill:SetPoint("BOTTOMRIGHT", centre, "BOTTOMLEFT")
 	local rightFill = piece("Fill", -5)
 	rightFill:SetPoint("BOTTOMLEFT", centre, "BOTTOMRIGHT")
-	rightFill:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+	rightFill:SetPoint("BOTTOMRIGHT")
 	return parts
 end
 

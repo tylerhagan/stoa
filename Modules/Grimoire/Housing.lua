@@ -18,9 +18,8 @@ local CHAT_TAB_HEIGHT = 22
 local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
-	-- With the leather art the chat keeps clear of its gold border lines.
-	local art = Console.db.art
-	local bottom, topPad = CHAT_BOTTOM + (art and 2 or 0), CHAT_TOP_PAD + (art and 8 or 0)
+	-- With the leather art the chat keeps clear of its gold top border.
+	local bottom, topPad = CHAT_BOTTOM, CHAT_TOP_PAD + (Console.db.art and 8 or 0)
 	chat:ClearAllPoints()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), bottom)
 	chat:SetSize(CHAT_WIDTH, Console:OpenHeight() - bottom - topPad - CHAT_TAB_HEIGHT)
