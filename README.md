@@ -56,4 +56,6 @@ Forever runs the modern client, so Stoa follows Midnight-era rules: unit values 
 
 ## Fonts
 
-The design uses Tenor Sans for names and numbers and Inter SemiBold (18pt cut) for labels, both SIL Open Font License. Drop `TenorSans-Regular.ttf` and `Inter-SemiBold.ttf` into `Media/Fonts`; Cormorant Garamond still works as a fallback. Until then Stoa falls back to the game's fonts.
+Stoa ships with Tenor Sans for names and numbers and Inter SemiBold (18pt cut) for labels, in `Media/Fonts`. Both are under the SIL Open Font License; see `Media/Fonts/OFL.txt`. If a font file is missing, Stoa falls back to Cormorant Garamond if present, then the game's own fonts.
+
+A font file that is new to the game is only picked up after a full restart of the game, not a `/reload`.
