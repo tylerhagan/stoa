@@ -6,7 +6,8 @@
 --   * colour by what you can do, not red/yellow/green: amber for an enemy,
 --     pale gold for neutral, blue for friends, and grey only for tapped or
 --     dead, as in the base game; enemy players keep class colour
---   * names and cast text in Stoa's sans with a fine outline
+--   * names and cast text in Stoa's sans with a fine outline; the level as
+--     a plain number shaded by how hard the fight is
 --   * cast bars on a dark ground with a cropped icon; Blizzard's shield
 --     still marks a cast you can't interrupt
 -- Plates the game won't let addons touch (friendly plates in instances) are
@@ -106,6 +107,32 @@ local function refont(frame)
 	end
 end
 
+-- Level ----------------------------------------------------------------------
+-- The level sits as a plain number beside the bar. Its shade says how hard
+-- the fight is by lightness, not green to red: muted for easy, bone for a
+-- fair fight, pale gold a few levels up, amber well above you.
+
+local function levelToken(diff)
+	local trivial = C_QuestLog and C_QuestLog.GetTrivialRange and C_QuestLog.GetTrivialRange() or 5
+	if diff < -trivial or diff <= -3 then return "muted" end
+	if diff <= 2 then return "text" end
+	if diff <= 4 then return "accent" end
+	return "danger"
+end
+
+local function colourLevel(frame)
+	if not frame.stoaDressed or not isPlate(frame) then return end
+	local level = frame.PlayerLevelDiffFrame
+	local text = level and level.playerLevelDiffText
+	if not (text and level:IsShown()) then return end
+	local theirs = known(UnitEffectiveLevel(frame.unit))
+	local mine = known(UnitEffectiveLevel("player"))
+	if not (theirs and mine) or theirs <= 0 then return end
+	local token = known(UnitCanAttack("player", frame.unit)) and levelToken(theirs - mine) or "muted"
+	text:SetText(theirs)
+	text:SetTextColor(Stoa:Color(token))
+end
+
 -- Target edge ----------------------------------------------------------------
 
 local function targetEdge(frame)
@@ -153,6 +180,12 @@ local function dress(frame)
 		if bar.SetIsTarget then hooksecurefunc(bar, "SetIsTarget", function() targetEdge(frame) end) end
 	end
 	dressCast(frame.CastBarsContainer and frame.CastBarsContainer.castBar)
+	local level = frame.PlayerLevelDiffFrame
+	if level then
+		if level.playerLevelDiffIcon then level.playerLevelDiffIcon:SetAlpha(0) end
+		if level.selectedBorder then level.selectedBorder:SetAlpha(0) end
+		sans(level.playerLevelDiffText)
+	end
 
 	-- Blizzard sets fonts again whenever plate options change.
 	if frame.ApplyFrameOptions then hooksecurefunc(frame, "ApplyFrameOptions", refont) end
@@ -166,6 +199,7 @@ function Plates:Added(unit)
 	dress(frame)
 	colourHealth(frame)
 	colourName(frame)
+	colourLevel(frame)
 	targetEdge(frame)
 	Stoa:Fire("STOA_PLATE_ADDED", unit, frame)
 end
@@ -185,6 +219,9 @@ function Plates:OnEnable()
 	end
 	if CompactUnitFrame_UpdateName then
 		hooksecurefunc("CompactUnitFrame_UpdateName", function(frame) guarded(colourName, frame) end)
+	end
+	if CompactUnitFrame_UpdatePlayerLevelDiff then
+		hooksecurefunc("CompactUnitFrame_UpdatePlayerLevelDiff", function(frame) guarded(colourLevel, frame) end)
 	end
 	local driver = _G.NamePlateDriverFrame
 	if driver and driver.OnNamePlateAdded then
