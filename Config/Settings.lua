@@ -69,6 +69,12 @@ local function build()
 		Stoa.modules.ActionBars:SetOption("hoverTray", value)
 	end)
 	checkbox(Stoa.modules.Windows.db, "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on Stoa's dark panels with light text. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Bags.db, "enabled", "Restyle bags", "Bags with rounded slots, a coloured edge by quality plus a corner mark for epic and above, item level on gear, free slots, your money in letters and a Sort button. Takes effect after /reload.", true)
+	dropdown(Stoa.modules.Bags.db, "bagMode", "Bag layout", "One combined bag, or a window for each bag. You can still switch from the bag's own menu; this applies when you change it here.", "combined", { { "combined", "One combined bag" }, { "separate", "Separate bags" } }, function()
+		Stoa.modules.Bags.db.appliedMode = nil
+		Stoa.modules.Bags:ApplyMode()
+	end)
+	checkbox(Stoa.modules.Character.db, "enabled", "Restyle the character sheet", "A dark panel, item level and quality edges on every slot, the words WORN and BROKEN on gear that needs repair, and an average item level line. The inspect window gets item levels too. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Top.db, "enabled", "Restyle the top of the screen", "Buffs as cropped icons with quiet timers, the quest tracker in Stoa's type without the gold bars, and the minimap's zone header on a dark panel with its buttons waiting for the mouse. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Plates.db, "enabled", "Restyle nameplates", "Flat bars coloured by what you can do: amber for enemies, pale gold for neutral, blue for friends, and grey only for tapped or dead. A bone edge marks your target. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Swing.db, "enabled", "Restyle the swing timer", "Blizzard's swing timer as a flat bar in a rounded dark track: pale gold for the main hand, blue for the off hand. Place it in Edit Mode. Takes effect after /reload.", true)
@@ -179,6 +185,8 @@ Stoa.commands.safe = function()
 	end
 	if m.ActionBars then m.ActionBars.db.enabled = false end
 	if m.Windows then m.Windows.db.enabled = false end
+	if m.Bags then m.Bags.db.enabled = false end
+	if m.Character then m.Character.db.enabled = false end
 	if m.Meters then m.Meters.db.enabled = false end
 	if m.Top then m.Top.db.enabled = false end
 	if m.Plates then m.Plates.db.enabled = false end
