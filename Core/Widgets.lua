@@ -316,6 +316,35 @@ function UI.roundPanel(frame, alpha)
 	return bg
 end
 
+-- A Stoa button: a dark rounded panel with a word in the sans, warming to
+-- the accent under the mouse. SetSelected marks the chosen one of a row.
+function UI.button(parent, label, width, onClick)
+	local button = CreateFrame("Button", nil, parent)
+	button:SetSize(width or 110, 26)
+	UI.roundPanel(button, 0.95)
+	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
+	local text = button:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(text, "sans", Stoa.typeSize.body)
+	text:SetPoint("CENTER")
+	text:SetText(label)
+	button.text = text
+	local function colour()
+		local lit = button.selected or button:IsMouseOver()
+		text:SetTextColor(Stoa:Color(lit and "accent" or "text"))
+		if lit then glow:Set(Stoa:Color("accent")) else glow:Clear() end
+	end
+	function button:SetSelected(selected)
+		self.selected = selected and true or false
+		colour()
+	end
+	button:SetScript("OnEnter", colour)
+	button:SetScript("OnLeave", colour)
+	if onClick then button:SetScript("OnClick", onClick) end
+	Stoa:On("STOA_THEME_CHANGED", colour)
+	colour()
+	return button
+end
+
 function UI.unitCard(card, styleName)
 	local bg = sliced(card, "BACKGROUND", "CardFill.tga")
 	if bg then

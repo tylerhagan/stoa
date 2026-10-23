@@ -40,10 +40,15 @@ function Stoa:SetRoleForSlot(slot, role)
 	self:UpdateRole()
 end
 
-function Stoa:UpdateRole()
+-- What this character's class plays when no role is chosen.
+function Stoa:DefaultRole()
 	local _, class = UnitClass("player")
+	return classDefault[class] or "MELEE"
+end
+
+function Stoa:UpdateRole()
 	local chosen = self.char.roles["slot" .. activeSlot()]
-	local role = (chosen ~= "AUTO" and chosen) or classDefault[class] or "MELEE"
+	local role = (chosen ~= "AUTO" and chosen) or self:DefaultRole()
 	if role ~= currentRole then
 		local previous = currentRole
 		currentRole = role
