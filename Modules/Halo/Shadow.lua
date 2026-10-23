@@ -6,8 +6,8 @@
 --   * an outline on the combat bar's next press (DoTs first, then Mind
 --     Blast and Shadow Word: Death when ready, then Mind Flay);
 --   * SHADOWFORM over the ring when you've dropped out of form;
---   * a small P on each enemy nameplate carrying your Pain, and a count
---     when more than one enemy is in the fight;
+--   * a PAIN count when more than one enemy is in the fight (the plates
+--     show Blizzard's own Pain icon);
 --   * Shadow Weaving stacks on the target plaque.
 -- Mind Flay's tick marks live with the cast line in Halo.lua.
 --
@@ -378,43 +378,11 @@ function Shadow:UpdateWeaving()
 end
 
 -- Nameplates ----------------------------------------------------------------
--- A small P on each enemy plate carrying your Pain. Plates the game won't
--- let addons touch are left alone.
-
-function Shadow:PlateMark(unit)
-	local plate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit)
-	if not plate or (plate.IsForbidden and plate:IsForbidden()) then return nil end
-	if not plate.stoaPain then
-		local mark = CreateFrame("Frame", nil, plate)
-		mark:SetSize(16, 16)
-		local ring = UI.circle(mark, "BORDER", 0, 16, "accent")
-		ring:SetPoint("CENTER")
-		local fill = UI.circle(mark, "BORDER", 1, 13, "panel")
-		fill:SetPoint("CENTER")
-		local letter = UI.text(mark, "serif", Stoa.typeSize.caption, "accent", "CENTER")
-		letter:SetPoint("CENTER", 0, 1)
-		letter:SetText("P")
-		mark:Hide()
-		plate.stoaPain = mark
-	end
-	-- Beside the health bar on a Stoa plate; the plate's corner otherwise.
-	local mark = plate.stoaPain
-	local plates = Stoa.modules.Plates
-	local bar = plates and plates.HealthBar and plates:HealthBar(unit)
-	mark:ClearAllPoints()
-	if bar then
-		mark:SetPoint("LEFT", bar, "RIGHT", 5, 0)
-	else
-		mark:SetPoint("BOTTOMLEFT", plate, "TOPRIGHT", -24, -10)
-	end
-	return mark
-end
+-- Blizzard's plates already show your Pain as a debuff icon with its time,
+-- so Stoa only counts which enemies in the fight carry it.
 
 function Shadow:UpdatePlate(unit)
-	local mark = self:PlateMark(unit)
-	if not mark then return end
 	local has = self:Active() and (findAura(unit, "pain") ~= nil or self:CastOnUnit(unit, "pain"))
-	mark:SetShown(has)
 	self.pained = self.pained or {}
 	self.pained[unit] = has or nil
 end
@@ -536,8 +504,6 @@ function Shadow:OnEnable()
 	Stoa:On("NAME_PLATE_UNIT_REMOVED", function(unit)
 		self.plates[unit] = nil
 		if self.pained then self.pained[unit] = nil end
-		local plate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit)
-		if plate and plate.stoaPain then plate.stoaPain:Hide() end
 	end)
 	-- Timers and cooldowns tick without events. If an update ever errors
 	-- the ticker stops rather than repeating the error.
