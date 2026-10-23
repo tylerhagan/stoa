@@ -2,8 +2,8 @@
 -- Each meter window loses its header bar and background art for a dark
 -- rounded panel with a hairline edge. Bars turn bone, your own bar turns to
 -- the accent, and only the names carry class colour. The windows stack in
--- one column at the top left, the same width, out of the way of the
--- console and the Halo in both states.
+-- one strip flush in the top-left corner, side by side, out of the way of
+-- the console and the Halo in both states.
 --
 -- Blizzard_DamageMeter loads on demand, so everything waits for it and is
 -- looked up by name and guarded.
@@ -13,8 +13,9 @@ local UI = Stoa.UI
 
 local Meters = Stoa:NewModule("Meters", { place = true })
 
-local LEFT, TOP = 24, -24
-local WIDTH, HEIGHT, GAP = 300, 168, 14
+local WIDTH, HEIGHT, FOLDED = 300, 168, 30
+-- Words and bars sit this far in from the window's edges.
+local INSET = 10
 
 local function guarded(fn, ...)
 	xpcall(fn, geterrorhandler(), ...)
@@ -90,17 +91,41 @@ end
 
 -- Windows --------------------------------------------------------------------
 
+-- A square panel with hairlines on its open sides: the strip meets the
+-- screen's top and left edges, so only the bottom and right are drawn, and
+-- the right hairline divides one window from the next.
+local function slab(frame)
+	local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+	bg:SetAllPoints()
+	UI.paint(bg, "panel", 0.9)
+	local bottom = UI.line(frame)
+	bottom:SetPoint("BOTTOMLEFT")
+	bottom:SetPoint("BOTTOMRIGHT")
+	local right = frame:CreateTexture(nil, "BORDER")
+	right:SetWidth(1)
+	right:SetPoint("TOPRIGHT")
+	right:SetPoint("BOTTOMRIGHT")
+	UI.paint(right, "hairline")
+	UI.applyTheme()
+end
+
 local function dressWindow(window)
 	if not window or window.stoaDressed then return end
 	window.stoaDressed = true
 
 	hide(window.Header)
+	-- Inset the header row, and the bars hung under it, from the edges.
+	if window.Header then
+		window.Header:ClearAllPoints()
+		window.Header:SetPoint("TOPLEFT", INSET, -2)
+		window.Header:SetPoint("TOPRIGHT", -INSET + 4, -2)
+	end
 	local container = window.GetMinimizeContainer and window:GetMinimizeContainer() or window.MinimizeContainer
 	if container then
 		hide(container.Background)
 		-- Blizzard sets the background's alpha from its opacity setting.
 		hooksecurefunc(window, "UpdateBackground", function() hide(container.Background) end)
-		UI.roundPanel(container, 0.9)
+		slab(container)
 		font(container.NotActive, Stoa.typeSize.body, "muted")
 	end
 
@@ -108,9 +133,9 @@ local function dressWindow(window)
 	local folded = CreateFrame("Frame", nil, window)
 	folded:SetPoint("TOPLEFT")
 	folded:SetPoint("TOPRIGHT")
-	folded:SetHeight(30)
+	folded:SetHeight(FOLDED)
 	folded:SetFrameLevel(math.max(window:GetFrameLevel() - 1, 0))
-	UI.roundPanel(folded, 0.9)
+	slab(folded)
 	local function fold()
 		folded:SetShown(window.IsMinimized and window:IsMinimized() or false)
 	end
@@ -179,7 +204,7 @@ end
 
 -- Placement ------------------------------------------------------------------
 
--- The windows in order, top to bottom: the one Blizzard calls primary first.
+-- The windows in order, left to right: the one Blizzard calls primary first.
 local function shownWindows()
 	local list = {}
 	for i = 1, 3 do
@@ -191,15 +216,14 @@ end
 
 function Meters:Place()
 	if not self.db.place then return end
-	local y = TOP
+	local x = 0
 	for _, window in ipairs(shownWindows()) do
 		window:ClearAllPoints()
-		window:SetPoint("TOPLEFT", UIParent, "TOPLEFT", LEFT, y)
+		window:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, 0)
 		window:SetSize(WIDTH, HEIGHT)
-		-- Keep Blizzard's position cache from saving over the column.
+		-- Keep Blizzard's position cache from saving over the strip.
 		if window.SetUserPlaced and window:IsMovable() then pcall(window.SetUserPlaced, window, false) end
-		local folded = window.IsMinimized and window:IsMinimized()
-		y = y - (folded and 30 or HEIGHT) - GAP
+		x = x + WIDTH
 	end
 end
 
@@ -208,7 +232,7 @@ local function hookWindow(window)
 	window.stoaPlaced = true
 	window:HookScript("OnShow", function() Meters:Place() end)
 	window:HookScript("OnHide", function() Meters:Place() end)
-	-- A drag or resize settles back into the column while placing is on.
+	-- A drag or resize settles back into the strip while placing is on.
 	window:HookScript("OnDragStop", function() Meters:Place() end)
 	hooksecurefunc(window, "SetMinimized", function() Meters:Place() end)
 end

@@ -59,7 +59,7 @@ local function build()
 	end)
 	checkbox(Stoa.modules.Windows.db, "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on Stoa's dark panels with light text. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Meters.db, "enabled", "Restyle the damage meter", "Blizzard's damage and healing meters on Stoa's dark panels: bone bars, your own bar in the accent, class colour on names only. Takes effect after /reload.", true)
-	checkbox(Stoa.modules.Meters.db, "place", "Stack the meters top left", "Every meter window shown sits in one column at the top left of the screen, the same width, in and out of combat. Off leaves them where Edit Mode and your dragging put them.", true, function(_, value)
+	checkbox(Stoa.modules.Meters.db, "place", "Meters in the top-left corner", "Every meter window shown sits side by side in one strip flush with the top-left corner of the screen, the same size, in and out of combat. Off leaves them where Edit Mode and your dragging put them.", true, function(_, value)
 		if value then Stoa.modules.Meters:Place() end
 	end)
 	checkbox(Stoa.modules.Grimoire.db, "houseMenu", "Bags and menu in the console corner", "Moves the bag slots and game menu off the action bar row into the console's bottom-right corner, quiet until you mouse over them. Takes effect after /reload.", true)
