@@ -99,7 +99,7 @@ function Party:Layout()
 			-- In combat under the combat bar when there is one; otherwise,
 			-- and with the console open, just under the Halo's cast line.
 			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa:CombatLayout()
-			frame:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and -136 or -52)
+			frame:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and Stoa.modules.CombatBar:GroupOffset() or -52)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 		else

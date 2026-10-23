@@ -47,6 +47,10 @@ local function build()
 	checkbox(Stoa.modules.Minimap.db, "enabled", "Style the minimap", "Rings in the theme colours, serif zone name, wheel to zoom. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.ActionBars.db, "enabled", "Rounded action buttons", "Rounded-square icons with a hairline edge, dim sockets for empty slots. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.CombatBar.db, "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before. Takes effect after /reload.", true)
+	local rowChoices = { { "1", "Main bar only" }, { "2", "Main + bottom-left" }, { "3", "Main + both bottom bars" } }
+	local function relayout() Stoa:AfterCombat(function() Stoa.modules.CombatBar:Layout() end) end
+	dropdown(Stoa.modules.CombatBar.db, "rows", "Combat rows", "How many rows show under the Halo in combat when you tank or deal damage. Each extra row is a step smaller and shows only the buttons you've filled.", "2", rowChoices, relayout)
+	dropdown(Stoa.modules.CombatBar.db, "healerRows", "Combat rows when healing", "The same, for healing. One keeps the group frames close under your spells.", "1", rowChoices, relayout)
 	checkbox(Stoa.modules.ActionBars.db, "combatHide", "Hand the bars to the Halo in combat", "With the combat bar on, the console's action bars step aside in combat and only the compact bar under the Halo shows. Your keybinds keep working.", true, function(_, value)
 		Stoa.modules.ActionBars:SetOption("combatHide", value)
 	end)

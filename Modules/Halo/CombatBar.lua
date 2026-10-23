@@ -9,14 +9,30 @@
 -- the main bar's page, so a transform or vehicle shows its own spells.
 -- Which buttons rest in the row is worked out out of combat; the game
 -- shows the row only in combat.
+--
+-- One or two more rows can follow from the bottom-left and bottom-right
+-- bars, each a step smaller so the rotation stays biggest. Long cooldowns
+-- sit dim until they're ready.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Bar = Stoa:NewModule("CombatBar", { count = 12 })
+local Bar = Stoa:NewModule("CombatBar", { count = 12, rows = "2", healerRows = "1" })
 
 local SIZE = 38
 local GAP = 8
+local TOP = -74
+-- Rows after the main bar: the bar each one mirrors (as its page of action
+-- slots and its key bindings) and its button size.
+local EXTRA_ROWS = {
+	{ page = 6, binding = "MULTIACTIONBAR1BUTTON", size = 34, gap = 7 },
+	{ page = 5, binding = "MULTIACTIONBAR2BUTTON", size = 30, gap = 6 },
+}
+-- Room for the keys under a row, and between rows.
+local KEY_ROOM = 18
+-- A cooldown longer than this dims its button until it's ready.
+local LONG_COOLDOWN = 30
+local WAITING_ALPHA = 0.38
 local MASK = UI.MEDIA .. "Textures\\ButtonMask"
 
 -- Newer clients keep the action API under C_ActionBar.
@@ -68,6 +84,61 @@ function Bar:Page()
 	return tonumber((self.pager:GetAttribute("actionpage"))) or 1
 end
 
+function Bar:MakeButton(name, parent, size)
+	local button = CreateFrame("Button", name, parent, "SecureActionButtonTemplate")
+	button:SetFrameStrata("LOW")
+	button:SetSize(size, size)
+	button.size = size
+	button:RegisterForClicks("AnyUp")
+	button:Hide()
+
+	UI.roundPanel(button, 0.9)
+	local icon = button:CreateTexture(nil, "ARTWORK")
+	icon:SetAllPoints()
+	icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	local mask = button:CreateMaskTexture()
+	mask:SetAllPoints()
+	mask:SetTexture(MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	icon:AddMaskTexture(mask)
+	button.icon = icon
+
+	local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+	highlight:SetAllPoints()
+	highlight:SetColorTexture(1, 1, 1, 0.15)
+	highlight:AddMaskTexture(mask)
+
+	local cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
+	cooldown:SetAllPoints()
+	cooldown:SetSwipeTexture(MASK)
+	cooldown:SetDrawEdge(false)
+	cooldown:SetDrawBling(false)
+	button.cooldown = cooldown
+	-- A long cooldown finishing brings its button back up.
+	cooldown:HookScript("OnCooldownDone", function()
+		button.waiting = nil
+		Bar.RefreshAlpha(button)
+	end)
+
+	local count = UI.text(button, "sans", Stoa.typeSize.caption, "text", "RIGHT")
+	count:SetPoint("BOTTOMRIGHT", 1, 1)
+	Stoa:SetFont(count, "sans", Stoa.typeSize.caption, "OUTLINE")
+	button.count = count
+	-- The key sits under the button, where the eye already is.
+	local key = UI.text(button, "sans", Stoa.typeSize.label, "muted", "CENTER")
+	key:SetPoint("TOP", button, "BOTTOM", 0, -3)
+	UI.legible(key)
+	button.key = key
+
+	button:SetScript("OnEnter", function(own)
+		if own.slot then
+			GameTooltip_SetDefaultAnchor(GameTooltip, own)
+			GameTooltip:SetAction(own.slot)
+		end
+	end)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	return button
+end
+
 function Bar:Build()
 	local pager = CreateFrame("Frame", "StoaCombatBarPager", UIParent)
 	RegisterAttributeDriver(pager, "actionpage", pageConditions())
@@ -76,60 +147,45 @@ function Bar:Build()
 	end)
 	self.pager = pager
 
-	self.buttons = {}
+	self.buttons, self.all = {}, {}
 	for i = 1, 12 do
-		local button = CreateFrame("Button", "StoaCombatButton" .. i, pager, "SecureActionButtonTemplate")
-		button:SetFrameStrata("LOW")
-		button:SetSize(SIZE, SIZE)
+		local button = self:MakeButton("StoaCombatButton" .. i, pager, SIZE)
 		-- Button i acts on slot i of whatever page the pager holds.
 		button:SetID(i)
 		button:SetAttribute("type", "action")
 		button:SetAttribute("useparent-actionpage", true)
 		button.binding = "ACTIONBUTTON" .. i
-		button:RegisterForClicks("AnyUp")
-		button:Hide()
-
-		UI.roundPanel(button, 0.9)
-		local icon = button:CreateTexture(nil, "ARTWORK")
-		icon:SetAllPoints()
-		icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-		local mask = button:CreateMaskTexture()
-		mask:SetAllPoints()
-		mask:SetTexture(MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-		icon:AddMaskTexture(mask)
-		button.icon = icon
-
-		local highlight = button:CreateTexture(nil, "HIGHLIGHT")
-		highlight:SetAllPoints()
-		highlight:SetColorTexture(1, 1, 1, 0.15)
-		highlight:AddMaskTexture(mask)
-
-		local cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
-		cooldown:SetAllPoints()
-		cooldown:SetSwipeTexture(MASK)
-		cooldown:SetDrawEdge(false)
-		cooldown:SetDrawBling(false)
-		button.cooldown = cooldown
-
-		local count = UI.text(button, "sans", Stoa.typeSize.caption, "text", "RIGHT")
-		count:SetPoint("BOTTOMRIGHT", 1, 1)
-		Stoa:SetFont(count, "sans", Stoa.typeSize.caption, "OUTLINE")
-		button.count = count
-		-- The key sits under the button, where the eye already is.
-		local key = UI.text(button, "sans", Stoa.typeSize.label, "muted", "CENTER")
-		key:SetPoint("TOP", button, "BOTTOM", 0, -3)
-		UI.legible(key)
-		button.key = key
-
-		button:SetScript("OnEnter", function(own)
-			if own.slot then
-				GameTooltip_SetDefaultAnchor(GameTooltip, own)
-				GameTooltip:SetAction(own.slot)
-			end
-		end)
-		button:SetScript("OnLeave", GameTooltip_Hide)
 		self.buttons[i] = button
+		self.all[#self.all + 1] = button
 	end
+
+	-- The extra rows point at fixed slots, so no paging.
+	self.extra = {}
+	for r, row in ipairs(EXTRA_ROWS) do
+		local buttons = {}
+		for i = 1, 12 do
+			local button = self:MakeButton(("StoaCombatRow%dButton%d"):format(r + 1, i), UIParent, row.size)
+			button.fixed = i + (row.page - 1) * 12
+			button:SetAttribute("type", "action")
+			button:SetAttribute("action", button.fixed)
+			button.binding = row.binding .. i
+			buttons[i] = button
+			self.all[#self.all + 1] = button
+		end
+		self.extra[r] = buttons
+	end
+end
+
+-- How many rows show in combat: healers keep their eyes on the group, so
+-- they default to one.
+function Bar:RowCount()
+	local wanted = Stoa:GetRole() == "HEALER" and self.db.healerRows or self.db.rows
+	return math.max(1, math.min(#EXTRA_ROWS + 1, tonumber(wanted) or 1))
+end
+
+-- Where the group frames sit under the Halo while the combat rows show.
+function Bar:GroupOffset()
+	return self.groupOffset or -136
 end
 
 -- Out of combat only: lays out the buttons the current page fills, centred
@@ -168,23 +224,74 @@ function Bar:Layout()
 		for _, entry in ipairs(list) do
 			local button, driver = entry[1], entry[2]
 			button:ClearAllPoints()
-			button:SetPoint("TOPLEFT", halo, "BOTTOM", x, -74)
+			button:SetPoint("TOPLEFT", halo, "BOTTOM", x, TOP)
 			x = x + SIZE + GAP
 			RegisterStateDriver(button, "visibility", driver)
 			if list == filled then self.shown[#self.shown + 1] = button end
 		end
 	end
+
+	-- The extra rows: only filled buttons, centred, each row under the last.
+	-- They step aside while a transform has the main row.
+	local y = TOP - SIZE - KEY_ROOM
+	local rows = self:RowCount()
+	for r, buttons in ipairs(self.extra) do
+		local row = EXTRA_ROWS[r]
+		local used = {}
+		for _, button in ipairs(buttons) do
+			UnregisterStateDriver(button, "visibility")
+			button:Hide()
+			if r < rows and plain(HasAction(button.fixed)) then used[#used + 1] = button end
+		end
+		if #used > 0 then
+			local rowX = -(#used * row.size + (#used - 1) * row.gap) / 2
+			for _, button in ipairs(used) do
+				button:ClearAllPoints()
+				button:SetPoint("TOPLEFT", halo, "BOTTOM", rowX, y)
+				rowX = rowX + row.size + row.gap
+				RegisterStateDriver(button, "visibility", RESTING)
+				self.shown[#self.shown + 1] = button
+			end
+			y = y - row.size - KEY_ROOM
+		end
+	end
+	local offset = y - 6
+	if offset ~= self.groupOffset then
+		self.groupOffset = offset
+		Stoa:Fire("STOA_COMBAT_LAYOUT", Stoa:CombatLayout())
+	end
 	self:UpdateAll()
 end
 
+-- Empty buttons vanish; ones waiting on a long cooldown sit dim. Alpha can
+-- change in combat where showing and hiding can't.
+function Bar.RefreshAlpha(button)
+	button:SetAlpha(button.empty and 0 or button.waiting and WAITING_ALPHA or 1)
+end
+
 function Bar:UpdateKeys()
-	for _, button in ipairs(self.buttons or {}) do
+	for _, button in ipairs(self.all or {}) do
 		button.key:SetText(shortKey(GetBindingKey(button.binding)))
 	end
 end
 
+-- Seconds left on a slot's cooldown, or nil when the game won't say.
+function Bar:CooldownLeft(slot)
+	local start, duration
+	if C_ActionBar and C_ActionBar.GetActionCooldown then
+		local ok, info = pcall(C_ActionBar.GetActionCooldown, slot)
+		if ok and type(info) == "table" then start, duration = info.startTime, info.duration end
+	elseif GetActionCooldown then
+		start, duration = GetActionCooldown(slot)
+	end
+	start, duration = plain(start), plain(duration)
+	if type(start) ~= "number" or type(duration) ~= "number" then return nil end
+	if start == 0 or duration == 0 then return 0 end
+	return start + duration - GetTime()
+end
+
 function Bar:UpdateCooldowns()
-	for _, button in ipairs(self.buttons or {}) do
+	for _, button in ipairs(self.all or {}) do
 		local cooldown, slot = button.cooldown, button.slot
 		-- Cooldowns may be secret in combat; newer clients hand out a
 		-- duration object the cooldown frame can draw without reading it.
@@ -200,6 +307,13 @@ function Bar:UpdateCooldowns()
 			end
 			if start then pcall(cooldown.SetCooldown, cooldown, start, duration) end
 		end
+		-- Dim while a long cooldown runs. If the game keeps the times secret
+		-- the button just keeps its sweep.
+		local waiting = self:CooldownLeft(slot)
+		if waiting ~= nil then
+			button.waiting = waiting > LONG_COOLDOWN or nil
+			Bar.RefreshAlpha(button)
+		end
 	end
 end
 
@@ -207,7 +321,7 @@ end
 -- its key in the warning colour, so range reads as a word-free shape cue
 -- rather than red alone.
 function Bar:UpdateState()
-	for _, button in ipairs(self.buttons or {}) do
+	for _, button in ipairs(self.all or {}) do
 		local slot = button.slot
 		local usable, noMana = IsUsableAction(slot)
 		usable, noMana = plain(usable), plain(noMana)
@@ -229,13 +343,12 @@ end
 function Bar:UpdateAll()
 	if not self.buttons then return end
 	local page = self:Page()
-	for i, button in ipairs(self.buttons) do
-		local slot = i + (page - 1) * 12
+	for i, button in ipairs(self.all) do
+		local slot = button.fixed or i + (page - 1) * 12
 		button.slot = slot
 		button.icon:SetTexture(GetActionTexture(slot))
-		-- An empty slot fades rather than leaving a dark square; alpha can
-		-- change in combat where showing and hiding can't.
-		button:SetAlpha(plain(HasAction(slot)) == false and 0 or 1)
+		button.empty = plain(HasAction(slot)) == false
+		Bar.RefreshAlpha(button)
 		local count = GetActionCount and plain(GetActionCount(slot))
 		button.count:SetText(count and count > 1 and count or "")
 	end
@@ -267,6 +380,7 @@ function Bar:OnEnable()
 		if name == "actionpage" then layout() end
 	end)
 	Stoa:On("UPDATE_BINDINGS", function() self:UpdateKeys() end)
+	Stoa:On("STOA_ROLE_CHANGED", layout)
 	Stoa:On("ACTIONBAR_UPDATE_COOLDOWN", function() self:UpdateCooldowns() end)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", function() self:UpdateCooldowns() end)
 	Stoa:On("ACTIONBAR_UPDATE_USABLE", function() self:UpdateState() end)
