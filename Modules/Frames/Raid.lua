@@ -37,7 +37,10 @@ local VISIBILITY = {
 	},
 }
 
-local OTHER_POINT = { "TOPLEFT", UIParent, "LEFT", 36, 260 }
+-- Everyone but healers: columns standing on the console, above the chat.
+local OTHER_LEFT = 36
+local OTHER_ABOVE_CONSOLE = 24
+local OTHER_SCALE = 0.8
 
 local cells = {}
 
@@ -123,7 +126,14 @@ function Raid:Place()
 		UnregisterStateDriver(header, "visibility")
 		RegisterStateDriver(header, "visibility", visibility[key])
 	end
-	self.holder:SetScale(healer and 1 or 0.8)
+	self.holder:SetScale(healer and 1 or OTHER_SCALE)
+	local wide = RAID_STYLES.wide
+	if healer then
+		self.holder:SetSize(5 * wide.width + 4 * wide.gap, wide.height)
+	else
+		-- As tall as a full group, so the columns rest on the console.
+		self.holder:SetSize(8 * wide.width + 7 * wide.gap, 5 * wide.height + 4 * wide.gap)
+	end
 
 	if Stoa.char.positions.raid then return end
 	self.holder:ClearAllPoints()
@@ -134,7 +144,8 @@ function Raid:Place()
 	elseif healer then
 		self.holder:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 	else
-		self.holder:SetPoint(unpack(OTHER_POINT))
+		local console = Stoa:IsModuleEnabled("Grimoire") and Stoa.modules.Grimoire:OpenHeight() or 0
+		self.holder:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", OTHER_LEFT / OTHER_SCALE, (console + OTHER_ABOVE_CONSOLE) / OTHER_SCALE)
 	end
 end
 

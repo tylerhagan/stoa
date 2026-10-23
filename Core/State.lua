@@ -91,11 +91,25 @@ function Stoa:IsPeeking()
 	return peeking
 end
 
+local function setPeeking(on)
+	if on == peeking then return end
+	peeking = on
+	Stoa:Fire("STOA_PEEK_CHANGED", peeking)
+end
+
+-- Alt-tabbing away can swallow the key-up, which would leave the console
+-- open. While peeking, check the key itself until it's let go.
+local peekTicker
 Stoa:On("MODIFIER_STATE_CHANGED", function(key, down)
 	if key ~= "LALT" and key ~= "RALT" then return end
-	local nowPeeking = state == COMBAT and down == 1
-	if nowPeeking ~= peeking then
-		peeking = nowPeeking
-		Stoa:Fire("STOA_PEEK_CHANGED", peeking)
+	setPeeking(state == COMBAT and down == 1)
+	if peeking and not peekTicker then
+		peekTicker = C_Timer.NewTicker(0.2, function()
+			if not IsAltKeyDown() or state ~= COMBAT then
+				setPeeking(false)
+				peekTicker:Cancel()
+				peekTicker = nil
+			end
+		end)
 	end
 end)
