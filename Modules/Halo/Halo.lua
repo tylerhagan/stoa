@@ -31,8 +31,8 @@ local SIGNATURES = {
 		HEALER = { 17 },                -- Power Word: Shield
 	},
 	PALADIN = {
-		MELEE = { 35395, 20271 },       -- Crusader Strike, Judgement
-		TANK = { 31935, 20925, 20271 }, -- Avenger's Shield, Holy Shield, Judgement
+		MELEE = { 679, 20271 },         -- Holy Strike, Judgement
+		TANK = { 1311015, 679, 20271 }, -- Templar's Bulwark, Holy Strike, Judgement
 		HEALER = { 20473, 20216, 633 }, -- Holy Shock, Divine Favor, Lay on Hands
 	},
 }

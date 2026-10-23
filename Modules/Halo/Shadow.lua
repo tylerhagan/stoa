@@ -333,7 +333,8 @@ end
 
 function Shadow:UpdateNext()
 	local bar = Stoa.modules.CombatBar
-	if not (bar and bar.SetNext) then return end
+	-- Other specs' signatures own the outline when this one isn't active.
+	if not (bar and bar.SetNext) or not self:Active() then return end
 	local inCombat = Stoa:GetState() == Stoa.STATE_COMBAT
 	bar:SetNext(inCombat and self:NextPress() or nil)
 end
