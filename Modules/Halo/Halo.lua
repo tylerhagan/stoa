@@ -160,13 +160,11 @@ local TARGET_WIDTH = 268
 local TARGET_PAD = 12
 -- Room on the left for the half of the coin inside the plaque.
 local TARGET_COIN_SPACE = 40
--- Where the tethers meet the ring, from the Halo's centre.
-local TETHER = 100
 
 function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
-	target:SetSize(TARGET_WIDTH, 76)
+	target:SetSize(TARGET_WIDTH, 84)
 	-- Over your head it fought with the game's own nameplate.
 	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 	target:SetAttribute("unit", "target")
@@ -186,7 +184,6 @@ function Halo:BuildTarget(frame)
 
 	-- A plaque like the tank watch opposite: the coin faces the Halo.
 	local plaque = UI.plaque(target, "LEFT")
-	plaque:Tether(frame, TETHER, TETHER)
 	target.plaque = plaque
 	local left = TARGET_COIN_SPACE
 	local caption = UI.caption(target, "")
@@ -207,7 +204,7 @@ function Halo:BuildTarget(frame)
 	-- Threat, in words: tanks hear when they are losing it, everyone else
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
-	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -5)
+	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -6)
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target.threat, target.caption = threat, caption
 
@@ -349,9 +346,6 @@ function Halo:UpdateTarget()
 	target.plaque:SetRank(plaqueRank)
 	target.caption:SetTextColor(Stoa:Color(plaqueRank and "accent" or "muted"))
 	if plaqueRank == "rare" then target.caption:SetTextColor(0.79, 0.8, 0.82) end
-	if target.plaque.tether then
-		target.plaque.tether:SetShown(Stoa:GetState() == Stoa.STATE_COMBAT)
-	end
 
 	-- A dead target says so in words and steps back, rather than reading as
 	-- a hostile at zero.
@@ -593,10 +587,6 @@ function Halo:OnEnable()
 	Stoa:On("STOA_STATE_CHANGED", function(state)
 		self:SetShown(state == Stoa.STATE_COMBAT)
 		self:UpdateReminders()
-	end)
-	Stoa:On("STOA_STATE_CHANGED", function(state)
-		local tether = self.target and self.target.plaque.tether
-		if tether then tether:SetShown(state == Stoa.STATE_COMBAT) end
 	end)
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		self:UpdateSignature()

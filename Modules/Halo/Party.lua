@@ -413,8 +413,6 @@ local WATCH_WIDTH = 214
 local WATCH_PAD = 14
 -- Room on the right for the half of the coin inside the plaque.
 local WATCH_COIN_SPACE = 40
--- Where the tether meets the ring, from the Halo's centre.
-local WATCH_TETHER = 100
 local HURT_HEALTH = 0.7
 
 local function watchedUnit()
@@ -439,14 +437,13 @@ end
 function Party:BuildWatch()
 	local watch = CreateFrame("Frame", "StoaTankWatch", UIParent)
 	watch:SetFrameStrata("LOW")
-	watch:SetSize(WATCH_WIDTH + WATCH_PAD + WATCH_COIN_SPACE, 76)
+	watch:SetSize(WATCH_WIDTH + WATCH_PAD + WATCH_COIN_SPACE, 84)
 	-- A plaque like the target opposite: the coin faces the Halo.
 	local plaque = UI.plaque(watch, "RIGHT")
 	watch.plaque = plaque
 	local halo = _G.StoaHalo
 	if halo then
 		watch:SetPoint("BOTTOMRIGHT", halo, "LEFT", -52, 36)
-		plaque:Tether(halo, -WATCH_TETHER, WATCH_TETHER)
 	else
 		watch:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
 	end
@@ -473,7 +470,7 @@ function Party:BuildWatch()
 	absorb:SetStatusBarColor(Stoa:Color("shield"))
 	UI.engrave(hp, WATCH_WIDTH)
 	local buffs = UI.caption(watch, "")
-	buffs:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
+	buffs:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -6)
 	watch.label = label
 
 	watch.name, watch.percent, watch.word, watch.hp = name, percent, word, hp
@@ -565,9 +562,6 @@ function Party:UpdateWatch()
 	if not watch.shown then UI.fade(watch, 1, 0.2) end
 	watch.shown = true
 	watch.plaque:SetRank(nil)
-	if watch.plaque.tether then
-		watch.plaque.tether:SetShown(Stoa:GetState() == Stoa.STATE_COMBAT)
-	end
 	if previewing and not unit then
 		self:PreviewWatch()
 		return

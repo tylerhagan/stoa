@@ -318,7 +318,7 @@ end
 -- A plaque: the tank watch and the target, dressed as small pieces of the
 -- console so they read as yours rather than as party cards. Warm leather,
 -- a gold hairline with a fainter one inside, a soft emboss, and a portrait
--- coin on the side that faces the Halo, with a fine tether to the ring.
+-- coin on the side that faces the Halo.
 local PLAQUE_FILL = { 0.11, 0.096, 0.083, 0.95 }
 local SILVER = { 0.79, 0.8, 0.82 }
 local COIN = 52
@@ -364,19 +364,6 @@ function UI.plaque(frame, coinSide)
 	portrait:SetPoint("CENTER")
 	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
 
-	-- The tether runs from the coin to the ring; it shows with the Halo.
-	if frame.CreateLine then
-		local tether = frame:CreateLine(nil, "BACKGROUND")
-		tether:SetThickness(1)
-		tether:SetStartPoint("CENTER", coin)
-		plaque.tether = tether
-	end
-
-	function plaque:Tether(halo, x, y)
-		if not self.tether or not halo then return end
-		self.tether:SetEndPoint("CENTER", halo, x, y)
-	end
-
 	-- Gold for everyone; elite doubles the gold, rare turns it silver.
 	function plaque:SetRank(rank)
 		local r, g, b = Stoa:Color("accent")
@@ -385,7 +372,6 @@ function UI.plaque(frame, coinSide)
 		if outer then outer:SetVertexColor(r, g, b, strong and 1 or 0.55) end
 		if inner then inner:SetVertexColor(r, g, b, strong and 0.7 or 0.16) end
 		ring:SetVertexColor(r, g, b, 1)
-		if self.tether then self.tether:SetColorTexture(r, g, b, 0.55) end
 	end
 	plaque:SetRank(nil)
 	return plaque
