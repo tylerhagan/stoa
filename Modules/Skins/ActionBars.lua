@@ -10,7 +10,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Bars = Stoa:NewModule("ActionBars", { tray = true, combatHide = true })
+local Bars = Stoa:NewModule("ActionBars", { hoverTray = false, combatHide = true })
 
 local PREFIXES = {
 	"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
@@ -94,10 +94,9 @@ function Bars:SkinAll()
 end
 
 -- Tray ----------------------------------------------------------------------
--- Out of combat only your main bar shows in the console; the other rows
--- that sit in it rest hidden and come up while the mouse is over the bar
--- area, while a spell or item is on the cursor (to place it), and in Edit
--- Mode. In combat the Halo's combat bar takes over and the console's rows,
+-- Out of combat every console row shows. Optionally (hoverTray) only your
+-- main bar shows and the other rows rest hidden, coming up while the mouse
+-- is over the bar area, a spell or item is on the cursor, or in Edit Mode. In combat the Halo's combat bar takes over and the console's rows,
 -- main bar included, step aside; your keys still reach them. Without the
 -- combat bar, combat brings every row up at once.
 --
@@ -180,7 +179,7 @@ local function handedToHalo(self)
 end
 
 local function trayWanted(self)
-	if not self.db.tray then return true end
+	if not self.db.hoverTray then return true end
 	if inCombat() then return true end
 	if GetCursorInfo() then return true end
 	if EditModeManagerFrame and EditModeManagerFrame:IsShown() then return true end
