@@ -118,10 +118,12 @@ local function consoleTop()
 	return UIParent:GetHeight() * 0.22
 end
 
-local function bottomOf(frame)
-	local bottom = frame:GetBottom()
-	if not bottom then return nil end
-	return bottom * frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+-- Where a bar's middle sits, so a tall side bar that merely reaches down
+-- to the console doesn't count as part of it.
+local function middleOf(frame)
+	local _, middle = frame:GetCenter()
+	if not middle then return nil end
+	return middle * frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
 end
 
 function Bars:FindTray()
@@ -129,8 +131,8 @@ function Bars:FindTray()
 	local tray, area = {}, {}
 	for _, name in ipairs(TRAY_BARS) do
 		local bar = _G[name]
-		local bottom = bar and bar:IsShown() and bottomOf(bar)
-		if bottom and bottom < top then
+		local middle = bar and bar:IsShown() and middleOf(bar)
+		if middle and middle < top then
 			table.insert(tray, bar)
 			table.insert(area, bar)
 		elseif bar and self.tray then

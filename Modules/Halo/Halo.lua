@@ -154,7 +154,7 @@ end
 -- of auras under it. Like the cast bar it is parented to UIParent, so
 -- it stays with you out of combat as well. It's a secure unit button, so
 -- right click opens the unit menu (focus, invite, inspect, trade) like
--- Blizzard's target frame; the game shows and hides it with the target.
+-- Blizzard's target frame.
 local TARGET_WIDTH = 240
 local TARGET_PAD = 9
 
@@ -173,7 +173,10 @@ function Halo:BuildTarget(frame)
 		GameTooltip:SetUnit("target")
 	end)
 	target:SetScript("OnLeave", GameTooltip_Hide)
-	RegisterUnitWatch(target)
+	-- Out of combat the game's nameplate already names an enemy, so the card
+	-- shows only for friends (for their buffs and the menu); in combat it
+	-- shows for anyone. A dead target needs no card.
+	RegisterStateDriver(target, "visibility", "[@target,noexists][@target,dead] hide; [combat] show; [@target,help] show; hide")
 	self.target = target
 
 	-- On a card like the tank watch opposite, so it reads over snow and sky.
