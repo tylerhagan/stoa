@@ -254,10 +254,13 @@ end
 -- game hides which target is which, a target change forgets them instead.
 local LONGEST = 60
 
-local function targetKey()
-	local guid = UnitGUID("target")
+local function unitKey(unit)
+	local guid = UnitGUID(unit)
 	if guid and not Stoa:IsSecret(guid) then return guid end
-	return "target"
+end
+
+local function targetKey()
+	return unitKey("target") or "target"
 end
 
 function Shadow:NoteCast(spellID)
@@ -287,6 +290,15 @@ function Shadow:CastOn(key)
 	local list = self.casts and self.casts[targetKey()]
 	local at = list and list[key]
 	if at and GetTime() - at < DURATIONS[key] then return at end
+end
+
+-- Whether your own cast put this DoT on a unit (a nameplate, say) and it
+-- hasn't run out.
+function Shadow:CastOnUnit(unit, key)
+	local who = unitKey(unit)
+	local list = who and self.casts and self.casts[who]
+	local at = list and list[key]
+	return at ~= nil and GetTime() - at < DURATIONS[key]
 end
 
 function Shadow:ForgetHiddenTarget()
@@ -401,7 +413,7 @@ end
 function Shadow:UpdatePlate(unit)
 	local mark = self:PlateMark(unit)
 	if not mark then return end
-	local has = self:Active() and findAura(unit, "pain") ~= nil
+	local has = self:Active() and (findAura(unit, "pain") ~= nil or self:CastOnUnit(unit, "pain"))
 	mark:SetShown(has)
 	self.pained = self.pained or {}
 	self.pained[unit] = has or nil
@@ -482,6 +494,8 @@ function Shadow:Refresh()
 	self:UpdateWeaving()
 	self:UpdateForm()
 	self:UpdateNext()
+	-- Plates whose Pain came from your casts run out without an aura event.
+	for unit in pairs(self.plates or {}) do self:UpdatePlate(unit) end
 	self:UpdatePainCount()
 end
 
