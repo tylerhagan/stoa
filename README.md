@@ -37,6 +37,8 @@ What works today:
 | Top of screen | Buffs as cropped icons in a hairline square with the time under them (pale gold when it runs short, amber edge for debuffs). Quest tracker headers in the display face over a hairline, bone quest titles, quiet minus and plus to fold. The zone above the minimap on a dark rounded panel with the clock beside it; tracking, calendar and the addon button wait for the mouse |
 | Nameplates | Blizzard's plates in a rounded dark track: amber for every enemy, pale gold for neutral, blue for friends, grey only for tapped or dead; enemy players in class colour. A bone edge on your target, the level as a plain number shaded by difficulty, cast bars on the same rounded ground |
 | Swing timer | Blizzard's swing timer (place it in Edit Mode) as a flat bar in the nameplates' rounded dark track: pale gold for the main hand, blue for the off hand, bone for ranged; amber words when out of range |
+| Bags | Rounded item slots with a hairline edge; quality shown as an edge colour plus a corner mark for epic and above, item level on gear, free-slot count, money in g/s/c letters, a Sort button, and a combined or separate layout option |
+| Character sheet | A Stoa panel, quality edges and item level on every equipment slot, WORN (under 30%) and BROKEN words for durability, an average item level line, and item levels in the inspect window |
 | Damage meters | Blizzard's meter windows with no panel, just outlined words and faint bars (your own in the accent, names in class colour), side by side in the top-left corner |
 | Comforts | Each its own setting, and Shift stops any of it: faster auto loot, a further camera, skip one-option gossip (on by default); accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet red errors in combat (off by default) |
 | Merchants | Sells grey junk and repairs, from guild funds when allowed |
@@ -53,7 +55,7 @@ Fonts are the main gap: see below.
 | `/stoa` | Open settings |
 | `/stoa unlock` | Toggle frame moving |
 | `/stoa reset` | Put moved frames back in their default spots |
-| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, top of screen, nameplates, swing timer, meters) and reload |
+| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload |
 | `/stoa theme` | Cycle Bone, Tide, Graphite |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
