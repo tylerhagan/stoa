@@ -10,7 +10,10 @@
 --       H for Holy Shield, C for Consecration on the ground;
 --   * an outline on the combat bar's next press;
 --   * as a tank in a group, TAUNT over the ring when your target is on
---     someone else: Judgement with Seal of Fury makes it attack you.
+--     someone else: Judgement with Seal of Fury makes it attack you;
+--   * for Retribution with Twist of Light, the moment a swing lands the
+--     other seal of the pair (Command and Righteousness) is outlined and
+--     named under the coins, so the next swing carries both.
 --
 -- Aura details can be secret in combat. Lookups go by name through the
 -- client, and your own casts stand in for timers the game hides.
@@ -42,7 +45,11 @@ local SPELLS = {
 -- Talents found by name, since their Forever spell IDs aren't settled.
 local TALENTS = {
 	arbiter = "Sacred Arbiter",
+	twist = "Twist of Light",
 }
+
+-- The seals Twist of Light swaps between, each to the other.
+local TWIST_PAIRS = { command = "righteousness", righteousness = "command" }
 
 local SEAL_LENGTH = 30
 local MARK_LENGTH = 40
@@ -197,6 +204,7 @@ function Paladin:NoteCast(spellID)
 
 	if name:sub(1, 8) == "Seal of " then
 		self.sealCast = { name = name, at = now }
+		if self.twist and self.twist.seal == name then self.twist = nil end
 		-- The seal you fight with, for when it drops.
 		if not MARKS[name] then self.mainSeal = name end
 	elseif name == nameOf("judgement") then
@@ -256,6 +264,46 @@ function Paladin:BuildCoins(halo)
 		coin:Hide()
 		self.coins[i] = coin
 	end
+end
+
+-- Twist of Light ---------------------------------------------------------------
+-- The game tells addons when each swing lands (Blizzard's swing timer runs
+-- on it). Right after a main-hand swing is the time to change seals.
+
+function Paladin:BuildTwist(halo)
+	local word = UI.caption(halo, "")
+	local angle = math.rad(COIN_ANGLES[#COIN_ANGLES])
+	word:SetPoint("TOP", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle) - COIN / 2 - 4)
+	UI.legible(word)
+	self.twistWord = word
+end
+
+function Paladin:NoteSwing(duration, swingType)
+	local mainHand = Enum and Enum.PlayerSwingType and Enum.PlayerSwingType.MainHand
+	if mainHand ~= nil and swingType ~= mainHand then return end
+	if self:Role() ~= "MELEE" or not hasTalent("twist") then return end
+	local seal = self:Seal()
+	for key, partner in pairs(TWIST_PAIRS) do
+		if seal == nameOf(key) and knows(SPELLS[partner]) then
+			local length = Stoa:PlainNumber(duration) or 3
+			self.twist = { seal = nameOf(partner), ends = GetTime() + length }
+			return
+		end
+	end
+end
+
+function Paladin:Twist()
+	local twist = self.twist
+	if twist and GetTime() < twist.ends then return twist.seal end
+	self.twist = nil
+end
+
+function Paladin:UpdateTwist()
+	local word = self.twistWord
+	if not word then return end
+	local seal = Stoa:GetState() == Stoa.STATE_COMBAT and self:Twist()
+	word:SetText(seal and ("TWIST: " .. seal:gsub("^Seal of ", ""):upper()) or "")
+	word:SetTextColor(Stoa:Color("accent"))
 end
 
 function Paladin:BuildTaunt(halo)
@@ -401,6 +449,8 @@ function Paladin:NextPress()
 			if seal and MARKS[seal] then return nameOf("judgement") end
 			return nameOf("crusader")
 		end
+		local twist = self:Twist()
+		if twist then return twist end
 		if undeadOrDemon() and knows(SPELLS.exorcism) and ready("exorcism") then return nameOf("exorcism") end
 	end
 	for _, key in ipairs({ "holyStrike", "judgement" }) do
@@ -423,6 +473,7 @@ end
 function Paladin:Refresh()
 	self:UpdateCoins()
 	self:UpdateTaunt()
+	self:UpdateTwist()
 	self:UpdateNext()
 end
 
@@ -433,6 +484,7 @@ function Paladin:OnEnable()
 	if not (halo and halo.frame) then return end
 	self:BuildCoins(halo.frame)
 	self:BuildTaunt(halo.frame)
+	self:BuildTwist(halo.frame)
 
 	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
 	Stoa:On("PLAYER_TARGET_CHANGED", function()
@@ -448,6 +500,10 @@ function Paladin:OnEnable()
 		if unit == "target" or unit == "player" then refresh() end
 	end)
 	Stoa:On("UNIT_THREAT_LIST_UPDATE", refresh)
+	Stoa:On("PLAYER_SWING", function(duration, swingType)
+		xpcall(self.NoteSwing, geterrorhandler(), self, duration, swingType)
+		refresh()
+	end)
 	Stoa:On("STOA_ROLE_CHANGED", refresh)
 	Stoa:On("STOA_STATE_CHANGED", refresh)
 	Stoa:On("SPELLS_CHANGED", refresh)

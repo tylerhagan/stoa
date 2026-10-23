@@ -43,7 +43,7 @@ local SPELLS = {
 
 -- How long each lasts, for the times the game won't show the aura itself:
 -- then the coin runs from your own cast on this target.
-local DURATIONS = { pain = 18, plague = 24, embrace = 60 }
+local DURATIONS = { pain = 18, plague = 24, embrace = 30 }
 
 local DOTS = {
 	{ key = "pain", letter = "P" },

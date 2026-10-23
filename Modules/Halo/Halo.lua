@@ -28,7 +28,7 @@ local AURA_COUNT = 8
 local SIGNATURES = {
 	PRIEST = {
 		RANGED = { 8092 },              -- Mind Blast
-		HEALER = { 17 },                -- Power Word: Shield
+		HEALER = { 1240721, 17 },       -- Penance, Power Word: Shield
 	},
 	PALADIN = {
 		MELEE = { 679, 20271 },         -- Holy Strike, Judgement

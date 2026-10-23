@@ -3,8 +3,10 @@
 -- themselves, even in combat, with the party cards' click-cast bindings.
 --
 -- Healers keep one rule at every size: your group reads as a row under
--- your spells. Ten players are two rows of full party cards; more are
--- compact rows of small cells, health filling the cell behind the name.
+-- your spells. Ten players are two rows of full party cards; twenty are
+-- compact rows of small cells, health filling the cell behind the name;
+-- forty are two blocks of smaller cells side by side, groups 1-4 on the
+-- left and 5-8 on the right, so the raid stays above the console.
 -- Everyone else gets a column per group on the left, a size smaller.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -19,7 +21,11 @@ local RAID_STYLES = {
 	wide = { width = 168, height = 58, gap = 6, style = "raid", template = "StoaRaidButtonTemplate" },
 	card = { width = 176, height = 70, gap = 8, style = "party", template = "StoaRaidCardTemplate" },
 	cell = { width = 90, height = 26, gap = 3, style = "cell", template = "StoaRaidCellTemplate" },
+	tinyLeft = { width = 78, height = 22, gap = 2, style = "tiny", template = "StoaRaidTinyTemplate", groups = "1,2,3,4" },
+	tinyRight = { width = 78, height = 22, gap = 2, style = "tiny", template = "StoaRaidTinyTemplate", groups = "5,6,7,8" },
 }
+-- The space between the two forty-player blocks.
+local BLOCK_GAP = 16
 Stoa.RAID_STYLES = RAID_STYLES
 Stoa.RAID_CELL = RAID_STYLES.wide
 
@@ -28,12 +34,16 @@ local VISIBILITY = {
 	HEALER = {
 		wide = "hide",
 		card = "[@raid11,exists] hide; [group:raid] show; hide",
-		cell = "[@raid11,exists] show; hide",
+		cell = "[@raid21,exists] hide; [@raid11,exists] show; hide",
+		tinyLeft = "[@raid21,exists] show; hide",
+		tinyRight = "[@raid21,exists] show; hide",
 	},
 	OTHER = {
 		wide = "[group:raid] show; hide",
 		card = "hide",
 		cell = "hide",
+		tinyLeft = "hide",
+		tinyRight = "hide",
 	},
 }
 
@@ -72,6 +82,7 @@ end
 function StoaRaidButton_OnLoad(cell) onLoad(cell, "raid") end
 function StoaRaidCard_OnLoad(cell) onLoad(cell, "party") end
 function StoaRaidCell_OnLoad(cell) onLoad(cell, "cell") end
+function StoaRaidTiny_OnLoad(cell) onLoad(cell, "tiny") end
 
 function Raid:Build()
 	local holder = CreateFrame("Frame", "StoaRaid", UIParent)
@@ -90,6 +101,7 @@ function Raid:Build()
 		header:SetAttribute("showPlayer", true)
 		header:SetAttribute("groupBy", "GROUP")
 		header:SetAttribute("groupingOrder", "1,2,3,4,5,6,7,8")
+		if size.groups then header:SetAttribute("groupFilter", size.groups) end
 		header:SetAttribute("columnSpacing", size.gap)
 		header:SetAttribute("unitsPerColumn", 5)
 		header:SetAttribute("maxColumns", 8)
@@ -115,7 +127,13 @@ function Raid:Place()
 			header:SetAttribute("xOffset", gap)
 			header:SetAttribute("yOffset", 0)
 			header:SetAttribute("columnAnchorPoint", "TOP")
-			header:SetPoint("TOP", self.holder, "TOP")
+			if key == "tinyLeft" then
+				header:SetPoint("TOPRIGHT", self.holder, "TOP", -BLOCK_GAP / 2, 0)
+			elseif key == "tinyRight" then
+				header:SetPoint("TOPLEFT", self.holder, "TOP", BLOCK_GAP / 2, 0)
+			else
+				header:SetPoint("TOP", self.holder, "TOP")
+			end
 		else
 			header:SetAttribute("point", "TOP")
 			header:SetAttribute("xOffset", 0)

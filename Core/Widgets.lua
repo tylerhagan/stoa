@@ -187,6 +187,8 @@ UI.CARD_STYLES = {
 	-- The compact raid cell: health fills the cell behind the name, and one
 	-- word or the percent sits on the right.
 	cell = { pad = 5, name = 11, cell = true },
+	-- The same, a size down, for forty players.
+	tiny = { pad = 4, name = 10, cell = true },
 }
 
 local MAX_PIPS = 3
