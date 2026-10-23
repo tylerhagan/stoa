@@ -149,6 +149,18 @@ function Bar:MakeButton(name, parent, size)
 	return button
 end
 
+-- The default spot: under the Halo, or mid-screen until the Halo exists.
+function Bar:PlaceAnchor()
+	local anchor, halo = self.anchor, _G.StoaHalo
+	anchor:ClearAllPoints()
+	if halo then
+		anchor:SetPoint("TOP", halo, "BOTTOM", 0, TOP)
+	else
+		anchor:SetPoint("TOP", UIParent, "CENTER", 0, -60 + TOP)
+	end
+	self.anchored = halo ~= nil
+end
+
 function Bar:Build()
 	local pager = CreateFrame("Frame", "StoaCombatBarPager", UIParent)
 	RegisterAttributeDriver(pager, "actionpage", pageConditions())
@@ -156,6 +168,15 @@ function Bar:Build()
 		if name == "actionpage" then self:UpdateAll() end
 	end)
 	self.pager = pager
+
+	-- The rows hang from this frame, so one mover shifts the whole bar. By
+	-- default it sits under the Halo, where the rows always went.
+	local anchor = CreateFrame("Frame", "StoaCombatBarAnchor", UIParent)
+	anchor:SetSize(12 * SIZE + 11 * GAP, SIZE)
+	anchor:SetFrameStrata("LOW")
+	self.anchor = anchor
+	self:PlaceAnchor()
+	Stoa:RegisterMover("combatbar", anchor, "Combat bar", { default = function() self:PlaceAnchor() end })
 
 	self.buttons, self.all = {}, {}
 	for i = 1, 12 do
@@ -206,6 +227,7 @@ end
 function Bar:Layout()
 	local halo = _G.StoaHalo
 	if not halo or InCombatLockdown() then return end
+	if not self.anchored and not Stoa:HasSavedPosition("combatbar") then self:PlaceAnchor() end
 	local GetPage = api("GetActionBarPage")
 	local base = tonumber(plain(GetPage and GetPage())) or 1
 	local page = self:Page()
@@ -234,7 +256,7 @@ function Bar:Layout()
 		for _, entry in ipairs(list) do
 			local button, driver = entry[1], entry[2]
 			button:ClearAllPoints()
-			button:SetPoint("TOPLEFT", halo, "BOTTOM", x, TOP)
+			button:SetPoint("TOPLEFT", self.anchor, "TOP", x, 0)
 			x = x + SIZE + GAP
 			RegisterStateDriver(button, "visibility", driver)
 			if list == filled then self.shown[#self.shown + 1] = button end
@@ -257,7 +279,7 @@ function Bar:Layout()
 			local rowX = -(#used * row.size + (#used - 1) * row.gap) / 2
 			for _, button in ipairs(used) do
 				button:ClearAllPoints()
-				button:SetPoint("TOPLEFT", halo, "BOTTOM", rowX, y)
+				button:SetPoint("TOPLEFT", self.anchor, "TOP", rowX, y - TOP)
 				rowX = rowX + row.size + row.gap
 				RegisterStateDriver(button, "visibility", RESTING)
 				self.shown[#self.shown + 1] = button

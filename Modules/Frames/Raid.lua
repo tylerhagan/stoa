@@ -111,7 +111,7 @@ function Raid:Build()
 	self.header = self.headers.wide
 
 	self:Place()
-	Stoa:RegisterMover("raid", holder, "Raid")
+	Stoa:RegisterMover("raid", holder, "Raid", { default = function() self:Place() end })
 end
 
 -- Healers: rows centred under the combat bar, like the party row. Everyone
@@ -153,7 +153,7 @@ function Raid:Place()
 		self.holder:SetSize(8 * wide.width + 7 * wide.gap, 5 * wide.height + 4 * wide.gap)
 	end
 
-	if Stoa.char.positions.raid then return end
+	if Stoa:HasSavedPosition("raid") then return end
 	self.holder:ClearAllPoints()
 	local halo = _G.StoaHalo
 	if healer and halo then

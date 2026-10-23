@@ -85,7 +85,7 @@ function Party:Build()
 
 	UI.applyTheme()
 	self:Layout()
-	Stoa:RegisterMover("party", frame, "Party")
+	Stoa:RegisterMover("party", frame, "Party", { default = function() self:Layout() end })
 end
 
 -- How many cards show: you plus your party, or all five in the preview.
@@ -100,7 +100,7 @@ function Party:Layout()
 	local frame = self.frame
 	local count = self:VisibleCount()
 	local halo = _G.StoaHalo
-	if not Stoa.char.positions.party then
+	if not Stoa:HasSavedPosition("party") then
 		frame:ClearAllPoints()
 		if layout.row and halo then
 			-- In combat under the combat bar when there is one; otherwise,
