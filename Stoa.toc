@@ -30,6 +30,7 @@ Modules\Grimoire\Minimap.lua
 
 Modules\Halo\Halo.lua
 Modules\Halo\Party.lua
+Modules\Halo\CombatBar.lua
 
 Modules\Frames\ClickCast.lua
 Modules\Frames\Raid.lua

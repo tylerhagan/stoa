@@ -29,6 +29,7 @@ What works today:
 | Raid frames | The same cards, one row per group under the Halo when you heal, one column per group on the left otherwise, for 10, 20 and 40 |
 | Click-casting | Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. `/stoa clicks` to edit |
 | Action bars | Rounded-square icons with a hairline edge like the party cards, dim sockets for empty slots, Stoa type on keys and counts. A tray: out of combat only the main bar shows in the console and the other rows come up on mouseover; in combat every row shows |
+| Combat bar | In combat, a compact row of your main bar's spells under the Halo: rounded icons, keys underneath, cooldown sweeps; dimmed when unusable, blue when short of mana, faded with an key in the warning colour when out of range |
 | Blizzard windows | Quest, gossip, merchant, trainer, bags and tooltips on dark rounded panels, with light quest text in Stoa's type, dark rounded buttons, a quiet close cross and plain-word tabs |
 | Minimap | Theme-coloured rings, serif zone name, wheel to zoom |
 | Merchants | Sells grey junk and repairs, from guild funds when allowed |
