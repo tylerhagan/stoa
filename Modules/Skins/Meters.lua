@@ -130,7 +130,28 @@ local function dressWindow(window)
 		strip(sessionDropdown)
 		font(sessionDropdown.SessionName, Stoa.typeSize.caption, "muted")
 	end
-	if window.MinimizeButton then window.MinimizeButton:SetAlpha(0.6) end
+	local fold = window.MinimizeButton
+	if fold then
+		-- Blizzard's red collapse button becomes a quiet minus or plus.
+		local function plain()
+			for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture" }) do
+				local tex = fold[getter] and fold[getter](fold)
+				if tex then tex:SetAlpha(0) end
+			end
+		end
+		local glyph = fold:CreateFontString(nil, "OVERLAY")
+		Stoa:SetFont(glyph, "sans", Stoa.typeSize.label)
+		glyph:SetPoint("CENTER", 0, 1)
+		glyph:SetTextColor(Stoa:Color("muted"))
+		local function update()
+			plain()
+			glyph:SetText(window.IsMinimized and window:IsMinimized() and "+" or "–")
+		end
+		hooksecurefunc(window, "SetMinimized", update)
+		fold:HookScript("OnEnter", function() glyph:SetTextColor(Stoa:Color("accent")) end)
+		fold:HookScript("OnLeave", function() glyph:SetTextColor(Stoa:Color("muted")) end)
+		update()
+	end
 	if window.SettingsDropdown then window.SettingsDropdown:SetAlpha(0.6) end
 
 	-- Bars, now and as the list makes new ones.
