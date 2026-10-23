@@ -10,7 +10,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Bars = Stoa:NewModule("ActionBars", { tray = true })
+local Bars = Stoa:NewModule("ActionBars", { tray = true, combatHide = true })
 
 local PREFIXES = {
 	"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
@@ -96,8 +96,10 @@ end
 -- Tray ----------------------------------------------------------------------
 -- Out of combat only your main bar shows in the console; the other rows
 -- that sit in it rest hidden and come up while the mouse is over the bar
--- area. Combat brings every row up at once, and so do holding a spell or
--- item on the cursor (to place it) and Edit Mode.
+-- area, while a spell or item is on the cursor (to place it), and in Edit
+-- Mode. In combat the Halo's combat bar takes over and the console's rows,
+-- main bar included, step aside; your keys still reach them. Without the
+-- combat bar, combat brings every row up at once.
 --
 -- Only alpha changes, which is allowed on secure bars at any time. Which
 -- rows count as the tray is worked out from where they sit, out of combat.
@@ -142,31 +144,44 @@ function Bars:FindTray()
 			end
 		end
 	end
+	local main
 	for _, name in ipairs(MAIN_BARS) do
-		if _G[name] then table.insert(area, _G[name]) break end
+		if _G[name] then main = _G[name] break end
 	end
-	self.tray, self.trayArea = tray, area
+	if main then table.insert(area, main) end
+	self.tray, self.trayArea, self.main = tray, area, main
 	self.trayLit = nil
 	self:UpdateTray()
 end
 
 -- One fader for the whole tray, kept off Blizzard's own frames.
 local trayFader = CreateFrame("Frame")
-local function fadeTray(bars, to, seconds)
+local function fadeTray(bars, targets, seconds)
 	local from, start = {}, GetTime()
 	for i, bar in ipairs(bars) do from[i] = bar:GetAlpha() end
 	trayFader:SetScript("OnUpdate", function(fader)
 		local progress = math.min((GetTime() - start) / seconds, 1)
 		for i, bar in ipairs(bars) do
-			bar:SetAlpha(from[i] + (to - from[i]) * progress)
+			bar:SetAlpha(from[i] + (targets[i] - from[i]) * progress)
 		end
 		if progress >= 1 then fader:SetScript("OnUpdate", nil) end
 	end)
 end
 
+local function inCombat()
+	return InCombatLockdown() or Stoa:GetState() == Stoa.STATE_COMBAT
+end
+
+-- In combat the Halo's own bar takes over, when there is one.
+local function handedToHalo(self)
+	if not self.db.combatHide or not inCombat() then return false end
+	local combatBar = Stoa.modules.CombatBar
+	return combatBar and combatBar.enabled and combatBar.shown and #combatBar.shown > 0
+end
+
 local function trayWanted(self)
 	if not self.db.tray then return true end
-	if InCombatLockdown() or Stoa:GetState() == Stoa.STATE_COMBAT then return true end
+	if inCombat() then return true end
 	if GetCursorInfo() then return true end
 	if EditModeManagerFrame and EditModeManagerFrame:IsShown() then return true end
 	for _, name in ipairs({ "SpellBookFrame", "PlayerSpellsFrame" }) do
@@ -180,19 +195,27 @@ end
 
 function Bars:UpdateTray()
 	if not self.tray then return end
-	local lit = trayWanted(self)
-	if lit == self.trayLit then return end
-	-- Combat shows the rows straight away rather than fading them in.
-	local instant = lit and InCombatLockdown()
-	self.trayLit = lit
+	local halo = handedToHalo(self)
+	local lit = not halo and trayWanted(self)
+	local state = halo and "halo" or lit and "lit" or "rest"
+	if state == self.trayLit then return end
+	self.trayLit = state
+	local bars, targets = {}, {}
 	for _, bar in ipairs(self.tray) do
-		if instant then
-			trayFader:SetScript("OnUpdate", nil)
-			bar:SetAlpha(1)
-		end
+		table.insert(bars, bar)
+		table.insert(targets, lit and 1 or 0)
 	end
-	if not instant then
-		fadeTray(self.tray, lit and 1 or 0, lit and TRAY_FADE_IN or TRAY_FADE_OUT)
+	if self.main then
+		table.insert(bars, self.main)
+		table.insert(targets, halo and 0 or 1)
+	end
+	-- Combat shows the rows straight away rather than fading them in.
+	if lit and InCombatLockdown() then
+		trayFader:SetScript("OnUpdate", nil)
+		for i, bar in ipairs(bars) do bar:SetAlpha(targets[i]) end
+	else
+		local seconds = halo and TRAY_FADE_IN or lit and TRAY_FADE_IN or TRAY_FADE_OUT
+		fadeTray(bars, targets, seconds)
 	end
 end
 
@@ -215,14 +238,15 @@ function Bars:StartTray()
 		if not xpcall(self.UpdateTray, geterrorhandler(), self) then
 			ticker:Cancel()
 			for _, bar in ipairs(self.tray or {}) do bar:SetAlpha(1) end
+			if self.main then self.main:SetAlpha(1) end
 		end
 	end)
 	find()
 end
 
--- The settings checkbox turns the tray on and off without a reload.
-function Bars:SetTray(on)
-	self.db.tray = on
+-- The settings checkboxes take effect without a reload.
+function Bars:SetOption(key, on)
+	self.db[key] = on
 	self.trayLit = nil
 	self:UpdateTray()
 end
