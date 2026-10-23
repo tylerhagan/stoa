@@ -2,7 +2,7 @@
 -- A full-width ink panel along the bottom of the screen. Your portrait seal
 -- rises out of its centre with health and mana either side; the left page
 -- holds margin notes, the right page your fellowship and who is online.
--- In combat it folds to a thin spine; hold Alt to peek.
+-- In combat it folds to a thin spine.
 --
 -- The console sits on the BACKGROUND strata so Blizzard's action bars,
 -- placed in its centre with Edit Mode, draw on top of it. Housing.lua moves
@@ -565,7 +565,7 @@ function Console:SetOpen(open, instant)
 end
 
 local function shouldBeOpen()
-	return Stoa:GetState() == Stoa.STATE_WORLD or Stoa:IsPeeking()
+	return Stoa:GetState() == Stoa.STATE_WORLD
 end
 
 -- Lifecycle -----------------------------------------------------------------
@@ -588,7 +588,6 @@ function Console:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen()) end)
-	Stoa:On("STOA_PEEK_CHANGED", function() self:SetOpen(shouldBeOpen()) end)
 
 	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
 		if unit == "player" then self:UpdateSeal() end

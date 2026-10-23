@@ -27,6 +27,7 @@ Modules\QoL\Merchant.lua
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
 Modules\Grimoire\Minimap.lua
+Modules\Grimoire\CombatChat.lua
 
 Modules\Halo\Halo.lua
 Modules\Halo\Party.lua
