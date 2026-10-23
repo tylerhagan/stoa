@@ -1,8 +1,8 @@
 -- Stoa: nameplates in Stoa's hand.
 -- Blizzard still builds and drives every plate (so hidden combat values keep
 -- working); Stoa changes how they look:
---   * a flat bar on a dark ground with a fine dark edge, an amber edge on
---     your target instead of Blizzard's white frame
+--   * a flat bar on a dark ground with a fine dark edge, and a bone edge
+--     around your target instead of Blizzard's frame
 --   * colour by what you can do, not red/yellow/green: amber for an enemy,
 --     pale gold for neutral, blue for friends, and grey only for tapped or
 --     dead, as in the base game; enemy players keep class colour
