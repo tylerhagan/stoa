@@ -1,9 +1,9 @@
 -- Stoa: Blizzard's damage meter in Stoa's dress.
--- Each meter window loses its header bar and background art for a dark
--- rounded panel with a hairline edge. Bars turn bone, your own bar turns to
--- the accent, and only the names carry class colour. The windows stack in
--- one strip flush in the top-left corner, side by side, out of the way of
--- the console and the Halo in both states.
+-- Each meter window loses its header bar and background art and floats as
+-- words and faint bars with no panel behind it. Bars turn bone, your own
+-- bar turns to the accent, and only the names carry class colour. The
+-- windows sit side by side in the top-left corner, out of the way of the
+-- console and the Halo in both states.
 --
 -- Blizzard_DamageMeter loads on demand, so everything waits for it and is
 -- looked up by name and guarded.
@@ -13,7 +13,7 @@ local UI = Stoa.UI
 
 local Meters = Stoa:NewModule("Meters", { place = true })
 
-local WIDTH, HEIGHT, FOLDED = 300, 168, 30
+local WIDTH, HEIGHT = 300, 168
 -- Words and bars sit this far in from the window's edges.
 local INSET = 10
 
@@ -33,10 +33,12 @@ local function strip(frame)
 	end
 end
 
+-- The meters float over the world with no panel, so every word gets a
+-- fine outline and shadow to hold up over snow and bright sky.
 local function font(fs, size, token)
 	if not fs then return end
 	Stoa:SetFont(fs, "sans", size)
-	fs:SetShadowOffset(0, 0)
+	UI.legible(fs)
 	if token then fs:SetTextColor(Stoa:Color(token)) end
 end
 
@@ -47,7 +49,7 @@ local function colourEntry(entry)
 	if bar then
 		local mine = entry.isLocalPlayer == true
 		local r, g, b = Stoa:Color(mine and "accent" or "muted")
-		bar:SetVertexColor(r, g, b, mine and 0.7 or 0.45)
+		bar:SetVertexColor(r, g, b, mine and 0.55 or 0.3)
 	end
 	local name = entry.GetName and entry:GetName()
 	if name and name.SetTextColor then
@@ -73,9 +75,6 @@ local function dressEntry(entry)
 	local bar = entry.GetStatusBar and entry:GetStatusBar()
 	if bar then
 		bar:SetStatusBarTexture(UI.WHITE)
-		local track = bar:CreateTexture(nil, "BACKGROUND", nil, -1)
-		track:SetAllPoints()
-		UI.paint(track, "text", 0.06)
 	end
 	font(entry.GetName and entry:GetName(), Stoa.typeSize.body, "text")
 	font(entry.GetValue and entry:GetValue(), Stoa.typeSize.body, "text")
@@ -90,24 +89,6 @@ local function dressEntry(entry)
 end
 
 -- Windows --------------------------------------------------------------------
-
--- A square panel with hairlines on its open sides: the strip meets the
--- screen's top and left edges, so only the bottom and right are drawn, and
--- the right hairline divides one window from the next.
-local function slab(frame)
-	local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
-	bg:SetAllPoints()
-	UI.paint(bg, "panel", 0.9)
-	local bottom = UI.line(frame)
-	bottom:SetPoint("BOTTOMLEFT")
-	bottom:SetPoint("BOTTOMRIGHT")
-	local right = frame:CreateTexture(nil, "BORDER")
-	right:SetWidth(1)
-	right:SetPoint("TOPRIGHT")
-	right:SetPoint("BOTTOMRIGHT")
-	UI.paint(right, "hairline")
-	UI.applyTheme()
-end
 
 local function dressWindow(window)
 	if not window or window.stoaDressed then return end
@@ -125,29 +106,16 @@ local function dressWindow(window)
 		hide(container.Background)
 		-- Blizzard sets the background's alpha from its opacity setting.
 		hooksecurefunc(window, "UpdateBackground", function() hide(container.Background) end)
-		slab(container)
 		font(container.NotActive, Stoa.typeSize.body, "muted")
 	end
 
-	-- A header-only panel for when the window is folded to its title.
-	local folded = CreateFrame("Frame", nil, window)
-	folded:SetPoint("TOPLEFT")
-	folded:SetPoint("TOPRIGHT")
-	folded:SetHeight(FOLDED)
-	folded:SetFrameLevel(math.max(window:GetFrameLevel() - 1, 0))
-	slab(folded)
-	local function fold()
-		folded:SetShown(window.IsMinimized and window:IsMinimized() or false)
-	end
-	hooksecurefunc(window, "SetMinimized", fold)
-	fold()
 
 	-- Header words: the meter's name in the display face, the rest quiet.
 	local typeDropdown = window.DamageMeterTypeDropdown
 	if typeDropdown and typeDropdown.TypeName then
 		Stoa:SetFont(typeDropdown.TypeName, "serif", Stoa.typeSize.label)
+		UI.legible(typeDropdown.TypeName)
 		typeDropdown.TypeName:SetTextColor(Stoa:Color("text"))
-		typeDropdown.TypeName:SetShadowOffset(0, 0)
 	end
 	font(window.SessionTimer, Stoa.typeSize.body, "muted")
 	local sessionDropdown = window.SessionDropdown
