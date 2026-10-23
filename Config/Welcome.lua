@@ -13,6 +13,7 @@ local WIDTH, HEIGHT = 600, 420
 local PAD = 28
 local ROLE_WIDTH = 112
 local CLASS_DEFAULT_WORD = "  (class default)"
+local WELCOME_THEMES = { "Bone", "Tide", "Graphite", "Class" }
 
 local function slotRole(slot)
 	local chosen = Stoa.char.roles["slot" .. slot]
@@ -69,8 +70,9 @@ function Welcome:Build()
 	local themeLabel = UI.caption(page, "Theme")
 	themeLabel:SetPoint("TOPLEFT", PAD, -240)
 	self.themeButtons = {}
-	for i, name in ipairs(Stoa.themeOrder) do
-		local button = UI.button(page, name, ROLE_WIDTH, function()
+	-- The house themes and your class's; every class theme is in settings.
+	for i, name in ipairs(WELCOME_THEMES) do
+		local button = UI.button(page, name == "Class" and "Your class" or name, ROLE_WIDTH, function()
 			Stoa:SetTheme(name)
 			self:Refresh()
 		end)

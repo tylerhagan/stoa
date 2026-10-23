@@ -47,9 +47,9 @@ local function build()
 	header("Look")
 	local themes = {}
 	for _, name in ipairs(Stoa.themeOrder) do
-		table.insert(themes, { name, name })
+		table.insert(themes, { name, name == "Class" and "Your class (follows the character)" or name })
 	end
-	dropdown(Stoa.db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. All three are colour-blind safe.", "Bone", themes, function(_, value)
+	dropdown(Stoa.db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Each class has its own, and Your class picks the one for whoever you log in. All are colour-blind safe.", "Bone", themes, function(_, value)
 		Stoa:SetTheme(value)
 	end)
 	checkbox(Stoa.modules.Grimoire.db, "enabled", "Show the Grimoire console", "The ink console along the bottom of the screen. Takes effect after /reload.", true)

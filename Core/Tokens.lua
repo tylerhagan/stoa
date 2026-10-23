@@ -1,8 +1,10 @@
 -- Stoa: design tokens. Every colour, font and spacing value in the suite comes
 -- from here, so a theme swap restyles everything at once.
 --
--- All three themes are colour-blind safe: states differ in lightness and always
--- carry a label or shape, never red against green alone.
+-- Every theme is colour-blind safe: states differ in lightness and always
+-- carry a label or shape, never red against green alone. Where a class's own
+-- colour sits near the warning amber (Druid orange, Rogue yellow, Hunter
+-- green), the warning moves well away from it in lightness.
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -56,9 +58,147 @@ Stoa.themes = {
 		disease = rgb("EDEDED"),
 		classTint = false,
 	},
+
+	-- Class themes: the class colour as the accent, the panel and words
+	-- tinted toward it. "Class" in the theme list follows whoever you log in.
+	Warrior = {
+		text    = rgb("EEE6D8"),
+		muted   = rgb("A89E90"),
+		panel   = rgb("14110E", 0.92),
+		hairline = rgb("EEE6D8", 0.22),
+		health  = rgb("E2D7C4"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("FF7A45"),
+		shield  = rgb("E6C9A0", 0.9),
+		accent  = rgb("C9A47C"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Paladin = {
+		text    = rgb("F2E9EE"),
+		muted   = rgb("AC9EA6"),
+		panel   = rgb("151014", 0.92),
+		hairline = rgb("F2E9EE", 0.22),
+		health  = rgb("EADFE3"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("F7C6DC", 0.9),
+		accent  = rgb("F4A3C8"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Hunter = {
+		text    = rgb("E9EDE0"),
+		muted   = rgb("9EA592"),
+		panel   = rgb("10130E", 0.92),
+		hairline = rgb("E9EDE0", 0.22),
+		health  = rgb("DDE3CF"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("FFD08A"),
+		shield  = rgb("C9DFA5", 0.9),
+		accent  = rgb("93B85E"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Rogue = {
+		text    = rgb("EFEDDD"),
+		muted   = rgb("A6A390"),
+		panel   = rgb("12120D", 0.92),
+		hairline = rgb("EFEDDD", 0.22),
+		health  = rgb("E4E0C8"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("E8743A"),
+		shield  = rgb("FFF3A8", 0.9),
+		accent  = rgb("F2E06B"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Priest = {
+		text    = rgb("F4F3F7"),
+		muted   = rgb("A7A5B0"),
+		panel   = rgb("121216", 0.92),
+		hairline = rgb("F4F3F7", 0.24),
+		health  = rgb("E6E4EC"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("FFFFFF", 0.85),
+		accent  = rgb("D2CCF2"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("E8C27A"),
+		classTint = true,
+	},
+	Shaman = {
+		text    = rgb("E2EAF4"),
+		muted   = rgb("95A4B8"),
+		panel   = rgb("0C1220", 0.92),
+		hairline = rgb("E2EAF4", 0.22),
+		health  = rgb("D7E0EC"),
+		mana    = rgb("5ED3E6"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("A8C8FF", 0.9),
+		accent  = rgb("4C94FF"),
+		magic   = rgb("5ED3E6"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Mage = {
+		text    = rgb("E4F0F6"),
+		muted   = rgb("96A9B4"),
+		panel   = rgb("0C141A", 0.92),
+		hairline = rgb("E4F0F6", 0.22),
+		health  = rgb("D9E6EE"),
+		mana    = rgb("5B7CFF"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("C4ECFF", 0.9),
+		accent  = rgb("7FD3F4"),
+		magic   = rgb("5B7CFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Warlock = {
+		text    = rgb("ECE8F4"),
+		muted   = rgb("A49DB4"),
+		panel   = rgb("110E17", 0.92),
+		hairline = rgb("ECE8F4", 0.22),
+		health  = rgb("E1DCEC"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("D2C6F5", 0.9),
+		accent  = rgb("A894E6"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("E8C27A"),
+		classTint = true,
+	},
+	Druid = {
+		text    = rgb("F1E9DF"),
+		muted   = rgb("AA9E90"),
+		panel   = rgb("15100C", 0.92),
+		hairline = rgb("F1E9DF", 0.22),
+		health  = rgb("E6DCCB"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("FFF4E8"),
+		shield  = rgb("FFD3A6", 0.9),
+		accent  = rgb("F28A3A"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
 }
 
-Stoa.themeOrder = { "Bone", "Tide", "Graphite" }
+Stoa.themeOrder = {
+	"Bone", "Tide", "Graphite", "Class",
+	"Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior",
+}
+
+-- "Class" follows the character: each class file name to its theme.
+local CLASS_THEMES = {
+	WARRIOR = "Warrior", PALADIN = "Paladin", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
+	SHAMAN = "Shaman", MAGE = "Mage", WARLOCK = "Warlock", DRUID = "Druid",
+}
 
 -- Spacing scale in pixels (4 px grid) and type sizes.
 Stoa.space = { xs = 4, s = 8, m = 12, l = 16, xl = 24, xxl = 36 }
@@ -92,8 +232,18 @@ end
 
 -- Theme access --------------------------------------------------------------
 
+-- The theme in use, with "Class" resolved to this character's class.
+function Stoa:ThemeName()
+	local name = self.db and self.db.theme or "Bone"
+	if name == "Class" then
+		local _, classFile = UnitClass("player")
+		name = CLASS_THEMES[classFile] or "Bone"
+	end
+	return self.themes[name] and name or "Bone"
+end
+
 function Stoa:Theme()
-	return self.themes[self.db and self.db.theme] or self.themes.Bone
+	return self.themes[self:ThemeName()]
 end
 
 function Stoa:Color(token)
@@ -101,7 +251,7 @@ function Stoa:Color(token)
 end
 
 function Stoa:SetTheme(name)
-	if not self.themes[name] then return end
+	if not self.themes[name] and name ~= "Class" then return end
 	self.db.theme = name
 	self:Fire("STOA_THEME_CHANGED", name)
 end

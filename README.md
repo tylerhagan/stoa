@@ -14,7 +14,7 @@ What works today:
 | Area | What it does |
 | --- | --- |
 | Core | Event bus, modules, saved settings (account and per character) |
-| Tokens | Bone, Tide and Graphite themes, all colour-blind safe; spacing and type scale |
+| Tokens | Bone, Tide and Graphite themes, one per class, and Your class (follows the character); all colour-blind safe; spacing and type scale |
 | Roles | Maps each dual-spec slot to a role; set it in settings or use the class default |
 | State | World and combat states with a 3 second calm-down |
 | Movers | `/stoa unlock` to drag Stoa frames; positions saved per character |
@@ -55,7 +55,7 @@ Fonts are the main gap: see below.
 | `/stoa unlock` | Toggle frame moving |
 | `/stoa reset` | Put moved frames back in their default spots |
 | `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, top of screen, nameplates, swing timer, meters) and reload |
-| `/stoa theme` | Cycle Bone, Tide, Graphite |
+| `/stoa theme` | Cycle the themes (house, Your class, then each class) |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
 | `/stoa backup` | Copy your settings as text, or paste a backup to restore it |
