@@ -13,8 +13,8 @@ local UI = Stoa.UI
 
 local Bar = Stoa:NewModule("CombatBar", { count = 12 })
 
-local SIZE = 32
-local GAP = 6
+local SIZE = 38
+local GAP = 8
 local MASK = UI.MEDIA .. "Textures\\ButtonMask"
 
 -- Newer clients keep the action API under C_ActionBar.
@@ -84,7 +84,7 @@ function Bar:Build()
 		Stoa:SetFont(count, "sans", Stoa.typeSize.caption, "OUTLINE")
 		button.count = count
 		-- The key sits under the button, where the eye already is.
-		local key = UI.text(button, "sans", Stoa.typeSize.caption, "muted", "CENTER")
+		local key = UI.text(button, "sans", Stoa.typeSize.label, "muted", "CENTER")
 		key:SetPoint("TOP", button, "BOTTOM", 0, -3)
 		UI.legible(key)
 		button.key = key
@@ -121,7 +121,7 @@ function Bar:Layout()
 	local width = #shown * SIZE + (#shown - 1) * GAP
 	for n, button in ipairs(shown) do
 		button:ClearAllPoints()
-		button:SetPoint("TOPLEFT", halo, "BOTTOM", -width / 2 + (n - 1) * (SIZE + GAP), -70)
+		button:SetPoint("TOPLEFT", halo, "BOTTOM", -width / 2 + (n - 1) * (SIZE + GAP), -74)
 		RegisterStateDriver(button, "visibility", "[combat] show; hide")
 	end
 	self.shown = shown
