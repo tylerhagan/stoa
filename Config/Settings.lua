@@ -145,6 +145,12 @@ local function build()
 	checkbox(invite, "enabled", "Invite on whispered \"inv\"", "Friends and guild only. Change the keywords with /stoa keywords <words>.", true)
 	checkbox(invite, "strangersToo", "Invite strangers too", nil, false)
 	checkbox(invite, "convertToRaid", "Make a raid when full", nil, true)
+	checkbox(invite, "guildChat", "Keyword works in guild chat", "A guildmate saying just the keyword in guild chat gets an invite.", false)
+	if CreateSettingsButtonInitializer then
+		layout:AddInitializer(CreateSettingsButtonInitializer("Company", "Open", function()
+			Stoa.modules.Roster:Toggle()
+		end, "Friends and guildmates who are online: click to whisper, Shift-click to invite. /stoa friends", true))
+	end
 
 	Settings.RegisterAddOnCategory(category)
 end

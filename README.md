@@ -19,7 +19,8 @@ What works today:
 | State | World and combat states with a 3 second calm-down |
 | Movers | `/stoa unlock` to drag Stoa frames; positions saved per character |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
-| Auto-invite | Friends and guildmates who whisper `inv` get invited |
+| Auto-invite | Friends and guildmates who whisper `inv` (in game or over Battle.net) get invited; optionally the keyword works in guild chat. Says so when the group is full or you aren't leader |
+| Company | `/stoa friends` or a click on the console's Company page: online friends, Battle.net friends in this game, and guild, with level, zone and AWAY/BUSY. Click to whisper, Shift- or right-click to invite. The console names a few friends online when you're alone |
 | Grimoire console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait seal (click to target yourself) with health and mana either side, and a Ready, Journey and Company page. Holds chat on its left page, with leather tabs standing on its top edge, and keeps bags and the game menu in its bottom-right corner. Strips the action bar art. Folds to a spine in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
 | Reminders | Missing self-buffs as words: aura, seal and Righteous Fury for paladins, Inner Fire and Shadowform for priests. Under the Halo in combat, beside your role on the console out of it |
@@ -57,6 +58,7 @@ Fonts are the main gap: see below.
 | `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, top of screen, nameplates, swing timer, meters) and reload |
 | `/stoa theme` | Cycle the themes (house, Your class, then each class) |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
+| `/stoa friends` | Open the Company roster |
 | `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
 | `/stoa backup` | Copy your settings as text, or paste a backup to restore it |
 | `/stoa state` | Print the current state and role |

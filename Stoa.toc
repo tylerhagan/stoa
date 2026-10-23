@@ -22,6 +22,7 @@ Core\Widgets.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
+Modules\QoL\Roster.lua
 Modules\QoL\Merchant.lua
 Modules\QoL\Comforts.lua
 
