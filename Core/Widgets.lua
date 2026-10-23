@@ -242,6 +242,27 @@ function UI.roundBorder(frame, file, size, outset)
 	}
 end
 
+-- Blizzard's collapse buttons as a quiet minus or plus that warms to the
+-- accent under the mouse. Returns a function taking the collapsed state.
+function UI.foldGlyph(button)
+	local function plain()
+		for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture" }) do
+			local tex = button[getter] and button[getter](button)
+			if tex then tex:SetAlpha(0) end
+		end
+	end
+	local glyph = button:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(glyph, "sans", Stoa.typeSize.label)
+	glyph:SetPoint("CENTER", 0, 1)
+	glyph:SetTextColor(Stoa:Color("muted"))
+	button:HookScript("OnEnter", function() glyph:SetTextColor(Stoa:Color("accent")) end)
+	button:HookScript("OnLeave", function() glyph:SetTextColor(Stoa:Color("muted")) end)
+	return function(collapsed)
+		plain()
+		glyph:SetText(collapsed and "+" or "–")
+	end
+end
+
 -- A rounded panel with a hairline edge behind a whole frame, for windows
 -- Stoa restyles. Square where slicing isn't available.
 function UI.roundPanel(frame, alpha)
