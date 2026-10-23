@@ -12,6 +12,7 @@
 ## X-Game: Forever
 
 Core\Init.lua
+Core\Report.lua
 Core\Util.lua
 Core\Database.lua
 Core\Tokens.lua

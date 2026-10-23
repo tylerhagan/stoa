@@ -632,7 +632,7 @@ function Party:OnEnable()
 	self:UpdateWatch()
 
 	if self.db.hideBlizzardParty then
-		Stoa:AfterCombat(function() xpcall(hideBlizzardParty, geterrorhandler()) end)
+		Stoa:AfterCombat(function() xpcall(hideBlizzardParty, Stoa.catch) end)
 	end
 
 	Stoa:On("STOA_ROLE_CHANGED", function()
@@ -682,12 +682,12 @@ function Party:OnEnable()
 
 	-- Range has no event, so it's checked a few times a second; buff timers
 	-- count down once a second.
-	C_Timer.NewTicker(0.3, function()
+	Stoa:NewTicker(0.3, function()
 		for _, card in ipairs(self.cards) do
 			self:UpdateRange(card)
 		end
 	end)
-	C_Timer.NewTicker(1, function()
+	Stoa:NewTicker(1, function()
 		if self.frame:IsVisible() then self:UpdateAll() end
 		self:UpdateWatch()
 	end)

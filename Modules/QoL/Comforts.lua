@@ -150,7 +150,7 @@ function Comforts:OnEnable()
 	local function on(event, method, ...)
 		local args = { ... }
 		Stoa:On(event, function()
-			xpcall(self[method], geterrorhandler(), self, unpack(args))
+			xpcall(self[method], Stoa.catch, self, unpack(args))
 		end)
 	end
 	on("LOOT_READY", "Loot")

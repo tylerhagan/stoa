@@ -14,12 +14,13 @@
 -- has renamed or left out is skipped without a word.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Bags = Stoa:NewModule("Bags", { bagMode = "combined" })
 
 local function guarded(fn, ...)
-	xpcall(fn, geterrorhandler(), ...)
+	xpcall(fn, Stoa.catch, ...)
 end
 
 -- Item slot helpers ---------------------------------------------------------

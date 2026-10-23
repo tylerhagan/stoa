@@ -340,10 +340,15 @@ end
 function Bar:UpdateCooldowns()
 	for _, button in ipairs(self.all or {}) do
 		local cooldown, slot = button.cooldown, button.slot
+		-- A button not yet laid out (combat at login) has no slot to read.
+		if not slot then
+			-- nothing to show yet
 		-- Cooldowns may be secret in combat; newer clients hand out a
 		-- duration object the cooldown frame can draw without reading it.
-		if C_ActionBar and C_ActionBar.GetActionCooldownDuration and cooldown.SetCooldownFromDurationObject then
-			pcall(cooldown.SetCooldownFromDurationObject, cooldown, C_ActionBar.GetActionCooldownDuration(slot))
+		elseif C_ActionBar and C_ActionBar.GetActionCooldownDuration and cooldown.SetCooldownFromDurationObject then
+			pcall(function()
+				cooldown:SetCooldownFromDurationObject(C_ActionBar.GetActionCooldownDuration(slot))
+			end)
 		else
 			local start, duration
 			if C_ActionBar and C_ActionBar.GetActionCooldown then
@@ -370,6 +375,7 @@ end
 function Bar:UpdateState()
 	for _, button in ipairs(self.all or {}) do
 		local slot = button.slot
+		if not slot then break end
 		local usable, noMana = IsUsableAction(slot)
 		usable, noMana = plain(usable), plain(noMana)
 		local inRange = IsActionInRange and plain(IsActionInRange(slot))
@@ -407,7 +413,7 @@ end
 function Bar:OnEnable()
 	self:Build()
 	local function layout()
-		Stoa:AfterCombat(function() xpcall(self.Layout, geterrorhandler(), self) end)
+		Stoa:AfterCombat(function() xpcall(self.Layout, Stoa.catch, self) end)
 	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(0.5, layout) end)
 	Stoa:On("ACTIONBAR_SLOT_CHANGED", function()
@@ -440,9 +446,9 @@ function Bar:OnEnable()
 	-- Range has no event. If an update ever errors the ticker stops rather
 	-- than repeating.
 	local ticker
-	ticker = C_Timer.NewTicker(0.25, function()
+	ticker = Stoa:NewTicker(0.25, function()
 		if not InCombatLockdown() then return end
-		if not xpcall(self.UpdateState, geterrorhandler(), self) then ticker:Cancel() end
+		if not xpcall(self.UpdateState, Stoa.catch, self) then ticker:Cancel() end
 	end)
 	-- /stoa combat practice: the game only shows the row in real combat,
 	-- so the filled buttons are shown by hand while practising.

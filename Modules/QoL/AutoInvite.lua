@@ -60,6 +60,7 @@ function AutoInvite:OnEnable()
 	end
 
 	local function invite(name, text, gameAccountID)
+		if not name or Stoa:IsSecret(name) then return end
 		local short = Ambiguate(name, "short")
 		if not canInvite() then
 			Stoa:Note("social", ("%s asked for an invite, but you are not the leader."):format(short))

@@ -239,10 +239,10 @@ function Disc:OnEnable()
 	if not (halo and halo.frame) then return end
 	self:BuildCoins(halo.frame)
 
-	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
+	local function refresh() xpcall(self.Refresh, Stoa.catch, self) end
 	Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
 		if unit ~= "player" then return end
-		xpcall(self.NoteCast, geterrorhandler(), self, spellID)
+		xpcall(self.NoteCast, Stoa.catch, self, spellID)
 		refresh()
 	end)
 	Stoa:On("UNIT_AURA", function(unit)
@@ -255,9 +255,9 @@ function Disc:OnEnable()
 	Stoa:On("SPELLS_CHANGED", refresh)
 	-- Timers tick without events; the group's auras are counted here too.
 	local ticker
-	ticker = C_Timer.NewTicker(0.25, function()
+	ticker = Stoa:NewTicker(0.25, function()
 		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Active() then return end
-		if not xpcall(self.Refresh, geterrorhandler(), self) then ticker:Cancel() end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticker:Cancel() end
 	end)
 	refresh()
 end

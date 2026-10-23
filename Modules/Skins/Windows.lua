@@ -7,6 +7,7 @@
 -- renamed or rebuilt is simply left as Blizzard drew it.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Windows = Stoa:NewModule("Windows")
@@ -359,7 +360,7 @@ local function dressTooltips()
 	end
 	if GameTooltip_SetDefaultAnchor then
 		hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
-			if tooltip:GetOwner() ~= parent then return end
+			if (tooltip.IsForbidden and tooltip:IsForbidden()) or tooltip:GetOwner() ~= parent then return end
 			local console = Stoa.modules.Grimoire
 			local floor = console and console.db and console.db.enabled ~= false and console.OpenHeight and console:OpenHeight() or 0
 			tooltip:ClearAllPoints()
@@ -369,7 +370,7 @@ local function dressTooltips()
 end
 
 local function guarded(fn)
-	xpcall(fn, geterrorhandler())
+	xpcall(fn, Stoa.catch)
 end
 
 function Windows:OnEnable()

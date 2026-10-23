@@ -486,14 +486,14 @@ function Paladin:OnEnable()
 	self:BuildTaunt(halo.frame)
 	self:BuildTwist(halo.frame)
 
-	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
+	local function refresh() xpcall(self.Refresh, Stoa.catch, self) end
 	Stoa:On("PLAYER_TARGET_CHANGED", function()
 		self:ForgetHiddenTarget()
 		refresh()
 	end)
 	Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
 		if unit ~= "player" then return end
-		xpcall(self.NoteCast, geterrorhandler(), self, spellID)
+		xpcall(self.NoteCast, Stoa.catch, self, spellID)
 		refresh()
 	end)
 	Stoa:On("UNIT_AURA", function(unit)
@@ -501,7 +501,7 @@ function Paladin:OnEnable()
 	end)
 	Stoa:On("UNIT_THREAT_LIST_UPDATE", refresh)
 	Stoa:On("PLAYER_SWING", function(duration, swingType)
-		xpcall(self.NoteSwing, geterrorhandler(), self, duration, swingType)
+		xpcall(self.NoteSwing, Stoa.catch, self, duration, swingType)
 		refresh()
 	end)
 	Stoa:On("STOA_ROLE_CHANGED", refresh)
@@ -510,9 +510,9 @@ function Paladin:OnEnable()
 	-- Timers tick without events. If an update ever errors the ticker
 	-- stops rather than repeating the error.
 	local ticker
-	ticker = C_Timer.NewTicker(0.2, function()
+	ticker = Stoa:NewTicker(0.2, function()
 		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Role() then return end
-		if not xpcall(self.Refresh, geterrorhandler(), self) then ticker:Cancel() end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticker:Cancel() end
 	end)
 	refresh()
 end

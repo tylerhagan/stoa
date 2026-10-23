@@ -449,7 +449,8 @@ end
 
 function Console:UpdateOnline()
 	local friends = C_FriendList.GetNumOnlineFriends() or 0
-	local _, bnetOnline = BNGetNumFriends()
+	local _, bnetOnline = 0, 0
+	if BNGetNumFriends then _, bnetOnline = BNGetNumFriends() end
 	local guild = 0
 	if IsInGuild() then
 		local _, online = GetNumGuildMembers()
@@ -583,7 +584,7 @@ function Console:SetOpen(open, instant)
 		return
 	end
 
-	frame:SetScript("OnUpdate", function()
+	frame:SetScript("OnUpdate", Stoa:GuardUpdate(function()
 		local progress = math.min((GetTime() - start) / FOLD_SECONDS, 1)
 		-- Ease out so the fold settles rather than stops.
 		progress = 1 - (1 - progress) ^ 3
@@ -593,7 +594,7 @@ function Console:SetOpen(open, instant)
 			self.leftPage:SetAlpha(pagesAlpha)
 			self.rightPage:SetAlpha(pagesAlpha)
 		end
-	end)
+	end))
 end
 
 local function shouldBeOpen()
@@ -628,7 +629,7 @@ function Console:OnEnable()
 		self:UpdateSeal()
 		self:UpdateResources()
 		self:UpdateFellowship()
-		if IsInGuild() then C_GuildInfo.GuildRoster() end
+		if IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
 	end)
 
 	Stoa:On("UNIT_HEALTH", function(unit)
@@ -664,5 +665,5 @@ function Console:OnEnable()
 	Stoa:On("GUILD_ROSTER_UPDATE", function() self:UpdateOnline() end)
 
 	-- Notes fade after NOTE_SECONDS.
-	C_Timer.NewTicker(5, function() self:RenderNotes() end)
+	Stoa:NewTicker(5, function() self:RenderNotes() end)
 end

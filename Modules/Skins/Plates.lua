@@ -14,6 +14,7 @@
 -- left alone.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Plates = Stoa:NewModule("Plates")
@@ -22,7 +23,7 @@ local Plates = Stoa:NewModule("Plates")
 local PAD = 2
 
 local function guarded(fn, ...)
-	xpcall(fn, geterrorhandler(), ...)
+	xpcall(fn, Stoa.catch, ...)
 end
 
 local function isPlate(frame)

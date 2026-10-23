@@ -121,7 +121,7 @@ end
 
 -- Moves a frame to a saved spot and keeps its overlay on it.
 local function commit(mover, saved)
-	local ok = xpcall(place, geterrorhandler(), mover.frame, saved)
+	local ok = xpcall(place, Stoa.catch, mover.frame, saved)
 	if ok then mover.moved = true end
 	fitOverlay(mover)
 end
@@ -137,7 +137,7 @@ local function applyOne(mover)
 		commit(mover, saved)
 	elseif mover.moved then
 		mover.moved = false
-		xpcall(putBack, geterrorhandler(), mover)
+		xpcall(putBack, Stoa.catch, mover)
 		fitOverlay(mover)
 	end
 end
@@ -324,13 +324,15 @@ local ARROWS = {
 }
 
 local function onKey(self, key)
+	-- Keyboard propagation can't change in combat; movers lock then anyway.
+	if InCombatLockdown() then return end
 	local step = ARROWS[key]
 	-- Keys other than the arrows carry on to the game as usual.
 	local handled = step and selected and true or false
 	pcall(self.SetPropagateKeyboardInput, self, not handled)
 	if handled then
 		local size = IsShiftKeyDown() and 10 or 1
-		xpcall(nudge, geterrorhandler(), step[1] * size, step[2] * size)
+		xpcall(nudge, Stoa.catch, step[1] * size, step[2] * size)
 	end
 end
 
@@ -356,6 +358,7 @@ local function buildBar()
 	bar:SetFrameStrata("FULLSCREEN_DIALOG")
 	bar:EnableMouse(true)
 	bar:EnableKeyboard(true)
+	pcall(bar.SetPropagateKeyboardInput, bar, true)
 	bar:SetScript("OnKeyDown", onKey)
 	UI.roundPanel(bar, 0.97)
 
@@ -455,7 +458,7 @@ end)
 -- Frames can't move in combat, so that waits for it to end.
 Stoa:On("STOA_ROLE_CHANGED", function()
 	Stoa:AfterCombat(function()
-		xpcall(applyAll, geterrorhandler())
+		xpcall(applyAll, Stoa.catch)
 		if unlocked and bar then
 			bar.title:SetText("Moving frames: " .. roleName() .. " layout")
 		end

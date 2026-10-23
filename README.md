@@ -45,6 +45,7 @@ What works today:
 | Comforts | Each its own setting, and Shift stops any of it: faster auto loot, a further camera, skip one-option gossip (on by default); accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet red errors in combat (off by default) |
 | Merchants | Sells grey junk and repairs, from guild funds when allowed |
 | Welcome | Once per character, a page to choose what each spec plays and the theme, with buttons to preview a party, practise combat or open settings |
+| Error guard | Stoa records its own errors once each with a count. If one part keeps erroring (a loop), it is switched off until the next reload and Stoa says so in chat, so an error can't lock up the screen. `/stoa report` shows your setup and the errors, ready to copy |
 | Backup | All of Stoa's settings as one line of text to keep safe, and a place to paste one back to restore it |
 | Settings | Options > AddOns > Stoa |
 
@@ -62,6 +63,7 @@ Fonts are the main gap: see below.
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa friends` | Open the Company roster |
 | `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
+| `/stoa report` | Your version, game build, spec, theme and any errors Stoa caught, ready to copy |
 | `/stoa backup` | Copy your settings as text, or paste a backup to restore it |
 | `/stoa state` | Print the current state and role |
 | `/stoa clicks` | Edit click-cast bindings for your current role |

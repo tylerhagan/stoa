@@ -39,8 +39,9 @@ end
 Stoa:On("PLAYER_REGEN_ENABLED", function()
 	local pending = queue
 	queue = {}
+	-- One failing change must not stop the rest.
 	for i = 1, #pending do
-		pending[i]()
+		xpcall(pending[i], Stoa.catch)
 	end
 end)
 

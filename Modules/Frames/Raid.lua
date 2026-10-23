@@ -66,7 +66,7 @@ local function onLoad(cell, styleName)
 	cell:SetScript("OnAttributeChanged", function(self, key, value)
 		if key == "unit" then
 			self.unit = value
-			if value then Stoa.modules.Party:UpdateCard(self) end
+			if value then xpcall(Stoa.modules.Party.UpdateCard, Stoa.catch, Stoa.modules.Party, self) end
 		end
 	end)
 	cell:SetScript("OnEnter", function(self)
@@ -181,7 +181,7 @@ end
 function Raid:OnEnable()
 	self:Build()
 	if self.db.hideBlizzardRaid then
-		Stoa:AfterCombat(function() xpcall(hideBlizzardRaid, geterrorhandler()) end)
+		Stoa:AfterCombat(function() xpcall(hideBlizzardRaid, Stoa.catch) end)
 	end
 
 	local party = Stoa.modules.Party
@@ -204,7 +204,7 @@ function Raid:OnEnable()
 	Stoa:On("PLAYER_TARGET_CHANGED", updateAll)
 	Stoa:On("STOA_THEME_CHANGED", updateAll)
 	-- Buff timers count down.
-	C_Timer.NewTicker(1, function()
+	Stoa:NewTicker(1, function()
 		if IsInRaid() then updateAll() end
 	end)
 	Stoa:On("STOA_ROLE_CHANGED", function()
@@ -214,7 +214,7 @@ function Raid:OnEnable()
 		if not InCombatLockdown() then self:Place() end
 	end)
 
-	C_Timer.NewTicker(0.3, function()
+	Stoa:NewTicker(0.3, function()
 		if not IsInRaid() then return end
 		for cell in pairs(cells) do
 			if cell.unit then party:UpdateRange(cell) end

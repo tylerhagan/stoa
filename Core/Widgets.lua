@@ -126,11 +126,11 @@ end
 function UI.fade(frame, to, seconds)
 	local from, start = frame:GetAlpha(), GetTime()
 	frame.stoaFade = frame.stoaFade or CreateFrame("Frame")
-	frame.stoaFade:SetScript("OnUpdate", function(self)
+	frame.stoaFade:SetScript("OnUpdate", Stoa:GuardUpdate(function(self)
 		local progress = math.min((GetTime() - start) / seconds, 1)
 		frame:SetAlpha(from + (to - from) * progress)
 		if progress >= 1 then self:SetScript("OnUpdate", nil) end
-	end)
+	end))
 end
 
 -- A hidden parent for Blizzard frames Stoa replaces.

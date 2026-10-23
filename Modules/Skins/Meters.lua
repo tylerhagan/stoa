@@ -9,6 +9,7 @@
 -- looked up by name and guarded.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Meters = Stoa:NewModule("Meters", { place = true })
@@ -18,7 +19,7 @@ local WIDTH, HEIGHT = 300, 168
 local INSET = 10
 
 local function guarded(fn, ...)
-	xpcall(fn, geterrorhandler(), ...)
+	xpcall(fn, Stoa.catch, ...)
 end
 
 local function hide(region)

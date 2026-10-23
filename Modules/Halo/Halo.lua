@@ -425,9 +425,13 @@ function Halo:UpdateTargetAuras()
 			collect("HELPFUL")
 		end
 	end
-	-- The row hangs under the card, from its inner edge.
-	icons[1]:ClearAllPoints()
-	icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
+	-- The row hangs under the card, from its inner edge. The card is a
+	-- secure button, so the anchor is set once, out of combat.
+	if not icons.placed and not InCombatLockdown() then
+		icons[1]:ClearAllPoints()
+		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
+		icons.placed = true
+	end
 	for i, icon in ipairs(icons) do
 		local aura = found[i]
 		if aura then
@@ -554,14 +558,14 @@ function Halo:StartCast(channel)
 
 	if not Stoa:IsSecret(startMS) and not Stoa:IsSecret(endMS) then
 		cast:SetMinMaxValues(startMS / 1000, endMS / 1000)
-		cast:SetScript("OnUpdate", function(bar)
+		cast:SetScript("OnUpdate", Stoa:GuardUpdate(function(bar)
 			local now = GetTime()
 			if channel then
 				bar:SetValue(endMS / 1000 - (now - startMS / 1000))
 			else
 				bar:SetValue(now)
 			end
-		end)
+		end))
 	elseif cast.SetTimerDuration then
 		local getDuration = channel and UnitChannelDuration or UnitCastingDuration
 		if getDuration then pcall(cast.SetTimerDuration, cast, getDuration("player")) end
@@ -617,12 +621,12 @@ function Halo:OnEnable()
 
 	if self.db.hidePlayerFrame then
 		Stoa:AfterCombat(function()
-			xpcall(hideBlizzard({ PlayerFrame, PlayerCastingBarFrame }), geterrorhandler())
+			xpcall(hideBlizzard({ PlayerFrame, PlayerCastingBarFrame }), Stoa.catch)
 		end)
 	end
 	if self.db.hideTargetFrame then
 		Stoa:AfterCombat(function()
-			xpcall(hideBlizzard({ TargetFrame, FocusFrame }), geterrorhandler())
+			xpcall(hideBlizzard({ TargetFrame, FocusFrame }), Stoa.catch)
 		end)
 	end
 

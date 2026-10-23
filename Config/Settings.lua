@@ -41,6 +41,9 @@ local function build()
 		layout:AddInitializer(CreateSettingsButtonInitializer("Backup", "Open", function()
 			Stoa.Backup:Show()
 		end, "All of Stoa's settings as one line of text to keep safe, and a place to paste one back. /stoa backup", true))
+		layout:AddInitializer(CreateSettingsButtonInitializer("Report a problem", "Open", function()
+			Stoa.Report:Show()
+		end, "Your setup and any errors Stoa caught this session, ready to copy and send. /stoa report", true))
 	end
 
 	-- Look

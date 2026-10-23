@@ -264,7 +264,7 @@ function Roster:Toggle()
 end
 
 function Roster:OnEnable()
-	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
+	local function refresh() xpcall(self.Refresh, Stoa.catch, self) end
 	for _, event in ipairs({ "FRIENDLIST_UPDATE", "BN_FRIEND_INFO_CHANGED", "BN_FRIEND_ACCOUNT_ONLINE",
 		"BN_FRIEND_ACCOUNT_OFFLINE", "GUILD_ROSTER_UPDATE", "GROUP_ROSTER_UPDATE" }) do
 		Stoa:On(event, refresh)
