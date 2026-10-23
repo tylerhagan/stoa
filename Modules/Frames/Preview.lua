@@ -200,7 +200,22 @@ function Stoa:TogglePreview(kind)
 	end
 end
 
-Stoa.commands.test = function(rest) Stoa:TogglePreview(rest:lower()) end
+Stoa.commands.test = function(rest)
+	rest = rest:lower()
+	-- Sample lines for the chat that surfaces in combat.
+	if rest == "chat" then
+		local chat = Stoa.modules.CombatChat
+		if not chat.lines then
+			Stoa:Print("Combat chat shows only while the console holds the chat.")
+			return
+		end
+		chat:Add("PARTY", "Brunhok", "pulling after this drink")
+		chat:Add("WHISPER", "Thalindra", "need a Fortitude when you get a sec?")
+		chat:Add("WARNING", "Velaris", "Spread for the next cast")
+		return
+	end
+	Stoa:TogglePreview(rest)
+end
 
 -- Entering combat ends the preview, so sample frames never stand in for real
 -- ones in a fight.
