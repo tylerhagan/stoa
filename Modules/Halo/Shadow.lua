@@ -41,6 +41,10 @@ local SPELLS = {
 	weaving = 15258,    -- Shadow Weaving (the debuff)
 }
 
+-- How long each lasts, for the times the game won't show the aura itself:
+-- then the coin runs from your own cast on this target.
+local DURATIONS = { pain = 18, plague = 24, embrace = 60 }
+
 local DOTS = {
 	{ key = "pain", letter = "P" },
 	{ key = "plague", letter = "D" },
@@ -134,7 +138,12 @@ function Shadow:BuildCoins(halo)
 		cooldown:SetDrawBling(false)
 		cooldown:SetHideCountdownNumbers(true)
 		if cooldown.SetUseCircularEdge then cooldown:SetUseCircularEdge(true) end
-		local letter = UI.text(cooldown, "serif", Stoa.typeSize.label, "text", "CENTER")
+		-- A cooldown frame hides itself when it has nothing to draw, so the
+		-- letter sits on its own layer above it.
+		local face = CreateFrame("Frame", nil, coin)
+		face:SetAllPoints()
+		face:SetFrameLevel(cooldown:GetFrameLevel() + 2)
+		local letter = UI.text(face, "serif", Stoa.typeSize.label, "text", "CENTER")
 		letter:SetPoint("CENTER", 0, 1)
 		letter:SetText(dot.letter)
 		UI.legible(letter)
@@ -201,7 +210,14 @@ function Shadow:UpdateCoins()
 			self.state[key] = nil
 		else
 			local aura = findAura("target", key)
-			if aura then
+			local cast = not aura and self:CastOn(key)
+			if cast then
+				coin.cooldown:SetCooldown(cast, DURATIONS[key])
+				local left = cast + DURATIONS[key] - GetTime()
+				local state = left < ENDING and "ending" or "on"
+				paintCoin(coin, state)
+				self.state[key] = state
+			elseif aura then
 				-- Newer clients hand out a duration object the swipe takes
 				-- even when the times are secret.
 				local drawn = false
@@ -231,6 +247,26 @@ function Shadow:UpdateCoins()
 	end
 end
 
+-- When the game hides auras in combat, your own casts still say when a DoT
+-- went on. Each lasts its known duration on the target you cast it at;
+-- changing target forgets them.
+function Shadow:NoteCast(spellID)
+	if Stoa:IsSecret(spellID) or not spellID then return end
+	local name = C_Spell.GetSpellName(spellID)
+	if not name then return end
+	for key in pairs(DURATIONS) do
+		if nameOf(key) == name then
+			self.casts = self.casts or {}
+			self.casts[key] = GetTime()
+		end
+	end
+end
+
+function Shadow:CastOn(key)
+	local at = self.casts and self.casts[key]
+	if at and GetTime() - at < DURATIONS[key] then return at end
+end
+
 -- The guide's single-target order: DoTs when they're off, Mind Blast and
 -- Shadow Word: Death when ready, Embrace when it's off, Mind Flay to fill.
 function Shadow:NextPress()
@@ -243,6 +279,15 @@ function Shadow:NextPress()
 	if wants("plague") and ready("plague") ~= false then return nameOf("plague") end
 	for _, key in ipairs({ "blast", "death" }) do
 		if knows(SPELLS[key]) and ready(key) then return nameOf(key) end
+	end
+	-- Cooldowns are hidden in combat, so for the rest the game's own
+	-- suggestion is asked, where there is one.
+	if C_AssistedCombat and C_AssistedCombat.GetNextCastSpell then
+		local ok, spellID = pcall(C_AssistedCombat.GetNextCastSpell, false)
+		if ok and spellID and not Stoa:IsSecret(spellID) then
+			local name = C_Spell.GetSpellName(spellID)
+			if name then return name end
+		end
 	end
 	if wants("embrace") then return nameOf("embrace") end
 	if knows(SPELLS.flay) then return nameOf("flay") end
@@ -377,6 +422,22 @@ function Shadow:Probe()
 	local info = C_Spell.GetSpellCooldown(SPELLS.blast)
 	say(("Mind Blast cooldown: start %s, length %s."):format(describe(info and info.startTime), describe(info and info.duration)))
 	say(("Target hostile %s, health %s."):format(describe(UnitCanAttack("player", "target")), describe(UnitHealth("target"))))
+	local any = 0
+	for i = 1, 40 do
+		local okAny, each = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, "HARMFUL")
+		if not okAny or not each then break end
+		any = any + 1
+	end
+	say(("Debuffs on the target from anyone: %d. Pain from your casts: %s."):format(any, self:CastOn("pain") and "yes" or "no"))
+	local probe = UIParent:CreateFontString(nil, "OVERLAY")
+	local fonts = {}
+	for _, kind in ipairs({ "serif", "sans" }) do
+		Stoa:SetFont(probe, kind, 14)
+		local path = probe:GetFont()
+		if type(path) == "string" then path = path:match("([^\\]+)$") or path end
+		fonts[#fonts + 1] = kind .. " " .. tostring(path)
+	end
+	say("Fonts: " .. table.concat(fonts, ", ") .. ".")
 end
 
 -- Lifecycle -----------------------------------------------------------------
@@ -400,7 +461,15 @@ function Shadow:OnEnable()
 	Stoa.commands.probe = function() xpcall(self.Probe, geterrorhandler(), self) end
 
 	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
-	Stoa:On("PLAYER_TARGET_CHANGED", refresh)
+	Stoa:On("PLAYER_TARGET_CHANGED", function()
+		self.casts = nil
+		refresh()
+	end)
+	Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
+		if unit ~= "player" then return end
+		self:NoteCast(spellID)
+		refresh()
+	end)
 	Stoa:On("STOA_ROLE_CHANGED", refresh)
 	Stoa:On("STOA_STATE_CHANGED", refresh)
 	Stoa:On("SPELLS_CHANGED", refresh)
