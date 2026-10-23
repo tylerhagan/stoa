@@ -39,6 +39,8 @@ What works today:
 | Damage meters | Blizzard's meter windows with no panel, just outlined words and faint bars (your own in the accent, names in class colour), side by side in the top-left corner |
 | Comforts | Each its own setting, and Shift stops any of it: faster auto loot, a further camera, skip one-option gossip (on by default); accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet red errors in combat (off by default) |
 | Merchants | Sells grey junk and repairs, from guild funds when allowed |
+| Welcome | Once per character, a page to choose what each spec plays and the theme, with buttons to preview a party, practise combat or open settings |
+| Backup | All of Stoa's settings as one line of text to keep safe, and a place to paste one back to restore it |
 | Settings | Options > AddOns > Stoa |
 
 Fonts are the main gap: see below.
@@ -53,6 +55,8 @@ Fonts are the main gap: see below.
 | `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, top of screen, nameplates, meters) and reload |
 | `/stoa theme` | Cycle Bone, Tide, Graphite |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
+| `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
+| `/stoa backup` | Copy your settings as text, or paste a backup to restore it |
 | `/stoa state` | Print the current state and role |
 | `/stoa clicks` | Edit click-cast bindings for your current role |
 | `/stoa test` | Show sample party cards without a group; `/stoa test raid` or `raid10` for a raid |
@@ -67,6 +71,9 @@ Copy this folder into the game's AddOns folder and name it exactly `Stoa`:
 - Live (from launch): check the Forever folder name in your install, e.g. `World of Warcraft\_forever_\Interface\AddOns\Stoa`
 
 ## Forever notes
+
+If a game patch raises the interface number before Stoa catches up, the AddOns list shows it as out of date: tick "Load out of date AddOns" there and it loads as before.
+
 
 Forever runs the modern client, so Stoa follows Midnight-era rules: unit values can be secret in combat, and the combat log is closed to addons. Stoa never does maths on a value without checking `issecretvalue` first (see `Core/Util.lua`), and it skins Blizzard's own data rather than recalculating it.
 

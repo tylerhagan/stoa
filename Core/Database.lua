@@ -5,6 +5,9 @@ local _, ns = ...
 local Stoa = ns.Stoa
 
 local accountDefaults = {
+	-- Bumped when saved settings change shape, so later versions can move
+	-- old settings over instead of losing them.
+	schema = 1,
 	theme = "Bone",
 	modules = {},
 }
@@ -15,6 +18,8 @@ local characterDefaults = {
 	positions = {},
 	-- Click-cast bindings per role, filled from defaults on first use.
 	clicks = {},
+	-- Whether this character has seen the welcome page.
+	welcomed = false,
 }
 
 function Stoa:InitializeDatabase()

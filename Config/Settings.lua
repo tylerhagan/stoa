@@ -32,6 +32,17 @@ end
 local function build()
 	category, layout = Settings.RegisterVerticalLayoutCategory("Stoa")
 
+	-- Setup
+	header("Setup")
+	if CreateSettingsButtonInitializer then
+		layout:AddInitializer(CreateSettingsButtonInitializer("Welcome page", "Open", function()
+			Stoa.Welcome:Show()
+		end, "Choose what each spec plays and your theme, and preview the party frames and combat. /stoa welcome", true))
+		layout:AddInitializer(CreateSettingsButtonInitializer("Backup", "Open", function()
+			Stoa.Backup:Show()
+		end, "All of Stoa's settings as one line of text to keep safe, and a place to paste one back. /stoa backup", true))
+	end
+
 	-- Look
 	header("Look")
 	local themes = {}

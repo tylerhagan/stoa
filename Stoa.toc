@@ -2,7 +2,7 @@
 ## Title: Stoa
 ## Notes: A calm, two-state UI suite for WoW Forever: the Grimoire console out of combat, the Halo in combat.
 ## Author: Tyler
-## Version: @project-version@
+## Version: 0.9.0
 ## SavedVariables: StoaDB
 ## SavedVariablesPerCharacter: StoaCharDB
 ## IconTexture: Interface\Icons\Spell_Holy_PowerWordShield
@@ -47,3 +47,5 @@ Modules\Skins\Top.lua
 Modules\Skins\Plates.lua
 
 Config\Settings.lua
+Config\Welcome.lua
+Config\Backup.lua
