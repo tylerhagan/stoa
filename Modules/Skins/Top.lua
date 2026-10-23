@@ -57,7 +57,8 @@ local function auraEdge(button)
 end
 
 local function dressAura(button)
-	if not button or button.stoaDressed or not button.Icon then return end
+	-- Private aura anchors share the list but hold a frame, not an icon.
+	if not button or button.stoaDressed or not (button.Icon and button.Icon.SetTexCoord) then return end
 	button.stoaDressed = true
 	button.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	bury(button.DebuffBorder)
