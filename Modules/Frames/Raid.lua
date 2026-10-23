@@ -37,9 +37,9 @@ local VISIBILITY = {
 	},
 }
 
--- Everyone but healers: columns standing on the console, above the chat.
+-- Everyone but healers: columns standing above the chat and its tabs.
 local OTHER_LEFT = 36
-local OTHER_ABOVE_CONSOLE = 24
+local OTHER_ABOVE_CONSOLE = 64
 local OTHER_SCALE = 0.8
 
 local cells = {}
