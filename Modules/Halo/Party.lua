@@ -96,9 +96,9 @@ function Party:Layout()
 	if not Stoa.char.positions.party then
 		frame:ClearAllPoints()
 		if layout.row and halo then
-			-- Under the combat bar when there is one, else just under the
-			-- Halo's cast line.
-			local combatBar = Stoa:IsModuleEnabled("CombatBar")
+			-- In combat under the combat bar when there is one; otherwise,
+			-- and with the console open, just under the Halo's cast line.
+			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa:CombatLayout()
 			frame:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and -136 or -52)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
@@ -631,6 +631,9 @@ function Party:OnEnable()
 
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		Stoa:AfterCombat(function() self:Layout() end)
+	end)
+	Stoa:On("STOA_COMBAT_LAYOUT", function()
+		if not InCombatLockdown() then self:Layout() end
 	end)
 	Stoa:On("STOA_STATE_CHANGED", function()
 		self:UpdateAll()

@@ -263,5 +263,18 @@ function Bar:OnEnable()
 		if not InCombatLockdown() then return end
 		if not xpcall(self.UpdateState, geterrorhandler(), self) then ticker:Cancel() end
 	end)
+	-- /stoa combat practice: the game only shows the row in real combat,
+	-- so the filled buttons are shown by hand while practising.
+	Stoa:On("STOA_STATE_CHANGED", function()
+		if InCombatLockdown() then return end
+		if Stoa:IsPractising() then
+			for _, button in ipairs(self.shown or {}) do
+				UnregisterStateDriver(button, "visibility")
+				button:Show()
+			end
+		else
+			layout()
+		end
+	end)
 	layout()
 end

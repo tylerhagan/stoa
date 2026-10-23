@@ -129,7 +129,7 @@ function Raid:Place()
 	self.holder:ClearAllPoints()
 	local halo = _G.StoaHalo
 	if healer and halo then
-		local combatBar = Stoa:IsModuleEnabled("CombatBar")
+		local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa:CombatLayout()
 		self.holder:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and -136 or -52)
 	elseif healer then
 		self.holder:SetPoint("TOP", UIParent, "CENTER", 0, -260)
@@ -180,6 +180,9 @@ function Raid:OnEnable()
 	end)
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		Stoa:AfterCombat(function() self:Place() end)
+	end)
+	Stoa:On("STOA_COMBAT_LAYOUT", function()
+		if not InCombatLockdown() then self:Place() end
 	end)
 
 	C_Timer.NewTicker(0.3, function()

@@ -49,7 +49,8 @@ Fonts are the main gap: see below.
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa state` | Print the current state and role |
 | `/stoa clicks` | Edit click-cast bindings for your current role |
-| `/stoa test` | Show sample party cards without a group; `/stoa test raid` for a raid grid |
+| `/stoa test` | Show sample party cards without a group; `/stoa test raid` or `raid10` for a raid |
+| `/stoa combat` | Practice combat out of combat: the console folds, the Halo, combat bar and group frames take their combat places. Again to end it |
 
 ## Install
 
