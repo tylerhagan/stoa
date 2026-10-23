@@ -184,10 +184,8 @@ function Halo:BuildTarget(frame)
 		GameTooltip:SetUnit("target")
 	end)
 	target:SetScript("OnLeave", GameTooltip_Hide)
-	-- Out of combat the game's nameplate already names an enemy, so the card
-	-- shows only for friends (for their buffs and the menu); in combat it
-	-- shows for anyone. A dead target needs no card.
-	RegisterStateDriver(target, "visibility", "[@target,noexists][@target,dead] hide; [combat] show; [@target,help] show; hide")
+	-- Any living target, in or out of combat. A dead target needs no card.
+	RegisterStateDriver(target, "visibility", "[@target,noexists][@target,dead] hide; show")
 	self.target = target
 
 	-- A plaque like the tank watch opposite: the coin faces the Halo.
