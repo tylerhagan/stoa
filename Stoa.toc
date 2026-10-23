@@ -40,5 +40,6 @@ Modules\Frames\Preview.lua
 
 Modules\Skins\ActionBars.lua
 Modules\Skins\Windows.lua
+Modules\Skins\Meters.lua
 
 Config\Settings.lua
