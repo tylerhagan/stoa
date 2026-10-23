@@ -96,7 +96,10 @@ function Party:Layout()
 	if not Stoa.char.positions.party then
 		frame:ClearAllPoints()
 		if layout.row and halo then
-			frame:SetPoint("TOP", halo, "BOTTOM", 0, -52)
+			-- Under the combat bar when there is one, else just under the
+			-- Halo's cast line.
+			local combatBar = Stoa:IsModuleEnabled("CombatBar")
+			frame:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and -136 or -52)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 		else
