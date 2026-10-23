@@ -210,7 +210,8 @@ function Shadow:UpdateCoins()
 			self.state[key] = nil
 		else
 			local aura = findAura("target", key)
-			local cast = not aura and self:CastOn(key)
+			-- Your own cast timing wins whenever the aura's times are hidden.
+			local cast = not (aura and auraLeft(aura)) and self:CastOn(key)
 			if cast then
 				coin.cooldown:SetCooldown(cast, DURATIONS[key])
 				local left = cast + DURATIONS[key] - GetTime()
@@ -248,23 +249,48 @@ function Shadow:UpdateCoins()
 end
 
 -- When the game hides auras in combat, your own casts still say when a DoT
--- went on. Each lasts its known duration on the target you cast it at;
--- changing target forgets them.
+-- went on. Each lasts its known duration on the target you cast it at, and
+-- each target keeps its own, so switching back shows the time left. If the
+-- game hides which target is which, a target change forgets them instead.
+local LONGEST = 60
+
+local function targetKey()
+	local guid = UnitGUID("target")
+	if guid and not Stoa:IsSecret(guid) then return guid end
+	return "target"
+end
+
 function Shadow:NoteCast(spellID)
 	if Stoa:IsSecret(spellID) or not spellID then return end
 	local name = C_Spell.GetSpellName(spellID)
 	if not name then return end
+	local now = GetTime()
+	self.casts = self.casts or {}
+	-- Forget targets whose DoTs have all run out.
+	for who, list in pairs(self.casts) do
+		local live = false
+		for _, at in pairs(list) do
+			if now - at < LONGEST then live = true end
+		end
+		if not live then self.casts[who] = nil end
+	end
 	for key in pairs(DURATIONS) do
 		if nameOf(key) == name then
-			self.casts = self.casts or {}
-			self.casts[key] = GetTime()
+			local who = targetKey()
+			self.casts[who] = self.casts[who] or {}
+			self.casts[who][key] = now
 		end
 	end
 end
 
 function Shadow:CastOn(key)
-	local at = self.casts and self.casts[key]
+	local list = self.casts and self.casts[targetKey()]
+	local at = list and list[key]
 	if at and GetTime() - at < DURATIONS[key] then return at end
+end
+
+function Shadow:ForgetHiddenTarget()
+	if self.casts then self.casts.target = nil end
 end
 
 -- The guide's single-target order: DoTs when they're off, Mind Blast and
@@ -349,7 +375,6 @@ function Shadow:PlateMark(unit)
 	if not plate.stoaPain then
 		local mark = CreateFrame("Frame", nil, plate)
 		mark:SetSize(16, 16)
-		mark:SetPoint("BOTTOMLEFT", plate, "TOPRIGHT", -24, -10)
 		local ring = UI.circle(mark, "BORDER", 0, 16, "accent")
 		ring:SetPoint("CENTER")
 		local fill = UI.circle(mark, "BORDER", 1, 13, "panel")
@@ -360,7 +385,17 @@ function Shadow:PlateMark(unit)
 		mark:Hide()
 		plate.stoaPain = mark
 	end
-	return plate.stoaPain
+	-- Beside the health bar on a Stoa plate; the plate's corner otherwise.
+	local mark = plate.stoaPain
+	local plates = Stoa.modules.Plates
+	local bar = plates and plates.HealthBar and plates:HealthBar(unit)
+	mark:ClearAllPoints()
+	if bar then
+		mark:SetPoint("LEFT", bar, "RIGHT", 5, 0)
+	else
+		mark:SetPoint("BOTTOMLEFT", plate, "TOPRIGHT", -24, -10)
+	end
+	return mark
 end
 
 function Shadow:UpdatePlate(unit)
@@ -462,7 +497,7 @@ function Shadow:OnEnable()
 
 	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
 	Stoa:On("PLAYER_TARGET_CHANGED", function()
-		self.casts = nil
+		self:ForgetHiddenTarget()
 		refresh()
 	end)
 	Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)

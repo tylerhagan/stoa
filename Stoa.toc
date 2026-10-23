@@ -42,5 +42,6 @@ Modules\Skins\ActionBars.lua
 Modules\Skins\Windows.lua
 Modules\Skins\Meters.lua
 Modules\Skins\Top.lua
+Modules\Skins\Plates.lua
 
 Config\Settings.lua

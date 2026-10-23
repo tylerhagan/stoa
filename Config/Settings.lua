@@ -59,6 +59,7 @@ local function build()
 	end)
 	checkbox(Stoa.modules.Windows.db, "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on Stoa's dark panels with light text. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Top.db, "enabled", "Restyle the top of the screen", "Buffs as cropped icons with quiet timers, the quest tracker in Stoa's type without the gold bars, and the minimap's zone header on a dark panel with its buttons waiting for the mouse. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Plates.db, "enabled", "Restyle nameplates", "Flat bars coloured by what you can do: bone for an enemy you haven't pulled, amber once it's fighting you, blue for friends, muted for neutral or tapped. An amber edge marks your target. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Meters.db, "enabled", "Restyle the damage meter", "Blizzard's damage and healing meters as words over the world with no panel: faint bone bars, your own bar in the accent, class colour on names only. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Meters.db, "place", "Meters in the top-left corner", "Every meter window shown sits side by side in one strip flush with the top-left corner of the screen, the same size, in and out of combat. Off leaves them where Edit Mode and your dragging put them.", true, function(_, value)
 		if value then Stoa.modules.Meters:Place() end
@@ -151,5 +152,6 @@ Stoa.commands.safe = function()
 	if m.Windows then m.Windows.db.enabled = false end
 	if m.Meters then m.Meters.db.enabled = false end
 	if m.Top then m.Top.db.enabled = false end
+	if m.Plates then m.Plates.db.enabled = false end
 	ReloadUI()
 end
