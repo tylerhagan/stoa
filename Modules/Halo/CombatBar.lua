@@ -58,8 +58,11 @@ local function pageConditions()
 		.. "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; 1"):format(override, vehicle, vehicle, temp)
 end
 
--- While one of these is up, every button shows, filled at rest or not.
+-- While one of these is up the page is swapped for the transform's own.
 local SWAPPED = "[combat,overridebar][combat,vehicleui][combat,possessbar][combat,shapeshift][combat,bonusbar:5] show; hide"
+local RESTING = "[overridebar][vehicleui][possessbar][shapeshift][bonusbar:5] hide; [combat] show; hide"
+-- Pages past the six bars belong to a transform, vehicle or possession.
+local LAST_BAR_PAGE = 10
 
 function Bar:Page()
 	return tonumber((self.pager:GetAttribute("actionpage"))) or 1
@@ -129,38 +132,48 @@ function Bar:Build()
 	end
 end
 
--- Out of combat only: lays out the buttons your resting page fills,
--- centred under the Halo, to show in combat. The rest wait to the right
--- and show only while a transform or vehicle swaps the page.
+-- Out of combat only: lays out the buttons the current page fills, centred
+-- under the Halo, to show in combat. At rest the others wait to the right
+-- and show only while a transform swaps the page; while transformed, the
+-- transform's spells sit centred and your resting ones wait to the right
+-- for when it ends. Empty buttons fade out either way.
 function Bar:Layout()
 	local halo = _G.StoaHalo
 	if not halo or InCombatLockdown() then return end
 	local GetPage = api("GetActionBarPage")
 	local base = tonumber(plain(GetPage and GetPage())) or 1
+	local page = self:Page()
+	local swapped = page > LAST_BAR_PAGE
+	local function has(i, onPage) return plain(HasAction(i + (onPage - 1) * 12)) end
 	local filled, spare = {}, {}
 	for i, button in ipairs(self.buttons) do
 		UnregisterStateDriver(button, "visibility")
 		button:Hide()
 		if i <= self.db.count then
-			local slot = i + (base - 1) * 12
-			table.insert(plain(HasAction(slot)) and filled or spare, button)
+			local now = has(i, swapped and page or base)
+			local other = swapped and has(i, base)
+			if now then
+				filled[#filled + 1] = { button, (not swapped or other) and "[combat] show; hide" or SWAPPED }
+			elseif swapped then
+				if other then spare[#spare + 1] = { button, RESTING } end
+			else
+				spare[#spare + 1] = { button, SWAPPED }
+			end
 		end
 	end
 	local width = #filled * SIZE + (#filled - 1) * GAP
 	local x = -width / 2
-	for _, button in ipairs(filled) do
-		button:ClearAllPoints()
-		button:SetPoint("TOPLEFT", halo, "BOTTOM", x, -74)
-		x = x + SIZE + GAP
-		RegisterStateDriver(button, "visibility", "[combat] show; hide")
+	self.shown = {}
+	for _, list in ipairs({ filled, spare }) do
+		for _, entry in ipairs(list) do
+			local button, driver = entry[1], entry[2]
+			button:ClearAllPoints()
+			button:SetPoint("TOPLEFT", halo, "BOTTOM", x, -74)
+			x = x + SIZE + GAP
+			RegisterStateDriver(button, "visibility", driver)
+			if list == filled then self.shown[#self.shown + 1] = button end
+		end
 	end
-	for _, button in ipairs(spare) do
-		button:ClearAllPoints()
-		button:SetPoint("TOPLEFT", halo, "BOTTOM", x, -74)
-		x = x + SIZE + GAP
-		RegisterStateDriver(button, "visibility", SWAPPED)
-	end
-	self.shown = filled
 	self:UpdateAll()
 end
 
@@ -220,6 +233,9 @@ function Bar:UpdateAll()
 		local slot = i + (page - 1) * 12
 		button.slot = slot
 		button.icon:SetTexture(GetActionTexture(slot))
+		-- An empty slot fades rather than leaving a dark square; alpha can
+		-- change in combat where showing and hiding can't.
+		button:SetAlpha(plain(HasAction(slot)) == false and 0 or 1)
 		local count = GetActionCount and plain(GetActionCount(slot))
 		button.count:SetText(count and count > 1 and count or "")
 	end
@@ -246,6 +262,10 @@ function Bar:OnEnable()
 			layout()
 		end)
 	end
+	-- The page driver can land a moment after the game's events.
+	self.pager:HookScript("OnAttributeChanged", function(_, name)
+		if name == "actionpage" then layout() end
+	end)
 	Stoa:On("UPDATE_BINDINGS", function() self:UpdateKeys() end)
 	Stoa:On("ACTIONBAR_UPDATE_COOLDOWN", function() self:UpdateCooldowns() end)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", function() self:UpdateCooldowns() end)
