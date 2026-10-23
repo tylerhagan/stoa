@@ -162,7 +162,8 @@ function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
 	target:SetSize(TARGET_WIDTH, 68)
-	self:PlaceTarget()
+	-- Over your head it fought with the game's own nameplate.
+	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 28, 36)
 	target:SetAttribute("unit", "target")
 	target:SetAttribute("type1", "target")
 	target:SetAttribute("type2", "togglemenu")
@@ -532,22 +533,6 @@ end
 
 -- Lifecycle -----------------------------------------------------------------
 
--- Upper right of the Halo; over your head it fought with the game's own
--- nameplate. A healer in a raid has the grid there, so the card sits on
--- top of the grid instead. Out of combat only.
-function Halo:PlaceTarget()
-	local target, halo = self.target, self.frame
-	if not target or InCombatLockdown() then return end
-	local grid = _G.StoaRaid
-	local raid = IsInRaid() or Stoa.previewing == "raid"
-	target:ClearAllPoints()
-	if grid and raid and Stoa:GetRole() == "HEALER" then
-		target:SetPoint("BOTTOMLEFT", grid, "TOPLEFT", 0, 12)
-	else
-		target:SetPoint("BOTTOMLEFT", halo, "RIGHT", 28, 36)
-	end
-end
-
 function Halo:OnEnable()
 	self:Build()
 
@@ -572,13 +557,6 @@ function Halo:OnEnable()
 		self:SetShown(state == Stoa.STATE_COMBAT)
 		self:UpdateReminders()
 	end)
-	local function placeTarget()
-		Stoa:AfterCombat(function() self:PlaceTarget() end)
-	end
-	Stoa:On("GROUP_ROSTER_UPDATE", placeTarget)
-	Stoa:On("STOA_PREVIEW_CHANGED", placeTarget)
-	Stoa:On("PLAYER_ENTERING_WORLD", placeTarget)
-	Stoa:On("STOA_ROLE_CHANGED", placeTarget)
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		self:UpdateSignature()
 		self:UpdateReminders()
