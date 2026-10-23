@@ -184,8 +184,9 @@ function Halo:BuildTarget(frame)
 		GameTooltip:SetUnit("target")
 	end)
 	target:SetScript("OnLeave", GameTooltip_Hide)
-	-- Any living target, in or out of combat. A dead target needs no card.
-	RegisterStateDriver(target, "visibility", "[@target,noexists][@target,dead] hide; show")
+	-- Any target, in or out of combat. A dead one stays, dimmed and saying
+	-- DEAD, so the plaque always matches what you have targeted.
+	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
 	self.target = target
 
 	-- A plaque like the tank watch opposite: the coin faces the Halo.
