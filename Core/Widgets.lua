@@ -315,6 +315,115 @@ function UI.unitCard(card, styleName)
 	UI.applyTheme()
 end
 
+-- A plaque: the tank watch and the target, dressed as small pieces of the
+-- console so they read as yours rather than as party cards. Warm leather,
+-- a gold hairline with a fainter one inside, a soft emboss, and a portrait
+-- coin on the side that faces the Halo, with a fine tether to the ring.
+local PLAQUE_FILL = { 0.11, 0.096, 0.083, 0.95 }
+local SILVER = { 0.79, 0.8, 0.82 }
+local COIN = 52
+
+function UI.plaque(frame, coinSide)
+	local plaque = {}
+	local fill = sliced(frame, "BACKGROUND", "CardFill.tga")
+	if fill then
+		fill:SetVertexColor(unpack(PLAQUE_FILL))
+	else
+		fill = frame:CreateTexture(nil, "BACKGROUND")
+		fill:SetAllPoints()
+		fill:SetColorTexture(unpack(PLAQUE_FILL))
+	end
+	-- The emboss: light catching the top edge, shadow under the bottom.
+	local light = frame:CreateTexture(nil, "BORDER")
+	light:SetColorTexture(1, 0.94, 0.82, 0.06)
+	light:SetHeight(1)
+	light:SetPoint("TOPLEFT", 10, -1)
+	light:SetPoint("TOPRIGHT", -10, -1)
+	local shade = frame:CreateTexture(nil, "BORDER")
+	shade:SetColorTexture(0, 0, 0, 0.5)
+	shade:SetHeight(1)
+	shade:SetPoint("BOTTOMLEFT", 10, 1)
+	shade:SetPoint("BOTTOMRIGHT", -10, 1)
+
+	local outer = sliced(frame, "BORDER", "CardEdge.tga")
+	local inner = sliced(frame, "BORDER", "CardEdge.tga", -5)
+	plaque.lines = { outer, inner }
+
+	-- The coin straddles the edge that faces the Halo.
+	local coin = CreateFrame("Frame", nil, frame)
+	coin:SetSize(COIN, COIN)
+	coin:SetPoint("CENTER", frame, coinSide, coinSide == "LEFT" and 1 or -1, 0)
+	coin:SetFrameLevel(frame:GetFrameLevel() + 3)
+	local gap = UI.circle(coin, "BACKGROUND", 0, COIN)
+	gap:SetPoint("CENTER")
+	gap:SetColorTexture(unpack(PLAQUE_FILL))
+	local ring = UI.circle(coin, "BORDER", 0, COIN - 6)
+	ring:SetPoint("CENTER")
+	ring:SetColorTexture(1, 1, 1)
+	local portrait = UI.circle(coin, "ARTWORK", 0, COIN - 10)
+	portrait:SetPoint("CENTER")
+	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
+
+	-- The tether runs from the coin to the ring; it shows with the Halo.
+	if frame.CreateLine then
+		local tether = frame:CreateLine(nil, "BACKGROUND")
+		tether:SetThickness(1)
+		tether:SetStartPoint("CENTER", coin)
+		plaque.tether = tether
+	end
+
+	function plaque:Tether(halo, x, y)
+		if not self.tether or not halo then return end
+		self.tether:SetEndPoint("CENTER", halo, x, y)
+	end
+
+	-- Gold for everyone; elite doubles the gold, rare turns it silver.
+	function plaque:SetRank(rank)
+		local r, g, b = Stoa:Color("accent")
+		if rank == "rare" then r, g, b = unpack(SILVER) end
+		local strong = rank == "elite" or rank == "rare"
+		if outer then outer:SetVertexColor(r, g, b, strong and 1 or 0.55) end
+		if inner then inner:SetVertexColor(r, g, b, strong and 0.7 or 0.16) end
+		ring:SetVertexColor(r, g, b, 1)
+		if self.tether then self.tether:SetColorTexture(r, g, b, 0.55) end
+	end
+	plaque:SetRank(nil)
+	return plaque
+end
+
+-- Health as a whole percent. Combat health can be secret: newer clients
+-- hand out a percent that is safe to show; failing that, the plain health.
+function UI.setHealthPercent(fs, unit, fraction)
+	if not fraction then
+		local health, max = UnitHealth(unit), UnitHealthMax(unit)
+		if not Stoa:IsSecret(health) and not Stoa:IsSecret(max) and max and max > 0 then
+			fraction = health / max
+		end
+	end
+	if fraction then
+		fs:SetText(math.floor(fraction * 100 + 0.5))
+		return
+	end
+	if UnitHealthPercent and CurveConstants and CurveConstants.ScaleTo100 then
+		local ok = pcall(function()
+			fs:SetFormattedText("%d", UnitHealthPercent(unit, true, CurveConstants.ScaleTo100))
+		end)
+		if ok then return end
+	end
+	fs:SetText(UnitHealth(unit))
+end
+
+-- Fine engraved ticks at a quarter, half and three quarters of a bar.
+function UI.engrave(bar, width)
+	for _, at in ipairs({ 0.25, 0.5, 0.75 }) do
+		local tick = bar:CreateTexture(nil, "OVERLAY", nil, 7)
+		tick:SetColorTexture(0.07, 0.08, 0.09, 0.85)
+		tick:SetWidth(1)
+		tick:SetPoint("TOP", bar, "TOPLEFT", width * at, 0)
+		tick:SetPoint("BOTTOM", bar, "BOTTOMLEFT", width * at, 0)
+	end
+end
+
 -- Lays out a card's insides for a style. Out of combat for party cards,
 -- since the sizes follow the role.
 function UI.styleCard(card, styleName)

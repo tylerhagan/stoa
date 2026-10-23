@@ -150,20 +150,25 @@ function Halo:BuildSignature(frame)
 end
 
 -- The target sits at the Halo's upper right, opposite the tank watch, on a
--- card: name, a bar, health and the hostile and threat words, and a row
--- of auras under it. Like the cast bar it is parented to UIParent, so
+-- plaque with its portrait coin: level and kind, name and health, an
+-- engraved bar, the hostile and threat words, and a row of auras under it.
+-- Elite and rare targets get a doubled gold or a silver line and the word. Like the cast bar it is parented to UIParent, so
 -- it stays with you out of combat as well. It's a secure unit button, so
 -- right click opens the unit menu (focus, invite, inspect, trade) like
 -- Blizzard's target frame.
-local TARGET_WIDTH = 240
-local TARGET_PAD = 9
+local TARGET_WIDTH = 268
+local TARGET_PAD = 12
+-- Room on the left for the half of the coin inside the plaque.
+local TARGET_COIN_SPACE = 40
+-- Where the tethers meet the ring, from the Halo's centre.
+local TETHER = 100
 
 function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
-	target:SetSize(TARGET_WIDTH, 68)
+	target:SetSize(TARGET_WIDTH, 76)
 	-- Over your head it fought with the game's own nameplate.
-	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 28, 36)
+	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 	target:SetAttribute("unit", "target")
 	target:SetAttribute("type1", "target")
 	target:SetAttribute("type2", "togglemenu")
@@ -179,25 +184,32 @@ function Halo:BuildTarget(frame)
 	RegisterStateDriver(target, "visibility", "[@target,noexists][@target,dead] hide; [combat] show; [@target,help] show; hide")
 	self.target = target
 
-	-- On a card like the tank watch opposite, so it reads over snow and sky.
-	UI.roundPanel(target, 0.92)
-	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "LEFT")
-	name:SetPoint("TOPLEFT", TARGET_PAD, -TARGET_PAD)
-	name:SetWidth(TARGET_WIDTH - TARGET_PAD * 2 - 60)
-	name:SetWordWrap(false)
+	-- A plaque like the tank watch opposite: the coin faces the Halo.
+	local plaque = UI.plaque(target, "LEFT")
+	plaque:Tether(frame, TETHER, TETHER)
+	target.plaque = plaque
+	local left = TARGET_COIN_SPACE
+	local caption = UI.caption(target, "")
+	caption:SetPoint("TOPLEFT", left, -TARGET_PAD)
 	-- Hostile targets get a word as well as a colour.
 	local cue = UI.caption(target, "")
-	cue:SetPoint("TOPRIGHT", -TARGET_PAD, -TARGET_PAD - 3)
-	local hp = UI.bar(target, TARGET_WIDTH - TARGET_PAD * 2, 4, "health")
-	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -6)
-	local health = UI.text(target, "sans", Stoa.typeSize.body, "muted", "LEFT")
-	health:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
+	cue:SetPoint("TOPRIGHT", -TARGET_PAD, -TARGET_PAD)
+	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "LEFT")
+	name:SetPoint("TOPLEFT", caption, "BOTTOMLEFT", 0, -4)
+	name:SetWidth(TARGET_WIDTH - left - TARGET_PAD - 40)
+	name:SetWordWrap(false)
+	local health = UI.text(target, "serif", Stoa.typeSize.title, "text", "RIGHT")
+	health:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
+	local barWidth = TARGET_WIDTH - left - TARGET_PAD
+	local hp = UI.bar(target, barWidth, 4, "health")
+	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
+	UI.engrave(hp, barWidth)
 	-- Threat, in words: tanks hear when they are losing it, everyone else
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
 	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -5)
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
-	target.threat = threat
+	target.threat, target.caption = threat, caption
 
 	-- Auras: on a friend, their buffs, yours first; on an enemy, the
 	-- debuffs you put there. Rounded icons with a sweep for time left.
@@ -314,7 +326,32 @@ function Halo:UpdateTarget()
 	target.name:SetText(UnitName("target"))
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
-	target.health:SetText(UnitHealth("target"))
+	UI.setHealthPercent(target.health, "target")
+	SetPortraitTexture(target.plaque.portrait, "target")
+
+	-- Level and kind on the caption; elite and rare say so and change the
+	-- plaque's line.
+	local function plain(value)
+		if Stoa:IsSecret(value) then return nil end
+		return value
+	end
+	local rank = plain(UnitClassification("target"))
+	local level = plain(UnitLevel("target"))
+	local kind = plain(UnitCreatureType("target"))
+	local words = {}
+	if rank == "elite" or rank == "worldboss" then words[#words + 1] = "ELITE" end
+	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
+	if level then words[#words + 1] = "LEVEL " .. (level < 0 and "??" or level) end
+	if kind and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end
+	target.caption:SetText(table.concat(words, " · "))
+	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
+		or (rank == "elite" or rank == "worldboss") and "elite" or nil
+	target.plaque:SetRank(plaqueRank)
+	target.caption:SetTextColor(Stoa:Color(plaqueRank and "accent" or "muted"))
+	if plaqueRank == "rare" then target.caption:SetTextColor(0.79, 0.8, 0.82) end
+	if target.plaque.tether then
+		target.plaque.tether:SetShown(Stoa:GetState() == Stoa.STATE_COMBAT)
+	end
 
 	-- A dead target says so in words and steps back, rather than reading as
 	-- a hostile at zero.
@@ -370,7 +407,7 @@ function Halo:UpdateTargetAuras()
 	end
 	-- The row hangs under the card, from its inner edge.
 	icons[1]:ClearAllPoints()
-	icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", 0, -6)
+	icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
 	for i, icon in ipairs(icons) do
 		local aura = found[i]
 		if aura then
@@ -556,6 +593,10 @@ function Halo:OnEnable()
 	Stoa:On("STOA_STATE_CHANGED", function(state)
 		self:SetShown(state == Stoa.STATE_COMBAT)
 		self:UpdateReminders()
+	end)
+	Stoa:On("STOA_STATE_CHANGED", function(state)
+		local tether = self.target and self.target.plaque.tether
+		if tether then tether:SetShown(state == Stoa.STATE_COMBAT) end
 	end)
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		self:UpdateSignature()

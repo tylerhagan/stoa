@@ -219,21 +219,9 @@ local function healthFraction(unit)
 	return health / max
 end
 
--- The percent in the card's corner. Newer clients hand out a percent that
--- is safe to show even when it's secret; otherwise it's worked out, and
--- failing both the plain health is shown.
+-- The percent in the card's corner.
 local function setPercent(fs, unit, fraction)
-	if fraction then
-		fs:SetText(math.floor(fraction * 100 + 0.5))
-		return
-	end
-	if UnitHealthPercent and CurveConstants and CurveConstants.ScaleTo100 then
-		local ok = pcall(function()
-			fs:SetFormattedText("%d", UnitHealthPercent(unit, true, CurveConstants.ScaleTo100))
-		end)
-		if ok then return end
-	end
-	fs:SetText(UnitHealth(unit))
+	UI.setHealthPercent(fs, unit, fraction)
 end
 
 function Party:UpdateCard(card)
@@ -421,8 +409,12 @@ end
 -- It shows with the Halo in combat, and in the /stoa test preview. Your
 -- click-casting bindings work on it in combat.
 
-local WATCH_WIDTH = 220
-local WATCH_PAD = 9
+local WATCH_WIDTH = 214
+local WATCH_PAD = 14
+-- Room on the right for the half of the coin inside the plaque.
+local WATCH_COIN_SPACE = 40
+-- Where the tether meets the ring, from the Halo's centre.
+local WATCH_TETHER = 100
 local HURT_HEALTH = 0.7
 
 local function watchedUnit()
@@ -447,13 +439,14 @@ end
 function Party:BuildWatch()
 	local watch = CreateFrame("Frame", "StoaTankWatch", UIParent)
 	watch:SetFrameStrata("LOW")
-	-- On a card like the party's, so it reads over snow and sky alike.
-	watch:SetSize(WATCH_WIDTH + WATCH_PAD * 2, 64)
-	UI.roundPanel(watch, 0.92)
+	watch:SetSize(WATCH_WIDTH + WATCH_PAD + WATCH_COIN_SPACE, 76)
+	-- A plaque like the target opposite: the coin faces the Halo.
+	local plaque = UI.plaque(watch, "RIGHT")
+	watch.plaque = plaque
 	local halo = _G.StoaHalo
 	if halo then
-		-- Upper left of the Halo; the target has the space over your head.
-		watch:SetPoint("BOTTOMRIGHT", halo, "LEFT", -28, 36)
+		watch:SetPoint("BOTTOMRIGHT", halo, "LEFT", -52, 36)
+		plaque:Tether(halo, -WATCH_TETHER, WATCH_TETHER)
 	else
 		watch:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
 	end
@@ -463,23 +456,25 @@ function Party:BuildWatch()
 	local label = UI.caption(watch, "Watching")
 	label:SetPoint("TOPLEFT", WATCH_PAD, -WATCH_PAD)
 	local word = UI.caption(watch, "")
-	word:SetPoint("TOPRIGHT", -WATCH_PAD, -WATCH_PAD)
-	local name = UI.text(watch, "serif", Stoa.typeSize.label + 2, "text", "LEFT")
-	name:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -3)
+	word:SetPoint("TOPRIGHT", -WATCH_COIN_SPACE, -WATCH_PAD)
+	local name = UI.text(watch, "serif", Stoa.typeSize.title, "text", "LEFT")
+	name:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
 	name:SetWidth(WATCH_WIDTH - 50)
 	name:SetWordWrap(false)
-	local percent = UI.text(watch, "serif", Stoa.typeSize.label + 2, "text", "RIGHT")
-	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -3)
-	local hp = UI.bar(watch, WATCH_WIDTH, 3, "health")
+	local percent = UI.text(watch, "serif", Stoa.typeSize.title, "text", "RIGHT")
+	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -4)
+	local hp = UI.bar(watch, WATCH_WIDTH, 4, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
 	hp:SetClipsChildren(true)
 	local absorb = CreateFrame("StatusBar", nil, hp)
 	absorb:SetStatusBarTexture(UI.WHITE)
 	absorb:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
-	absorb:SetSize(WATCH_WIDTH, 3)
+	absorb:SetSize(WATCH_WIDTH, 4)
 	absorb:SetStatusBarColor(Stoa:Color("shield"))
-	local buffs = UI.text(watch, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	UI.engrave(hp, WATCH_WIDTH)
+	local buffs = UI.caption(watch, "")
 	buffs:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
+	watch.label = label
 
 	watch.name, watch.percent, watch.word, watch.hp = name, percent, word, hp
 	watch.absorb, watch.buffs = absorb, buffs
@@ -531,6 +526,8 @@ end
 -- Fills the watch from sample data, for the /stoa test preview.
 function Party:PreviewWatch()
 	local watch = self.watch
+	watch.label:SetText("WATCHING · TANK")
+	SetPortraitTexture(watch.plaque.portrait, "player")
 	watch.name:SetText("Brunhok")
 	watch.name:SetTextColor(Stoa:Color("text"))
 	watch.percent:SetText("62")
@@ -541,7 +538,7 @@ function Party:PreviewWatch()
 	watch.hp:SetStatusBarColor(Stoa:Color("health"))
 	watch.absorb:SetMinMaxValues(0, 100)
 	watch.absorb:SetValue(14)
-	watch.buffs:SetText("SHIELD 12  ·  RENEW")
+	watch.buffs:SetText("SHIELD 12 · RENEW")
 end
 
 function Party:UpdateWatch()
@@ -567,6 +564,10 @@ function Party:UpdateWatch()
 	end
 	if not watch.shown then UI.fade(watch, 1, 0.2) end
 	watch.shown = true
+	watch.plaque:SetRank(nil)
+	if watch.plaque.tether then
+		watch.plaque.tether:SetShown(Stoa:GetState() == Stoa.STATE_COMBAT)
+	end
 	if previewing and not unit then
 		self:PreviewWatch()
 		return
@@ -574,6 +575,8 @@ function Party:UpdateWatch()
 
 	watch.name:SetText(UnitName(unit))
 	watch.name:SetTextColor(UI.classColor(unit))
+	watch.label:SetText(unit == "focus" and "WATCHING · FOCUS" or "WATCHING · TANK")
+	SetPortraitTexture(watch.plaque.portrait, unit)
 	UI.setUnitBar(watch.hp, unit, "health")
 
 	local fraction = healthFraction(unit)
@@ -601,7 +604,7 @@ function Party:UpdateWatch()
 	self:AuraPips(unit, pips)
 	local words = {}
 	for i, pip in ipairs(pips) do words[i] = pip[1] end
-	watch.buffs:SetText(table.concat(words, "  ·  "))
+	watch.buffs:SetText(table.concat(words, " · "))
 end
 
 local function cardFor(self, unit)
