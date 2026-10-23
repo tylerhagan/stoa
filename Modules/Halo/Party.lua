@@ -273,6 +273,13 @@ function Party:UpdateCard(card)
 	local r, g, b = Stoa:Color(low and "danger" or "health")
 	card.hp:SetStatusBarColor(r, g, b)
 	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+	if gone then
+		UI.cellWord(card, gone, "muted")
+	elseif dispel then
+		UI.cellWord(card, dispel.word, dispel.token)
+	elseif low then
+		UI.cellWord(card, "LOW", "danger")
+	end
 
 	card.glow:Clear()
 	if dispel then

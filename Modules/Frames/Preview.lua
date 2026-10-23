@@ -50,6 +50,13 @@ local function fill(card, sample)
 		if low then table.insert(pips, 1, { "LOW", "danger" }) end
 	end
 	UI.setPips(card, pips)
+	if sample.status then
+		UI.cellWord(card, sample.status, "muted")
+	elseif sample.dispel then
+		UI.cellWord(card, pips[low and 2 or 1][1], sample.dispel)
+	elseif low then
+		UI.cellWord(card, "LOW", "danger")
+	end
 
 	card.glow:Clear()
 	if sample.dispel then
@@ -102,41 +109,54 @@ local function hideParty()
 end
 
 -- The raid preview is plain frames drawn by the same code as real cells,
--- laid over where the grid would be.
-local function showRaid()
+-- laid out the way the real headers would: for healers, compact rows for
+-- 20 or two rows of cards for 10; columns of cells for everyone else.
+local function showRaid(ten)
 	local raid = Stoa.modules.Raid
 	if not raid.holder then return end
-	if not raidPreview then
-		raidPreview = CreateFrame("Frame", nil, raid.holder)
-		raidPreview:SetPoint("TOPLEFT")
-		raidPreview:SetSize(1, 1)
-		raidPreview.cells = {}
+	local healer = Stoa:GetRole() == "HEALER"
+	local key = not healer and "wide" or ten and "card" or "cell"
+	local size = Stoa.RAID_STYLES[key]
+	local groups = ten and 2 or GROUPS
+	raidPreview = raidPreview or {}
+	for _, built in pairs(raidPreview) do built:Hide() end
+	local frame = raidPreview[key]
+	if not frame then
+		frame = CreateFrame("Frame", nil, raid.holder)
+		frame.cells = {}
 		for group = 1, GROUPS do
 			for slot = 1, 5 do
-				local cell = CreateFrame("Button", nil, raidPreview)
-				cell:SetSize(Stoa.RAID_CELL.width, Stoa.RAID_CELL.height)
+				local cell = CreateFrame("Button", nil, frame)
+				cell:SetSize(size.width, size.height)
 				cell.group, cell.slot = group, slot
-				Stoa.UI.raidCell(cell)
-				table.insert(raidPreview.cells, cell)
+				Stoa.UI.raidCell(cell, size.style)
+				table.insert(frame.cells, cell)
 			end
 		end
+		raidPreview[key] = frame
 	end
-	-- Same arrangement as the real grid: rows of groups for healers,
-	-- columns for everyone else.
-	local size = Stoa.RAID_CELL
-	local rows = Stoa:GetRole() == "HEALER"
-	for i, cell in ipairs(raidPreview.cells) do
-		local across, down = cell.slot - 1, cell.group - 1
-		if not rows then across, down = down, across end
+	local across, down = 5, groups
+	if not healer then across, down = groups, 5 end
+	frame:SetSize(across * (size.width + size.gap) - size.gap, down * (size.height + size.gap) - size.gap)
+	frame:ClearAllPoints()
+	if healer then
+		frame:SetPoint("TOP", raid.holder, "TOP")
+	else
+		frame:SetPoint("TOPLEFT", raid.holder, "TOPLEFT")
+	end
+	for i, cell in ipairs(frame.cells) do
+		local x, y = cell.slot - 1, cell.group - 1
+		if not healer then x, y = y, x end
 		cell:ClearAllPoints()
-		cell:SetPoint("TOPLEFT", across * (size.width + size.gap), -down * (size.height + size.gap))
+		cell:SetPoint("TOPLEFT", x * (size.width + size.gap), -y * (size.height + size.gap))
+		cell:SetShown(cell.group <= groups)
 		fill(cell, SAMPLE[(i - 1) % #SAMPLE + 1])
 	end
-	raidPreview:Show()
+	frame:Show()
 end
 
 local function hideRaid()
-	if raidPreview then raidPreview:Hide() end
+	for _, built in pairs(raidPreview or {}) do built:Hide() end
 end
 
 function Stoa:TogglePreview(kind)
@@ -154,14 +174,15 @@ function Stoa:TogglePreview(kind)
 		return
 	end
 	active = true
-	self.previewing = kind == "raid" and "raid" or "party"
+	local raid = kind == "raid" or kind == "raid10"
+	self.previewing = raid and "raid" or "party"
 	self:Fire("STOA_PREVIEW_CHANGED")
-	if kind == "raid" then
-		showRaid()
-		self:Print("Showing a sample raid. /stoa test to hide it; /stoa unlock to move it.")
+	if raid then
+		showRaid(kind == "raid10")
+		self:Print("Showing a sample raid. /stoa test raid10 for ten players, /stoa test to hide it; /stoa unlock to move it.")
 	else
 		showParty()
-		self:Print("Showing a sample party. /stoa test raid for a raid, /stoa test to hide; /stoa unlock to move it.")
+		self:Print("Showing a sample party. /stoa test raid or raid10 for a raid, /stoa test to hide; /stoa unlock to move it.")
 	end
 end
 

@@ -184,6 +184,9 @@ UI.CARD_STYLES = {
 	party = { pad = 9, name = 16, bar = 12, pip = 16, pipFont = 11, gap = 6 },
 	compact = { pad = 7, name = 14, bar = 8, pip = 14, pipFont = 10, gap = 5 },
 	raid = { pad = 7, name = 15, bar = 9, pip = 14, pipFont = 10, gap = 5 },
+	-- The compact raid cell: health fills the cell behind the name, and one
+	-- word or the percent sits on the right.
+	cell = { pad = 5, name = 11, cell = true },
 }
 
 local MAX_PIPS = 3
@@ -318,6 +321,26 @@ function UI.styleCard(card, styleName)
 	local style = UI.CARD_STYLES[styleName] or UI.CARD_STYLES.party
 	card.style = style
 	local pad = style.pad
+	if style.cell then
+		Stoa:SetFont(card.name, "sans", style.name, "")
+		card.name:ClearAllPoints()
+		card.name:SetPoint("LEFT", pad, 0)
+		card.name:SetPoint("RIGHT", card.percent, "LEFT", -3, 0)
+		Stoa:SetFont(card.percent, "sans", style.name - 1, "")
+		card.percent:ClearAllPoints()
+		card.percent:SetPoint("RIGHT", -pad, 0)
+		-- Dimmed, so the name stays readable over a full bar.
+		card.hp:ClearAllPoints()
+		card.hp:SetPoint("TOPLEFT", 2, -2)
+		card.hp:SetPoint("BOTTOMRIGHT", -2, 2)
+		card.hp:SetAlpha(0.4)
+		card.hp.track:Hide()
+		card.absorb:SetWidth(math.max(1, (card:GetWidth() or 90) - 4))
+		for _, pip in ipairs(card.pips) do pip:Hide() end
+		return
+	end
+	card.hp:SetAlpha(1)
+	card.hp.track:Show()
 
 	Stoa:SetFont(card.name, "serif", style.name)
 	card.name:ClearAllPoints()
@@ -345,9 +368,25 @@ function UI.styleCard(card, styleName)
 	end
 end
 
+-- A compact cell has no pip row: the most urgent word takes the percent's
+-- place, in its colour. Returns true when it did.
+local CELL_WORDS = {
+	MAGIC = "MAG", DISEASE = "DIS", CURSE = "CUR", POISON = "POI", DISPEL = "DSP",
+	LOW = "LOW", DEAD = "DEAD", OFFLINE = "OFF",
+}
+function UI.cellWord(card, word, token)
+	if not (card.style and card.style.cell) then return false end
+	for _, pip in ipairs(card.pips) do pip:Hide() end
+	if not word then return false end
+	card.percent:SetText(CELL_WORDS[word] or word)
+	card.percent:SetTextColor(Stoa:Color(token or "muted"))
+	return true
+end
+
 -- Fills the pip row. Each pip is { text, fill } where fill is a theme token
 -- for a solid chip (dark text on it), or nil for a quiet chip.
 function UI.setPips(card, list)
+	if card.style and card.style.cell then return end
 	for i, pip in ipairs(card.pips) do
 		local entry = list and list[i]
 		if entry then
