@@ -101,6 +101,17 @@ local function build()
 		end)
 	end
 
+	-- Comforts
+	local comforts = Stoa.modules.Comforts.db
+	header("Comforts")
+	checkbox(comforts, "fastLoot", "Faster loot", "With auto loot on, everything lands in your bags the moment the loot window would open. Hold Shift to see the window.", true)
+	checkbox(comforts, "farCamera", "Pull the camera further out", "Raises the camera's maximum zoom distance.", true, function() Stoa.modules.Comforts:Camera() end)
+	checkbox(comforts, "skipGossip", "Skip one-option gossip", "When an NPC has no quests and only one thing to say, Stoa picks it for you. Hold Shift to stop.", true)
+	checkbox(comforts, "acceptQuests", "Accept quests", "Picks up offered quests. Hold Shift to read one first.", false)
+	checkbox(comforts, "turnInQuests", "Hand in quests", "Hands in finished quests. A quest with a choice of reward always waits for you. Hold Shift to stop.", false)
+	checkbox(comforts, "skipCinematics", "Skip cinematics", "Cancels cinematics and movies as they start. Hold Shift to watch.", false)
+	checkbox(comforts, "quietErrors", "Quiet errors in combat", "Hides the red \"Not enough mana\" and \"Out of range\" text while you fight; it comes back after.", false)
+
 	-- Merchant
 	local merchant = Stoa.modules.Merchant.db
 	header("Merchants")

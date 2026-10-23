@@ -23,6 +23,7 @@ Core\Widgets.lua
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
 Modules\QoL\Merchant.lua
+Modules\QoL\Comforts.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua

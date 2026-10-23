@@ -30,9 +30,13 @@ What works today:
 | Click-casting | Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. `/stoa clicks` to edit |
 | Action bars | Rounded-square icons with a hairline edge like the party cards, dim sockets for empty slots, Stoa type on keys and counts. Out of combat every console row shows (optionally only the main bar, with the rest on mouseover); in combat the bars step aside for the combat bar (your keys still work), or every row shows if the combat bar is off |
 | Combat bar | In combat, a compact row of your main bar's spells under the Halo: rounded icons, keys underneath, cooldown sweeps; dimmed when unusable, blue when short of mana, faded with its key in the warning colour when out of range. Up to two more rows follow from the bottom-left and bottom-right bars, each a step smaller (Settings: Combat rows; healers default to one). Spells on a long cooldown sit dim until they're ready |
-| Shadow | For Shadow Priests: coins on the Halo's right for Shadow Word: Pain (P), Devouring Plague (D) and Vampiric Embrace (V) on your target, draining as they run and in the warning colour when off; an outline on the combat bar's next press; Mind Flay's three ticks on the cast line; SHADOWFORM over the ring when you're out of form; a P on enemy nameplates carrying your Pain with a PAIN n/m count; Shadow Weaving stacks on the target plaque. `/stoa probe` in a fight reports what the game hides from addons |
+| Shadow | For Shadow Priests: coins on the Halo's right for Shadow Word: Pain (P), Devouring Plague (D) and Vampiric Embrace (V) on your target, draining as they run and in the warning colour when off. Timing is kept per target, so switching between mobs keeps each one's Pain. An outline on the combat bar's next press; Mind Flay's three ticks on the cast line; SHADOWFORM over the ring when you're out of form; a PAIN n/m count of nameplates carrying your Pain; Shadow Weaving stacks on the target plaque. `/stoa probe` in a fight reports what the game hides from addons |
 | Blizzard windows | Quest, gossip, merchant, trainer, bags and tooltips on dark rounded panels, with light quest text in Stoa's type, dark rounded buttons, a quiet close cross and plain-word tabs |
 | Minimap | Theme-coloured rings, serif zone name, wheel to zoom |
+| Top of screen | Buffs as cropped icons in a hairline square with the time under them (pale gold when it runs short, amber edge for debuffs). Quest tracker headers in the display face over a hairline, bone quest titles, quiet minus and plus to fold. The zone above the minimap on a dark rounded panel with the clock beside it; tracking, calendar and the addon button wait for the mouse |
+| Nameplates | Blizzard's plates in a rounded dark track: amber for every enemy, pale gold for neutral, blue for friends, grey only for tapped or dead; enemy players in class colour. A bone edge on your target, the level as a plain number shaded by difficulty, cast bars on the same rounded ground |
+| Damage meters | Blizzard's meter windows with no panel, just outlined words and faint bars (your own in the accent, names in class colour), side by side in the top-left corner |
+| Comforts | Each its own setting, and Shift stops any of it: faster auto loot, a further camera, skip one-option gossip (on by default); accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet red errors in combat (off by default) |
 | Merchants | Sells grey junk and repairs, from guild funds when allowed |
 | Settings | Options > AddOns > Stoa |
 
@@ -45,12 +49,13 @@ Fonts are the main gap: see below.
 | `/stoa` | Open settings |
 | `/stoa unlock` | Toggle frame moving |
 | `/stoa reset` | Put moved frames back in their default spots |
-| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows) and reload |
+| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, top of screen, nameplates, meters) and reload |
 | `/stoa theme` | Cycle Bone, Tide, Graphite |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa state` | Print the current state and role |
 | `/stoa clicks` | Edit click-cast bindings for your current role |
 | `/stoa test` | Show sample party cards without a group; `/stoa test raid` or `raid10` for a raid |
+| `/stoa probe` | In a fight, print what the game hides from addons right now |
 | `/stoa combat` | Practice combat out of combat: the console folds, the Halo, combat bar and group frames take their combat places. Again to end it |
 
 ## Install
