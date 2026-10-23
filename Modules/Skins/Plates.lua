@@ -1,8 +1,8 @@
 -- Stoa: nameplates in Stoa's hand.
 -- Blizzard still builds and drives every plate (so hidden combat values keep
 -- working); Stoa changes how they look:
---   * a flat bar on a dark ground with a fine dark edge, and a bone edge
---     around your target instead of Blizzard's frame
+--   * a flat bar in a rounded dark track, and a rounded bone edge around
+--     your target instead of Blizzard's frame
 --   * colour by what you can do, not red/yellow/green: amber for an enemy,
 --     pale gold for neutral, blue for friends, and grey only for tapped or
 --     dead, as in the base game; enemy players keep class colour
@@ -17,6 +17,9 @@ local Stoa = ns.Stoa
 local UI = Stoa.UI
 
 local Plates = Stoa:NewModule("Plates")
+
+-- How far the rounded track reaches past the bar's own edges.
+local PAD = 2
 
 local function guarded(fn, ...)
 	xpcall(fn, geterrorhandler(), ...)
@@ -150,15 +153,11 @@ end
 local function dressCast(cast)
 	if not cast or cast.stoaDressed then return end
 	cast.stoaDressed = true
-	if cast.Background then
-		cast.Background:SetTexture(UI.WHITE)
-		cast.Background:SetVertexColor(Stoa:Color("panel"))
-		cast.Background:SetAlpha(0.85)
-	end
+	if cast.Background then cast.Background:SetAlpha(0) end
 	if cast.Border then cast.Border:SetAlpha(0) end
 	if cast.Icon then cast.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
-	local edge = UI.border(cast, 1, 1)
-	edge:Set(0, 0, 0, 0.9)
+	UI.tint(UI.pillFill(cast, PAD), "panel", 0.85)
+	UI.pillEdge(cast, PAD):Set(0, 0, 0, 0.9)
 end
 
 local function dress(frame)
@@ -168,15 +167,13 @@ local function dress(frame)
 	local bar = frame.healthBar
 	if bar then
 		bar:SetStatusBarTexture(UI.WHITE)
-		if bar.bgTexture then
-			bar.bgTexture:SetTexture(UI.WHITE)
-			bar.bgTexture:SetVertexColor(Stoa:Color("panel"))
-			bar.bgTexture:SetAlpha(0.85)
-		end
+		if bar.bgTexture then bar.bgTexture:SetAlpha(0) end
 		if bar.selectedBorder then bar.selectedBorder:SetAlpha(0) end
-		local edge = UI.border(bar, 1, 1)
-		edge:Set(0, 0, 0, 0.9)
-		frame.stoaTargetEdge = UI.border(bar, 1, 2)
+		-- The fill runs square inside a rounded dark track a little larger
+		-- than the bar, so the corners read rounded without masking it.
+		UI.tint(UI.pillFill(bar, PAD), "panel", 0.85)
+		UI.pillEdge(bar, PAD):Set(0, 0, 0, 0.9)
+		frame.stoaTargetEdge = UI.pillEdge(bar, PAD + 1)
 		if bar.SetIsTarget then hooksecurefunc(bar, "SetIsTarget", function() targetEdge(frame) end) end
 	end
 	dressCast(frame.CastBarsContainer and frame.CastBarsContainer.castBar)
@@ -187,6 +184,7 @@ local function dress(frame)
 		sans(level.playerLevelDiffText)
 	end
 
+	UI.applyTheme()
 	-- Blizzard sets fonts again whenever plate options change.
 	if frame.ApplyFrameOptions then hooksecurefunc(frame, "ApplyFrameOptions", refont) end
 	refont(frame)

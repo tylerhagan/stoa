@@ -208,7 +208,7 @@ end
 -- keep their shape at any size. Clients without slicing get square ones.
 local CARD_SLICE = 12
 
-local function sliced(parent, layer, file, outset)
+local function sliced(parent, layer, file, outset, margin)
 	if not parent.CreateTexture then return nil end
 	local tex = parent:CreateTexture(nil, layer)
 	if not tex.SetTextureSliceMargins then
@@ -216,7 +216,8 @@ local function sliced(parent, layer, file, outset)
 		return nil
 	end
 	tex:SetTexture(UI.MEDIA .. "Textures\\" .. file)
-	tex:SetTextureSliceMargins(CARD_SLICE, CARD_SLICE, CARD_SLICE, CARD_SLICE)
+	margin = margin or CARD_SLICE
+	tex:SetTextureSliceMargins(margin, margin, margin, margin)
 	if tex.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
 		tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
 	end
@@ -231,6 +232,37 @@ end
 function UI.roundBorder(frame, file, size, outset)
 	local tex = sliced(frame, "OVERLAY", file, outset)
 	if not tex then return UI.border(frame, size, outset) end
+	tex:Hide()
+	return {
+		edges = { tex },
+		Set = function(_, r, g, b, a)
+			tex:SetVertexColor(r, g, b, a or 1)
+			tex:Show()
+		end,
+		Clear = function() tex:Hide() end,
+	}
+end
+
+-- Small rounded pieces for thin bars (nameplates): a filled pill behind
+-- the bar and a 1px rounded outline that can be set and cleared like
+-- UI.border. Square where slicing isn't available.
+local PLATE_SLICE = 5
+
+function UI.pillFill(frame, outset)
+	local tex = sliced(frame, "BACKGROUND", "PlateFill.tga", outset, PLATE_SLICE)
+	if not tex then
+		tex = frame:CreateTexture(nil, "BACKGROUND")
+		tex:SetColorTexture(1, 1, 1)
+		tex:SetPoint("TOPLEFT", -outset, outset)
+		tex:SetPoint("BOTTOMRIGHT", outset, -outset)
+	end
+	tex:SetDrawLayer("BACKGROUND", -8)
+	return tex
+end
+
+function UI.pillEdge(frame, outset)
+	local tex = sliced(frame, "OVERLAY", "PlateEdge.tga", outset, PLATE_SLICE)
+	if not tex then return UI.border(frame, 1, outset) end
 	tex:Hide()
 	return {
 		edges = { tex },
