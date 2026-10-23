@@ -53,6 +53,14 @@ local REMINDERS = {
 	},
 }
 
+-- Channels whose ticks are worth seeing, by spell name: Mind Flay does
+-- most of its damage on the last of three, so it shouldn't be clipped.
+local CHANNEL_TICKS = {}
+local function addTicks(spellID, count)
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+	if name then CHANNEL_TICKS[name] = count end
+end
+
 local function knows(spellID)
 	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
 	return IsSpellKnown and IsSpellKnown(spellID) or false
@@ -249,6 +257,23 @@ function Halo:BuildCast(frame)
 	local spell = UI.text(cast, "italic", Stoa.typeSize.label, "text", "CENTER")
 	spell:SetPoint("BOTTOM", cast, "TOP", 0, 4)
 	cast.spell = spell
+	-- Tick marks for channels whose ticks matter. The bar drains towards
+	-- the left, so each tick lands where the fill edge will be; the last
+	-- tick, at the left end, gets a notch of its own.
+	cast.ticks = {}
+	for i = 1, 2 do
+		local tick = cast:CreateTexture(nil, "OVERLAY")
+		tick:SetSize(1, 9)
+		UI.paint(tick, "text", 0.9)
+		tick:Hide()
+		cast.ticks[i] = tick
+	end
+	local notch = cast:CreateTexture(nil, "OVERLAY")
+	notch:SetSize(3, 11)
+	notch:SetPoint("CENTER", cast, "LEFT", 0, 0)
+	UI.paint(notch, "accent")
+	notch:Hide()
+	cast.notch = notch
 	cast:Hide()
 	self.cast = cast
 
@@ -524,6 +549,7 @@ function Halo:StartCast(channel)
 	if not Stoa:IsSecret(label) then label = label:gsub(" %- No Text$", "") end
 	cast.spell:SetText(label)
 	cast:SetScript("OnUpdate", nil)
+	self:SetTicks(channel and not Stoa:IsSecret(name) and CHANNEL_TICKS[name] or nil)
 
 	if not Stoa:IsSecret(startMS) and not Stoa:IsSecret(endMS) then
 		cast:SetMinMaxValues(startMS / 1000, endMS / 1000)
@@ -540,6 +566,20 @@ function Halo:StartCast(channel)
 		if getDuration then pcall(cast.SetTimerDuration, cast, getDuration("player")) end
 	end
 	cast:Show()
+end
+
+-- Shows evenly spaced tick marks for a channel of this many ticks.
+function Halo:SetTicks(count)
+	local cast = self.cast
+	for i, tick in ipairs(cast.ticks) do
+		local shown = count and i < count
+		if shown then
+			tick:ClearAllPoints()
+			tick:SetPoint("CENTER", cast, "LEFT", cast:GetWidth() * (count - i) / count, 0)
+		end
+		tick:SetShown(shown and true or false)
+	end
+	cast.notch:SetShown(count and true or false)
 end
 
 function Halo:StopCast()
@@ -565,6 +605,7 @@ end
 -- Lifecycle -----------------------------------------------------------------
 
 function Halo:OnEnable()
+	addTicks(15407, 3) -- Mind Flay
 	self:Build()
 
 	self:UpdateHealth()

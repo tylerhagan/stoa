@@ -44,6 +44,7 @@ local GetActionTexture = api("GetActionTexture")
 local IsUsableAction = api("IsUsableAction")
 local IsActionInRange = api("IsActionInRange")
 local GetActionCount = api("GetActionCount")
+local GetActionInfo = api("GetActionInfo")
 
 local function plain(value)
 	if Stoa:IsSecret(value) then return nil end
@@ -91,6 +92,15 @@ function Bar:MakeButton(name, parent, size)
 	button.size = size
 	button:RegisterForClicks("AnyUp")
 	button:Hide()
+
+	-- An outline behind the button for the suggested next press.
+	local nextRing = button:CreateTexture(nil, "BACKGROUND", nil, -8)
+	nextRing:SetPoint("TOPLEFT", -3, 3)
+	nextRing:SetPoint("BOTTOMRIGHT", 3, -3)
+	nextRing:SetTexture(MASK)
+	UI.tint(nextRing, "accent")
+	nextRing:Hide()
+	button.nextRing = nextRing
 
 	UI.roundPanel(button, 0.9)
 	local icon = button:CreateTexture(nil, "ARTWORK")
@@ -267,6 +277,21 @@ end
 -- change in combat where showing and hiding can't.
 function Bar.RefreshAlpha(button)
 	button:SetAlpha(button.empty and 0 or button.waiting and WAITING_ALPHA or 1)
+end
+
+-- Outlines the button holding the named spell, or none. Spell ranks have
+-- their own IDs, so buttons are matched by name.
+function Bar:SetNext(spellName)
+	for _, button in ipairs(self.all or {}) do
+		local match = false
+		if spellName and button.slot and GetActionInfo and button:IsVisible() then
+			local kind, id = GetActionInfo(button.slot)
+			if kind == "spell" and not Stoa:IsSecret(id) and id then
+				match = C_Spell.GetSpellName(id) == spellName
+			end
+		end
+		button.nextRing:SetShown(match)
+	end
 end
 
 function Bar:UpdateKeys()
