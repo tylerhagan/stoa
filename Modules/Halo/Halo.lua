@@ -188,6 +188,7 @@ function Halo:BuildTarget(frame)
 	-- DEAD, so the plaque always matches what you have targeted.
 	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
 	self.target = target
+	Stoa:RegisterMover("target", target, "Target plaque")
 
 	-- A plaque like the tank watch opposite: the coin faces the Halo.
 	local plaque = UI.plaque(target, "LEFT")
@@ -275,6 +276,7 @@ function Halo:BuildCast(frame)
 	cast.notch = notch
 	cast:Hide()
 	self.cast = cast
+	Stoa:RegisterMover("cast", cast, "Cast bar")
 
 	-- Missing self-buffs, and your seal, under the cast bar.
 	local reminders = UI.caption(frame, "")

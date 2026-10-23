@@ -17,7 +17,7 @@ What works today:
 | Tokens | Bone, Tide and Graphite themes, all colour-blind safe; spacing and type scale |
 | Roles | Maps each dual-spec slot to a role; set it in settings or use the class default |
 | State | World and combat states with a 3 second calm-down |
-| Movers | `/stoa unlock` to drag Stoa frames; positions saved per character |
+| Movers | `/stoa unlock` (or Move frames in settings) to drag the Halo, target plaque, cast bar, combat bar, party, raid, tank watch, click grid and damage meters. A small bar offers Lock, Reset this layout and a grid; arrow keys nudge the chosen frame 1 (Shift 10); right-click puts one back. Spots are saved per role, so healer and damage layouts differ; older saves still apply |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` get invited |
 | Grimoire console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait seal (click to target yourself) with health and mana either side, and a Ready, Journey and Company page. Holds chat on its left page, with leather tabs standing on its top edge, and keeps bags and the game menu in its bottom-right corner. Strips the action bar art. Folds to a spine in combat |
@@ -52,7 +52,7 @@ Fonts are the main gap: see below.
 | --- | --- |
 | `/stoa` | Open settings |
 | `/stoa unlock` | Toggle frame moving |
-| `/stoa reset` | Put moved frames back in their default spots |
+| `/stoa reset` | Put moved frames back in their default spots, in every role |
 | `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, top of screen, nameplates, swing timer, meters) and reload |
 | `/stoa theme` | Cycle Bone, Tide, Graphite |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |

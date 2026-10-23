@@ -101,6 +101,16 @@ local function build()
 		end, "Fifteen bindings per role: five mouse buttons, plain, Shift and Ctrl.", true))
 	end
 
+	-- Move frames
+	header("Move frames")
+	if CreateSettingsButtonInitializer then
+		layout:AddInitializer(CreateSettingsButtonInitializer("Move frames", "Unlock", function()
+			-- Settings covers the screen, so step out of its way first.
+			if not InCombatLockdown() and SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
+			Stoa:ToggleMovers()
+		end, "Drag the Halo, party, raid, target, cast bar and more where you like. Each role keeps its own spots. Arrow keys nudge, right-click puts one back. /stoa unlock", true))
+	end
+
 	-- Roles
 	header("Roles for this character")
 	local roles = { { "AUTO", "Class default" } }
