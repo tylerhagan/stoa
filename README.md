@@ -16,7 +16,7 @@ What works today:
 | Core | Event bus, modules, saved settings (account and per character) |
 | Tokens | Bone, Tide and Graphite themes, all colour-blind safe; spacing and type scale |
 | Roles | Maps each dual-spec slot to a role; set it in settings or use the class default |
-| State | World and combat states with a 3 second calm-down. In combat, party, raid and whisper lines surface for a few seconds just above the folded console |
+| State | World and combat states with a 3 second calm-down |
 | Movers | `/stoa unlock` to drag Stoa frames; positions saved per character |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` get invited |
