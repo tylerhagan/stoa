@@ -3,9 +3,9 @@
 -- working); Stoa changes how they look:
 --   * a flat bar on a dark ground with a fine dark edge, an amber edge on
 --     your target instead of Blizzard's white frame
---   * colour by what you can do, not red/yellow/green: bone for an enemy
---     you haven't pulled, amber once it's fighting you, blue for friends,
---     muted for neutral, tapped or dead; enemy players keep class colour
+--   * colour by what you can do, not red/yellow/green: amber for an enemy,
+--     pale gold for neutral, blue for friends, and grey only for tapped or
+--     dead, as in the base game; enemy players keep class colour
 --   * names and cast text in Stoa's sans with a fine outline
 --   * cast bars on a dark ground with a cropped icon; Blizzard's shield
 --     still marks a cast you can't interrupt
@@ -47,10 +47,8 @@ local function healthToken(frame)
 	if known(UnitIsTapDenied(unit)) and not known(UnitPlayerControlled(unit)) then return "muted", 0.6 end
 	local reaction = known(UnitReaction(unit, "player"))
 	if reaction and reaction >= 5 then return "mana" end
-	if reaction == 4 then return "muted" end
-	local fighting = CompactUnitFrame_IsOnThreatListWithPlayer and known(CompactUnitFrame_IsOnThreatListWithPlayer(unit))
-	if fighting then return "danger" end
-	return "health"
+	if reaction == 4 then return "accent" end
+	return "danger"
 end
 
 local function colourHealth(frame)
@@ -114,7 +112,7 @@ local function targetEdge(frame)
 	local edge = frame.stoaTargetEdge
 	if not edge then return end
 	if frame.IsTarget and frame:IsTarget() then
-		edge:Set(Stoa:Color("accent"))
+		edge:Set(Stoa:Color("text"))
 	else
 		edge:Clear()
 	end
@@ -194,13 +192,6 @@ function Plates:OnEnable()
 	else
 		Stoa:On("NAME_PLATE_UNIT_ADDED", function(unit) C_Timer.After(0, function() guarded(Plates.Added, Plates, unit) end) end)
 	end
-	-- Fighting status changes without a health update.
-	Stoa:On("UNIT_THREAT_LIST_UPDATE", function(unit)
-		if type(unit) ~= "string" or not unit:find("^nameplate") then return end
-		local plate = C_NamePlate.GetNamePlateForUnit(unit)
-		local frame = plate and plate.UnitFrame
-		if frame then guarded(colourHealth, frame) end
-	end)
 	Stoa:On("STOA_THEME_CHANGED", function()
 		for _, plate in ipairs(C_NamePlate.GetNamePlates() or {}) do
 			local frame = plate.UnitFrame
