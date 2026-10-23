@@ -46,7 +46,24 @@ local function build()
 	checkbox(Stoa.modules.Grimoire.db, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and Stoa's notes appear in chat. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Minimap.db, "enabled", "Style the minimap", "Rings in the theme colours, serif zone name, wheel to zoom. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.ActionBars.db, "enabled", "Rounded action buttons", "Rounded-square icons with a hairline edge, dim sockets for empty slots. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.CombatBar.db, "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before. Takes effect after /reload.", true)
+	local rowChoices = { { "1", "Main bar only" }, { "2", "Main + bottom-left" }, { "3", "Main + both bottom bars" } }
+	local function relayout() Stoa:AfterCombat(function() Stoa.modules.CombatBar:Layout() end) end
+	dropdown(Stoa.modules.CombatBar.db, "rows", "Combat rows", "How many rows show under the Halo in combat when you tank or deal damage. Each extra row is a step smaller and shows only the buttons you've filled.", "2", rowChoices, relayout)
+	dropdown(Stoa.modules.CombatBar.db, "healerRows", "Combat rows when healing", "The same, for healing. One keeps the group frames close under your spells.", "1", rowChoices, relayout)
+	checkbox(Stoa.modules.ActionBars.db, "combatHide", "Hand the bars to the Halo in combat", "With the combat bar on, the console's action bars step aside in combat and only the compact bar under the Halo shows. Your keybinds keep working.", true, function(_, value)
+		Stoa.modules.ActionBars:SetOption("combatHide", value)
+	end)
+	checkbox(Stoa.modules.ActionBars.db, "hoverTray", "Extra rows on mouseover", "Out of combat only your main bar shows in the console; the other rows come up while you mouse over the bars. Off shows every row out of combat.", false, function(_, value)
+		Stoa.modules.ActionBars:SetOption("hoverTray", value)
+	end)
 	checkbox(Stoa.modules.Windows.db, "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on Stoa's dark panels with light text. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Top.db, "enabled", "Restyle the top of the screen", "Buffs as cropped icons with quiet timers, the quest tracker in Stoa's type without the gold bars, and the minimap's zone header on a dark panel with its buttons waiting for the mouse. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Plates.db, "enabled", "Restyle nameplates", "Flat bars coloured by what you can do: amber for enemies, pale gold for neutral, blue for friends, and grey only for tapped or dead. A bone edge marks your target. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Meters.db, "enabled", "Restyle the damage meter", "Blizzard's damage and healing meters as words over the world with no panel: faint bone bars, your own bar in the accent, class colour on names only. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Meters.db, "place", "Meters in the top-left corner", "Every meter window shown sits side by side in one strip flush with the top-left corner of the screen, the same size, in and out of combat. Off leaves them where Edit Mode and your dragging put them.", true, function(_, value)
+		if value then Stoa.modules.Meters:Place() end
+	end)
 	checkbox(Stoa.modules.Grimoire.db, "houseMenu", "Bags and menu in the console corner", "Moves the bag slots and game menu off the action bar row into the console's bottom-right corner, quiet until you mouse over them. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Grimoire.db, "hideBarArt", "Hide action bar art", "Removes the gryphons and border so the bar sits on the ink. Takes effect after /reload.", true)
 
@@ -58,6 +75,9 @@ local function build()
 	checkbox(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The seal and the Halo show the same. Also hides Blizzard's cast bar. Takes effect after /reload.", true)
 	checkbox(halo, "hideTargetFrame", "Hide Blizzard's target frame", "Stoa shows your target beside the Halo. Takes effect after /reload.", true)
 	checkbox(party, "enabled", "Show Stoa party cards", "Large beside the Halo when you heal, compact on the left otherwise. Takes effect after /reload.", true)
+	checkbox(party, "quietCards", "Quiet group frames when not healing", "Tanking or dealing damage, party and raid cards show health and only the words you can act on: a debuff you can dispel, dead or offline. No buff words.", true, function()
+		if Stoa.modules.Party.cards then Stoa.modules.Party:UpdateAll() end
+	end)
 	checkbox(party, "hideBlizzardParty", "Hide Blizzard's party frames", "Takes effect after /reload.", true)
 	local raid = Stoa.modules.Raid.db
 	checkbox(raid, "enabled", "Show Stoa raid frames", "A grid of compact cards, one column per group. Takes effect after /reload.", true)
@@ -80,6 +100,17 @@ local function build()
 			Stoa:UpdateRole()
 		end)
 	end
+
+	-- Comforts
+	local comforts = Stoa.modules.Comforts.db
+	header("Comforts")
+	checkbox(comforts, "fastLoot", "Faster loot", "With auto loot on, everything lands in your bags the moment the loot window would open. Hold Shift to see the window.", true)
+	checkbox(comforts, "farCamera", "Pull the camera further out", "Raises the camera's maximum zoom distance.", true, function() Stoa.modules.Comforts:Camera() end)
+	checkbox(comforts, "skipGossip", "Skip one-option gossip", "When an NPC has no quests and only one thing to say, Stoa picks it for you. Hold Shift to stop.", true)
+	checkbox(comforts, "acceptQuests", "Accept quests", "Picks up offered quests. Hold Shift to read one first.", false)
+	checkbox(comforts, "turnInQuests", "Hand in quests", "Hands in finished quests. A quest with a choice of reward always waits for you. Hold Shift to stop.", false)
+	checkbox(comforts, "skipCinematics", "Skip cinematics", "Cancels cinematics and movies as they start. Hold Shift to watch.", false)
+	checkbox(comforts, "quietErrors", "Quiet errors in combat", "Hides the red \"Not enough mana\" and \"Out of range\" text while you fight; it comes back after.", false)
 
 	-- Merchant
 	local merchant = Stoa.modules.Merchant.db
@@ -130,5 +161,8 @@ Stoa.commands.safe = function()
 	end
 	if m.ActionBars then m.ActionBars.db.enabled = false end
 	if m.Windows then m.Windows.db.enabled = false end
+	if m.Meters then m.Meters.db.enabled = false end
+	if m.Top then m.Top.db.enabled = false end
+	if m.Plates then m.Plates.db.enabled = false end
 	ReloadUI()
 end

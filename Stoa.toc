@@ -23,6 +23,7 @@ Core\Widgets.lua
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
 Modules\QoL\Merchant.lua
+Modules\QoL\Comforts.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
@@ -30,6 +31,8 @@ Modules\Grimoire\Minimap.lua
 
 Modules\Halo\Halo.lua
 Modules\Halo\Party.lua
+Modules\Halo\CombatBar.lua
+Modules\Halo\Shadow.lua
 
 Modules\Frames\ClickCast.lua
 Modules\Frames\Raid.lua
@@ -38,5 +41,8 @@ Modules\Frames\Preview.lua
 
 Modules\Skins\ActionBars.lua
 Modules\Skins\Windows.lua
+Modules\Skins\Meters.lua
+Modules\Skins\Top.lua
+Modules\Skins\Plates.lua
 
 Config\Settings.lua

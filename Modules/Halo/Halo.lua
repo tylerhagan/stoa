@@ -53,6 +53,14 @@ local REMINDERS = {
 	},
 }
 
+-- Channels whose ticks are worth seeing, by spell name: Mind Flay does
+-- most of its damage on the last of three, so it shouldn't be clipped.
+local CHANNEL_TICKS = {}
+local function addTicks(spellID, count)
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+	if name then CHANNEL_TICKS[name] = count end
+end
+
 local function knows(spellID)
 	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
 	return IsSpellKnown and IsSpellKnown(spellID) or false
@@ -150,20 +158,23 @@ function Halo:BuildSignature(frame)
 end
 
 -- The target sits at the Halo's upper right, opposite the tank watch, on a
--- card: name, a bar, health and the hostile and threat words, and a row
--- of auras under it. Like the cast bar it is parented to UIParent, so
+-- plaque with its portrait coin: level and kind, name and health, an
+-- engraved bar, the hostile and threat words, and a row of auras under it.
+-- Elite and rare targets get a doubled gold or a silver line and the word. Like the cast bar it is parented to UIParent, so
 -- it stays with you out of combat as well. It's a secure unit button, so
 -- right click opens the unit menu (focus, invite, inspect, trade) like
--- Blizzard's target frame; the game shows and hides it with the target.
-local TARGET_WIDTH = 240
-local TARGET_PAD = 9
+-- Blizzard's target frame.
+local TARGET_WIDTH = 268
+local TARGET_PAD = 12
+-- Room on the left for the half of the coin inside the plaque.
+local TARGET_COIN_SPACE = 40
 
 function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
-	target:SetSize(TARGET_WIDTH, 68)
+	target:SetSize(TARGET_WIDTH, 84)
 	-- Over your head it fought with the game's own nameplate.
-	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 28, 36)
+	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 	target:SetAttribute("unit", "target")
 	target:SetAttribute("type1", "target")
 	target:SetAttribute("type2", "togglemenu")
@@ -173,28 +184,36 @@ function Halo:BuildTarget(frame)
 		GameTooltip:SetUnit("target")
 	end)
 	target:SetScript("OnLeave", GameTooltip_Hide)
-	RegisterUnitWatch(target)
+	-- Any target, in or out of combat. A dead one stays, dimmed and saying
+	-- DEAD, so the plaque always matches what you have targeted.
+	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
 	self.target = target
 
-	-- On a card like the tank watch opposite, so it reads over snow and sky.
-	UI.roundPanel(target, 0.92)
-	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "LEFT")
-	name:SetPoint("TOPLEFT", TARGET_PAD, -TARGET_PAD)
-	name:SetWidth(TARGET_WIDTH - TARGET_PAD * 2 - 60)
-	name:SetWordWrap(false)
+	-- A plaque like the tank watch opposite: the coin faces the Halo.
+	local plaque = UI.plaque(target, "LEFT")
+	target.plaque = plaque
+	local left = TARGET_COIN_SPACE
+	local caption = UI.caption(target, "")
+	caption:SetPoint("TOPLEFT", left, -TARGET_PAD)
 	-- Hostile targets get a word as well as a colour.
 	local cue = UI.caption(target, "")
-	cue:SetPoint("TOPRIGHT", -TARGET_PAD, -TARGET_PAD - 3)
-	local hp = UI.bar(target, TARGET_WIDTH - TARGET_PAD * 2, 4, "health")
-	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -6)
-	local health = UI.text(target, "sans", Stoa.typeSize.body, "muted", "LEFT")
-	health:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
+	cue:SetPoint("TOPRIGHT", -TARGET_PAD, -TARGET_PAD)
+	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "LEFT")
+	name:SetPoint("TOPLEFT", caption, "BOTTOMLEFT", 0, -4)
+	name:SetWidth(TARGET_WIDTH - left - TARGET_PAD - 40)
+	name:SetWordWrap(false)
+	local health = UI.text(target, "serif", Stoa.typeSize.title, "text", "RIGHT")
+	health:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
+	local barWidth = TARGET_WIDTH - left - TARGET_PAD
+	local hp = UI.bar(target, barWidth, 4, "health")
+	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
+	UI.engrave(hp, barWidth)
 	-- Threat, in words: tanks hear when they are losing it, everyone else
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
-	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -5)
+	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -6)
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
-	target.threat = threat
+	target.threat, target.caption = threat, caption
 
 	-- Auras: on a friend, their buffs, yours first; on an enemy, the
 	-- debuffs you put there. Rounded icons with a sweep for time left.
@@ -237,6 +256,23 @@ function Halo:BuildCast(frame)
 	local spell = UI.text(cast, "italic", Stoa.typeSize.label, "text", "CENTER")
 	spell:SetPoint("BOTTOM", cast, "TOP", 0, 4)
 	cast.spell = spell
+	-- Tick marks for channels whose ticks matter. The bar drains towards
+	-- the left, so each tick lands where the fill edge will be; the last
+	-- tick, at the left end, gets a notch of its own.
+	cast.ticks = {}
+	for i = 1, 2 do
+		local tick = cast:CreateTexture(nil, "OVERLAY")
+		tick:SetSize(1, 9)
+		UI.paint(tick, "text", 0.9)
+		tick:Hide()
+		cast.ticks[i] = tick
+	end
+	local notch = cast:CreateTexture(nil, "OVERLAY")
+	notch:SetSize(3, 11)
+	notch:SetPoint("CENTER", cast, "LEFT", 0, 0)
+	UI.paint(notch, "accent")
+	notch:Hide()
+	cast.notch = notch
 	cast:Hide()
 	self.cast = cast
 
@@ -311,7 +347,29 @@ function Halo:UpdateTarget()
 	target.name:SetText(UnitName("target"))
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
-	target.health:SetText(UnitHealth("target"))
+	UI.setHealthPercent(target.health, "target")
+	SetPortraitTexture(target.plaque.portrait, "target")
+
+	-- Level and kind on the caption; elite and rare say so and change the
+	-- plaque's line.
+	local function plain(value)
+		if Stoa:IsSecret(value) then return nil end
+		return value
+	end
+	local rank = plain(UnitClassification("target"))
+	local level = plain(UnitLevel("target"))
+	local kind = plain(UnitCreatureType("target"))
+	local words = {}
+	if rank == "elite" or rank == "worldboss" then words[#words + 1] = "ELITE" end
+	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
+	if level then words[#words + 1] = "LEVEL " .. (level < 0 and "??" or level) end
+	if kind and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end
+	target.caption:SetText(table.concat(words, " · "))
+	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
+		or (rank == "elite" or rank == "worldboss") and "elite" or nil
+	target.plaque:SetRank(plaqueRank)
+	target.caption:SetTextColor(Stoa:Color(plaqueRank and "accent" or "muted"))
+	if plaqueRank == "rare" then target.caption:SetTextColor(0.79, 0.8, 0.82) end
 
 	-- A dead target says so in words and steps back, rather than reading as
 	-- a hostile at zero.
@@ -367,7 +425,7 @@ function Halo:UpdateTargetAuras()
 	end
 	-- The row hangs under the card, from its inner edge.
 	icons[1]:ClearAllPoints()
-	icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", 0, -6)
+	icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
 	for i, icon in ipairs(icons) do
 		local aura = found[i]
 		if aura then
@@ -490,6 +548,7 @@ function Halo:StartCast(channel)
 	if not Stoa:IsSecret(label) then label = label:gsub(" %- No Text$", "") end
 	cast.spell:SetText(label)
 	cast:SetScript("OnUpdate", nil)
+	self:SetTicks(channel and not Stoa:IsSecret(name) and CHANNEL_TICKS[name] or nil)
 
 	if not Stoa:IsSecret(startMS) and not Stoa:IsSecret(endMS) then
 		cast:SetMinMaxValues(startMS / 1000, endMS / 1000)
@@ -506,6 +565,20 @@ function Halo:StartCast(channel)
 		if getDuration then pcall(cast.SetTimerDuration, cast, getDuration("player")) end
 	end
 	cast:Show()
+end
+
+-- Shows evenly spaced tick marks for a channel of this many ticks.
+function Halo:SetTicks(count)
+	local cast = self.cast
+	for i, tick in ipairs(cast.ticks) do
+		local shown = count and i < count
+		if shown then
+			tick:ClearAllPoints()
+			tick:SetPoint("CENTER", cast, "LEFT", cast:GetWidth() * (count - i) / count, 0)
+		end
+		tick:SetShown(shown and true or false)
+	end
+	cast.notch:SetShown(count and true or false)
 end
 
 function Halo:StopCast()
@@ -531,6 +604,7 @@ end
 -- Lifecycle -----------------------------------------------------------------
 
 function Halo:OnEnable()
+	addTicks(15407, 3) -- Mind Flay
 	self:Build()
 
 	self:UpdateHealth()

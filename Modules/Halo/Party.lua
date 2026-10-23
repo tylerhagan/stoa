@@ -13,7 +13,14 @@ local UI = Stoa.UI
 
 local Party = Stoa:NewModule("Party", {
 	hideBlizzardParty = true,
+	-- When not healing, cards show health, and words only for what you can
+	-- act on: a debuff you can dispel, dead or offline.
+	quietCards = true,
 })
+
+function Party:Quiet()
+	return self.db.quietCards and Stoa:GetRole() ~= "HEALER"
+end
 
 local UNITS = { "player", "party1", "party2", "party3", "party4" }
 local WORLD_ALPHA = 1
@@ -96,7 +103,10 @@ function Party:Layout()
 	if not Stoa.char.positions.party then
 		frame:ClearAllPoints()
 		if layout.row and halo then
-			frame:SetPoint("TOP", halo, "BOTTOM", 0, -52)
+			-- In combat under the combat bar when there is one; otherwise,
+			-- and with the console open, just under the Halo's cast line.
+			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa:CombatLayout()
+			frame:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and Stoa.modules.CombatBar:GroupOffset() or -52)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 		else
@@ -216,21 +226,9 @@ local function healthFraction(unit)
 	return health / max
 end
 
--- The percent in the card's corner. Newer clients hand out a percent that
--- is safe to show even when it's secret; otherwise it's worked out, and
--- failing both the plain health is shown.
+-- The percent in the card's corner.
 local function setPercent(fs, unit, fraction)
-	if fraction then
-		fs:SetText(math.floor(fraction * 100 + 0.5))
-		return
-	end
-	if UnitHealthPercent and CurveConstants and CurveConstants.ScaleTo100 then
-		local ok = pcall(function()
-			fs:SetFormattedText("%d", UnitHealthPercent(unit, true, CurveConstants.ScaleTo100))
-		end)
-		if ok then return end
-	end
-	fs:SetText(UnitHealth(unit))
+	UI.setHealthPercent(fs, unit, fraction)
 end
 
 function Party:UpdateCard(card)
@@ -261,8 +259,10 @@ function Party:UpdateCard(card)
 	else
 		setPercent(card.percent, unit, fraction)
 		if dispel then pips[#pips + 1] = { dispel.word, dispel.token } end
-		if low then pips[#pips + 1] = { "LOW", "danger" } end
-		self:AuraPips(unit, pips)
+		if not self:Quiet() then
+			if low then pips[#pips + 1] = { "LOW", "danger" } end
+			self:AuraPips(unit, pips)
+		end
 	end
 	UI.setPips(card, pips)
 
@@ -270,6 +270,13 @@ function Party:UpdateCard(card)
 	local r, g, b = Stoa:Color(low and "danger" or "health")
 	card.hp:SetStatusBarColor(r, g, b)
 	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+	if gone then
+		UI.cellWord(card, gone, "muted")
+	elseif dispel then
+		UI.cellWord(card, dispel.word, dispel.token)
+	elseif low then
+		UI.cellWord(card, "LOW", "danger")
+	end
 
 	card.glow:Clear()
 	if dispel then
@@ -408,10 +415,13 @@ end
 -- For healers: a card beside the Halo's upper left naming who you're keeping alive, with
 -- a health word, a thin bar with their shields, and your buffs on them.
 -- It watches your focus if you have a friendly one, else the group's tank.
--- It shows with the Halo in combat, and in the /stoa test preview.
+-- It shows with the Halo in combat, and in the /stoa test preview. Your
+-- click-casting bindings work on it in combat.
 
-local WATCH_WIDTH = 220
-local WATCH_PAD = 9
+local WATCH_WIDTH = 214
+local WATCH_PAD = 14
+-- Room on the right for the half of the coin inside the plaque.
+local WATCH_COIN_SPACE = 40
 local HURT_HEALTH = 0.7
 
 local function watchedUnit()
@@ -436,13 +446,13 @@ end
 function Party:BuildWatch()
 	local watch = CreateFrame("Frame", "StoaTankWatch", UIParent)
 	watch:SetFrameStrata("LOW")
-	-- On a card like the party's, so it reads over snow and sky alike.
-	watch:SetSize(WATCH_WIDTH + WATCH_PAD * 2, 64)
-	UI.roundPanel(watch, 0.92)
+	watch:SetSize(WATCH_WIDTH + WATCH_PAD + WATCH_COIN_SPACE, 84)
+	-- A plaque like the target opposite: the coin faces the Halo.
+	local plaque = UI.plaque(watch, "RIGHT")
+	watch.plaque = plaque
 	local halo = _G.StoaHalo
 	if halo then
-		-- Upper left of the Halo; the target has the space over your head.
-		watch:SetPoint("BOTTOMRIGHT", halo, "LEFT", -28, 36)
+		watch:SetPoint("BOTTOMRIGHT", halo, "LEFT", -52, 36)
 	else
 		watch:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
 	end
@@ -452,33 +462,78 @@ function Party:BuildWatch()
 	local label = UI.caption(watch, "Watching")
 	label:SetPoint("TOPLEFT", WATCH_PAD, -WATCH_PAD)
 	local word = UI.caption(watch, "")
-	word:SetPoint("TOPRIGHT", -WATCH_PAD, -WATCH_PAD)
-	local name = UI.text(watch, "serif", Stoa.typeSize.label + 2, "text", "LEFT")
-	name:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -3)
+	word:SetPoint("TOPRIGHT", -WATCH_COIN_SPACE, -WATCH_PAD)
+	local name = UI.text(watch, "serif", Stoa.typeSize.title, "text", "LEFT")
+	name:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
 	name:SetWidth(WATCH_WIDTH - 50)
 	name:SetWordWrap(false)
-	local percent = UI.text(watch, "serif", Stoa.typeSize.label + 2, "text", "RIGHT")
-	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -3)
-	local hp = UI.bar(watch, WATCH_WIDTH, 3, "health")
+	local percent = UI.text(watch, "serif", Stoa.typeSize.title, "text", "RIGHT")
+	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -4)
+	local hp = UI.bar(watch, WATCH_WIDTH, 4, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
 	hp:SetClipsChildren(true)
 	local absorb = CreateFrame("StatusBar", nil, hp)
 	absorb:SetStatusBarTexture(UI.WHITE)
 	absorb:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
-	absorb:SetSize(WATCH_WIDTH, 3)
+	absorb:SetSize(WATCH_WIDTH, 4)
 	absorb:SetStatusBarColor(Stoa:Color("shield"))
-	local buffs = UI.text(watch, "sans", Stoa.typeSize.caption, "text", "LEFT")
-	buffs:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -5)
+	UI.engrave(hp, WATCH_WIDTH)
+	local buffs = UI.caption(watch, "")
+	buffs:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -6)
+	watch.label = label
 
 	watch.name, watch.percent, watch.word, watch.hp = name, percent, word, hp
 	watch.absorb, watch.buffs = absorb, buffs
 	self.watch = watch
 	Stoa:RegisterMover("tankwatch", watch, "Tank watch")
+	self:BuildWatchClicks(watch)
+end
+
+-- Your click-casting bindings work on the watch card just as on the party
+-- cards. The card itself fades, so the clicks live on a secure button laid
+-- over it that the game shows only in combat while its unit exists. Its
+-- unit can only change out of combat.
+function Party:BuildWatchClicks(watch)
+	local clicker = CreateFrame("Button", "StoaTankWatchClicks", UIParent, "SecureUnitButtonTemplate")
+	clicker:SetFrameStrata("LOW")
+	clicker:SetFrameLevel(watch:GetFrameLevel() + 5)
+	clicker:SetAllPoints(watch)
+	clicker:SetAttribute("type1", "target")
+	clicker:SetAttribute("type2", "togglemenu")
+	clicker:RegisterForClicks("AnyUp")
+	clicker:SetScript("OnEnter", function(button)
+		local unit = button:GetAttribute("unit")
+		if unit and UnitExists(unit) then
+			GameTooltip_SetDefaultAnchor(GameTooltip, button)
+			GameTooltip:SetUnit(unit)
+		end
+	end)
+	clicker:SetScript("OnLeave", GameTooltip_Hide)
+	clicker:Hide()
+	self.clicker = clicker
+	Stoa:RegisterClickFrame(clicker)
+end
+
+-- false means nobody: the button stays hidden.
+function Party:SetClickUnit(unit)
+	if self.clickUnit == unit or not self.clicker or InCombatLockdown() then return end
+	self.clickUnit = unit
+	local clicker = self.clicker
+	UnregisterStateDriver(clicker, "visibility")
+	if unit then
+		clicker:SetAttribute("unit", unit)
+		RegisterStateDriver(clicker, "visibility", "[combat,@" .. unit .. ",exists] show; hide")
+	else
+		clicker:SetAttribute("unit", nil)
+		clicker:Hide()
+	end
 end
 
 -- Fills the watch from sample data, for the /stoa test preview.
 function Party:PreviewWatch()
 	local watch = self.watch
+	watch.label:SetText("WATCHING · TANK")
+	SetPortraitTexture(watch.plaque.portrait, "player")
 	watch.name:SetText("Brunhok")
 	watch.name:SetTextColor(Stoa:Color("text"))
 	watch.percent:SetText("62")
@@ -489,7 +544,7 @@ function Party:PreviewWatch()
 	watch.hp:SetStatusBarColor(Stoa:Color("health"))
 	watch.absorb:SetMinMaxValues(0, 100)
 	watch.absorb:SetValue(14)
-	watch.buffs:SetText("SHIELD 12  ·  RENEW")
+	watch.buffs:SetText("SHIELD 12 · RENEW")
 end
 
 function Party:UpdateWatch()
@@ -498,7 +553,14 @@ function Party:UpdateWatch()
 	local healer = Stoa:GetRole() == "HEALER"
 	local previewing = Stoa.previewing and healer
 	local unit = healer and watchedUnit()
+	-- In combat the card keeps showing whoever its clicks are set to, so
+	-- what you see is always who you heal. A new focus takes over after.
+	if InCombatLockdown() and self.clickUnit ~= nil then
+		unit = self.clickUnit or nil
+		if unit and not UnitExists(unit) then unit = nil end
+	end
 	self.watchedUnit = unit
+	self:SetClickUnit(healer and watchedUnit() or false)
 
 	local shown = previewing or (unit and Stoa:GetState() == Stoa.STATE_COMBAT)
 	if not shown then
@@ -508,6 +570,7 @@ function Party:UpdateWatch()
 	end
 	if not watch.shown then UI.fade(watch, 1, 0.2) end
 	watch.shown = true
+	watch.plaque:SetRank(nil)
 	if previewing and not unit then
 		self:PreviewWatch()
 		return
@@ -515,6 +578,8 @@ function Party:UpdateWatch()
 
 	watch.name:SetText(UnitName(unit))
 	watch.name:SetTextColor(UI.classColor(unit))
+	watch.label:SetText(unit == "focus" and "WATCHING · FOCUS" or "WATCHING · TANK")
+	SetPortraitTexture(watch.plaque.portrait, unit)
 	UI.setUnitBar(watch.hp, unit, "health")
 
 	local fraction = healthFraction(unit)
@@ -542,7 +607,7 @@ function Party:UpdateWatch()
 	self:AuraPips(unit, pips)
 	local words = {}
 	for i, pip in ipairs(pips) do words[i] = pip[1] end
-	watch.buffs:SetText(table.concat(words, "  ·  "))
+	watch.buffs:SetText(table.concat(words, " · "))
 end
 
 local function cardFor(self, unit)
@@ -573,6 +638,9 @@ function Party:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		Stoa:AfterCombat(function() self:Layout() end)
 	end)
+	Stoa:On("STOA_COMBAT_LAYOUT", function()
+		if not InCombatLockdown() then self:Layout() end
+	end)
 	Stoa:On("STOA_STATE_CHANGED", function()
 		self:UpdateAll()
 		self:UpdateGrid()
@@ -582,7 +650,10 @@ function Party:OnEnable()
 		self:UpdateGrid()
 		self:UpdateWatch()
 	end)
-	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateWatch() end)
+	Stoa:On("STOA_ROLE_CHANGED", function()
+		self:UpdateWatch()
+		self:UpdateAll()
+	end)
 	Stoa:On("PLAYER_FOCUS_CHANGED", function() self:UpdateWatch() end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function()
 		self:UpdateAll()

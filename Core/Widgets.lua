@@ -184,6 +184,9 @@ UI.CARD_STYLES = {
 	party = { pad = 9, name = 16, bar = 12, pip = 16, pipFont = 11, gap = 6 },
 	compact = { pad = 7, name = 14, bar = 8, pip = 14, pipFont = 10, gap = 5 },
 	raid = { pad = 7, name = 15, bar = 9, pip = 14, pipFont = 10, gap = 5 },
+	-- The compact raid cell: health fills the cell behind the name, and one
+	-- word or the percent sits on the right.
+	cell = { pad = 5, name = 11, cell = true },
 }
 
 local MAX_PIPS = 3
@@ -205,7 +208,7 @@ end
 -- keep their shape at any size. Clients without slicing get square ones.
 local CARD_SLICE = 12
 
-local function sliced(parent, layer, file, outset)
+local function sliced(parent, layer, file, outset, margin)
 	if not parent.CreateTexture then return nil end
 	local tex = parent:CreateTexture(nil, layer)
 	if not tex.SetTextureSliceMargins then
@@ -213,7 +216,8 @@ local function sliced(parent, layer, file, outset)
 		return nil
 	end
 	tex:SetTexture(UI.MEDIA .. "Textures\\" .. file)
-	tex:SetTextureSliceMargins(CARD_SLICE, CARD_SLICE, CARD_SLICE, CARD_SLICE)
+	margin = margin or CARD_SLICE
+	tex:SetTextureSliceMargins(margin, margin, margin, margin)
 	if tex.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
 		tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
 	end
@@ -237,6 +241,58 @@ function UI.roundBorder(frame, file, size, outset)
 		end,
 		Clear = function() tex:Hide() end,
 	}
+end
+
+-- Small rounded pieces for thin bars (nameplates): a filled pill behind
+-- the bar and a 1px rounded outline that can be set and cleared like
+-- UI.border. Square where slicing isn't available.
+local PLATE_SLICE = 5
+
+function UI.pillFill(frame, outset)
+	local tex = sliced(frame, "BACKGROUND", "PlateFill.tga", outset, PLATE_SLICE)
+	if not tex then
+		tex = frame:CreateTexture(nil, "BACKGROUND")
+		tex:SetColorTexture(1, 1, 1)
+		tex:SetPoint("TOPLEFT", -outset, outset)
+		tex:SetPoint("BOTTOMRIGHT", outset, -outset)
+	end
+	tex:SetDrawLayer("BACKGROUND", -8)
+	return tex
+end
+
+function UI.pillEdge(frame, outset)
+	local tex = sliced(frame, "OVERLAY", "PlateEdge.tga", outset, PLATE_SLICE)
+	if not tex then return UI.border(frame, 1, outset) end
+	tex:Hide()
+	return {
+		edges = { tex },
+		Set = function(_, r, g, b, a)
+			tex:SetVertexColor(r, g, b, a or 1)
+			tex:Show()
+		end,
+		Clear = function() tex:Hide() end,
+	}
+end
+
+-- Blizzard's collapse buttons as a quiet minus or plus that warms to the
+-- accent under the mouse. Returns a function taking the collapsed state.
+function UI.foldGlyph(button)
+	local function plain()
+		for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture" }) do
+			local tex = button[getter] and button[getter](button)
+			if tex then tex:SetAlpha(0) end
+		end
+	end
+	local glyph = button:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(glyph, "sans", Stoa.typeSize.label)
+	glyph:SetPoint("CENTER", 0, 1)
+	glyph:SetTextColor(Stoa:Color("muted"))
+	button:HookScript("OnEnter", function() glyph:SetTextColor(Stoa:Color("accent")) end)
+	button:HookScript("OnLeave", function() glyph:SetTextColor(Stoa:Color("muted")) end)
+	return function(collapsed)
+		plain()
+		glyph:SetText(collapsed and "+" or "–")
+	end
 end
 
 -- A rounded panel with a hairline edge behind a whole frame, for windows
@@ -312,12 +368,127 @@ function UI.unitCard(card, styleName)
 	UI.applyTheme()
 end
 
+-- A plaque: the tank watch and the target, dressed as small pieces of the
+-- console so they read as yours rather than as party cards. Warm leather,
+-- a gold hairline with a fainter one inside, a soft emboss, and a portrait
+-- coin on the side that faces the Halo.
+local PLAQUE_FILL = { 0.11, 0.096, 0.083, 0.95 }
+local SILVER = { 0.79, 0.8, 0.82 }
+local COIN = 52
+
+function UI.plaque(frame, coinSide)
+	local plaque = {}
+	local fill = sliced(frame, "BACKGROUND", "CardFill.tga")
+	if fill then
+		fill:SetVertexColor(unpack(PLAQUE_FILL))
+	else
+		fill = frame:CreateTexture(nil, "BACKGROUND")
+		fill:SetAllPoints()
+		fill:SetColorTexture(unpack(PLAQUE_FILL))
+	end
+	-- The emboss: light catching the top edge, shadow under the bottom.
+	local light = frame:CreateTexture(nil, "BORDER")
+	light:SetColorTexture(1, 0.94, 0.82, 0.06)
+	light:SetHeight(1)
+	light:SetPoint("TOPLEFT", 10, -1)
+	light:SetPoint("TOPRIGHT", -10, -1)
+	local shade = frame:CreateTexture(nil, "BORDER")
+	shade:SetColorTexture(0, 0, 0, 0.5)
+	shade:SetHeight(1)
+	shade:SetPoint("BOTTOMLEFT", 10, 1)
+	shade:SetPoint("BOTTOMRIGHT", -10, 1)
+
+	local outer = sliced(frame, "BORDER", "CardEdge.tga")
+	local inner = sliced(frame, "BORDER", "CardEdge.tga", -5)
+	plaque.lines = { outer, inner }
+
+	-- The coin straddles the edge that faces the Halo.
+	local coin = CreateFrame("Frame", nil, frame)
+	coin:SetSize(COIN, COIN)
+	coin:SetPoint("CENTER", frame, coinSide, coinSide == "LEFT" and 1 or -1, 0)
+	coin:SetFrameLevel(frame:GetFrameLevel() + 3)
+	local gap = UI.circle(coin, "BACKGROUND", 0, COIN)
+	gap:SetPoint("CENTER")
+	gap:SetColorTexture(unpack(PLAQUE_FILL))
+	local ring = UI.circle(coin, "BORDER", 0, COIN - 6)
+	ring:SetPoint("CENTER")
+	ring:SetColorTexture(1, 1, 1)
+	local portrait = UI.circle(coin, "ARTWORK", 0, COIN - 10)
+	portrait:SetPoint("CENTER")
+	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
+
+	-- Gold for everyone; elite doubles the gold, rare turns it silver.
+	function plaque:SetRank(rank)
+		local r, g, b = Stoa:Color("accent")
+		if rank == "rare" then r, g, b = unpack(SILVER) end
+		local strong = rank == "elite" or rank == "rare"
+		if outer then outer:SetVertexColor(r, g, b, strong and 1 or 0.55) end
+		if inner then inner:SetVertexColor(r, g, b, strong and 0.7 or 0.16) end
+		ring:SetVertexColor(r, g, b, 1)
+	end
+	plaque:SetRank(nil)
+	return plaque
+end
+
+-- Health as a whole percent. Combat health can be secret: newer clients
+-- hand out a percent that is safe to show; failing that, the plain health.
+function UI.setHealthPercent(fs, unit, fraction)
+	if not fraction then
+		local health, max = UnitHealth(unit), UnitHealthMax(unit)
+		if not Stoa:IsSecret(health) and not Stoa:IsSecret(max) and max and max > 0 then
+			fraction = health / max
+		end
+	end
+	if fraction then
+		fs:SetText(math.floor(fraction * 100 + 0.5))
+		return
+	end
+	if UnitHealthPercent and CurveConstants and CurveConstants.ScaleTo100 then
+		local ok = pcall(function()
+			fs:SetFormattedText("%d", UnitHealthPercent(unit, true, CurveConstants.ScaleTo100))
+		end)
+		if ok then return end
+	end
+	fs:SetText(UnitHealth(unit))
+end
+
+-- Fine engraved ticks at a quarter, half and three quarters of a bar.
+function UI.engrave(bar, width)
+	for _, at in ipairs({ 0.25, 0.5, 0.75 }) do
+		local tick = bar:CreateTexture(nil, "OVERLAY", nil, 7)
+		tick:SetColorTexture(0.07, 0.08, 0.09, 0.85)
+		tick:SetWidth(1)
+		tick:SetPoint("TOP", bar, "TOPLEFT", width * at, 0)
+		tick:SetPoint("BOTTOM", bar, "BOTTOMLEFT", width * at, 0)
+	end
+end
+
 -- Lays out a card's insides for a style. Out of combat for party cards,
 -- since the sizes follow the role.
 function UI.styleCard(card, styleName)
 	local style = UI.CARD_STYLES[styleName] or UI.CARD_STYLES.party
 	card.style = style
 	local pad = style.pad
+	if style.cell then
+		Stoa:SetFont(card.name, "sans", style.name, "")
+		card.name:ClearAllPoints()
+		card.name:SetPoint("LEFT", pad, 0)
+		card.name:SetPoint("RIGHT", card.percent, "LEFT", -3, 0)
+		Stoa:SetFont(card.percent, "sans", style.name - 1, "")
+		card.percent:ClearAllPoints()
+		card.percent:SetPoint("RIGHT", -pad, 0)
+		-- Dimmed, so the name stays readable over a full bar.
+		card.hp:ClearAllPoints()
+		card.hp:SetPoint("TOPLEFT", 2, -2)
+		card.hp:SetPoint("BOTTOMRIGHT", -2, 2)
+		card.hp:SetAlpha(0.4)
+		card.hp.track:Hide()
+		card.absorb:SetWidth(math.max(1, (card:GetWidth() or 90) - 4))
+		for _, pip in ipairs(card.pips) do pip:Hide() end
+		return
+	end
+	card.hp:SetAlpha(1)
+	card.hp.track:Show()
 
 	Stoa:SetFont(card.name, "serif", style.name)
 	card.name:ClearAllPoints()
@@ -345,9 +516,25 @@ function UI.styleCard(card, styleName)
 	end
 end
 
+-- A compact cell has no pip row: the most urgent word takes the percent's
+-- place, in its colour. Returns true when it did.
+local CELL_WORDS = {
+	MAGIC = "MAG", DISEASE = "DIS", CURSE = "CUR", POISON = "POI", DISPEL = "DSP",
+	LOW = "LOW", DEAD = "DEAD", OFFLINE = "OFF",
+}
+function UI.cellWord(card, word, token)
+	if not (card.style and card.style.cell) then return false end
+	for _, pip in ipairs(card.pips) do pip:Hide() end
+	if not word then return false end
+	card.percent:SetText(CELL_WORDS[word] or word)
+	card.percent:SetTextColor(Stoa:Color(token or "muted"))
+	return true
+end
+
 -- Fills the pip row. Each pip is { text, fill } where fill is a theme token
 -- for a solid chip (dark text on it), or nil for a quiet chip.
 function UI.setPips(card, list)
+	if card.style and card.style.cell then return end
 	for i, pip in ipairs(card.pips) do
 		local entry = list and list[i]
 		if entry then

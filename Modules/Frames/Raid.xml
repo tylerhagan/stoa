@@ -1,10 +1,23 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\..\FrameXML\UI.xsd">
-	<!-- One raid cell. The size has to live here: the group header makes
-	     cells from this template in secure code. -->
+	<!-- Raid cells, one template per look. The sizes have to live here: the
+	     group headers make cells from these templates in secure code, and
+	     Raid.lua repeats them in RAID_STYLES. -->
 	<Button name="StoaRaidButtonTemplate" inherits="SecureUnitButtonTemplate" virtual="true">
 		<Size x="168" y="58"/>
 		<Scripts>
 			<OnLoad function="StoaRaidButton_OnLoad"/>
+		</Scripts>
+	</Button>
+	<Button name="StoaRaidCardTemplate" inherits="SecureUnitButtonTemplate" virtual="true">
+		<Size x="176" y="70"/>
+		<Scripts>
+			<OnLoad function="StoaRaidCard_OnLoad"/>
+		</Scripts>
+	</Button>
+	<Button name="StoaRaidCellTemplate" inherits="SecureUnitButtonTemplate" virtual="true">
+		<Size x="90" y="26"/>
+		<Scripts>
+			<OnLoad function="StoaRaidCell_OnLoad"/>
 		</Scripts>
 	</Button>
 </Ui>
