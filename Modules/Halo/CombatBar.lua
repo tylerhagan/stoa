@@ -5,8 +5,10 @@
 --
 -- The buttons are Stoa's own secure action buttons pointing at the same
 -- action slots as Blizzard's main bar, so your keybinds keep working on
--- Blizzard's buttons and a click here casts the same spell. Which slots
--- show is worked out out of combat; the game shows the row only in combat.
+-- Blizzard's buttons and a click here casts the same spell. The row follows
+-- the main bar's page, so a transform or vehicle shows its own spells.
+-- Which buttons rest in the row is worked out out of combat; the game
+-- shows the row only in combat.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -40,20 +42,47 @@ local function shortKey(key)
 	return key
 end
 
--- The action slot Blizzard's main bar button i is showing.
-local function slotFor(i)
-	local blizzard = _G["ActionButton" .. i]
-	local slot = blizzard and (blizzard.action or blizzard:GetAttribute("action"))
-	return plain(slot) or i
+-- The main bar's page, as Blizzard's own main bar picks it: a transform,
+-- vehicle or possession brings its own page, as do stances and bar paging.
+-- An attribute driver keeps it current in combat with no secure code.
+local function pageConditions()
+	local function index(name, fallback)
+		local fn = api(name)
+		return tonumber(plain(fn and fn())) or fallback
+	end
+	local override = index("GetOverrideBarIndex", 14)
+	local vehicle = index("GetVehicleBarIndex", 12)
+	local temp = index("GetTempShapeshiftBarIndex", 13)
+	return ("[overridebar] %d; [vehicleui] %d; [possessbar] %d; [shapeshift] %d; "
+		.. "[bonusbar:5] 11; [bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10; "
+		.. "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; 1"):format(override, vehicle, vehicle, temp)
+end
+
+-- While one of these is up, every button shows, filled at rest or not.
+local SWAPPED = "[combat,overridebar][combat,vehicleui][combat,possessbar][combat,shapeshift][combat,bonusbar:5] show; hide"
+
+function Bar:Page()
+	return tonumber((self.pager:GetAttribute("actionpage"))) or 1
 end
 
 function Bar:Build()
+	local pager = CreateFrame("Frame", "StoaCombatBarPager", UIParent)
+	RegisterAttributeDriver(pager, "actionpage", pageConditions())
+	pager:HookScript("OnAttributeChanged", function(_, name)
+		if name == "actionpage" then self:UpdateAll() end
+	end)
+	self.pager = pager
+
 	self.buttons = {}
 	for i = 1, 12 do
-		local button = CreateFrame("Button", "StoaCombatButton" .. i, UIParent, "SecureActionButtonTemplate")
+		local button = CreateFrame("Button", "StoaCombatButton" .. i, pager, "SecureActionButtonTemplate")
 		button:SetFrameStrata("LOW")
 		button:SetSize(SIZE, SIZE)
+		-- Button i acts on slot i of whatever page the pager holds.
+		button:SetID(i)
 		button:SetAttribute("type", "action")
+		button:SetAttribute("useparent-actionpage", true)
+		button.binding = "ACTIONBUTTON" .. i
 		button:RegisterForClicks("AnyUp")
 		button:Hide()
 
@@ -90,10 +119,9 @@ function Bar:Build()
 		button.key = key
 
 		button:SetScript("OnEnter", function(own)
-			local slot = own:GetAttribute("action")
-			if slot then
+			if own.slot then
 				GameTooltip_SetDefaultAnchor(GameTooltip, own)
-				GameTooltip:SetAction(slot)
+				GameTooltip:SetAction(own.slot)
 			end
 		end)
 		button:SetScript("OnLeave", GameTooltip_Hide)
@@ -101,41 +129,49 @@ function Bar:Build()
 	end
 end
 
--- Out of combat only: picks the filled slots and lays them out centred
--- under the Halo.
+-- Out of combat only: lays out the buttons your resting page fills,
+-- centred under the Halo, to show in combat. The rest wait to the right
+-- and show only while a transform or vehicle swaps the page.
 function Bar:Layout()
 	local halo = _G.StoaHalo
 	if not halo or InCombatLockdown() then return end
-	local shown = {}
+	local GetPage = api("GetActionBarPage")
+	local base = tonumber(plain(GetPage and GetPage())) or 1
+	local filled, spare = {}, {}
 	for i, button in ipairs(self.buttons) do
-		local slot = slotFor(i)
-		button:SetAttribute("action", slot)
-		button.slot = slot
 		UnregisterStateDriver(button, "visibility")
 		button:Hide()
-		if i <= self.db.count and plain(HasAction(slot)) then
-			table.insert(shown, button)
-			button.binding = "ACTIONBUTTON" .. i
+		if i <= self.db.count then
+			local slot = i + (base - 1) * 12
+			table.insert(plain(HasAction(slot)) and filled or spare, button)
 		end
 	end
-	local width = #shown * SIZE + (#shown - 1) * GAP
-	for n, button in ipairs(shown) do
+	local width = #filled * SIZE + (#filled - 1) * GAP
+	local x = -width / 2
+	for _, button in ipairs(filled) do
 		button:ClearAllPoints()
-		button:SetPoint("TOPLEFT", halo, "BOTTOM", -width / 2 + (n - 1) * (SIZE + GAP), -74)
+		button:SetPoint("TOPLEFT", halo, "BOTTOM", x, -74)
+		x = x + SIZE + GAP
 		RegisterStateDriver(button, "visibility", "[combat] show; hide")
 	end
-	self.shown = shown
+	for _, button in ipairs(spare) do
+		button:ClearAllPoints()
+		button:SetPoint("TOPLEFT", halo, "BOTTOM", x, -74)
+		x = x + SIZE + GAP
+		RegisterStateDriver(button, "visibility", SWAPPED)
+	end
+	self.shown = filled
 	self:UpdateAll()
 end
 
 function Bar:UpdateKeys()
-	for _, button in ipairs(self.shown or {}) do
+	for _, button in ipairs(self.buttons or {}) do
 		button.key:SetText(shortKey(GetBindingKey(button.binding)))
 	end
 end
 
 function Bar:UpdateCooldowns()
-	for _, button in ipairs(self.shown or {}) do
+	for _, button in ipairs(self.buttons or {}) do
 		local cooldown, slot = button.cooldown, button.slot
 		-- Cooldowns may be secret in combat; newer clients hand out a
 		-- duration object the cooldown frame can draw without reading it.
@@ -158,7 +194,7 @@ end
 -- its key in the warning colour, so range reads as a word-free shape cue
 -- rather than red alone.
 function Bar:UpdateState()
-	for _, button in ipairs(self.shown or {}) do
+	for _, button in ipairs(self.buttons or {}) do
 		local slot = button.slot
 		local usable, noMana = IsUsableAction(slot)
 		usable, noMana = plain(usable), plain(noMana)
@@ -178,8 +214,11 @@ function Bar:UpdateState()
 end
 
 function Bar:UpdateAll()
-	for _, button in ipairs(self.shown or {}) do
-		local slot = button.slot
+	if not self.buttons then return end
+	local page = self:Page()
+	for i, button in ipairs(self.buttons) do
+		local slot = i + (page - 1) * 12
+		button.slot = slot
 		button.icon:SetTexture(GetActionTexture(slot))
 		local count = GetActionCount and plain(GetActionCount(slot))
 		button.count:SetText(count and count > 1 and count or "")
@@ -195,8 +234,18 @@ function Bar:OnEnable()
 		Stoa:AfterCombat(function() xpcall(self.Layout, geterrorhandler(), self) end)
 	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(0.5, layout) end)
-	Stoa:On("ACTIONBAR_SLOT_CHANGED", layout)
-	Stoa:On("ACTIONBAR_PAGE_CHANGED", layout)
+	Stoa:On("ACTIONBAR_SLOT_CHANGED", function()
+		self:UpdateAll()
+		layout()
+	end)
+	-- A page swap shows straight away; the resting layout follows after
+	-- combat.
+	for _, event in ipairs({ "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR", "UPDATE_OVERRIDE_ACTIONBAR", "UPDATE_VEHICLE_ACTIONBAR", "UPDATE_POSSESS_BAR", "UPDATE_SHAPESHIFT_FORM" }) do
+		Stoa:On(event, function()
+			self:UpdateAll()
+			layout()
+		end)
+	end
 	Stoa:On("UPDATE_BINDINGS", function() self:UpdateKeys() end)
 	Stoa:On("ACTIONBAR_UPDATE_COOLDOWN", function() self:UpdateCooldowns() end)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", function() self:UpdateCooldowns() end)
