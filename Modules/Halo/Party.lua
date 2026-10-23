@@ -13,7 +13,14 @@ local UI = Stoa.UI
 
 local Party = Stoa:NewModule("Party", {
 	hideBlizzardParty = true,
+	-- When not healing, cards show health, and words only for what you can
+	-- act on: a debuff you can dispel, dead or offline.
+	quietCards = true,
 })
+
+function Party:Quiet()
+	return self.db.quietCards and Stoa:GetRole() ~= "HEALER"
+end
 
 local UNITS = { "player", "party1", "party2", "party3", "party4" }
 local WORLD_ALPHA = 1
@@ -252,8 +259,10 @@ function Party:UpdateCard(card)
 	else
 		setPercent(card.percent, unit, fraction)
 		if dispel then pips[#pips + 1] = { dispel.word, dispel.token } end
-		if low then pips[#pips + 1] = { "LOW", "danger" } end
-		self:AuraPips(unit, pips)
+		if not self:Quiet() then
+			if low then pips[#pips + 1] = { "LOW", "danger" } end
+			self:AuraPips(unit, pips)
+		end
 	end
 	UI.setPips(card, pips)
 
@@ -641,7 +650,10 @@ function Party:OnEnable()
 		self:UpdateGrid()
 		self:UpdateWatch()
 	end)
-	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateWatch() end)
+	Stoa:On("STOA_ROLE_CHANGED", function()
+		self:UpdateWatch()
+		self:UpdateAll()
+	end)
 	Stoa:On("PLAYER_FOCUS_CHANGED", function() self:UpdateWatch() end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function()
 		self:UpdateAll()

@@ -69,6 +69,9 @@ local function build()
 	checkbox(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The seal and the Halo show the same. Also hides Blizzard's cast bar. Takes effect after /reload.", true)
 	checkbox(halo, "hideTargetFrame", "Hide Blizzard's target frame", "Stoa shows your target beside the Halo. Takes effect after /reload.", true)
 	checkbox(party, "enabled", "Show Stoa party cards", "Large beside the Halo when you heal, compact on the left otherwise. Takes effect after /reload.", true)
+	checkbox(party, "quietCards", "Quiet group frames when not healing", "Tanking or dealing damage, party and raid cards show health and only the words you can act on: a debuff you can dispel, dead or offline. No buff words.", true, function()
+		if Stoa.modules.Party.cards then Stoa.modules.Party:UpdateAll() end
+	end)
 	checkbox(party, "hideBlizzardParty", "Hide Blizzard's party frames", "Takes effect after /reload.", true)
 	local raid = Stoa.modules.Raid.db
 	checkbox(raid, "enabled", "Show Stoa raid frames", "A grid of compact cards, one column per group. Takes effect after /reload.", true)

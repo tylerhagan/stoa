@@ -57,14 +57,17 @@ local function fill(card, sample)
 	if sample.status then
 		pips[1] = { sample.status }
 	else
-		for _, pip in ipairs(sample.pips or {}) do pips[#pips + 1] = pip end
-		if low then table.insert(pips, 1, { "LOW", "danger" }) end
+		local quiet = Stoa.modules.Party:Quiet()
+		for _, pip in ipairs(sample.pips or {}) do
+			if not quiet or (sample.dispel and pip[2] == sample.dispel) then pips[#pips + 1] = pip end
+		end
+		if low and not quiet then table.insert(pips, 1, { "LOW", "danger" }) end
 	end
 	UI.setPips(card, pips)
 	if sample.status then
 		UI.cellWord(card, sample.status, "muted")
 	elseif sample.dispel then
-		UI.cellWord(card, pips[low and 2 or 1][1], sample.dispel)
+		UI.cellWord(card, sample.pips[1][1], sample.dispel)
 	elseif low then
 		UI.cellWord(card, "LOW", "danger")
 	end
