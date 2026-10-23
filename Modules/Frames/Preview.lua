@@ -15,6 +15,17 @@ local SAMPLE = {
 	{ name = "Aldren", class = "PALADIN", status = "OFFLINE", health = 1 },
 	{ name = "Mirelle", class = "DRUID", health = 1 },
 	{ name = "Tovan", class = "SHAMAN", health = 0.84, pips = { { "DISEASE", "disease" } }, dispel = "disease" },
+	{ name = "Ysolde", class = "MAGE", health = 0.91 },
+	{ name = "Harrow", class = "WARRIOR", health = 1 },
+	{ name = "Fennick", class = "ROGUE", health = 0.56, dispel = "magic", pips = { { "MAGIC", "magic" } } },
+	{ name = "Brisa", class = "DRUID", health = 1 },
+	{ name = "Doran", class = "PALADIN", health = 0.88, absorb = 0.12, pips = { { "SHIELD", "shield" } } },
+	{ name = "Ilsa", class = "PRIEST", health = 1 },
+	{ name = "Quill", class = "HUNTER", health = 1 },
+	{ name = "Marrow", class = "WARLOCK", health = 0.39 },
+	{ name = "Sable", class = "ROGUE", health = 1 },
+	{ name = "Torvin", class = "SHAMAN", health = 0.74 },
+	{ name = "Arthilian", class = "MAGE", health = 1 },
 }
 
 local LOW_HEALTH = 0.35
