@@ -79,6 +79,16 @@ local APIS = {
 	{ "Settings.RegisterAddOnSetting", "the settings panel", true },
 	{ "CreateSettingsButtonInitializer", "settings buttons" },
 	{ "Enum.PlayerSwingType", "Twist of Light" },
+	{ "GetMaxPlayerLevel", "experience pace on the console" },
+	{ "C_QuestLog.GetNumQuestWatches", "the console's quest line" },
+	{ "C_QuestLog.GetQuestIDForQuestWatchIndex", "the console's quest line" },
+	{ "C_QuestLog.GetQuestObjectives", "the console's quest line" },
+	{ "C_QuestLog.GetDistanceSqToQuest", "nearest quest (else the first watched)" },
+	{ "C_PartyInfo.DoCountdown", "/stoa pull (else a chat countdown)" },
+	{ "C_ChatInfo.SendChatMessage", "the pull countdown in chat (else SendChatMessage)" },
+	{ "GetReadyCheckStatus", "READY and NOT READY on party cards" },
+	{ "UnitCastingInfo", "the KICK cue" },
+	{ "UnitChannelInfo", "the KICK cue" },
 }
 
 -- Blizzard frames Stoa dresses or takes the place of.
@@ -95,6 +105,8 @@ local FRAMES = {
 	{ "GameTooltip", "tooltips" },
 	{ "DamageMeter", "damage meters" },
 	{ "SwingTimerMainHandFrame", "the swing timer" },
+	{ "ReadyCheckFrame", "the ready check skin" },
+	{ "ReadyCheckListenerFrame", "the ready check skin" },
 }
 
 -- Events the signatures and frames need from this client.
@@ -102,6 +114,12 @@ local EVENTS = {
 	{ "PLAYER_SWING", "Twist of Light" },
 	{ "UNIT_SPELLCAST_SUCCEEDED", "signature timing", true },
 	{ "UNIT_AURA", "auras everywhere", true },
+	{ "READY_CHECK", "ready words on party cards" },
+	{ "READY_CHECK_CONFIRM", "ready words on party cards" },
+	{ "READY_CHECK_FINISHED", "ready words on party cards" },
+	{ "PLAYER_XP_UPDATE", "experience pace" },
+	{ "UNIT_SPELLCAST_INTERRUPTIBLE", "the KICK cue" },
+	{ "UNIT_SPELLCAST_NOT_INTERRUPTIBLE", "the KICK cue" },
 }
 
 local function lookup(path)

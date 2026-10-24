@@ -264,13 +264,22 @@ function Party:UpdateCard(card)
 			self:AuraPips(unit, pips)
 		end
 	end
+	-- During a ready check each card says where that player stands.
+	local kit = Stoa.modules.Kit
+	local ready, readyToken
+	if kit and kit.ReadyPip and kit.enabled and not gone then
+		ready, readyToken = kit:ReadyPip(unit)
+		if ready then table.insert(pips, 1, ready) end
+	end
 	UI.setPips(card, pips)
 
 	-- Bar and percent turn amber when low, and the border says why.
 	local r, g, b = Stoa:Color(low and "danger" or "health")
 	card.hp:SetStatusBarColor(r, g, b)
 	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
-	if gone then
+	if ready then
+		UI.cellWord(card, ready[1], readyToken)
+	elseif gone then
 		UI.cellWord(card, gone, "muted")
 	elseif dispel then
 		UI.cellWord(card, dispel.word, dispel.token)

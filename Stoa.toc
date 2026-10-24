@@ -38,6 +38,7 @@ Modules\Halo\CombatBar.lua
 Modules\Halo\Shadow.lua
 Modules\Halo\Paladin.lua
 Modules\Halo\Disc.lua
+Modules\Halo\Kit.lua
 
 Modules\Frames\ClickCast.lua
 Modules\Frames\Raid.lua

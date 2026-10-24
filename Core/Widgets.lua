@@ -552,6 +552,7 @@ end
 local CELL_WORDS = {
 	MAGIC = "MAG", DISEASE = "DIS", CURSE = "CUR", POISON = "POI", DISPEL = "DSP",
 	LOW = "LOW", DEAD = "DEAD", OFFLINE = "OFF",
+	READY = "RDY", ["NOT READY"] = "NOT", WAITING = "...",
 }
 function UI.cellWord(card, word, token)
 	if not (card.style and card.style.cell) then return false end

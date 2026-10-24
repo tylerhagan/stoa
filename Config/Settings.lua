@@ -110,6 +110,21 @@ local function build()
 		end, "Fifteen bindings per role: five mouse buttons, plain, Shift and Ctrl.", true))
 	end
 
+	-- Dungeon kit
+	local kit = Stoa.modules.Kit.db
+	header("Levelling and dungeons")
+	checkbox(kit, "xpRate", "Experience pace on the console", "Experience an hour and time to level under the Journey bar, worked out over the last half hour and started again at each level. /stoa xp prints it. Hidden at the highest level.", true, function()
+		Stoa.modules.Kit:UpdateConsole()
+	end)
+	checkbox(kit, "questLine", "Nearest quest on the console", "When you are not in a group, one line under Journey with the progress of the watched quest nearest you.", true, function()
+		Stoa.modules.Kit:UpdateConsole()
+	end)
+	checkbox(kit, "bigNumber", "Big number for the pull timer", "/stoa pull 10 shows a large number in the middle of the screen when the game's own group countdown can't be used (you aren't a leader, or you are alone). Group chat gets 3, 2, 1 when you are grouped.", true)
+	checkbox(kit, "readyCheck", "Ready check dress and words", "The ready check prompt on Stoa's panel, and READY, NOT READY or WAITING on each party card while it runs. Takes effect after /reload.", true)
+	checkbox(kit, "kickCue", "KICK cue on the target", "The word KICK on the target plaque while it casts something you can interrupt.", true, function()
+		Stoa.modules.Kit:UpdateKick()
+	end)
+
 	-- Move frames
 	header("Move frames")
 	if CreateSettingsButtonInitializer then

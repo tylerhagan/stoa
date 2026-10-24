@@ -350,6 +350,17 @@ function Console:BuildFellowship(frame, space)
 	local xpNote = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
 	xpNote:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -5)
 	self.levelText, self.xpBar, self.restedBar, self.xpNote = level, xp, rested, xpNote
+	-- Two short lines for the dungeon kit (Kit.lua): experience per hour and
+	-- time to level, and the nearest watched quest's progress when alone.
+	local rate = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
+	rate:SetPoint("TOPLEFT", xpNote, "BOTTOMLEFT", 0, -3)
+	rate:SetWidth(COLUMN_WIDTH)
+	rate:SetWordWrap(false)
+	local quest = text(page, "italic", Stoa.typeSize.caption + 1, "muted")
+	quest:SetPoint("TOPLEFT", rate, "BOTTOMLEFT", 0, -3)
+	quest:SetWidth(COLUMN_WIDTH)
+	quest:SetWordWrap(false)
+	self.rateNote, self.questNote = rate, quest
 
 	-- Company.
 	local company = column(page, 3, "Company")
@@ -509,6 +520,7 @@ function Console:UpdateJourney()
 	self.xpBar:SetShown(not atMax)
 	if atMax then
 		self.xpNote:SetText("")
+		self:UpdateKitLines()
 		return
 	end
 	local xp, xpMax = UnitXP("player"), UnitXPMax("player")
@@ -521,6 +533,13 @@ function Console:UpdateJourney()
 	local note = math.floor(xp / xpMax * 100) .. "% to " .. (level + 1)
 	if rested > 0 then note = note .. "  ·  rested " .. math.floor(rested / xpMax * 100) .. "%" end
 	self.xpNote:SetText(note)
+	self:UpdateKitLines()
+end
+
+-- The kit's lines under the experience bar, if the kit is on.
+function Console:UpdateKitLines()
+	local kit = Stoa.modules.Kit
+	if kit and kit.UpdateConsole and kit.enabled then kit:UpdateConsole() end
 end
 
 function Console:AddNote(_, message)
