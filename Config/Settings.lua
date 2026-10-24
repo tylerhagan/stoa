@@ -112,6 +112,9 @@ local function build()
 	checkbox(raid, "enabled", "Show Stoa raid frames", "A grid of compact cards, one column per group. Takes effect after /reload.", true)
 	checkbox(raid, "hideBlizzardRaid", "Hide Blizzard's raid frames", "Takes effect after /reload.", true)
 	checkbox(Stoa.modules.ClickCast.db, "enabled", "Click-casting", "Mouse bindings on Stoa's party and raid frames. Set them with /stoa clicks. Takes effect after /reload.", true)
+	dropdown(party, "clickGrid", "Click grid", "The table of what each click does, shown beside your cards when you heal. Folded keeps just its title until you hover a card or hold Shift; click the title to keep it open. /stoa grid", "fold", {
+		{ "open", "Always open" }, { "fold", "Folded until needed" }, { "hidden", "Hidden" },
+	}, function() Stoa.modules.Party:SetGridMode(party.clickGrid) end)
 	if CreateSettingsButtonInitializer then
 		layout:AddInitializer(CreateSettingsButtonInitializer("Click bindings", "Open", function()
 			Stoa.modules.ClickCast:TogglePage()

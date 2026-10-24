@@ -16,6 +16,9 @@ local Party = Stoa:NewModule("Party", {
 	-- When not healing, cards show health, and words only for what you can
 	-- act on: a debuff you can dispel, dead or offline.
 	quietCards = true,
+	-- The click grid: "open" always shows it, "fold" keeps just its title
+	-- until you hover a card or hold Shift, "hidden" never shows it.
+	clickGrid = "fold",
 })
 
 function Party:Quiet()
@@ -56,8 +59,12 @@ function Party:BuildCard(index, unit)
 	card:SetScript("OnEnter", function(button)
 		GameTooltip_SetDefaultAnchor(GameTooltip, button)
 		GameTooltip:SetUnit(button.unit)
+		self:Peek("card", true)
 	end)
-	card:SetScript("OnLeave", GameTooltip_Hide)
+	card:SetScript("OnLeave", function()
+		GameTooltip_Hide()
+		self:Peek("card", false)
+	end)
 
 	if unit == "player" then
 		-- Your own card only shows in a group; alone the Halo covers you.
@@ -159,6 +166,20 @@ local function shortName(action)
 	return action
 end
 
+local GRID_MODES = { "open", "fold", "hidden" }
+Party.gridModes = GRID_MODES
+
+local function modeIndex(mode)
+	for i, name in ipairs(GRID_MODES) do
+		if name == mode then return i end
+	end
+end
+
+function Party:GridMode()
+	local mode = self.db.clickGrid
+	return modeIndex(mode) and mode or "fold"
+end
+
 function Party:BuildGrid()
 	local grid = CreateFrame("Frame", "StoaClickGrid", UIParent)
 	local width = GRID_LABEL_WIDTH + #GRID_COLUMNS * GRID_CELL_WIDTH
@@ -167,15 +188,43 @@ function Party:BuildGrid()
 	grid:SetPoint("TOPLEFT", UIParent, "LEFT", 60, -40)
 	grid:Hide()
 	self.grid = grid
+	self.peeks = {}
 
-	local title = UI.caption(grid, "Your hands · click-cast on any card")
-	title:SetPoint("TOPLEFT")
+	-- The title is the grid's handle: click it to keep the grid open or
+	-- fold it back to this one line.
+	local handle = CreateFrame("Button", nil, grid)
+	handle:SetPoint("TOPLEFT")
+	handle:SetSize(width, 16)
+	handle:RegisterForClicks("LeftButtonUp")
+	local title = UI.caption(handle, "")
+	title:SetPoint("LEFT")
+	grid.title = title
+	handle:SetScript("OnClick", function()
+		self.db.clickGrid = self:GridMode() == "open" and "fold" or "open"
+		self:UpdateGrid()
+	end)
+	handle:SetScript("OnEnter", function(button)
+		self:Peek("handle", true)
+		GameTooltip:SetOwner(button, "ANCHOR_TOPLEFT")
+		GameTooltip:SetText("Your hands")
+		GameTooltip:AddLine(self:GridMode() == "open" and "Click to fold it to this line. It opens while you hover a card or hold Shift."
+			or "Click to keep it open.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	handle:SetScript("OnLeave", function()
+		self:Peek("handle", false)
+		GameTooltip_Hide()
+	end)
+
+	local body = CreateFrame("Frame", nil, grid)
+	body:SetAllPoints()
+	grid.body = body
 
 	local function cell(row, col, kind)
 		local x = col == 0 and 0 or GRID_LABEL_WIDTH + (col - 1) * GRID_CELL_WIDTH
 		local y = -20 - row * GRID_ROW_HEIGHT
-		local fs = kind == "caption" and UI.caption(grid, "") or UI.text(grid, "serif", Stoa.typeSize.label, "text")
-		fs:SetPoint("LEFT", grid, "TOPLEFT", x + 6, y - GRID_ROW_HEIGHT / 2)
+		local fs = kind == "caption" and UI.caption(body, "") or UI.text(body, "serif", Stoa.typeSize.label, "text")
+		fs:SetPoint("LEFT", body, "TOPLEFT", x + 6, y - GRID_ROW_HEIGHT / 2)
 		fs:SetWidth((col == 0 and GRID_LABEL_WIDTH or GRID_CELL_WIDTH) - 10)
 		fs:SetWordWrap(false)
 		return fs
@@ -186,7 +235,7 @@ function Party:BuildGrid()
 	end
 	grid.cells = {}
 	for row, mod in ipairs(GRID_ROWS) do
-		local line = UI.line(grid)
+		local line = UI.line(body)
 		line:SetPoint("TOPLEFT", 0, -20 - row * GRID_ROW_HEIGHT)
 		line:SetPoint("TOPRIGHT", 0, -20 - row * GRID_ROW_HEIGHT)
 		cell(row, 0, "caption"):SetText(mod.label:upper())
@@ -197,6 +246,22 @@ function Party:BuildGrid()
 	Stoa:RegisterMover("clickgrid", grid, "Click grid")
 end
 
+-- A folded grid opens while something asks to see it: a hovered card, its
+-- own title, or Shift held down.
+function Party:Peek(reason, on)
+	if not self.peeks then return end
+	self.peeks[reason] = on or nil
+	self:UpdateGridBody()
+end
+
+function Party:UpdateGridBody()
+	local grid = self.grid
+	if not grid then return end
+	local open = self:GridMode() == "open" or next(self.peeks) ~= nil
+	grid.body:SetShown(open)
+	grid.title:SetText(open and "YOUR HANDS · CLICK-CAST ON ANY CARD" or "YOUR HANDS · HOVER A CARD OR HOLD SHIFT")
+end
+
 function Party:UpdateGrid()
 	local grid = self.grid
 	local clickCast = Stoa.modules.ClickCast
@@ -205,8 +270,28 @@ function Party:UpdateGrid()
 		fs:SetText(shortName(bindings[key]))
 	end
 	local cards = Stoa.previewing or IsInGroup()
-	grid:SetShown(layoutFor(Stoa:GetRole()).grid and cards and true or false)
+	local wanted = layoutFor(Stoa:GetRole()).grid and cards and self:GridMode() ~= "hidden"
+	grid:SetShown(wanted and true or false)
 	grid:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 1 or 0.8)
+	self:UpdateGridBody()
+end
+
+function Party:SetGridMode(mode)
+	self.db.clickGrid = modeIndex(mode) and mode or "fold"
+	if self.grid then self:UpdateGrid() end
+end
+
+-- /stoa grid [open|fold|hidden] sets or cycles the click grid.
+Stoa.commands.grid = function(rest)
+	local mode = rest and rest:lower():match("%a+")
+	if mode == "hide" then mode = "hidden" end
+	if not modeIndex(mode) then
+		local index = modeIndex(Party:GridMode())
+		mode = GRID_MODES[index % #GRID_MODES + 1]
+	end
+	Party:SetGridMode(mode)
+	local words = { open = "always open", fold = "folded to its title until you hover a card or hold Shift", hidden = "hidden" }
+	Stoa:Print(("Click grid: %s."):format(words[mode]))
 end
 
 -- Updates -------------------------------------------------------------------
@@ -674,6 +759,9 @@ function Party:OnEnable()
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateAll() end)
 	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateAll() end)
 	Stoa:On("STOA_CLICKS_CHANGED", function() self:UpdateGrid() end)
+	Stoa:On("MODIFIER_STATE_CHANGED", function()
+		if self.grid and self.grid:IsShown() then self:Peek("shift", IsShiftKeyDown()) end
+	end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function() self:UpdateAll() end)
 	Stoa:On("UNIT_CONNECTION", function(unit)
 		local card = cardFor(self, unit)

@@ -73,8 +73,12 @@ local function onLoad(cell, styleName)
 		if not self.unit then return end
 		GameTooltip_SetDefaultAnchor(GameTooltip, self)
 		GameTooltip:SetUnit(self.unit)
+		Stoa.modules.Party:Peek("card", true)
 	end)
-	cell:SetScript("OnLeave", GameTooltip_Hide)
+	cell:SetScript("OnLeave", function()
+		GameTooltip_Hide()
+		Stoa.modules.Party:Peek("card", false)
+	end)
 
 	cells[cell] = true
 	Stoa:RegisterClickFrame(cell)

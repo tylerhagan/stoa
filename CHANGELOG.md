@@ -12,6 +12,7 @@ Everything below is on the launch branch and not yet in a numbered release.
 
 - Colour vision setting: Standard, Red-green, Blue-yellow or No colour, laid over any theme; also on the welcome page and `/stoa vision`. Each set is checked by `Tools/art/cvd_audit.py` (simulated colour blindness, CIEDE2000 difference, WCAG contrast).
 - Tide's text is a step dimmer so its white warnings stand out; Druid's warning is pale yellow rather than near-white.
+- Click grid folds to its title by default and opens while you hover a party or raid card or hold Shift; click its title to keep it open. A Click grid setting and `/stoa grid` choose always open, folded or hidden.
 - Shift and drag moves quest, gossip, merchant, bag, character, spellbook, mail and similar windows; each remembers its spot.
 
 - Discipline signature: coins on the Halo for Penance, Inner Focus and Power Infusion, SHIELDS and RENEW counts, and an outline on Greater Heal while Inner Focus is up.
