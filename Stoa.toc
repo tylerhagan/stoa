@@ -13,6 +13,7 @@
 
 Core\Init.lua
 Core\Report.lua
+Core\SelfCheck.lua
 Core\Util.lua
 Core\Database.lua
 Core\Tokens.lua

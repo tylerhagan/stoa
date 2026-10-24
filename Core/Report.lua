@@ -162,6 +162,10 @@ function Report:Text()
 	add("On: ", table.concat(on, ", "))
 	add("Off: ", #off > 0 and table.concat(off, ", ") or "none")
 	add("")
+	if Stoa.Check then
+		local ok, text = pcall(Stoa.Check.Text, Stoa.Check)
+		if ok then add(text) add("") end
+	end
 	if #kept == 0 then
 		add("No errors from Stoa this session.")
 	else
