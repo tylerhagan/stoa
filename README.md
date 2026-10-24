@@ -80,6 +80,18 @@ Copy this folder into the game's AddOns folder and name it exactly `Stoa`:
 - Beta: `World of Warcraft\_classic_beta_\Interface\AddOns\Stoa`
 - Live (from launch): check the Forever folder name in your install, e.g. `World of Warcraft\_forever_\Interface\AddOns\Stoa`
 
+## Releases
+
+Installers download the latest `Stoa-<version>.zip` from the repository's Releases page and unpack it into the AddOns folder; the zip already holds a single `Stoa` folder.
+
+To cut a release:
+
+1. Set `## Version:` in `Stoa.toc` (for example `0.9.1`).
+2. Add a `## 0.9.1` section to `CHANGELOG.md`; it becomes the release notes.
+3. Commit, then `git tag v0.9.1 && git push origin v0.9.1`.
+
+The workflow in `.github/workflows/release.yml` fails if the tag and the TOC version differ or the changelog section is missing. To build the same zip without CI, run `Tools/package.sh`; it writes `dist/Stoa-<version>.zip`. `.pkgmeta` is ready for the BigWigs packager (CurseForge, Wago); how to switch that on is in `CHANGELOG.md`.
+
 ## Forever notes
 
 If a game patch raises the interface number before Stoa catches up, the AddOns list shows it as out of date: tick "Load out of date AddOns" there and it loads as before.
