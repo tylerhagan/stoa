@@ -213,6 +213,11 @@ function Halo:BuildTarget(frame)
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
 	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -6)
+	-- KICK, when the target is casting something you can interrupt (Kit.lua).
+	local kick = UI.text(target, "sans", Stoa.typeSize.label, "danger", "LEFT")
+	kick:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -6)
+	kick:Hide()
+	target.kick = kick
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target.threat, target.caption = threat, caption
 
