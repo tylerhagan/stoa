@@ -13,40 +13,103 @@ Stoa.Check = Check
 -- The interface number Stoa's TOC was written for.
 local BUILT_FOR = 16001
 
--- Every spell ID Stoa uses, with its English name and who uses it. If the
--- ID is gone, or (in an English client) names a different spell, the
--- feature that uses it is named in the result.
+-- Every spell ID Stoa uses for each class, with its English name and who
+-- uses it. Only your own class is checked. If the ID is gone, or (in an
+-- English client) names a different spell, the feature that uses it is
+-- named in the result.
 local SPELLS = {
-	{ 589, "Shadow Word: Pain", "Shadow" },
-	{ 2944, "Devouring Plague", "Shadow" },
-	{ 15286, "Vampiric Embrace", "Shadow" },
-	{ 8092, "Mind Blast", "Shadow and the Halo signature" },
-	{ 32379, "Shadow Word: Death", "Shadow" },
-	{ 15407, "Mind Flay", "Shadow and the cast bar ticks" },
-	{ 15473, "Shadowform", "Shadow and reminders" },
-	{ 15258, "Shadow Weaving", "Shadow" },
-	{ 1240721, "Penance", "Discipline and the Halo signature" },
-	{ 14751, "Inner Focus", "Discipline" },
-	{ 10060, "Power Infusion", "Discipline" },
-	{ 17, "Power Word: Shield", "Discipline and the Halo signature" },
-	{ 139, "Renew", "Discipline" },
-	{ 2060, "Greater Heal", "Discipline" },
-	{ 588, "Inner Fire", "reminders" },
-	{ 679, "Holy Strike", "Paladin and the Halo signature" },
-	{ 20271, "Judgement", "Paladin and the Halo signature" },
-	{ 26573, "Consecration", "Protection" },
-	{ 20925, "Holy Shield", "Protection" },
-	{ 1311649, "Seal of Fury", "Protection" },
-	{ 1311015, "Templar's Bulwark", "the Halo signature for tanks" },
-	{ 20375, "Seal of Command", "Retribution and Twist of Light" },
-	{ 21084, "Seal of Righteousness", "Retribution and Twist of Light" },
-	{ 21082, "Seal of the Crusader", "Retribution" },
-	{ 879, "Exorcism", "Retribution" },
-	{ 20473, "Holy Shock", "the Halo signature for Holy" },
-	{ 20216, "Divine Favor", "the Halo signature for Holy" },
-	{ 633, "Lay on Hands", "the Halo signature for Holy" },
-	{ 465, "Devotion Aura", "reminders" },
-	{ 25780, "Righteous Fury", "reminders" },
+	PRIEST = {
+		{ 589, "Shadow Word: Pain", "Shadow" },
+		{ 2944, "Devouring Plague", "Shadow" },
+		{ 15286, "Vampiric Embrace", "Shadow" },
+		{ 8092, "Mind Blast", "Shadow and the Halo signature" },
+		{ 32379, "Shadow Word: Death", "Shadow" },
+		{ 15407, "Mind Flay", "Shadow and the cast bar ticks" },
+		{ 15473, "Shadowform", "Shadow and reminders" },
+		{ 15258, "Shadow Weaving", "Shadow" },
+		{ 1240721, "Penance", "Discipline and the Halo signature" },
+		{ 14751, "Inner Focus", "Discipline" },
+		{ 10060, "Power Infusion", "Discipline" },
+		{ 17, "Power Word: Shield", "Discipline and the Halo signature" },
+		{ 139, "Renew", "Discipline" },
+		{ 2060, "Greater Heal", "Discipline" },
+		{ 588, "Inner Fire", "reminders" },
+	},
+	PALADIN = {
+		{ 679, "Holy Strike", "Paladin and the Halo signature" },
+		{ 20271, "Judgement", "Paladin and the Halo signature" },
+		{ 26573, "Consecration", "Protection" },
+		{ 20925, "Holy Shield", "Protection" },
+		{ 1311649, "Seal of Fury", "Protection" },
+		{ 1311015, "Templar's Bulwark", "the Halo signature for tanks" },
+		{ 20375, "Seal of Command", "Retribution and Twist of Light" },
+		{ 21084, "Seal of Righteousness", "Retribution and Twist of Light" },
+		{ 21082, "Seal of the Crusader", "Retribution" },
+		{ 879, "Exorcism", "Retribution" },
+		{ 20473, "Holy Shock", "the Halo signature for Holy" },
+		{ 20216, "Divine Favor", "the Halo signature for Holy" },
+		{ 633, "Lay on Hands", "the Halo signature for Holy" },
+		{ 465, "Devotion Aura", "reminders" },
+		{ 25780, "Righteous Fury", "reminders" },
+	},
+	DRUID = {
+		{ 8921, "Moonfire", "Balance" },
+		{ 5570, "Insect Swarm", "Balance" },
+		{ 5176, "Wrath", "Balance" },
+		{ 2912, "Starfire", "Balance" },
+		{ 24858, "Moonkin Form", "Balance" },
+		{ 770, "Faerie Fire", "the druid signatures" },
+		{ 16857, "Faerie Fire (Feral)", "Cat and Bear" },
+		{ 1822, "Rake", "Cat" },
+		{ 1079, "Rip", "Cat" },
+		{ 5221, "Shred", "Cat" },
+		{ 22568, "Ferocious Bite", "Cat" },
+		{ 5217, "Tiger's Fury", "Cat and the Halo signature" },
+		{ 417141, "Berserk", "Cat, Bear and the Halo signature" },
+		{ 1322605, "Shifting Power", "Cat" },
+		{ 768, "Cat Form", "Cat" },
+		{ 5487, "Bear Form", "Bear" },
+		{ 1235827, "Lacerate", "Bear" },
+		{ 407995, "Primal Bite", "Bear" },
+		{ 6807, "Maul", "Bear" },
+		{ 99, "Demoralizing Roar", "Bear" },
+		{ 6795, "Growl", "Bear's TAUNT" },
+		{ 5229, "Enrage", "the Halo signature for tanks" },
+		{ 774, "Rejuvenation", "Restoration" },
+		{ 8936, "Regrowth", "Restoration" },
+		{ 5185, "Healing Touch", "Restoration" },
+		{ 1238215, "Wild Growth", "Restoration" },
+		{ 18562, "Swiftmend", "Restoration and the Halo signature" },
+		{ 17116, "Nature's Swiftness", "Restoration" },
+		{ 16870, "Clearcasting", "CLEARCAST" },
+		{ 29166, "Innervate", "the Halo signature for Balance" },
+		{ 1126, "Mark of the Wild", "reminders" },
+	},
+	MAGE = {
+		{ 12042, "Arcane Power", "Arcane and the Halo signature" },
+		{ 12043, "Presence of Mind", "Arcane" },
+		{ 12051, "Evocation", "Arcane" },
+		{ 400573, "Arcane Blast", "Arcane" },
+		{ 5143, "Arcane Missiles", "Arcane" },
+		{ 400588, "Missile Barrage", "Arcane" },
+		{ 12536, "Clearcasting", "CLEARCAST" },
+		{ 133, "Fireball", "Fire" },
+		{ 2136, "Fire Blast", "Fire and the Halo signature" },
+		{ 11366, "Pyroblast", "Fire" },
+		{ 2948, "Scorch", "Fire" },
+		{ 11129, "Combustion", "Fire and the Halo signature" },
+		{ 400624, "Hot Streak", "Fire" },
+		{ 11095, "Improved Scorch", "Fire" },
+		{ 22959, "Fire Vulnerability", "Fire" },
+		{ 116, "Frostbolt", "Frost" },
+		{ 400640, "Ice Lance", "Frost" },
+		{ 122, "Frost Nova", "Frost" },
+		{ 11426, "Ice Barrier", "Frost and the Halo signature" },
+		{ 11958, "Ice Block", "Frost" },
+		{ 400647, "Fingers of Frost", "Frost" },
+		{ 168, "Frost Armor", "reminders" },
+		{ 1459, "Arcane Intellect", "reminders" },
+	},
 }
 
 -- Game functions Stoa calls, as dotted paths. "needed" ones break a
@@ -156,7 +219,8 @@ function Check:Run()
 	local english = not GetLocale or GetLocale() == "enUS" or GetLocale() == "enGB"
 	local getName = C_Spell and C_Spell.GetSpellName
 	if getName then
-		for _, spell in ipairs(SPELLS) do
+		local _, classFile = UnitClass("player")
+		for _, spell in ipairs(SPELLS[classFile] or {}) do
 			local id, expected, users = spell[1], spell[2], spell[3]
 			local ok, name = pcall(getName, id)
 			name = ok and name or nil

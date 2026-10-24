@@ -35,6 +35,37 @@ local SIGNATURES = {
 		TANK = { 1311015, 679, 20271 }, -- Templar's Bulwark, Holy Strike, Judgement
 		HEALER = { 20473, 20216, 633 }, -- Holy Shock, Divine Favor, Lay on Hands
 	},
+	DRUID = {
+		TANK = { 417141, 5229 },        -- Berserk, Enrage
+		MELEE = { 417141, 5217 },       -- Berserk, Tiger's Fury
+		RANGED = { 29166 },             -- Innervate
+		HEALER = { 18562, 17116 },      -- Swiftmend, Nature's Swiftness
+	},
+	-- Mage picks by talent tree (Mage.lua); these are for before it can.
+	MAGE = {
+		RANGED = { 12042, 11129, 11426, 2136 }, -- Arcane Power, Combustion, Ice Barrier, Fire Blast
+	},
+	-- Classes without a signature of their own: one cooldown each.
+	WARRIOR = {
+		MELEE = { 12294, 23881, 1680 }, -- Mortal Strike, Bloodthirst, Whirlwind
+		TANK = { 23922, 6572, 2565 },   -- Shield Slam, Revenge, Shield Block
+	},
+	ROGUE = {
+		MELEE = { 13750, 13877, 14177, 5277 }, -- Adrenaline Rush, Blade Flurry, Cold Blood, Evasion
+	},
+	HUNTER = {
+		RANGED = { 19434, 3044 },       -- Aimed Shot, Arcane Shot
+		MELEE = { 2973, 3044 },         -- Raptor Strike, Arcane Shot
+	},
+	WARLOCK = {
+		RANGED = { 17962, 17877, 6789 }, -- Conflagrate, Shadowburn, Death Coil
+	},
+	SHAMAN = {
+		RANGED = { 16166, 8042 },       -- Elemental Mastery, Earth Shock
+		MELEE = { 17364, 8042 },        -- Stormstrike, Earth Shock
+		HEALER = { 16188, 16190 },      -- Nature's Swiftness, Mana Tide Totem
+		TANK = { 8042 },                -- Earth Shock
+	},
 }
 
 -- Self-buffs each class keeps up, by role. A reminder shows as a word
@@ -50,6 +81,13 @@ local REMINDERS = {
 	PRIEST = {
 		{ word = "NO INNER FIRE", name = "Inner Fire", spell = 588 },
 		{ word = "NO SHADOWFORM", name = "Shadowform", spell = 15473, roles = { RANGED = true } },
+	},
+	DRUID = {
+		{ word = "NO MARK", name = "Mark of the Wild", spell = 1126 },
+	},
+	MAGE = {
+		{ word = "NO ARMOR", suffix = " Armor", spell = 168 },           -- Frost, Ice, Mage or Molten Armor
+		{ word = "NO INTELLECT", name = "Arcane Intellect", spell = 1459 },
 	},
 }
 
@@ -296,9 +334,20 @@ function Halo:UpdateHealth()
 	self.healthText:SetText(UnitHealth("player"))
 end
 
+-- The right arc is whatever your power is: mana in its own colour, energy
+-- pale gold, rage bone, so a druid's form change reads at a glance.
+local POWER_TOKENS = { [1] = "text", [3] = "accent" }
+
 function Halo:UpdatePower()
 	UI.setUnitBar(self.mana, "player", "power")
 	self.manaText:SetText(UnitPower("player"))
+	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType("player")))
+	local token = kind and POWER_TOKENS[kind] or "mana"
+	if token ~= self.powerToken then
+		self.powerToken = token
+		self.mana:SetStatusBarColor(Stoa:Color(token))
+		self.manaText:SetTextColor(Stoa:Color(token))
+	end
 end
 
 function Halo:UpdateSignature()
@@ -307,8 +356,8 @@ function Halo:UpdateSignature()
 	local _, classFile = UnitClass("player")
 	local list = SIGNATURES[classFile] and SIGNATURES[classFile][role] or {}
 
-	slot.spellID = nil
-	for _, spellID in ipairs(list) do
+	slot.spellID = Stoa.signatureFor and Stoa.signatureFor() or nil
+	for _, spellID in ipairs(slot.spellID and {} or list) do
 		if knows(spellID) then
 			slot.spellID = spellID
 			break
@@ -642,6 +691,13 @@ function Halo:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		self:UpdateSignature()
 		self:UpdateReminders()
+	end)
+	Stoa:On("UNIT_DISPLAYPOWER", function(unit)
+		if unit == "player" then self:UpdatePower() end
+	end)
+	Stoa:On("STOA_THEME_CHANGED", function()
+		self.powerToken = nil
+		self:UpdatePower()
 	end)
 	Stoa:On("UNIT_AURA", function(unit)
 		if unit == "player" then self:UpdateReminders() end

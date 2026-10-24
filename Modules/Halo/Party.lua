@@ -402,6 +402,10 @@ local OWN_BUFFS = {
 	["Blessing of Protection"] = { "PROTECTION" },
 	["Blessing of Freedom"] = { "FREEDOM" },
 	["Blessing of Sacrifice"] = { "SACRIFICE" },
+	["Rejuvenation"] = { "REJUV" },
+	["Regrowth"] = { "REGROWTH" },
+	["Wild Growth"] = { "GROWTH" },
+	["Innervate"] = { "INNERVATE" },
 }
 -- Debuffs from anyone that change what you can cast on them.
 local LOCKOUTS = {

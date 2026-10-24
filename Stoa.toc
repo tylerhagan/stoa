@@ -36,9 +36,12 @@ Modules\Grimoire\Minimap.lua
 Modules\Halo\Halo.lua
 Modules\Halo\Party.lua
 Modules\Halo\CombatBar.lua
+Modules\Halo\Sign.lua
 Modules\Halo\Shadow.lua
 Modules\Halo\Paladin.lua
 Modules\Halo\Disc.lua
+Modules\Halo\Druid.lua
+Modules\Halo\Mage.lua
 Modules\Halo\Kit.lua
 
 Modules\Frames\ClickCast.lua
