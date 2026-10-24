@@ -120,6 +120,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <li><a href="#world">Out of combat</a></li>
 <li><a href="#dungeons">Levelling and dungeons</a></li>
 <li><a href="#windows">Windows, bags, gear</a></li>
+<li><a href="#windows-move">Moving windows</a></li>
 <li><a href="#social">Social</a></li>
 <li><a href="#comforts">Comforts</a></li>
 <li><a href="#themes">Themes</a></li>
@@ -135,7 +136,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <h1>Stoa</h1>
 <p class="say">STOH-uh · an interface for World of Warcraft Forever</p>
 <p class="lede">Calm out of combat, focused in it. The Grimoire console holds the world; the Halo rises around your character when a fight starts.</p>
-<ul class="facts"><li>Interface 16001</li><li>Version 0.9.0</li><li>Colour-blind safe</li><li>Per role, per spec</li></ul>
+<ul class="facts"><li>Interface 16001</li><li>Version 0.9.0</li><li>Colour vision modes</li><li>Per role, per spec</li></ul>
 </div>
 <svg class="halo-art" viewBox="0 0 300 300" role="img" aria-label="The Halo: health and mana arcs around the character, with three spell coins on its right">
 <circle cx="150" cy="150" r="118" fill="none" stroke="var(--rule)" stroke-width="1"/>
@@ -179,6 +180,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <ul class="plain">
 <li><strong>What each spec plays.</strong> Tank, Healer, Melee or Ranged for your first and second spec. Leave it and Stoa uses your class's usual role.</li>
 <li><strong>Theme.</strong> Bone, Tide, Graphite, or Your class. Every theme is in settings.</li>
+<li><strong>Colour vision.</strong> Standard, Red-green, Blue-yellow or No colour.</li>
 <li><strong>Try it.</strong> A sample party, a practice combat that shows the Halo without a fight, or the settings.</li>
 </ul>
 <p><code>/stoa welcome</code> brings it back. Settings live under Options, AddOns, Stoa, or just type <code>/stoa</code>.</p>
@@ -269,6 +271,11 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 </dl>
 </section>
 
+<section id="windows-move">
+<h2>Moving Blizzard windows</h2>
+<p>Hold <kbd>Shift</kbd> and drag a quest, gossip, merchant, bag, character, spellbook, mail, auction or similar window by its title or edge. It keeps that spot every time it opens. Shift and right-click puts it back where the game wants it, and <code>/stoa windows reset</code> puts them all back. The key can be Alt or Ctrl instead, in settings. Shift-clicking an item still splits or links it as usual.</p>
+</section>
+
 <section id="social">
 <h2>Social</h2>
 <dl class="feat">
@@ -289,7 +296,9 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 
 <section id="themes">
 <h2>Themes</h2>
-<p>Three house themes, one for each class, and <strong>Your class</strong>, which picks the class theme of whoever you log in. All are colour-blind safe: warnings differ from the accent in lightness and always carry a word. Change with <code>/stoa theme</code> or in settings.</p>
+<p>Three house themes, one for each class, and <strong>Your class</strong>, which picks the class theme of whoever you log in. Change with <code>/stoa theme</code> or in settings.</p>
+<h3>Colour vision</h3>
+<p>Every state in Stoa carries a word or a shape (LOW, DEAD, KICK, a dispel name), so nothing rests on colour alone. The themes themselves are tuned for red-green colour blindness. For other kinds, the <strong>Colour vision</strong> setting lays a matching set of state colours over whichever theme you use: <strong>Red-green</strong> (protan, deutan) uses blue against orange and yellow, <strong>Blue-yellow</strong> (tritan) uses red against teal, and <strong>No colour</strong> tells states apart by lightness alone. Your theme's panels and text stay as they are. Outside Standard, names show in the text colour instead of class colours, since nine class colours can't all stay apart for every eye. Set it on the welcome page, in settings, or with <code>/stoa vision</code>.</p>
 <div class="themes">
 <div class="theme" style="--p:#111113;--t:#ECE6DA;--m:#A39E94;--h:#ECE6DA33"><b>Bone</b><span>House</span><div class="sw"><i style="background:#ECE6DA" title="text"></i><i style="background:#F2D58A" title="accent"></i><i style="background:#F0A04B" title="danger"></i><i style="background:#6F9BFF" title="mana"></i><i style="background:#6F9BFF" title="magic"></i><i style="background:#C9A0FF" title="disease"></i></div><div class="bar"><i style="width:78%;background:#E4DCCB"></i></div><div class="bar"><i style="width:55%;background:#6F9BFF"></i></div></div>
 <div class="theme" style="--p:#0D131A;--t:#DCE6F2;--m:#93A7BE;--h:#DCE6F233"><b>Tide</b><span>House</span><div class="sw"><i style="background:#DCE6F2" title="text"></i><i style="background:#A9CBFF" title="accent"></i><i style="background:#FFFFFF" title="danger"></i><i style="background:#3F6FD8" title="mana"></i><i style="background:#A9CBFF" title="magic"></i><i style="background:#DCE6F2" title="disease"></i></div><div class="bar"><i style="width:78%;background:#7FA6D6"></i></div><div class="bar"><i style="width:55%;background:#3F6FD8"></i></div></div>
@@ -326,6 +335,8 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <tr><td><code>/stoa unlock</code></td><td>Toggle frame moving</td></tr>
 <tr><td><code>/stoa reset</code></td><td>Put moved frames back in their default spots, in every role</td></tr>
 <tr><td><code>/stoa safe</code></td><td>Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload</td></tr>
+<tr><td><code>/stoa vision</code></td><td>Cycle colour vision modes, or name one: <code>redgreen</code>, <code>blueyellow</code>, <code>nocolour</code> or <code>standard</code></td></tr>
+<tr><td><code>/stoa windows reset</code></td><td>Put every moved Blizzard window back in its usual place</td></tr>
 <tr><td><code>/stoa theme</code></td><td>Cycle the themes (house, Your class, then each class)</td></tr>
 <tr><td><code>/stoa keywords inv, invite</code></td><td>Set auto-invite keywords</td></tr>
 <tr><td><code>/stoa friends</code></td><td>Open the Company roster</td></tr>
