@@ -9,6 +9,7 @@ local accountDefaults = {
 	-- old settings over instead of losing them.
 	schema = 1,
 	theme = "Bone",
+	vision = "Standard",
 	modules = {},
 }
 

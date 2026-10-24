@@ -10,6 +10,9 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Colour vision setting: Standard, Red-green, Blue-yellow or No colour, laid over any theme; also on the welcome page and `/stoa vision`.
+- Shift and drag moves quest, gossip, merchant, bag, character, spellbook, mail and similar windows; each remembers its spot.
+
 - Discipline signature: coins on the Halo for Penance, Inner Focus and Power Infusion, SHIELDS and RENEW counts, and an outline on Greater Heal while Inner Focus is up.
 - Twist of Light for Paladins: after a main-hand swing lands, the other seal of the pair is outlined and named so the next swing carries both.
 - Vampiric Embrace coin for Shadow Priests now counts down from 30 seconds.
@@ -31,7 +34,7 @@ First numbered build, for the WoW Forever beta (interface 16001).
 - Core: event bus, modules, account and per-character saved settings, a schema version, and a settings backup you can copy as text (`/stoa backup`).
 - Two states: the Grimoire console out of combat (leather panel, chat on its left page, Ready, Journey and Company pages) and the Halo in combat (health and mana arcs, signature spell, target and cast bar), with a 3 second calm-down.
 - Layouts per role (Tank, Healer, Melee DPS, Ranged DPS) following your dual-spec slots.
-- Bone, Tide and Graphite themes, colour-blind safe.
+- Bone, Tide and Graphite themes, tuned for red-green colour blindness.
 - Tank watch and target plaques, party cards, raid frames for healing, and fifteen click-casting bindings per role.
 - Combat bar with up to two extra rows, and rounded action bars.
 - Shadow and Paladin (Retribution and Protection) signatures, and self-buff reminders.

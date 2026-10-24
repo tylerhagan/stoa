@@ -52,8 +52,15 @@ local function build()
 	for _, name in ipairs(Stoa.themeOrder) do
 		table.insert(themes, { name, name == "Class" and "Your class (follows the character)" or name })
 	end
-	dropdown(Stoa.db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Each class has its own, and Your class picks the one for whoever you log in. All are colour-blind safe.", "Bone", themes, function(_, value)
+	dropdown(Stoa.db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Each class has its own, and Your class picks the one for whoever you log in. All suit red-green colour blindness; for other kinds, set Colour vision below.", "Bone", themes, function(_, value)
 		Stoa:SetTheme(value)
+	end)
+	local visions = {}
+	for _, name in ipairs(Stoa.visionOrder) do
+		table.insert(visions, { name, Stoa.VISION_LABELS[name] })
+	end
+	dropdown(Stoa.db, "vision", "Colour vision", "Swaps the warning, accent, mana and dispel colours for a set made for that kind of colour blindness, on top of any theme. Every state also keeps its word or shape. Modes other than Standard show names in the theme's text colour rather than class colours.", "Standard", visions, function(_, value)
+		Stoa:SetVision(value)
 	end)
 	checkbox(Stoa.modules.Grimoire.db, "enabled", "Show the Grimoire console", "The ink console along the bottom of the screen. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Grimoire.db, "art", "Leather console", "Dress the console in tooled leather, its lines in your theme's accent. Off gives the plain ink panel. Takes effect after /reload.", true)
@@ -165,6 +172,12 @@ local function build()
 	checkbox(merchant, "sellJunk", "Sell grey junk", nil, true)
 	checkbox(merchant, "autoRepair", "Repair gear", nil, true)
 	checkbox(merchant, "useGuildFunds", "Use guild funds when allowed", nil, true)
+
+	-- Moving Blizzard windows
+	local windows = Stoa.modules.WindowMover.db
+	header("Moving windows")
+	checkbox(windows, "enabled", "Hold a key and drag to move windows", "Quest, gossip, merchant, bags, character, spellbook, mail and similar windows: hold the key and drag the window by its title or edge. Each keeps its spot when it opens again; the key and right-click puts one back. /stoa windows reset puts them all back. Takes effect after /reload.", true)
+	dropdown(windows, "modifier", "Key to hold", nil, "SHIFT", { { "SHIFT", "Shift" }, { "ALT", "Alt" }, { "CTRL", "Ctrl" } })
 
 	-- Social
 	local social = Stoa.modules.Social.db

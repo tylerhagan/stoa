@@ -381,7 +381,9 @@ function Bar:UpdateState()
 		local inRange = IsActionInRange and plain(IsActionInRange(slot))
 		local icon = button.icon
 		if noMana then
-			icon:SetVertexColor(0.45, 0.55, 1)
+			-- Short of mana: tinted toward the theme's mana colour.
+			local r, g, b = Stoa:Color("mana")
+			icon:SetVertexColor(0.3 + r * 0.4, 0.3 + g * 0.4, 0.3 + b * 0.4)
 		elseif usable == false then
 			icon:SetVertexColor(0.4, 0.4, 0.4)
 		else

@@ -1,10 +1,12 @@
 -- Stoa: design tokens. Every colour, font and spacing value in the suite comes
 -- from here, so a theme swap restyles everything at once.
 --
--- Every theme is colour-blind safe: states differ in lightness and always
--- carry a label or shape, never red against green alone. Where a class's own
--- colour sits near the warning amber (Druid orange, Rogue yellow, Hunter
--- green), the warning moves well away from it in lightness.
+-- Every state carries a label or shape, never red against green alone, and
+-- the palettes are tuned for red-green colour blindness: states differ in
+-- lightness, and where a class's own colour sits near the warning amber
+-- (Druid orange, Rogue yellow, Hunter green), the warning moves well away
+-- from it. Other kinds of colour blindness are served by the colour vision
+-- swaps further down.
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -242,8 +244,78 @@ function Stoa:ThemeName()
 	return self.themes[name] and name or "Bone"
 end
 
+-- Colour vision ------------------------------------------------------------
+-- Every theme already pairs each state with a word or a shape. On top of
+-- that, a colour vision setting swaps only the state colours (warnings,
+-- the accent, mana, dispel types, shields and health) for a set chosen for
+-- that kind of colour blindness, leaving the theme's panels and words as
+-- they are. Class colours on names are turned off in these modes, since
+-- nine classes can't all stay apart for every eye.
+--   Red-green (protan, deutan): blue against orange and yellow (Okabe-Ito).
+--   Blue-yellow (tritan): red against teal, with pink and white.
+--   No colour (achromat): states differ by lightness alone.
+Stoa.visions = {
+	RedGreen = {
+		accent  = rgb("F0E442"),
+		danger  = rgb("E69F00"),
+		mana    = rgb("56B4E9"),
+		magic   = rgb("56B4E9"),
+		disease = rgb("F5F0E6"),
+		shield  = rgb("F0E442", 0.85),
+		health  = rgb("E8E2D6"),
+	},
+	BlueYellow = {
+		accent  = rgb("F7C6D9"),
+		danger  = rgb("FF5A4E"),
+		mana    = rgb("3FD0E0"),
+		magic   = rgb("3FD0E0"),
+		disease = rgb("FF9EC4"),
+		shield  = rgb("FFFFFF", 0.85),
+		health  = rgb("E8E2D6"),
+	},
+	NoColour = {
+		text    = rgb("EDEDED"),
+		muted   = rgb("9A9A9A"),
+		accent  = rgb("FFFFFF"),
+		danger  = rgb("FFFFFF"),
+		mana    = rgb("7C7C7C"),
+		magic   = rgb("C4C4C4"),
+		disease = rgb("6A6A6A"),
+		shield  = rgb("FFFFFF", 0.9),
+		health  = rgb("D2D2D2"),
+	},
+}
+Stoa.visionOrder = { "Standard", "RedGreen", "BlueYellow", "NoColour" }
+Stoa.VISION_LABELS = {
+	Standard = "Standard",
+	RedGreen = "Red-green (protan, deutan)",
+	BlueYellow = "Blue-yellow (tritan)",
+	NoColour = "No colour (lightness only)",
+}
+
+local blended = {}
+
+-- The theme in use, with the colour vision swaps laid over it.
 function Stoa:Theme()
-	return self.themes[self:ThemeName()]
+	local name = self:ThemeName()
+	local vision = self.db and self.db.vision
+	local swaps = vision and self.visions[vision]
+	if not swaps then return self.themes[name] end
+	local key = name .. ":" .. vision
+	if not blended[key] then
+		local theme = {}
+		for token, value in pairs(self.themes[name]) do theme[token] = value end
+		for token, value in pairs(swaps) do theme[token] = value end
+		theme.classTint = false
+		blended[key] = theme
+	end
+	return blended[key]
+end
+
+function Stoa:SetVision(name)
+	if name ~= "Standard" and not self.visions[name] then return end
+	self.db.vision = name
+	self:Fire("STOA_THEME_CHANGED", self.db.theme)
 end
 
 function Stoa:Color(token)
@@ -267,3 +339,21 @@ function Stoa:CycleTheme()
 	end
 	self:SetTheme("Bone")
 end
+
+-- /stoa vision cycles the colour vision modes; /stoa vision redgreen etc.
+Stoa.commands.vision = function(rest)
+	local wanted = rest and rest:lower():gsub("[%s%-]", "")
+	local pick
+	for _, name in ipairs(Stoa.visionOrder) do
+		if wanted ~= "" and name:lower() == wanted then pick = name end
+	end
+	if not pick then
+		local current = Stoa.db.vision or "Standard"
+		for i, name in ipairs(Stoa.visionOrder) do
+			if name == current then pick = Stoa.visionOrder[i % #Stoa.visionOrder + 1] end
+		end
+	end
+	Stoa:SetVision(pick or "Standard")
+	Stoa:Print("Colour vision:", Stoa.VISION_LABELS[Stoa.db.vision])
+end
+

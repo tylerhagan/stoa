@@ -9,7 +9,7 @@ local UI = Stoa.UI
 local Welcome = {}
 Stoa.Welcome = Welcome
 
-local WIDTH, HEIGHT = 600, 420
+local WIDTH, HEIGHT = 600, 484
 local PAD = 28
 local ROLE_WIDTH = 112
 local CLASS_DEFAULT_WORD = "  (class default)"
@@ -80,9 +80,23 @@ function Welcome:Build()
 		self.themeButtons[name] = button
 	end
 
+	-- Colour vision, laid over whichever theme you pick.
+	local visionLabel = UI.caption(page, "Colour vision")
+	visionLabel:SetPoint("TOPLEFT", PAD, -304)
+	self.visionButtons = {}
+	local VISION_WORDS = { Standard = "Standard", RedGreen = "Red-green", BlueYellow = "Blue-yellow", NoColour = "No colour" }
+	for i, name in ipairs(Stoa.visionOrder) do
+		local button = UI.button(page, VISION_WORDS[name], ROLE_WIDTH, function()
+			Stoa:SetVision(name)
+			self:Refresh()
+		end)
+		button:SetPoint("TOPLEFT", PAD + (i - 1) * (ROLE_WIDTH + 8), -322)
+		self.visionButtons[name] = button
+	end
+
 	-- Ways to see it all before a real fight.
 	local tryLabel = UI.caption(page, "Try it")
-	tryLabel:SetPoint("TOPLEFT", PAD, -304)
+	tryLabel:SetPoint("TOPLEFT", PAD, -368)
 	local tries = {
 		{ "Sample party", function() Stoa.commands.test("") end },
 		{ "Practice combat", function() page:Hide(); Stoa.commands.combat("") end },
@@ -90,7 +104,7 @@ function Welcome:Build()
 	}
 	for i, entry in ipairs(tries) do
 		local button = UI.button(page, entry[1], ROLE_WIDTH + 20, entry[2])
-		button:SetPoint("TOPLEFT", PAD + (i - 1) * (ROLE_WIDTH + 28), -322)
+		button:SetPoint("TOPLEFT", PAD + (i - 1) * (ROLE_WIDTH + 28), -386)
 	end
 
 	local done = UI.button(page, "Done", 96, function() page:Hide() end)
@@ -111,6 +125,8 @@ function Welcome:Refresh()
 	end
 	local theme = Stoa.db.theme
 	for name, button in pairs(self.themeButtons) do button:SetSelected(name == theme) end
+	local vision = Stoa.db.vision or "Standard"
+	for name, button in pairs(self.visionButtons) do button:SetSelected(name == vision) end
 end
 
 function Welcome:Show()

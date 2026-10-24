@@ -14,10 +14,12 @@ What works today:
 | Area | What it does |
 | --- | --- |
 | Core | Event bus, modules, saved settings (account and per character) |
-| Tokens | Bone, Tide and Graphite themes, one per class, and Your class (follows the character); all colour-blind safe; spacing and type scale |
+| Tokens | Bone, Tide and Graphite themes, one per class, and Your class (follows the character); spacing and type scale. Every state carries a word or shape, and the palettes suit red-green colour blindness |
+| Colour vision | A setting on top of any theme (also on the welcome page and `/stoa vision`): Standard, Red-green (protan, deutan), Blue-yellow (tritan) or No colour (lightness only). It swaps only the state colours (warnings, accent, mana, dispel types, shields, health) and shows names in the text colour instead of class colours |
 | Roles | Maps each dual-spec slot to a role; set it in settings or use the class default |
 | State | World and combat states with a 3 second calm-down |
 | Movers | `/stoa unlock` (or Move frames in settings) to drag the Halo, target plaque, cast bar, combat bar, party, raid, tank watch, click grid and damage meters. A small bar offers Lock, Reset this layout and a grid; arrow keys nudge the chosen frame 1 (Shift 10); right-click puts one back. Spots are saved per role, so healer and damage layouts differ; older saves still apply |
+| Moving windows | Hold Shift (or Alt or Ctrl, in settings) and drag a quest, gossip, merchant, bag, character, spellbook, mail, auction or similar window by its title or edge. Each keeps its spot whenever it opens again; Shift and right-click puts one back. Shift-clicking items still splits and links as usual |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` (in game or over Battle.net) get invited; optionally the keyword works in guild chat. Says so when the group is full or you aren't leader |
 | Company | `/stoa friends` or a click on the console's Company page: online friends, Battle.net friends in this game, and guild, with level, zone and AWAY/BUSY. Click to whisper, Shift- or right-click to invite. The console names a few friends online when you're alone |
@@ -62,6 +64,8 @@ Fonts are the main gap: see below.
 | `/stoa unlock` | Toggle frame moving |
 | `/stoa reset` | Put moved frames back in their default spots, in every role |
 | `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload |
+| `/stoa vision` | Cycle colour vision modes, or name one: `redgreen`, `blueyellow`, `nocolour` or `standard` |
+| `/stoa windows reset` | Put every moved Blizzard window back in its usual place |
 | `/stoa theme` | Cycle the themes (house, Your class, then each class) |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa friends` | Open the Company roster |

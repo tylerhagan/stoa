@@ -27,6 +27,7 @@ Modules\QoL\AutoInvite.lua
 Modules\QoL\Roster.lua
 Modules\QoL\Merchant.lua
 Modules\QoL\Comforts.lua
+Modules\QoL\WindowMover.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
