@@ -1,8 +1,11 @@
 -- Stoa: design tokens. Every colour, font and spacing value in the suite comes
 -- from here, so a theme swap restyles everything at once.
 --
--- All three themes are colour-blind safe: states differ in lightness and always
--- carry a label or shape, never red against green alone.
+-- Every state carries a label or shape, never colour alone. The themes
+-- avoid red against green, but they're made for looks first: measured
+-- (Tools/art/cvd_audit.py), some states sit close for colour-blind eyes,
+-- such as blue and purple dispels. The colour vision swaps further down
+-- are the colour-safe sets, one per kind.
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -29,10 +32,10 @@ Stoa.themes = {
 		classTint = true,
 	},
 	Tide = {
-		text    = rgb("DCE6F2"),
+		text    = rgb("B8C8DC"),
 		muted   = rgb("93A7BE"),
 		panel   = rgb("0D131A", 0.92),
-		hairline = rgb("DCE6F2", 0.2),
+		hairline = rgb("B8C8DC", 0.2),
 		health  = rgb("7FA6D6"),
 		mana    = rgb("3F6FD8"),
 		danger  = rgb("FFFFFF"),
@@ -56,9 +59,147 @@ Stoa.themes = {
 		disease = rgb("EDEDED"),
 		classTint = false,
 	},
+
+	-- Class themes: the class colour as the accent, the panel and words
+	-- tinted toward it. "Class" in the theme list follows whoever you log in.
+	Warrior = {
+		text    = rgb("EEE6D8"),
+		muted   = rgb("A89E90"),
+		panel   = rgb("14110E", 0.92),
+		hairline = rgb("EEE6D8", 0.22),
+		health  = rgb("E2D7C4"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("FF7A45"),
+		shield  = rgb("E6C9A0", 0.9),
+		accent  = rgb("C9A47C"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Paladin = {
+		text    = rgb("F2E9EE"),
+		muted   = rgb("AC9EA6"),
+		panel   = rgb("151014", 0.92),
+		hairline = rgb("F2E9EE", 0.22),
+		health  = rgb("EADFE3"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("F7C6DC", 0.9),
+		accent  = rgb("F4A3C8"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Hunter = {
+		text    = rgb("E9EDE0"),
+		muted   = rgb("9EA592"),
+		panel   = rgb("10130E", 0.92),
+		hairline = rgb("E9EDE0", 0.22),
+		health  = rgb("DDE3CF"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("FFD08A"),
+		shield  = rgb("C9DFA5", 0.9),
+		accent  = rgb("93B85E"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Rogue = {
+		text    = rgb("EFEDDD"),
+		muted   = rgb("A6A390"),
+		panel   = rgb("12120D", 0.92),
+		hairline = rgb("EFEDDD", 0.22),
+		health  = rgb("E4E0C8"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("E8743A"),
+		shield  = rgb("FFF3A8", 0.9),
+		accent  = rgb("F2E06B"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Priest = {
+		text    = rgb("F4F3F7"),
+		muted   = rgb("A7A5B0"),
+		panel   = rgb("121216", 0.92),
+		hairline = rgb("F4F3F7", 0.24),
+		health  = rgb("E6E4EC"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("FFFFFF", 0.85),
+		accent  = rgb("D2CCF2"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("E8C27A"),
+		classTint = true,
+	},
+	Shaman = {
+		text    = rgb("E2EAF4"),
+		muted   = rgb("95A4B8"),
+		panel   = rgb("0C1220", 0.92),
+		hairline = rgb("E2EAF4", 0.22),
+		health  = rgb("D7E0EC"),
+		mana    = rgb("5ED3E6"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("A8C8FF", 0.9),
+		accent  = rgb("4C94FF"),
+		magic   = rgb("5ED3E6"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Mage = {
+		text    = rgb("E4F0F6"),
+		muted   = rgb("96A9B4"),
+		panel   = rgb("0C141A", 0.92),
+		hairline = rgb("E4F0F6", 0.22),
+		health  = rgb("D9E6EE"),
+		mana    = rgb("5B7CFF"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("C4ECFF", 0.9),
+		accent  = rgb("7FD3F4"),
+		magic   = rgb("5B7CFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
+	Warlock = {
+		text    = rgb("ECE8F4"),
+		muted   = rgb("A49DB4"),
+		panel   = rgb("110E17", 0.92),
+		hairline = rgb("ECE8F4", 0.22),
+		health  = rgb("E1DCEC"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("F0A04B"),
+		shield  = rgb("D2C6F5", 0.9),
+		accent  = rgb("A894E6"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("E8C27A"),
+		classTint = true,
+	},
+	Druid = {
+		text    = rgb("F1E9DF"),
+		muted   = rgb("AA9E90"),
+		panel   = rgb("15100C", 0.92),
+		hairline = rgb("F1E9DF", 0.22),
+		health  = rgb("E6DCCB"),
+		mana    = rgb("6F9BFF"),
+		danger  = rgb("FFF07A"),
+		shield  = rgb("FFD3A6", 0.9),
+		accent  = rgb("F28A3A"),
+		magic   = rgb("6F9BFF"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
 }
 
-Stoa.themeOrder = { "Bone", "Tide", "Graphite" }
+Stoa.themeOrder = {
+	"Bone", "Tide", "Graphite", "Class",
+	"Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior",
+}
+
+-- "Class" follows the character: each class file name to its theme.
+local CLASS_THEMES = {
+	WARRIOR = "Warrior", PALADIN = "Paladin", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
+	SHAMAN = "Shaman", MAGE = "Mage", WARLOCK = "Warlock", DRUID = "Druid",
+}
 
 -- Spacing scale in pixels (4 px grid) and type sizes.
 Stoa.space = { xs = 4, s = 8, m = 12, l = 16, xl = 24, xxl = 36 }
@@ -92,8 +233,92 @@ end
 
 -- Theme access --------------------------------------------------------------
 
+-- The theme in use, with "Class" resolved to this character's class.
+function Stoa:ThemeName()
+	local name = self.db and self.db.theme or "Bone"
+	if name == "Class" then
+		local _, classFile = UnitClass("player")
+		name = CLASS_THEMES[classFile] or "Bone"
+	end
+	return self.themes[name] and name or "Bone"
+end
+
+-- Colour vision ------------------------------------------------------------
+-- Every theme already pairs each state with a word or a shape. On top of
+-- that, a colour vision setting swaps only the state colours (warnings,
+-- the accent, mana, dispel types, shields and health) for a set chosen for
+-- that kind of colour blindness, leaving the theme's panels and words as
+-- they are. Class colours on names are turned off in these modes, since
+-- nine classes can't all stay apart for every eye.
+--   Red-green (protan, deutan): blue against deep orange and pale yellow.
+--   Blue-yellow (tritan): red against teal, with pink and white.
+--   No colour (achromat): four steps of lightness, the warning brightest.
+-- Each set was picked by search so the states that meet on screen stay
+-- apart (colour difference, CIEDE2000) both for the eyes it's for, using
+-- the Machado 2009 simulation, and for typical vision, with text tokens at
+-- 4.5:1 or more on the panels. Tools/art/cvd_audit.py repeats the check.
+Stoa.visions = {
+	RedGreen = {
+		accent  = rgb("FAED8D"),
+		danger  = rgb("E07E02"),
+		mana    = rgb("4296DE"),
+		magic   = rgb("4296DE"),
+		disease = rgb("F6F7F7"),
+		shield  = rgb("FAED8D", 0.85),
+		health  = rgb("B1A481"),
+	},
+	BlueYellow = {
+		accent  = rgb("FDFDFD"),
+		danger  = rgb("FF3A51"),
+		mana    = rgb("269AA8"),
+		magic   = rgb("269AA8"),
+		disease = rgb("F37DB9"),
+		shield  = rgb("FDFDFD", 0.85),
+		health  = rgb("A48E78"),
+	},
+	NoColour = {
+		text    = rgb("CFCFCF"),
+		muted   = rgb("9A9A9A"),
+		accent  = rgb("CFCFCF"),
+		danger  = rgb("FFFFFF"),
+		mana    = rgb("7E7E7E"),
+		magic   = rgb("CFCFCF"),
+		disease = rgb("7E7E7E"),
+		shield  = rgb("FFFFFF", 0.9),
+		health  = rgb("A2A2A2"),
+	},
+}
+Stoa.visionOrder = { "Standard", "RedGreen", "BlueYellow", "NoColour" }
+Stoa.VISION_LABELS = {
+	Standard = "Standard",
+	RedGreen = "Red-green (protan, deutan)",
+	BlueYellow = "Blue-yellow (tritan)",
+	NoColour = "No colour (lightness only)",
+}
+
+local blended = {}
+
+-- The theme in use, with the colour vision swaps laid over it.
 function Stoa:Theme()
-	return self.themes[self.db and self.db.theme] or self.themes.Bone
+	local name = self:ThemeName()
+	local vision = self.db and self.db.vision
+	local swaps = vision and self.visions[vision]
+	if not swaps then return self.themes[name] end
+	local key = name .. ":" .. vision
+	if not blended[key] then
+		local theme = {}
+		for token, value in pairs(self.themes[name]) do theme[token] = value end
+		for token, value in pairs(swaps) do theme[token] = value end
+		theme.classTint = false
+		blended[key] = theme
+	end
+	return blended[key]
+end
+
+function Stoa:SetVision(name)
+	if name ~= "Standard" and not self.visions[name] then return end
+	self.db.vision = name
+	self:Fire("STOA_THEME_CHANGED", self.db.theme)
 end
 
 function Stoa:Color(token)
@@ -101,7 +326,7 @@ function Stoa:Color(token)
 end
 
 function Stoa:SetTheme(name)
-	if not self.themes[name] then return end
+	if not self.themes[name] and name ~= "Class" then return end
 	self.db.theme = name
 	self:Fire("STOA_THEME_CHANGED", name)
 end
@@ -117,3 +342,21 @@ function Stoa:CycleTheme()
 	end
 	self:SetTheme("Bone")
 end
+
+-- /stoa vision cycles the colour vision modes; /stoa vision redgreen etc.
+Stoa.commands.vision = function(rest)
+	local wanted = rest and rest:lower():gsub("[%s%-]", "")
+	local pick
+	for _, name in ipairs(Stoa.visionOrder) do
+		if wanted ~= "" and name:lower() == wanted then pick = name end
+	end
+	if not pick then
+		local current = Stoa.db.vision or "Standard"
+		for i, name in ipairs(Stoa.visionOrder) do
+			if name == current then pick = Stoa.visionOrder[i % #Stoa.visionOrder + 1] end
+		end
+	end
+	Stoa:SetVision(pick or "Standard")
+	Stoa:Print("Colour vision:", Stoa.VISION_LABELS[Stoa.db.vision])
+end
+

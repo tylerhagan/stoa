@@ -13,12 +13,13 @@
 -- looked up and guarded, so a renamed frame costs one detail.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Top = Stoa:NewModule("Top")
 
 local function guarded(fn, ...)
-	xpcall(fn, geterrorhandler(), ...)
+	xpcall(fn, Stoa.catch, ...)
 end
 
 -- Textures moved here never draw again, whatever Blizzard does to them.

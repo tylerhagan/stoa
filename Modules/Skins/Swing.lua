@@ -6,6 +6,7 @@
 -- amber instead of Blizzard's red.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Swing = Stoa:NewModule("Swing")
@@ -18,7 +19,7 @@ local FRAMES = {
 }
 
 local function guarded(fn, ...)
-	xpcall(fn, geterrorhandler(), ...)
+	xpcall(fn, Stoa.catch, ...)
 end
 
 -- Textures moved here never draw again, whatever Blizzard does to them.

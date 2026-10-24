@@ -67,7 +67,7 @@ end
 function Merchant:OnEnable()
 	local db = self.db
 	Stoa:On("MERCHANT_SHOW", function()
-		if db.sellJunk then xpcall(sellJunk, geterrorhandler()) end
-		if db.autoRepair then xpcall(repair, geterrorhandler(), db) end
+		if db.sellJunk then xpcall(sellJunk, Stoa.catch) end
+		if db.autoRepair then xpcall(repair, Stoa.catch, db) end
 	end)
 end

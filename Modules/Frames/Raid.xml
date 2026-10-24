@@ -20,4 +20,10 @@
 			<OnLoad function="StoaRaidCell_OnLoad"/>
 		</Scripts>
 	</Button>
+	<Button name="StoaRaidTinyTemplate" inherits="SecureUnitButtonTemplate" virtual="true">
+		<Size x="78" y="22"/>
+		<Scripts>
+			<OnLoad function="StoaRaidTiny_OnLoad"/>
+		</Scripts>
+	</Button>
 </Ui>

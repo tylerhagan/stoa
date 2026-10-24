@@ -43,7 +43,7 @@ local SPELLS = {
 
 -- How long each lasts, for the times the game won't show the aura itself:
 -- then the coin runs from your own cast on this target.
-local DURATIONS = { pain = 18, plague = 24, embrace = 60 }
+local DURATIONS = { pain = 18, plague = 24, embrace = 30 }
 
 local DOTS = {
 	{ key = "pain", letter = "P" },
@@ -476,9 +476,9 @@ function Shadow:OnEnable()
 	if halo.target and halo.target.hp then self:BuildWeaving(halo.target) end
 	self.plates = {}
 
-	Stoa.commands.probe = function() xpcall(self.Probe, geterrorhandler(), self) end
+	Stoa.commands.probe = function() xpcall(self.Probe, Stoa.catch, self) end
 
-	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
+	local function refresh() xpcall(self.Refresh, Stoa.catch, self) end
 	Stoa:On("PLAYER_TARGET_CHANGED", function()
 		self:ForgetHiddenTarget()
 		refresh()
@@ -495,12 +495,12 @@ function Shadow:OnEnable()
 	Stoa:On("UNIT_AURA", function(unit)
 		if unit == "target" or unit == "player" then refresh() end
 		if unit and self.plates[unit] then
-			xpcall(self.UpdatePlate, geterrorhandler(), self, unit)
+			xpcall(self.UpdatePlate, Stoa.catch, self, unit)
 		end
 	end)
 	Stoa:On("NAME_PLATE_UNIT_ADDED", function(unit)
 		self.plates[unit] = true
-		xpcall(self.UpdatePlate, geterrorhandler(), self, unit)
+		xpcall(self.UpdatePlate, Stoa.catch, self, unit)
 	end)
 	Stoa:On("NAME_PLATE_UNIT_REMOVED", function(unit)
 		self.plates[unit] = nil
@@ -509,9 +509,9 @@ function Shadow:OnEnable()
 	-- Timers and cooldowns tick without events. If an update ever errors
 	-- the ticker stops rather than repeating the error.
 	local ticker
-	ticker = C_Timer.NewTicker(0.2, function()
+	ticker = Stoa:NewTicker(0.2, function()
 		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Active() then return end
-		if not xpcall(self.Refresh, geterrorhandler(), self) then ticker:Cancel() end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticker:Cancel() end
 	end)
 	refresh()
 end

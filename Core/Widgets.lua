@@ -126,11 +126,11 @@ end
 function UI.fade(frame, to, seconds)
 	local from, start = frame:GetAlpha(), GetTime()
 	frame.stoaFade = frame.stoaFade or CreateFrame("Frame")
-	frame.stoaFade:SetScript("OnUpdate", function(self)
+	frame.stoaFade:SetScript("OnUpdate", Stoa:GuardUpdate(function(self)
 		local progress = math.min((GetTime() - start) / seconds, 1)
 		frame:SetAlpha(from + (to - from) * progress)
 		if progress >= 1 then self:SetScript("OnUpdate", nil) end
-	end)
+	end))
 end
 
 -- A hidden parent for Blizzard frames Stoa replaces.
@@ -187,6 +187,8 @@ UI.CARD_STYLES = {
 	-- The compact raid cell: health fills the cell behind the name, and one
 	-- word or the percent sits on the right.
 	cell = { pad = 5, name = 11, cell = true },
+	-- The same, a size down, for forty players.
+	tiny = { pad = 4, name = 10, cell = true },
 }
 
 local MAX_PIPS = 3
@@ -550,6 +552,7 @@ end
 local CELL_WORDS = {
 	MAGIC = "MAG", DISEASE = "DIS", CURSE = "CUR", POISON = "POI", DISPEL = "DSP",
 	LOW = "LOW", DEAD = "DEAD", OFFLINE = "OFF",
+	READY = "RDY", ["NOT READY"] = "NOT", WAITING = "...",
 }
 function UI.cellWord(card, word, token)
 	if not (card.style and card.style.cell) then return false end

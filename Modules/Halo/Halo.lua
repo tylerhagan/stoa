@@ -28,7 +28,7 @@ local AURA_COUNT = 8
 local SIGNATURES = {
 	PRIEST = {
 		RANGED = { 8092 },              -- Mind Blast
-		HEALER = { 17 },                -- Power Word: Shield
+		HEALER = { 1240721, 17 },       -- Penance, Power Word: Shield
 	},
 	PALADIN = {
 		MELEE = { 679, 20271 },         -- Holy Strike, Judgement
@@ -188,6 +188,7 @@ function Halo:BuildTarget(frame)
 	-- DEAD, so the plaque always matches what you have targeted.
 	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
 	self.target = target
+	Stoa:RegisterMover("target", target, "Target plaque")
 
 	-- A plaque like the tank watch opposite: the coin faces the Halo.
 	local plaque = UI.plaque(target, "LEFT")
@@ -212,6 +213,11 @@ function Halo:BuildTarget(frame)
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
 	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -6)
+	-- KICK, when the target is casting something you can interrupt (Kit.lua).
+	local kick = UI.text(target, "sans", Stoa.typeSize.label, "danger", "LEFT")
+	kick:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -6)
+	kick:Hide()
+	target.kick = kick
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target.threat, target.caption = threat, caption
 
@@ -275,6 +281,7 @@ function Halo:BuildCast(frame)
 	cast.notch = notch
 	cast:Hide()
 	self.cast = cast
+	Stoa:RegisterMover("cast", cast, "Cast bar")
 
 	-- Missing self-buffs, and your seal, under the cast bar.
 	local reminders = UI.caption(frame, "")
@@ -423,9 +430,13 @@ function Halo:UpdateTargetAuras()
 			collect("HELPFUL")
 		end
 	end
-	-- The row hangs under the card, from its inner edge.
-	icons[1]:ClearAllPoints()
-	icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
+	-- The row hangs under the card, from its inner edge. The card is a
+	-- secure button, so the anchor is set once, out of combat.
+	if not icons.placed and not InCombatLockdown() then
+		icons[1]:ClearAllPoints()
+		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
+		icons.placed = true
+	end
 	for i, icon in ipairs(icons) do
 		local aura = found[i]
 		if aura then
@@ -552,14 +563,14 @@ function Halo:StartCast(channel)
 
 	if not Stoa:IsSecret(startMS) and not Stoa:IsSecret(endMS) then
 		cast:SetMinMaxValues(startMS / 1000, endMS / 1000)
-		cast:SetScript("OnUpdate", function(bar)
+		cast:SetScript("OnUpdate", Stoa:GuardUpdate(function(bar)
 			local now = GetTime()
 			if channel then
 				bar:SetValue(endMS / 1000 - (now - startMS / 1000))
 			else
 				bar:SetValue(now)
 			end
-		end)
+		end))
 	elseif cast.SetTimerDuration then
 		local getDuration = channel and UnitChannelDuration or UnitCastingDuration
 		if getDuration then pcall(cast.SetTimerDuration, cast, getDuration("player")) end
@@ -615,12 +626,12 @@ function Halo:OnEnable()
 
 	if self.db.hidePlayerFrame then
 		Stoa:AfterCombat(function()
-			xpcall(hideBlizzard({ PlayerFrame, PlayerCastingBarFrame }), geterrorhandler())
+			xpcall(hideBlizzard({ PlayerFrame, PlayerCastingBarFrame }), Stoa.catch)
 		end)
 	end
 	if self.db.hideTargetFrame then
 		Stoa:AfterCombat(function()
-			xpcall(hideBlizzard({ TargetFrame, FocusFrame }), geterrorhandler())
+			xpcall(hideBlizzard({ TargetFrame, FocusFrame }), Stoa.catch)
 		end)
 	end
 

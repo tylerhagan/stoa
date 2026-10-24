@@ -85,7 +85,7 @@ function Party:Build()
 
 	UI.applyTheme()
 	self:Layout()
-	Stoa:RegisterMover("party", frame, "Party")
+	Stoa:RegisterMover("party", frame, "Party", { default = function() self:Layout() end })
 end
 
 -- How many cards show: you plus your party, or all five in the preview.
@@ -100,7 +100,7 @@ function Party:Layout()
 	local frame = self.frame
 	local count = self:VisibleCount()
 	local halo = _G.StoaHalo
-	if not Stoa.char.positions.party then
+	if not Stoa:HasSavedPosition("party") then
 		frame:ClearAllPoints()
 		if layout.row and halo then
 			-- In combat under the combat bar when there is one; otherwise,
@@ -264,13 +264,22 @@ function Party:UpdateCard(card)
 			self:AuraPips(unit, pips)
 		end
 	end
+	-- During a ready check each card says where that player stands.
+	local kit = Stoa.modules.Kit
+	local ready, readyToken
+	if kit and kit.ReadyPip and kit.enabled and not gone then
+		ready, readyToken = kit:ReadyPip(unit)
+		if ready then table.insert(pips, 1, ready) end
+	end
 	UI.setPips(card, pips)
 
 	-- Bar and percent turn amber when low, and the border says why.
 	local r, g, b = Stoa:Color(low and "danger" or "health")
 	card.hp:SetStatusBarColor(r, g, b)
 	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
-	if gone then
+	if ready then
+		UI.cellWord(card, ready[1], readyToken)
+	elseif gone then
 		UI.cellWord(card, gone, "muted")
 	elseif dispel then
 		UI.cellWord(card, dispel.word, dispel.token)
@@ -632,7 +641,7 @@ function Party:OnEnable()
 	self:UpdateWatch()
 
 	if self.db.hideBlizzardParty then
-		Stoa:AfterCombat(function() xpcall(hideBlizzardParty, geterrorhandler()) end)
+		Stoa:AfterCombat(function() xpcall(hideBlizzardParty, Stoa.catch) end)
 	end
 
 	Stoa:On("STOA_ROLE_CHANGED", function()
@@ -682,12 +691,12 @@ function Party:OnEnable()
 
 	-- Range has no event, so it's checked a few times a second; buff timers
 	-- count down once a second.
-	C_Timer.NewTicker(0.3, function()
+	Stoa:NewTicker(0.3, function()
 		for _, card in ipairs(self.cards) do
 			self:UpdateRange(card)
 		end
 	end)
-	C_Timer.NewTicker(1, function()
+	Stoa:NewTicker(1, function()
 		if self.frame:IsVisible() then self:UpdateAll() end
 		self:UpdateWatch()
 	end)

@@ -9,13 +9,17 @@ local accountDefaults = {
 	-- old settings over instead of losing them.
 	schema = 1,
 	theme = "Bone",
+	vision = "Standard",
 	modules = {},
 }
 
 local characterDefaults = {
 	-- Role for each dual-spec slot. "AUTO" means use the class default.
 	roles = { slot1 = "AUTO", slot2 = "AUTO" },
+	-- Older, layout-free spots; kept so earlier saves still work.
 	positions = {},
+	-- Frame spots per role layout: layouts.HEALER.party and so on.
+	layouts = {},
 	-- Click-cast bindings per role, filled from defaults on first use.
 	clicks = {},
 	-- Whether this character has seen the welcome page.

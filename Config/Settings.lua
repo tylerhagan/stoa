@@ -41,16 +41,26 @@ local function build()
 		layout:AddInitializer(CreateSettingsButtonInitializer("Backup", "Open", function()
 			Stoa.Backup:Show()
 		end, "All of Stoa's settings as one line of text to keep safe, and a place to paste one back. /stoa backup", true))
+		layout:AddInitializer(CreateSettingsButtonInitializer("Report a problem", "Open", function()
+			Stoa.Report:Show()
+		end, "Your setup and any errors Stoa caught this session, ready to copy and send. /stoa report", true))
 	end
 
 	-- Look
 	header("Look")
 	local themes = {}
 	for _, name in ipairs(Stoa.themeOrder) do
-		table.insert(themes, { name, name })
+		table.insert(themes, { name, name == "Class" and "Your class (follows the character)" or name })
 	end
-	dropdown(Stoa.db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. All three are colour-blind safe.", "Bone", themes, function(_, value)
+	dropdown(Stoa.db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Each class has its own, and Your class picks the one for whoever you log in. Every state has a word as well as a colour; for colours picked and checked for colour-blind eyes, set Colour vision below.", "Bone", themes, function(_, value)
 		Stoa:SetTheme(value)
+	end)
+	local visions = {}
+	for _, name in ipairs(Stoa.visionOrder) do
+		table.insert(visions, { name, Stoa.VISION_LABELS[name] })
+	end
+	dropdown(Stoa.db, "vision", "Colour vision", "Swaps the warning, accent, mana and dispel colours for a set made for that kind of colour blindness, on top of any theme. Every state also keeps its word or shape. Modes other than Standard show names in the theme's text colour rather than class colours.", "Standard", visions, function(_, value)
+		Stoa:SetVision(value)
 	end)
 	checkbox(Stoa.modules.Grimoire.db, "enabled", "Show the Grimoire console", "The ink console along the bottom of the screen. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Grimoire.db, "art", "Leather console", "Dress the console in tooled leather, its lines in your theme's accent. Off gives the plain ink panel. Takes effect after /reload.", true)
@@ -69,6 +79,13 @@ local function build()
 		Stoa.modules.ActionBars:SetOption("hoverTray", value)
 	end)
 	checkbox(Stoa.modules.Windows.db, "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on Stoa's dark panels with light text. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.MoreWindows.db, "enabled", "Restyle more windows", "Spellbook, talents, world map border, mail, auction house, group finder, friends and guild, game menu and settings on the same dark panels. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Bags.db, "enabled", "Restyle bags", "Bags with rounded slots, a coloured edge by quality plus a corner mark for epic and above, item level on gear, free slots, your money in letters and a Sort button. Takes effect after /reload.", true)
+	dropdown(Stoa.modules.Bags.db, "bagMode", "Bag layout", "One combined bag, or a window for each bag. You can still switch from the bag's own menu; this applies when you change it here.", "combined", { { "combined", "One combined bag" }, { "separate", "Separate bags" } }, function()
+		Stoa.modules.Bags.db.appliedMode = nil
+		Stoa.modules.Bags:ApplyMode()
+	end)
+	checkbox(Stoa.modules.Character.db, "enabled", "Restyle the character sheet", "A dark panel, item level and quality edges on every slot, the words WORN and BROKEN on gear that needs repair, and an average item level line. The inspect window gets item levels too. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Top.db, "enabled", "Restyle the top of the screen", "Buffs as cropped icons with quiet timers, the quest tracker in Stoa's type without the gold bars, and the minimap's zone header on a dark panel with its buttons waiting for the mouse. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Plates.db, "enabled", "Restyle nameplates", "Flat bars coloured by what you can do: amber for enemies, pale gold for neutral, blue for friends, and grey only for tapped or dead. A bone edge marks your target. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Swing.db, "enabled", "Restyle the swing timer", "Blizzard's swing timer as a flat bar in a rounded dark track: pale gold for the main hand, blue for the off hand. Place it in Edit Mode. Takes effect after /reload.", true)
@@ -101,6 +118,31 @@ local function build()
 		end, "Fifteen bindings per role: five mouse buttons, plain, Shift and Ctrl.", true))
 	end
 
+	-- Dungeon kit
+	local kit = Stoa.modules.Kit.db
+	header("Levelling and dungeons")
+	checkbox(kit, "xpRate", "Experience pace on the console", "Experience an hour and time to level under the Journey bar, worked out over the last half hour and started again at each level. /stoa xp prints it. Hidden at the highest level.", true, function()
+		Stoa.modules.Kit:UpdateConsole()
+	end)
+	checkbox(kit, "questLine", "Nearest quest on the console", "When you are not in a group, one line under Journey with the progress of the watched quest nearest you.", true, function()
+		Stoa.modules.Kit:UpdateConsole()
+	end)
+	checkbox(kit, "bigNumber", "Big number for the pull timer", "/stoa pull 10 shows a large number in the middle of the screen when the game's own group countdown can't be used (you aren't a leader, or you are alone). Group chat gets 3, 2, 1 when you are grouped.", true)
+	checkbox(kit, "readyCheck", "Ready check dress and words", "The ready check prompt on Stoa's panel, and READY, NOT READY or WAITING on each party card while it runs. Takes effect after /reload.", true)
+	checkbox(kit, "kickCue", "KICK cue on the target", "The word KICK on the target plaque while it casts something you can interrupt.", true, function()
+		Stoa.modules.Kit:UpdateKick()
+	end)
+
+	-- Move frames
+	header("Move frames")
+	if CreateSettingsButtonInitializer then
+		layout:AddInitializer(CreateSettingsButtonInitializer("Move frames", "Unlock", function()
+			-- Settings covers the screen, so step out of its way first.
+			if not InCombatLockdown() and SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
+			Stoa:ToggleMovers()
+		end, "Drag the Halo, party, raid, target, cast bar and more where you like. Each role keeps its own spots. Arrow keys nudge, right-click puts one back. /stoa unlock", true))
+	end
+
 	-- Roles
 	header("Roles for this character")
 	local roles = { { "AUTO", "Class default" } }
@@ -131,6 +173,11 @@ local function build()
 	checkbox(merchant, "autoRepair", "Repair gear", nil, true)
 	checkbox(merchant, "useGuildFunds", "Use guild funds when allowed", nil, true)
 
+	-- Moving Blizzard windows
+	local windows = Stoa.modules.WindowMover.db
+	header("Moving windows")
+	checkbox(windows, "enabled", "Shift and drag to move windows", "Quest, gossip, merchant, bags, character, spellbook, mail and similar windows: hold Shift and drag the window by its title or edge. Each keeps its spot when it opens again; Shift and right-click puts one back. /stoa windows reset puts them all back. Takes effect after /reload.", true)
+
 	-- Social
 	local social = Stoa.modules.Social.db
 	header("Social")
@@ -145,6 +192,12 @@ local function build()
 	checkbox(invite, "enabled", "Invite on whispered \"inv\"", "Friends and guild only. Change the keywords with /stoa keywords <words>.", true)
 	checkbox(invite, "strangersToo", "Invite strangers too", nil, false)
 	checkbox(invite, "convertToRaid", "Make a raid when full", nil, true)
+	checkbox(invite, "guildChat", "Keyword works in guild chat", "A guildmate saying just the keyword in guild chat gets an invite.", false)
+	if CreateSettingsButtonInitializer then
+		layout:AddInitializer(CreateSettingsButtonInitializer("Company", "Open", function()
+			Stoa.modules.Roster:Toggle()
+		end, "Friends and guildmates who are online: click to whisper, Shift-click to invite. /stoa friends", true))
+	end
 
 	Settings.RegisterAddOnCategory(category)
 end
@@ -173,6 +226,9 @@ Stoa.commands.safe = function()
 	end
 	if m.ActionBars then m.ActionBars.db.enabled = false end
 	if m.Windows then m.Windows.db.enabled = false end
+	if m.MoreWindows then m.MoreWindows.db.enabled = false end
+	if m.Bags then m.Bags.db.enabled = false end
+	if m.Character then m.Character.db.enabled = false end
 	if m.Meters then m.Meters.db.enabled = false end
 	if m.Top then m.Top.db.enabled = false end
 	if m.Plates then m.Plates.db.enabled = false end

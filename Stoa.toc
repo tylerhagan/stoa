@@ -12,6 +12,8 @@
 ## X-Game: Forever
 
 Core\Init.lua
+Core\Report.lua
+Core\SelfCheck.lua
 Core\Util.lua
 Core\Database.lua
 Core\Tokens.lua
@@ -22,8 +24,10 @@ Core\Widgets.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
+Modules\QoL\Roster.lua
 Modules\QoL\Merchant.lua
 Modules\QoL\Comforts.lua
+Modules\QoL\WindowMover.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
@@ -34,6 +38,8 @@ Modules\Halo\Party.lua
 Modules\Halo\CombatBar.lua
 Modules\Halo\Shadow.lua
 Modules\Halo\Paladin.lua
+Modules\Halo\Disc.lua
+Modules\Halo\Kit.lua
 
 Modules\Frames\ClickCast.lua
 Modules\Frames\Raid.lua
@@ -42,6 +48,9 @@ Modules\Frames\Preview.lua
 
 Modules\Skins\ActionBars.lua
 Modules\Skins\Windows.lua
+Modules\Skins\MoreWindows.lua
+Modules\Skins\Bags.lua
+Modules\Skins\Character.lua
 Modules\Skins\Meters.lua
 Modules\Skins\Top.lua
 Modules\Skins\Plates.lua

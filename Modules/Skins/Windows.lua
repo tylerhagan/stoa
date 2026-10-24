@@ -7,6 +7,7 @@
 -- renamed or rebuilt is simply left as Blizzard drew it.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Windows = Stoa:NewModule("Windows")
@@ -359,7 +360,7 @@ local function dressTooltips()
 	end
 	if GameTooltip_SetDefaultAnchor then
 		hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
-			if tooltip:GetOwner() ~= parent then return end
+			if (tooltip.IsForbidden and tooltip:IsForbidden()) or tooltip:GetOwner() ~= parent then return end
 			local console = Stoa.modules.Grimoire
 			local floor = console and console.db and console.db.enabled ~= false and console.OpenHeight and console:OpenHeight() or 0
 			tooltip:ClearAllPoints()
@@ -368,8 +369,34 @@ local function dressTooltips()
 	end
 end
 
+-- The ready check prompt: the listener frame is the window; the frame
+-- around it only carries events. The Ready and Not ready buttons are dressed
+-- with the rest. Off with the kit's ready check setting.
+local function dressReadyCheck()
+	local kit = Stoa.modules.Kit
+	if kit and kit.db and kit.db.readyCheck == false then return end
+	local frame = ReadyCheckListenerFrame
+	if not frame then return end
+	Windows:Dress(frame)
+	hide(frame.FrameGlow)
+	hide(frame.Bg)
+	strip(ReadyCheckFrame)
+	local text = frame.Text or ReadyCheckFrameText
+	if text then
+		Stoa:SetFont(text, "sans", Stoa.typeSize.body)
+		text:SetTextColor(Stoa:Color("text"))
+	end
+	-- The text is set again each time the prompt opens.
+	frame:HookScript("OnShow", function()
+		xpcall(function()
+			if text then text:SetTextColor(Stoa:Color("text")) end
+			dressButtonsIn(frame, 3)
+		end, Stoa.catch)
+	end)
+end
+
 local function guarded(fn)
-	xpcall(fn, geterrorhandler())
+	xpcall(fn, Stoa.catch)
 end
 
 function Windows:OnEnable()
@@ -379,6 +406,7 @@ function Windows:OnEnable()
 	guarded(dressMerchant)
 	guarded(dressBags)
 	guarded(dressTooltips)
+	guarded(dressReadyCheck)
 	-- The trainer window loads with its own addon the first time it opens.
 	if ClassTrainerFrame then
 		guarded(dressTrainer)

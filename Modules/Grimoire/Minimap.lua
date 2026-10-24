@@ -53,5 +53,5 @@ function MinimapStyle:Style()
 end
 
 function MinimapStyle:OnEnable()
-	xpcall(self.Style, geterrorhandler(), self)
+	xpcall(self.Style, Stoa.catch, self)
 end

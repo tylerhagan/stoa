@@ -350,6 +350,17 @@ function Console:BuildFellowship(frame, space)
 	local xpNote = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
 	xpNote:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -5)
 	self.levelText, self.xpBar, self.restedBar, self.xpNote = level, xp, rested, xpNote
+	-- Two short lines for the dungeon kit (Kit.lua): experience per hour and
+	-- time to level, and the nearest watched quest's progress when alone.
+	local rate = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
+	rate:SetPoint("TOPLEFT", xpNote, "BOTTOMLEFT", 0, -3)
+	rate:SetWidth(COLUMN_WIDTH)
+	rate:SetWordWrap(false)
+	local quest = text(page, "italic", Stoa.typeSize.caption + 1, "muted")
+	quest:SetPoint("TOPLEFT", rate, "BOTTOMLEFT", 0, -3)
+	quest:SetWidth(COLUMN_WIDTH)
+	quest:SetWordWrap(false)
+	self.rateNote, self.questNote = rate, quest
 
 	-- Company.
 	local company = column(page, 3, "Company")
@@ -373,6 +384,27 @@ function Console:BuildFellowship(frame, space)
 	local online = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
 	online:SetPoint("TOPLEFT", self.alone, "BOTTOMLEFT", 0, -4)
 	self.onlineCount = online
+	-- A few of them by name, so the column says who as well as how many.
+	local names = text(page, "serif", Stoa.typeSize.label, "text")
+	names:SetPoint("TOPLEFT", online, "BOTTOMLEFT", 0, -4)
+	names:SetWidth(COLUMN_WIDTH)
+	names:SetWordWrap(false)
+	self.onlineNames = names
+
+	-- The whole column opens the roster.
+	local open = CreateFrame("Button", nil, page)
+	open:SetPoint("TOPLEFT", company, "TOPLEFT", 0, 22)
+	open:SetSize(COLUMN_WIDTH, 104)
+	open:SetScript("OnClick", function()
+		if Stoa.modules.Roster then Stoa.modules.Roster:Toggle() end
+	end)
+	open:SetScript("OnEnter", function(button)
+		GameTooltip:SetOwner(button, "ANCHOR_TOP")
+		GameTooltip:AddLine("Company")
+		GameTooltip:AddLine("Click for friends and guild online.", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	open:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
 -- Updates -------------------------------------------------------------------
@@ -423,11 +455,13 @@ function Console:UpdateFellowship()
 	end
 	self.alone:SetShown(not any)
 	self.onlineCount:SetShown(not any)
+	if self.onlineNames then self.onlineNames:SetShown(not any) end
 end
 
 function Console:UpdateOnline()
 	local friends = C_FriendList.GetNumOnlineFriends() or 0
-	local _, bnetOnline = BNGetNumFriends()
+	local _, bnetOnline = 0, 0
+	if BNGetNumFriends then _, bnetOnline = BNGetNumFriends() end
 	local guild = 0
 	if IsInGuild() then
 		local _, online = GetNumGuildMembers()
@@ -436,6 +470,16 @@ function Console:UpdateOnline()
 	end
 	local total = friends + (bnetOnline or 0) + guild
 	self.onlineCount:SetText(total == 1 and "1 friend online" or (total .. " friends online"))
+	if self.onlineNames then
+		local names = {}
+		if C_FriendList and C_FriendList.GetNumFriends then
+			for i = 1, C_FriendList.GetNumFriends() or 0 do
+				local info = C_FriendList.GetFriendInfoByIndex(i)
+				if info and info.connected and #names < 3 then names[#names + 1] = Ambiguate(info.name, "short") end
+			end
+		end
+		self.onlineNames:SetText(table.concat(names, ", "))
+	end
 end
 
 -- Gear wear (the most worn piece) and free bag slots.
@@ -476,6 +520,7 @@ function Console:UpdateJourney()
 	self.xpBar:SetShown(not atMax)
 	if atMax then
 		self.xpNote:SetText("")
+		self:UpdateKitLines()
 		return
 	end
 	local xp, xpMax = UnitXP("player"), UnitXPMax("player")
@@ -488,6 +533,13 @@ function Console:UpdateJourney()
 	local note = math.floor(xp / xpMax * 100) .. "% to " .. (level + 1)
 	if rested > 0 then note = note .. "  ·  rested " .. math.floor(rested / xpMax * 100) .. "%" end
 	self.xpNote:SetText(note)
+	self:UpdateKitLines()
+end
+
+-- The kit's lines under the experience bar, if the kit is on.
+function Console:UpdateKitLines()
+	local kit = Stoa.modules.Kit
+	if kit and kit.UpdateConsole and kit.enabled then kit:UpdateConsole() end
 end
 
 function Console:AddNote(_, message)
@@ -551,7 +603,7 @@ function Console:SetOpen(open, instant)
 		return
 	end
 
-	frame:SetScript("OnUpdate", function()
+	frame:SetScript("OnUpdate", Stoa:GuardUpdate(function()
 		local progress = math.min((GetTime() - start) / FOLD_SECONDS, 1)
 		-- Ease out so the fold settles rather than stops.
 		progress = 1 - (1 - progress) ^ 3
@@ -561,7 +613,7 @@ function Console:SetOpen(open, instant)
 			self.leftPage:SetAlpha(pagesAlpha)
 			self.rightPage:SetAlpha(pagesAlpha)
 		end
-	end)
+	end))
 end
 
 local function shouldBeOpen()
@@ -596,7 +648,7 @@ function Console:OnEnable()
 		self:UpdateSeal()
 		self:UpdateResources()
 		self:UpdateFellowship()
-		if IsInGuild() then C_GuildInfo.GuildRoster() end
+		if IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
 	end)
 
 	Stoa:On("UNIT_HEALTH", function(unit)
@@ -632,5 +684,5 @@ function Console:OnEnable()
 	Stoa:On("GUILD_ROSTER_UPDATE", function() self:UpdateOnline() end)
 
 	-- Notes fade after NOTE_SECONDS.
-	C_Timer.NewTicker(5, function() self:RenderNotes() end)
+	Stoa:NewTicker(5, function() self:RenderNotes() end)
 end
