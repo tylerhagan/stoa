@@ -118,6 +118,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <li><a href="#signatures">Spec signatures</a></li>
 <li><a href="#group">Party and raid</a></li>
 <li><a href="#world">Out of combat</a></li>
+<li><a href="#dungeons">Levelling and dungeons</a></li>
 <li><a href="#windows">Windows, bags, gear</a></li>
 <li><a href="#social">Social</a></li>
 <li><a href="#comforts">Comforts</a></li>
@@ -125,6 +126,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <li><a href="#move">Moving frames</a></li>
 <li><a href="#commands">Commands</a></li>
 <li><a href="#trouble">If something breaks</a></li>
+<li><a href="#releases">Updates</a></li>
 </ol>
 </nav>
 <main id="top">
@@ -246,11 +248,23 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 </dl>
 </section>
 
+<section id="dungeons">
+<h2>Levelling and dungeons</h2>
+<dl class="feat">
+<dt>Pace</dt><dd>Journey on the console shows experience an hour and time to level, worked out over the last half hour and started again at each level. <code>/stoa xp</code> prints it with the session's total.</dd>
+<dt>Next quest</dt><dd>When you're travelling alone, the nearest watched quest's next objective sits under Journey, or "Hand in" once it's done.</dd>
+<dt>Pull timer</dt><dd><code>/stoa pull</code> counts down ten seconds (or <code>/stoa pull 5</code>). It uses the game's own countdown when you're allowed to, otherwise 3, 2, 1 in group chat and a large number on screen. <code>/stoa pull 0</code> cancels.</dd>
+<dt>Ready check</dt><dd>The prompt in a Stoa panel, and each party card says <span class="w">READY</span>, <span class="w">NOT READY</span> or WAITING while the check runs.</dd>
+<dt>Interrupts</dt><dd>When a hostile target starts a cast you can interrupt, the target plaque says <span class="w">KICK</span>. It stays hidden when the game won't say.</dd>
+</dl>
+</section>
+
 <section id="windows">
 <h2>Windows, bags and gear</h2>
 <dl class="feat">
 <dt>Windows</dt><dd>Quest, gossip, merchant, trainer and tooltips on dark rounded panels with light text and plain-word tabs.</dd>
 <dt>Bags</dt><dd>Rounded item slots. Quality is an edge colour plus a corner mark for epic (one) and legendary (two), so it never rests on colour alone. Item level on gear, free slots (or <span class="w">FULL</span>), money, a Sort button, and combined or separate bags.</dd>
+<dt>More windows</dt><dd>Spellbook, talents, the world map's border (never the map itself), mail, auction house, group finder, and friends and guild, each dressed as it loads. The game menu and settings panel are left alone so they never cause blocked-action errors.</dd>
 <dt>Character sheet</dt><dd>Quality edges and item level on each slot, <span class="w">WORN</span> under 30% durability and <span class="w">BROKEN</span> at none, an average item level line, and item levels when you inspect someone.</dd>
 </dl>
 </section>
@@ -311,13 +325,16 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <tr><td><code>/stoa</code></td><td>Open settings</td></tr>
 <tr><td><code>/stoa unlock</code></td><td>Toggle frame moving</td></tr>
 <tr><td><code>/stoa reset</code></td><td>Put moved frames back in their default spots, in every role</td></tr>
-<tr><td><code>/stoa safe</code></td><td>Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload</td></tr>
+<tr><td><code>/stoa safe</code></td><td>Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload</td></tr>
 <tr><td><code>/stoa theme</code></td><td>Cycle the themes (house, Your class, then each class)</td></tr>
 <tr><td><code>/stoa keywords inv, invite</code></td><td>Set auto-invite keywords</td></tr>
 <tr><td><code>/stoa friends</code></td><td>Open the Company roster</td></tr>
 <tr><td><code>/stoa welcome</code></td><td>Open the welcome page: roles per spec, theme, previews</td></tr>
+<tr><td><code>/stoa check</code></td><td>Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build</td></tr>
 <tr><td><code>/stoa report</code></td><td>Your version, game build, spec, theme and any errors Stoa caught, ready to copy</td></tr>
 <tr><td><code>/stoa backup</code></td><td>Copy your settings as text, or paste a backup to restore it</td></tr>
+<tr><td><code>/stoa xp</code></td><td>Experience this session, per hour, and time to level</td></tr>
+<tr><td><code>/stoa pull [seconds]</code></td><td>Pull countdown for the group (10 by default); <code>/stoa pull 0</code> cancels</td></tr>
 <tr><td><code>/stoa state</code></td><td>Print the current state and role</td></tr>
 <tr><td><code>/stoa clicks</code></td><td>Edit click-cast bindings for your current role</td></tr>
 <tr><td><code>/stoa test</code></td><td>Show sample party cards without a group; <code>/stoa test raid</code>, <code>raid10</code> or <code>raid40</code> for a raid</td></tr>
@@ -329,6 +346,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <section id="trouble">
 <h2>If something breaks</h2>
 <ol class="steps">
+<li><strong>After a game patch.</strong> On the first login with a new game build, Stoa checks every spell, game function and Blizzard frame it relies on, and says in one line if something moved. <code>/stoa check</code> lists the details.</li>
 <li><strong>A skin looks wrong or errors.</strong> <code>/stoa safe</code> turns off every skin that touches Blizzard's frames and reloads. Stoa's own frames keep working.</li>
 <li><strong>Something keeps erroring.</strong> If one part of Stoa errors over and over, Stoa switches that part off for the session and says so in chat, so an error can't lock up your screen.</li>
 <li><strong>To report it.</strong> <code>/stoa report</code> opens a page with your version, game build, spec, theme and the errors Stoa caught. Copy it and send it along.</li>
@@ -336,6 +354,11 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 </ol>
 <h3>How Forever shapes Stoa</h3>
 <p>Forever runs the modern client. In combat some values are secret to addons and the combat log is closed, so Stoa checks every value before using it, skins Blizzard's own data rather than recalculating it, and times what it must from your own casts.</p>
+</section>
+
+<section id="releases">
+<h2>Updates</h2>
+<p>Each version is published on the <a href="https://github.com/tylerhagan/stoa/releases">Releases page</a> as a ready-to-install zip with a single <code>Stoa</code> folder inside. Download it, replace your old <code>Stoa</code> folder, and <code>/reload</code>. Back up first with <code>/stoa backup</code> if you like; settings are kept either way.</p>
 </section>
 
 <footer>Stoa 0.9.0 for World of Warcraft Forever. Fonts: Tenor Sans and Inter, under the SIL Open Font License. World of Warcraft is a trademark of Blizzard Entertainment; Stoa is a fan-made addon and isn't affiliated with Blizzard.</footer>
