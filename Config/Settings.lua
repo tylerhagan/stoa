@@ -72,6 +72,7 @@ local function build()
 		Stoa.modules.ActionBars:SetOption("hoverTray", value)
 	end)
 	checkbox(Stoa.modules.Windows.db, "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on Stoa's dark panels with light text. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.MoreWindows.db, "enabled", "Restyle more windows", "Spellbook, talents, world map border, mail, auction house, group finder, friends and guild, game menu and settings on the same dark panels. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Bags.db, "enabled", "Restyle bags", "Bags with rounded slots, a coloured edge by quality plus a corner mark for epic and above, item level on gear, free slots, your money in letters and a Sort button. Takes effect after /reload.", true)
 	dropdown(Stoa.modules.Bags.db, "bagMode", "Bag layout", "One combined bag, or a window for each bag. You can still switch from the bag's own menu; this applies when you change it here.", "combined", { { "combined", "One combined bag" }, { "separate", "Separate bags" } }, function()
 		Stoa.modules.Bags.db.appliedMode = nil
@@ -198,6 +199,7 @@ Stoa.commands.safe = function()
 	end
 	if m.ActionBars then m.ActionBars.db.enabled = false end
 	if m.Windows then m.Windows.db.enabled = false end
+	if m.MoreWindows then m.MoreWindows.db.enabled = false end
 	if m.Bags then m.Bags.db.enabled = false end
 	if m.Character then m.Character.db.enabled = false end
 	if m.Meters then m.Meters.db.enabled = false end
