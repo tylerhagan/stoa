@@ -1,12 +1,11 @@
 -- Stoa: design tokens. Every colour, font and spacing value in the suite comes
 -- from here, so a theme swap restyles everything at once.
 --
--- Every state carries a label or shape, never red against green alone, and
--- the palettes are tuned for red-green colour blindness: states differ in
--- lightness, and where a class's own colour sits near the warning amber
--- (Druid orange, Rogue yellow, Hunter green), the warning moves well away
--- from it. Other kinds of colour blindness are served by the colour vision
--- swaps further down.
+-- Every state carries a label or shape, never colour alone. The themes
+-- avoid red against green, but they're made for looks first: measured
+-- (Tools/art/cvd_audit.py), some states sit close for colour-blind eyes,
+-- such as blue and purple dispels. The colour vision swaps further down
+-- are the colour-safe sets, one per kind.
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -33,10 +32,10 @@ Stoa.themes = {
 		classTint = true,
 	},
 	Tide = {
-		text    = rgb("DCE6F2"),
+		text    = rgb("B8C8DC"),
 		muted   = rgb("93A7BE"),
 		panel   = rgb("0D131A", 0.92),
-		hairline = rgb("DCE6F2", 0.2),
+		hairline = rgb("B8C8DC", 0.2),
 		health  = rgb("7FA6D6"),
 		mana    = rgb("3F6FD8"),
 		danger  = rgb("FFFFFF"),
@@ -182,7 +181,7 @@ Stoa.themes = {
 		hairline = rgb("F1E9DF", 0.22),
 		health  = rgb("E6DCCB"),
 		mana    = rgb("6F9BFF"),
-		danger  = rgb("FFF4E8"),
+		danger  = rgb("FFF07A"),
 		shield  = rgb("FFD3A6", 0.9),
 		accent  = rgb("F28A3A"),
 		magic   = rgb("6F9BFF"),
@@ -251,38 +250,42 @@ end
 -- that kind of colour blindness, leaving the theme's panels and words as
 -- they are. Class colours on names are turned off in these modes, since
 -- nine classes can't all stay apart for every eye.
---   Red-green (protan, deutan): blue against orange and yellow (Okabe-Ito).
+--   Red-green (protan, deutan): blue against deep orange and pale yellow.
 --   Blue-yellow (tritan): red against teal, with pink and white.
---   No colour (achromat): states differ by lightness alone.
+--   No colour (achromat): four steps of lightness, the warning brightest.
+-- Each set was picked by search so the states that meet on screen stay
+-- apart (colour difference, CIEDE2000) both for the eyes it's for, using
+-- the Machado 2009 simulation, and for typical vision, with text tokens at
+-- 4.5:1 or more on the panels. Tools/art/cvd_audit.py repeats the check.
 Stoa.visions = {
 	RedGreen = {
-		accent  = rgb("F0E442"),
-		danger  = rgb("E69F00"),
-		mana    = rgb("56B4E9"),
-		magic   = rgb("56B4E9"),
-		disease = rgb("F5F0E6"),
-		shield  = rgb("F0E442", 0.85),
-		health  = rgb("E8E2D6"),
+		accent  = rgb("FAED8D"),
+		danger  = rgb("E07E02"),
+		mana    = rgb("4296DE"),
+		magic   = rgb("4296DE"),
+		disease = rgb("F6F7F7"),
+		shield  = rgb("FAED8D", 0.85),
+		health  = rgb("B1A481"),
 	},
 	BlueYellow = {
-		accent  = rgb("F7C6D9"),
-		danger  = rgb("FF5A4E"),
-		mana    = rgb("3FD0E0"),
-		magic   = rgb("3FD0E0"),
-		disease = rgb("FF9EC4"),
-		shield  = rgb("FFFFFF", 0.85),
-		health  = rgb("E8E2D6"),
+		accent  = rgb("FDFDFD"),
+		danger  = rgb("FF3A51"),
+		mana    = rgb("269AA8"),
+		magic   = rgb("269AA8"),
+		disease = rgb("F37DB9"),
+		shield  = rgb("FDFDFD", 0.85),
+		health  = rgb("A48E78"),
 	},
 	NoColour = {
-		text    = rgb("EDEDED"),
+		text    = rgb("CFCFCF"),
 		muted   = rgb("9A9A9A"),
-		accent  = rgb("FFFFFF"),
+		accent  = rgb("CFCFCF"),
 		danger  = rgb("FFFFFF"),
-		mana    = rgb("7C7C7C"),
-		magic   = rgb("C4C4C4"),
-		disease = rgb("6A6A6A"),
+		mana    = rgb("7E7E7E"),
+		magic   = rgb("CFCFCF"),
+		disease = rgb("7E7E7E"),
 		shield  = rgb("FFFFFF", 0.9),
-		health  = rgb("D2D2D2"),
+		health  = rgb("A2A2A2"),
 	},
 }
 Stoa.visionOrder = { "Standard", "RedGreen", "BlueYellow", "NoColour" }

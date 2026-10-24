@@ -1,4 +1,4 @@
--- Stoa QoL: move Blizzard windows. Hold Shift (or the key you pick) and
+-- Stoa QoL: move Blizzard windows. Hold Shift and
 -- drag a quest, gossip, merchant, bag, character, spellbook, mail or other
 -- window by any empty part of it. It keeps that spot every time it opens,
 -- since the game would otherwise put it back. Shift and right-click puts a
@@ -10,9 +10,8 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 
-local WindowMover = Stoa:NewModule("WindowMover", {
-	modifier = "SHIFT",
-})
+-- Shift only: Alt and Ctrl are left free for the player's own bindings.
+local WindowMover = Stoa:NewModule("WindowMover", {})
 
 -- Windows that can be moved. Load-on-demand ones are picked up when their
 -- Blizzard addon loads.
@@ -24,12 +23,6 @@ local WINDOWS = {
 	"PVEFrame", "LFGParentFrame", "ItemTextFrame", "TaxiFrame", "TradeSkillFrame",
 	"ProfessionsFrame", "CraftFrame", "AchievementFrame", "ContainerFrameCombinedBags",
 	"ContainerFrame1",
-}
-
-local held = {
-	SHIFT = function() return IsShiftKeyDown() end,
-	ALT = function() return IsAltKeyDown() end,
-	CTRL = function() return IsControlKeyDown() end,
 }
 
 WindowMover.windows = WINDOWS
@@ -54,8 +47,7 @@ local function place(name, frame)
 end
 
 function WindowMover:Wants()
-	local isHeld = held[self.db.modifier] or held.SHIFT
-	return isHeld()
+	return IsShiftKeyDown()
 end
 
 function WindowMover:Hook(name)
