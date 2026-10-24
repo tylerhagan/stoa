@@ -93,6 +93,9 @@ local FRAMES = {
 	{ "ContainerFrameCombinedBags", "combined bags" },
 	{ "CharacterFrame", "the character sheet" },
 	{ "GameTooltip", "tooltips" },
+	{ "WorldMapFrame", "the world map border" },
+	{ "MailFrame", "the mail window" },
+	{ "FriendsFrame", "the friends window" },
 	{ "DamageMeter", "damage meters" },
 	{ "SwingTimerMainHandFrame", "the swing timer" },
 }

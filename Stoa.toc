@@ -46,6 +46,7 @@ Modules\Frames\Preview.lua
 
 Modules\Skins\ActionBars.lua
 Modules\Skins\Windows.lua
+Modules\Skins\MoreWindows.lua
 Modules\Skins\Bags.lua
 Modules\Skins\Character.lua
 Modules\Skins\Meters.lua
