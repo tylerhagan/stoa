@@ -30,8 +30,8 @@ local TARGETS = {
 	{ name = "LFDParentFrame" },
 	{ name = "FriendsFrame", parts = { "FriendsFrameInset", "WhoFrameListInset", "WhoFrameEditBoxInset" } },
 	{ name = "CommunitiesFrame" },
-	{ name = "GameMenuFrame" },
-	{ name = "SettingsPanel", mode = "border" },
+	-- The game menu and the settings panel are left alone: addons touching
+	-- them are a known cause of blocked-action errors (Edit Mode, logout).
 	-- The map canvas, pins and quest panel are never touched.
 	{ name = "WorldMapFrame", mode = "map" },
 }
