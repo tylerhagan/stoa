@@ -17,10 +17,16 @@ Core\SelfCheck.lua
 Core\Util.lua
 Core\Database.lua
 Core\Tokens.lua
+Core\Specs.lua
 Core\Roles.lua
 Core\State.lua
 Core\Movers.lua
 Core\Widgets.lua
+Core\Spells.lua
+Core\Items.lua
+Core\Group.lua
+Core\Power.lua
+Core\Rules.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
@@ -64,3 +70,4 @@ Modules\Skins\Swing.lua
 Config\Settings.lua
 Config\Welcome.lua
 Config\Backup.lua
+Core\API.lua

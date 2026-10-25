@@ -282,46 +282,17 @@ function Tooltip:DressItem(tip, data)
 	tip:Show()
 end
 
--- Gear against what you wear: the slots each kind of item goes in, and the
--- name the line uses.
-local SLOTS = {
-	INVTYPE_HEAD = { 1 }, INVTYPE_NECK = { 2 }, INVTYPE_SHOULDER = { 3 }, INVTYPE_BODY = { 4 },
-	INVTYPE_CHEST = { 5 }, INVTYPE_ROBE = { 5 }, INVTYPE_WAIST = { 6 }, INVTYPE_LEGS = { 7 },
-	INVTYPE_FEET = { 8 }, INVTYPE_WRIST = { 9 }, INVTYPE_HAND = { 10 }, INVTYPE_FINGER = { 11, 12 },
-	INVTYPE_TRINKET = { 13, 14 }, INVTYPE_CLOAK = { 15 }, INVTYPE_WEAPON = { 16, 17 },
-	INVTYPE_2HWEAPON = { 16 }, INVTYPE_WEAPONMAINHAND = { 16 }, INVTYPE_WEAPONOFFHAND = { 17 },
-	INVTYPE_SHIELD = { 17 }, INVTYPE_HOLDABLE = { 17 }, INVTYPE_RANGED = { 18 }, INVTYPE_RANGEDRIGHT = { 18 },
-	INVTYPE_THROWN = { 18 }, INVTYPE_RELIC = { 18 },
-}
-local SLOT_NAMES = {
-	[1] = "head", [2] = "neck", [3] = "shoulders", [5] = "chest", [6] = "waist", [7] = "legs", [8] = "feet",
-	[9] = "wrists", [10] = "hands", [11] = "ring", [12] = "ring", [13] = "trinket", [14] = "trinket",
-	[15] = "back", [16] = "main hand", [17] = "off hand", [18] = "ranged slot",
-}
-
+-- Gear against what you wear, from the weaker of the slots it goes in.
 function Tooltip:Upgrade(tip, link)
-	local skin = Stoa.ItemSkin
-	if not (skin and skin.itemLevel) or not link or Stoa:IsSecret(link) then return end
-	local level = skin.itemLevel(link)
-	if not level then return end
-	local equipLoc = C_Item and C_Item.GetItemInfo and select(9, C_Item.GetItemInfo(link))
-	local slots = equipLoc and SLOTS[equipLoc]
-	if not slots then return end
-	-- Against the weaker of two slots, the one it would replace.
-	local worstSlot, worst
-	for _, slot in ipairs(slots) do
-		local worn = GetInventoryItemLink("player", slot)
-		if worn == link then return end
-		local wornLevel = worn and skin.itemLevel(worn) or 0
-		if not worst or wornLevel < worst then worstSlot, worst = slot, wornLevel end
-	end
-	local where = SLOT_NAMES[worstSlot] or "slot"
-	if worst == 0 then
+	if not link or Stoa:IsSecret(link) then return end
+	local delta, where, empty = Stoa.Items.compare(link)
+	if not delta then return end
+	if empty then
 		tip:AddLine("Fills your empty " .. where, Stoa:Color("accent"))
-	elseif level > worst then
-		tip:AddLine(("+%d over your %s"):format(level - worst, where), Stoa:Color("accent"))
-	elseif level < worst then
-		tip:AddLine(("%d below your %s"):format(worst - level, where), Stoa:Color("muted"))
+	elseif delta > 0 then
+		tip:AddLine(("+%d over your %s"):format(delta, where), Stoa:Color("accent"))
+	elseif delta < 0 then
+		tip:AddLine(("%d below your %s"):format(-delta, where), Stoa:Color("muted"))
 	else
 		tip:AddLine("Same level as your " .. where, Stoa:Color("muted"))
 	end

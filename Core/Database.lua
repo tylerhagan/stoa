@@ -12,6 +12,8 @@ local accountDefaults = {
 	vision = "Standard",
 	-- The stone behind windows.
 	windowStone = true,
+	-- Items marked as junk, by itemID, sold with the greys.
+	junk = {},
 	modules = {},
 }
 

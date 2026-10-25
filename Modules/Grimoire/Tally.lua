@@ -251,6 +251,25 @@ local GROUPS = {
 	{ "World", { "zone", "reputation", "clock", "latency", "framerate" } },
 }
 
+-- Other parts of Stoa, and other addons through StoaAPI, add entries
+-- here: Tally:Register("goldHour", { label = "Gold an hour", value = fn },
+-- "Kit"). value returns the text and, optionally, true to warn.
+function Tally:Register(key, entry, groupName)
+	if type(key) ~= "string" or type(entry) ~= "table" or type(entry.value) ~= "function" then return end
+	groupName = groupName or entry.group or "Other"
+	entry.group = groupName
+	local isNew = not ENTRIES[key]
+	ENTRIES[key] = entry
+	if not isNew then return end
+	for _, group in ipairs(GROUPS) do
+		if group[1] == groupName then
+			table.insert(group[2], key)
+			return
+		end
+	end
+	table.insert(GROUPS, { groupName, { key } })
+end
+
 local AGILE = { ROGUE = true, HUNTER = true, DRUID = true }
 
 local ROLE_STATS = {

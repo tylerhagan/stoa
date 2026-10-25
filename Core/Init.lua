@@ -64,6 +64,28 @@ frame:SetScript("OnEvent", function(_, event, ...)
 	Stoa:Fire(event, ...)
 end)
 
+-- Unit events for one or two units only. UNIT_AURA and UNIT_POWER_FREQUENT
+-- fire for every unit nearby; asking the game for just the units you want
+-- (RegisterUnitEvent) keeps a 40-man raid from waking every handler.
+-- Stoa:OnUnit("UNIT_AURA", { "player", "target" }, fn) gets fn(unit, ...).
+function Stoa:OnUnit(event, units, fn)
+	local owner = Stoa.loading
+	local listener = CreateFrame("Frame")
+	local ok = pcall(listener.RegisterUnitEvent, listener, event, units[1], units[2])
+	if not ok then return Stoa:On(event, function(unit, ...)
+		if unit == units[1] or unit == units[2] then return fn(unit, ...) end
+	end) end
+	local function handler(err)
+		if Stoa:Fail(err, owner) then listener:UnregisterAllEvents() end
+	end
+	listener:SetScript("OnEvent", function(_, _, unit, ...)
+		local module = owner and Stoa.modules[owner]
+		if module and module.tripped then return end
+		xpcall(fn, handler, unit, ...)
+	end)
+	return listener
+end
+
 -- Modules -------------------------------------------------------------------
 -- A module is a table with optional OnInitialize (after saved variables load)
 -- and OnEnable (after the player enters the world). Modules can be switched

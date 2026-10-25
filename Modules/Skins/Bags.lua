@@ -47,24 +47,7 @@ function Item.qualityColour(quality)
 end
 
 -- Effective item level of a link, only for things you can wear or wield.
-function Item.itemLevel(link)
-	if not link or Stoa:IsSecret(link) then return nil end
-	local equippable
-	if C_Item and C_Item.IsEquippableItem then
-		equippable = C_Item.IsEquippableItem(link)
-	elseif IsEquippableItem then
-		equippable = IsEquippableItem(link)
-	end
-	if not equippable then return nil end
-	local level
-	if C_Item and C_Item.GetDetailedItemLevelInfo then
-		level = C_Item.GetDetailedItemLevelInfo(link)
-	elseif GetDetailedItemLevelInfo then
-		level = GetDetailedItemLevelInfo(link)
-	end
-	level = Stoa:PlainNumber(level)
-	if level and level > 1 then return math.floor(level + 0.5) end
-end
+Item.itemLevel = Stoa.Items.level
 
 -- Draws the rounded slot once: square art hidden, icon masked, a dim socket
 -- with a hairline edge, and the pieces quality and item level need.
