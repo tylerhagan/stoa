@@ -1,8 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stoa</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Stoa: a calm, two-state interface for World of Warcraft Forever. The Grimoire console out of combat, the Halo in it.">
@@ -104,9 +99,6 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 }
 @media (prefers-reduced-motion:no-preference){.halo-art .spin{transform-origin:150px 150px;animation:turn 60s linear infinite}@keyframes turn{to{transform:rotate(360deg)}}}
 </style>
-</head>
-<body>
-
 <div class="shell">
 <nav class="toc" aria-label="Contents">
 <a class="mark" href="#top">Stoa</a>
@@ -278,8 +270,8 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <section id="windows">
 <h2>Windows, bags and gear</h2>
 <dl class="feat">
-<dt>Windows</dt><dd>Quest, gossip, merchant, trainer and the rest on dark rounded panels with light text and plain-word tabs, with Tyler's stone behind them: faint rings and grain in the theme's colour.</dd>
-<dt>Tooltips</dt><dd>Cards edged in the unit's or item's colour. Enemies say how hard they are as a word (<span class="w">TRIVIAL</span> to <span class="w">DEADLY</span>, plus <span class="w">ELITE</span>, <span class="w">RARE</span> or <span class="w">BOSS</span>) instead of the game's red-green level colours, whom they target (<span class="w">YOU</span> in the warning colour), what they cast and your threat. Players show item level; gear says how it compares with what you wear ("+6 over your chest"); items show how many you own. In combat a card keeps only what matters then. Above the console or at the cursor.</dd>
+<dt>Windows</dt><dd>Quest, gossip, merchant, trainer and the rest on dark rounded panels with light text: a lighter header band with the title in it and a soft shadow under it (warm for trade windows, cool for social ones), a dark footer tray, darker wells behind grouped things, and tabs left where Blizzard hangs them, dressed as dark tabs with the chosen one underlined. Tyler's stone sits in the body: faint rings and grain in the theme's colour, fading out towards the top.</dd>
+<dt>Tooltips</dt><dd>Cards with a header band behind the name. Rank gets an outline: a doubled gold line for elites, silver for rares, gold and silver for rare elites, a heavier gold for bosses, with that colour fading across the header; items above common fade their quality colour the same way. Enemies say how hard they are as a word (<span class="w">TRIVIAL</span> to <span class="w">DEADLY</span>, plus <span class="w">ELITE</span>, <span class="w">RARE</span> or <span class="w">BOSS</span>) instead of the game's red-green level colours, whom they target (<span class="w">YOU</span> in the warning colour), what they cast and your threat. Players show item level; gear says how it compares with what you wear ("+6 over your chest"); items show how many you own. In combat a card keeps only what matters then. Above the console or at the cursor.</dd>
 <dt>Bags</dt><dd>Rounded item slots. Quality is an edge colour plus a corner mark for epic (one) and legendary (two), so it never rests on colour alone. Item level on gear, free slots (or <span class="w">FULL</span>), money, a Sort button, and combined or separate bags.</dd>
 <dt>More windows</dt><dd>Spellbook, talents, the world map's border (never the map itself), mail, auction house, group finder, and friends and guild, each dressed as it loads. The game menu and settings panel are left alone so they never cause blocked-action errors.</dd>
 <dt>Character sheet</dt><dd>Quality edges and item level on each slot, <span class="w">WORN</span> under 30% durability and <span class="w">BROKEN</span> at none, an average item level line, and item levels when you inspect someone.</dd>
@@ -411,6 +403,3 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
   Object.keys(map).forEach(function(id){ var s = document.getElementById(id); if (s) io.observe(s); });
 })();
 </script>
-
-</body>
-</html>
