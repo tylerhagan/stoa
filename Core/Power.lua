@@ -20,10 +20,15 @@ local MANA = Enum and Enum.PowerType and Enum.PowerType.Mana or 0
 
 local lastSpend, lastTick, lastMana = 0, nil, nil
 
+-- Passes on every result after a clean pcall, not just two: UnitCastingInfo's
+-- spell ID is its ninth.
+local function passOn(ok, ...)
+	if ok then return ... end
+end
+
 local function call(fn, ...)
 	if type(fn) ~= "function" then return nil end
-	local ok, a, b = pcall(fn, ...)
-	if ok then return a, b end
+	return passOn(pcall(fn, ...))
 end
 
 -- Mana and its maximum as plain numbers, whatever form you're in, or nil
@@ -103,3 +108,121 @@ Stoa:On("UNIT_POWER_UPDATE", watch)
 Stoa:On("PLAYER_ENTERING_WORLD", function()
 	lastMana = Power.mana()
 end)
+
+-- Dressing a mana bar -------------------------------------------------------
+-- Three quiet extras any mana bar can wear, shared by the Halo's arc and the
+-- console's bar so they behave the same:
+--   a spark that travels the bar while the five-second rule runs, then
+--     pulses at the fill edge on each regen tick;
+--   a dark shade over the mana the spell being cast will spend;
+--   a slim second bar for a druid's mana while a form shows another power.
+-- opts: place(tex, f) puts a dot at fraction f (0-1) along the bar;
+-- shade(tex, from, to) stretches the shade between two fractions;
+-- enabled(key) says whether "manaRule", "castCost" or "formMana" is on;
+-- form = { bar = StatusBar, show = function(current, max) , hide = function() }
+-- is optional. Everything is hidden whenever mana can't be read (secret in
+-- combat).
+local PULSE_SECONDS = 0.5
+
+function Power.dress(sb, opts)
+	local UI = Stoa.UI
+	local dress = {}
+	local spark = UI.circle(sb, "OVERLAY", 2, 5, "text")
+	spark:Hide()
+	local shade = sb:CreateTexture(nil, "OVERLAY", nil, 1)
+	shade:SetTexture(opts.texture or UI.WHITE)
+	UI.tint(shade, "panel", 0.75)
+	shade:Hide()
+	local driver = CreateFrame("Frame", nil, sb)
+	local pulseAt, casting = nil, false
+	dress.spark, dress.shade, dress.driver = spark, shade, driver
+
+	-- The bar shows mana itself (not a druid's form power).
+	local function onMana()
+		return Power.usesMana() and not Power.manaHidden()
+	end
+
+	-- Draws the spark for this instant; false once it has nothing to show,
+	-- which lets the driver go quiet.
+	local function sweep()
+		if not (opts.enabled("manaRule") and onMana()) then spark:Hide() return false end
+		local left = Power.ruleLeft()
+		if left > 0 then
+			opts.place(spark, 1 - left / RULE_SECONDS)
+			spark:SetAlpha(0.7)
+			spark:Show()
+			return true
+		end
+		local age = pulseAt and GetTime() - pulseAt
+		local current, max = Power.mana()
+		if age and age < PULSE_SECONDS and current then
+			opts.place(spark, current / max)
+			spark:SetAlpha(0.8 * (1 - age / PULSE_SECONDS))
+			spark:Show()
+			return true
+		end
+		spark:Hide()
+		return false
+	end
+
+	local function wake()
+		if sweep() then
+			driver:SetScript("OnUpdate", Stoa:GuardUpdate(function(self)
+				if not sweep() then self:SetScript("OnUpdate", nil) end
+			end))
+		end
+	end
+
+	function dress.Cost()
+		local current, max = Power.mana()
+		local cost = casting and opts.enabled("castCost") and onMana() and Power.castCost()
+		if current and max and cost and cost > 0 then
+			opts.shade(shade, math.max(current - cost, 0) / max, current / max)
+			shade:Show()
+		else
+			shade:Hide()
+		end
+	end
+
+	function dress.Form()
+		local form = opts.form
+		if not form then return end
+		local current, max = Power.mana()
+		if opts.enabled("formMana") and Power.manaHidden() and current then
+			form.bar:SetMinMaxValues(0, max)
+			form.bar:SetValue(current)
+			form.bar:Show()
+			form.show(current)
+		else
+			form.bar:Hide()
+			form.hide()
+		end
+	end
+
+	-- For when a setting changes or the character does.
+	function dress.Refresh()
+		wake()
+		dress.Cost()
+		dress.Form()
+	end
+
+	Stoa:On("STOA_POWER_RULE", wake)
+	Stoa:On("STOA_POWER_TICK", function()
+		pulseAt = GetTime()
+		wake()
+	end)
+	local function started() casting = true dress.Cost() end
+	local function stopped() casting = false dress.Cost() end
+	for _, event in ipairs({ "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_DELAYED" }) do
+		Stoa:OnUnit(event, { "player" }, started)
+	end
+	for _, event in ipairs({ "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_FAILED",
+		"UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_CHANNEL_START" }) do
+		Stoa:OnUnit(event, { "player" }, stopped)
+	end
+	for _, event in ipairs({ "UNIT_DISPLAYPOWER", "UNIT_POWER_UPDATE", "UNIT_MAXPOWER" }) do
+		Stoa:OnUnit(event, { "player" }, function() dress.Cost() dress.Form() end)
+	end
+	Stoa:On("PLAYER_ENTERING_WORLD", dress.Refresh)
+	return dress
+end

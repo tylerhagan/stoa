@@ -16,6 +16,10 @@ local Console = Stoa:NewModule("Grimoire", {
 	hideBarArt = true,
 	houseMenu = true,
 	art = true,
+	-- Quiet mana play on the mana bar, as on the Halo.
+	manaRule = true,
+	castCost = true,
+	formMana = true,
 })
 
 local SPINE_HEIGHT = 22
@@ -243,6 +247,7 @@ function Console:BuildSeal(frame)
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
+	self:BuildManaPlay(mana, manaCap)
 end
 
 -- With the art: health and mana sit down in the leather either side of
@@ -273,6 +278,37 @@ function Console:BuildResources(frame)
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
+	self:BuildManaPlay(mana, manaCap)
+end
+
+-- Mana play on the mana bar (shared with the Halo, see Power.dress): a
+-- spark along it for the five-second rule, a shade over what the cast will
+-- spend, and, for a druid in a form, a hairline of mana under the bar with
+-- the amount in the caption.
+function Console:BuildManaPlay(mana, manaCap)
+	local db = self.db
+	local form = bar(mana, 150, 1, "mana")
+	form:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -1)
+	form:SetPoint("TOPRIGHT", mana, "BOTTOMRIGHT", 0, -1)
+	form:Hide()
+	self.manaPlay = Stoa.Power.dress(mana, {
+		enabled = function(key) return db[key] end,
+		place = function(tex, f)
+			tex:ClearAllPoints()
+			tex:SetPoint("CENTER", mana, "LEFT", f * mana:GetWidth(), 0)
+		end,
+		shade = function(tex, from, to)
+			local width = mana:GetWidth()
+			tex:ClearAllPoints()
+			tex:SetPoint("TOPLEFT", mana, "TOPLEFT", from * width, 0)
+			tex:SetPoint("BOTTOMRIGHT", mana, "BOTTOMLEFT", to * width, 0)
+		end,
+		form = {
+			bar = form,
+			show = function(current) manaCap:SetText("Mana " .. current) end,
+			hide = function() manaCap:SetText("Mana") end,
+		},
+	})
 end
 
 function Console:BuildNotes(frame, space)
