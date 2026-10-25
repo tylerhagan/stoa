@@ -283,6 +283,59 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
   box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px color-mix(in srgb, var(--panel) 90%, transparent), 0 0 0 7px color-mix(in srgb, var(--text) 22%, transparent); }
 .mini span { position: absolute; left: 50%; top: -34px; transform: translateX(-50%); font: 15px var(--serif); color: var(--text); white-space: nowrap; }
 
+/* Helpers ------------------------------------------------------------------- */
+.hx { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 30px 28px; }
+.hx .spec { align-content: start; gap: 0; }
+.hx .cap-line { margin-top: 10px; font: 12px/1.4 var(--sans); color: rgba(255,255,255,0.62); text-shadow: 0 1px 2px rgba(0,0,0,0.8); max-width: 38ch; }
+.pbar { height: 4px; background: color-mix(in srgb, var(--text) 14%, transparent); position: relative; }
+.pbar.slim { height: 2px; }
+.pbar i { position: absolute; inset: 0 auto 0 0; background: var(--mana); }
+.pbar.energy i { background: var(--accent); }
+.pbar s { position: absolute; top: 0; bottom: 0; background: rgba(0,0,0,0.62); }
+.pbar u { position: absolute; top: 50%; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--text);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--text) 70%, transparent); }
+.pstack { display: grid; gap: 6px; width: 100%; max-width: 240px; }
+.pstack .pl { display: flex; justify-content: space-between; align-items: baseline; font: 12px/1 var(--sans); color: var(--text); }
+.pstack .pl b { font: 600 14px/1 var(--sans); font-variant-numeric: tabular-nums; }
+.threat { width: 100%; max-width: 240px; display: grid; gap: 3px; }
+.threat .mrow { padding: 0 4px; }
+.threat .mrow em { font: 600 9px/1 var(--sans); letter-spacing: 0.12em; font-style: normal; color: var(--muted); margin-left: 6px; }
+.threat .mrow.me span, .threat .mrow.me b { color: var(--accent); }
+.threat .pull { margin-top: 8px; font: 600 11px/1 var(--sans); letter-spacing: 0.14em; color: var(--danger); }
+.marks { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.mk { width: 23px; height: 23px; border-radius: 6px; display: grid; place-items: center; opacity: 0.6;
+  background: color-mix(in srgb, var(--panel) 90%, transparent); border: 1px solid color-mix(in srgb, var(--text) 16%, transparent); }
+.mk svg { width: 13px; height: 13px; display: block; }
+.mk.hover { opacity: 1; border-color: var(--accent); }
+.mk.clear { color: var(--muted); font: 16px/1 var(--sans); }
+.lootfeed { width: 100%; max-width: 300px; display: grid; gap: 2px; font: 13px/1.5 var(--sans); color: #e9e2d0; text-shadow: 0 1px 1px #000; }
+.lootfeed p { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lootfeed .edge-line { margin-top: 6px; padding: 7px 10px; border-top: 1px solid color-mix(in srgb, var(--text) 22%, transparent); background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border-radius: 0 0 6px 6px; color: var(--muted); font-size: 12px; }
+.buffs { display: grid; gap: 4px; width: 100%; max-width: 240px; }
+.buffs .w { font: 600 12px/1 var(--sans); letter-spacing: 0.14em; color: var(--text); }
+.buffs .w span { color: var(--danger); }
+.rewards { display: flex; flex-wrap: wrap; gap: 8px; }
+.rw { display: flex; gap: 8px; align-items: center; padding: 6px 10px 6px 6px; border-radius: 7px; font: 12px/1.2 var(--sans); color: var(--text);
+  background: color-mix(in srgb, var(--panel) 95%, transparent); border: 1px solid color-mix(in srgb, var(--text) 22%, transparent); }
+.rw i { width: 26px; height: 26px; border-radius: 4px; flex: none; border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); background: linear-gradient(150deg, #4a4550, #1e1c22); }
+.rw small { display: block; font: 600 9px/1 var(--sans); letter-spacing: 0.12em; margin-top: 3px; color: var(--muted); }
+.rw.up { border-color: var(--accent); }
+.rw.up small { color: var(--accent); }
+.bagrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.slot { width: 32px; height: 32px; border-radius: 4px; position: relative; border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); background: linear-gradient(150deg, #4a4550, #1e1c22); }
+.slot.dim { opacity: 0.4; }
+.slot.dim::after { content: "JUNK"; position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font: 600 8px/1 var(--sans); letter-spacing: 0.1em; color: var(--text); }
+.key.mini-key { width: auto; height: 26px; padding: 0 10px; border-radius: 7px; font: 600 12px/1 var(--sans); }
+.copywin { width: 100%; max-width: 340px; }
+.copywin .head { height: 44px; }
+.copywin .body { min-height: 0; padding: 16px 18px; }
+.edit { height: 30px; border-radius: 5px; display: flex; align-items: center; padding: 0 8px; background: rgba(0,0,0,0.35); border: 1px solid color-mix(in srgb, var(--text) 22%, transparent); font: 12px/1 var(--sans); color: var(--text); overflow: hidden; white-space: nowrap; }
+.edit mark { background: color-mix(in srgb, var(--accent) 38%, transparent); color: var(--text); padding: 3px 2px; border-radius: 2px; overflow: hidden; text-overflow: ellipsis; }
+.copywin .foot { height: 34px; }
+.hx .tip { width: 100%; max-width: 280px; }
+.snap { width: 100%; max-width: 280px; height: auto; display: block; }
+
 .foot-note { max-width: 1240px; margin: 48px auto 0; color: var(--ink-quiet); font-size: 13px; }
 @media (max-width: 640px) { .world { padding: 18px; } }
 @media (prefers-reduced-motion: no-preference) { .picker button { transition: border-color 0.15s, color 0.15s; } }
@@ -296,7 +349,7 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
 <nav class="toc" aria-label="Sections">
   <a href="#palette">Palette and type</a><a href="#console">Console</a><a href="#halo">Halo</a><a href="#group">Party and raid</a>
   <a href="#satellites">Target and watch</a><a href="#plates">Nameplates</a><a href="#windows">Windows</a><a href="#tooltips">Tooltips</a>
-  <a href="#controls">Buttons and grid</a><a href="#words">Words</a><a href="#top">Top of screen</a>
+  <a href="#controls">Buttons and grid</a><a href="#words">Words</a><a href="#top">Top of screen</a><a href="#helpers">Helpers</a>
 </nav>
 
 <main id="catalogue">
@@ -531,6 +584,97 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
           <div class="mrow" style="--w:24%;--c:#f58cba"><span class="outlined">Aelra</span><b class="outlined">71</b></div></div>
       </div>
       <div class="mini" style="margin-top:34px"><span>Westfall</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="plate" id="helpers">
+  <header><h2>Helpers</h2><p>Small quiet aids that appear only when they matter: resource bars, threat, raid markers, loot, group buffs, quest rewards, bags, chat copying, gathering and frame snapping.</p></header>
+  <div class="world">
+    <div class="hx">
+      <div class="spec"><div class="label">Mana bar</div>
+        <div class="pstack">
+          <div class="pl"><span class="cap">Mana</span><b class="t-mana">2,410</b></div>
+          <div class="pbar"><i style="width:72%"></i><s style="left:60%;width:12%"></s><u style="left:84%"></u></div>
+          <div class="pl" style="margin-top:10px"><span class="cap">Energy</span><b class="t-accent">86</b></div>
+          <div class="pbar energy"><i style="width:86%"></i></div>
+          <div class="pbar slim"><i style="width:48%"></i></div>
+          <div class="pl"><span class="t-muted" style="font-size:11px">Mana 1240</span></div>
+        </div>
+        <div class="cap-line">Five-second-rule spark on the bar, the cost of your cast shaded at the fill's end; a druid's form mana sits slim under energy.</div></div>
+
+      <div class="spec"><div class="label">Threat meter</div>
+        <div class="threat meter" style="width:100%">
+          <div class="mrow" style="--w:100%;--c:var(--mana)"><span class="outlined">Brannoc<em>TANK</em></span><b class="outlined">100%</b></div>
+          <div class="mrow me" style="--w:78%;--c:var(--accent)"><span class="outlined">Tyler</span><b class="outlined">78%</b></div>
+          <div class="mrow" style="--w:64%;--c:var(--text)"><span class="outlined">Corvin</span><b class="outlined">64%</b></div>
+          <div class="mrow" style="--w:41%;--c:var(--text)"><span class="outlined">Gwyn</span><b class="outlined">41%</b></div>
+          <div class="mrow" style="--w:22%;--c:var(--text)"><span class="outlined">Aelra</span><b class="outlined">22%</b></div>
+          <div class="pull outlined">PULLING AGGRO 93%</div>
+        </div>
+        <div class="cap-line">Five rows like the damage meter, the tank first, you in the accent; the target plaque warns in words as you near the pull.</div></div>
+
+      <div class="spec"><div class="label">Raid markers</div>
+        <div class="marks"><span class="mk"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l2.1 4.6 5 .5-3.7 3.4 1.1 4.9L8 11.9 3.5 14.4l1.1-4.9L.9 6.1l5-.5z" fill="#ffd100"/></svg></span><span class="mk"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="#ff8c1a"/></svg></span><span class="mk hover"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l6 7-6 7-6-7z" fill="#b05cf0"/></svg></span><span class="mk"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6.5 12h-13z" fill="#3fbf4a"/></svg></span><span class="mk"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.5 2.5A6.5 6.5 0 1 0 13.5 11 5 5 0 0 1 11.5 2.5z" fill="#c9d6e6"/></svg></span><span class="mk"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="1" fill="#3b82f6"/></svg></span><span class="mk"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1h4v5h5v4h-5v5H6v-5H1V6h5z" fill="#e03b3b"/></svg></span><span class="mk"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c-3.300 0-5.5 2.200-5.5 5 0 1.700.8 2.800 2 3.5v2.5h7V10c1.200-.7 2-1.800 2-3.5 0-2.800-2.200-5-5.5-5z" fill="#f2f2f2"/><circle cx="5.700" cy="7" r="1.5" fill="#111"/><circle cx="10.300" cy="7" r="1.5" fill="#111"/></svg></span><span class="mk clear" aria-label="Clear">×</span></div>
+        <div class="cap-line">Eight markers at rest, quiet; the one under the mouse comes to full. The cross clears.</div></div>
+
+      <div class="spec"><div class="label">Loot feed</div>
+        <div class="lootfeed">
+          <p style="opacity:.35"><span style="color:#9d9d9d">[Worn Shortsword]</span> x1</p>
+          <p style="opacity:.55"><span style="color:#fff">[Linen Cloth]</span> x3</p>
+          <p style="opacity:.8"><span style="color:#1eff00">[Defias Mask]</span></p>
+          <p><span style="color:#0070dd">[Blackened Defias Belt]</span></p>
+          <p><span class="t-accent">+12s 40c</span></p>
+          <div class="edge-line">[General] Aelra: nice drop</div>
+        </div>
+        <div class="cap-line">What you pick up fades above the chat edge, in each item's own quality colour, with the money on a line of its own.</div></div>
+
+      <div class="spec"><div class="label">Group buffs</div>
+        <div class="buffs">
+          <div class="cap">Ready</div><div class="hair"></div>
+          <div class="w">FORTITUDE <span class="t-muted" style="color:var(--muted)">·</span> <span>3 missing</span></div>
+          <div class="w">MARK <span class="t-muted" style="color:var(--muted)">·</span> <span>1 missing</span></div>
+        </div>
+        <div class="cap-line">On the Ready page: the buffs you can give, and how many of the group lack them.</div></div>
+
+      <div class="spec"><div class="label">Quest rewards</div>
+        <div class="rewards">
+          <span class="rw"><i style="border-color:#1eff00"></i><span>Rugged Boots</span></span>
+          <span class="rw up"><i style="border-color:#0070dd"></i><span>Band of Mists<small>UPGRADE</small></span></span>
+          <span class="rw"><i></i><span>Linen Belt</span></span>
+        </div>
+        <div class="rewards" style="margin-top:8px">
+          <span class="rw"><i></i><span>Dusty Cloak<small>VALUE</small></span></span>
+          <span class="rw"><i style="border-color:#1eff00"></i><span>Oak Staff<small>VALUE</small></span></span>
+        </div>
+        <div class="cap-line">An outline and UPGRADE mark the reward that beats what you wear; with no upgrade, VALUE names the best vendor price.</div></div>
+
+      <div class="spec"><div class="label">Bag slots</div>
+        <div class="bagrow">
+          <span class="slot"></span><span class="slot" style="border-color:#1eff00"></span><span class="slot dim"></span><span class="slot"></span><span class="slot" style="border-color:#0070dd"></span>
+          <span class="key mini-key next">Junk</span>
+        </div>
+        <div class="cap-line">With Junk on, grey items dim and carry a muted JUNK word, ready to sell.</div></div>
+
+      <div class="spec"><div class="label">Chat copy</div>
+        <div class="win copywin"><div class="head"><h3>Copy</h3><span>×</span></div>
+          <div class="body"><div class="edit"><mark>https://example.com/stoa/guide</mark></div></div>
+          <div class="foot"><span>Ctrl+C to copy, Escape to close</span></div></div>
+        <div class="cap-line">Links in chat open in a small box with the text already selected.</div></div>
+
+      <div class="spec"><div class="label">Gathering tooltip</div>
+        <div class="tip"><div class="th"><span class="t-text">Gold Vein</span><b></b></div>
+          <div class="tb"><div class="pair"><span>Mining 155 · you 142</span><b class="t-danger">TOO LOW</b></div></div></div>
+        <div class="cap-line">Nodes say what skill they need and where you stand, in words.</div></div>
+
+      <div class="spec"><div class="label">Snapping</div>
+        <svg class="snap" viewBox="0 0 280 120" role="img" aria-label="Two frames with a guide line between aligned edges">
+          <rect x="14" y="14" width="96" height="60" rx="6" fill="none" style="stroke: color-mix(in srgb, var(--text) 45%, transparent)" stroke-width="1.5"/>
+          <rect x="170" y="38" width="96" height="68" rx="6" fill="none" style="stroke: color-mix(in srgb, var(--text) 45%, transparent)" stroke-width="1.5"/>
+          <line x1="10" y1="38" x2="270" y2="38" stroke-dasharray="3 4" stroke-width="1" style="stroke: var(--accent)" opacity="0.7"/>
+          <circle cx="110" cy="38" r="2.500" style="fill: var(--accent)"/><circle cx="170" cy="38" r="2.500" style="fill: var(--accent)"/>
+        </svg>
+        <div class="cap-line">Dragging a frame near another's edge draws a faint guide and pulls it into line.</div></div>
     </div>
   </div>
 </section>

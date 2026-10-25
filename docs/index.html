@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stoa</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Stoa: a calm, two-state interface for World of Warcraft Forever. The Grimoire console out of combat, the Halo in it.">
@@ -99,6 +104,9 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 }
 @media (prefers-reduced-motion:no-preference){.halo-art .spin{transform-origin:150px 150px;animation:turn 60s linear infinite}@keyframes turn{to{transform:rotate(360deg)}}}
 </style>
+</head>
+<body>
+
 <div class="shell">
 <nav class="toc" aria-label="Contents">
 <a class="mark" href="#top">Stoa</a>
@@ -176,6 +184,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <li><strong>Try it.</strong> A sample party, a practice combat that shows the Halo without a fight, or the settings.</li>
 </ul>
 <p><code>/stoa welcome</code> brings it back. Settings live under Options, AddOns, Stoa, or just type <code>/stoa</code>.</p>
+<p>The welcome page also offers a starting point: Full, Quiet (fewer words on screen) or Classic feel (Blizzard's own windows, bags and tooltips with Stoa's console, Halo and frames). <code>/stoa preset</code> does the same.</p>
 </section>
 
 <section id="roles">
@@ -185,6 +194,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <dt>Tank</dt><dd>Group cards to the left. TAUNT appears over the ring when your target is attacking someone else.</dd>
 <dt>Melee and Ranged</dt><dd>Group cards to the left and quiet: only health and what you can dispel, so the Halo carries the fight.</dd>
 <dt>Per role</dt><dd>Frame positions, click-cast bindings and combat bar rows are kept per role, so a healing layout and a damage layout each stay as you set them.</dd>
+<dt>Per spec</dt><dd>Combat rows, the click grid, the bar tray and the tally also keep their own setting in each spec, so changing spec brings its own look with it.</dd>
 </dl>
 </section>
 
@@ -196,6 +206,8 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <dt>Target</dt><dd>A leather plaque at the Halo's upper right: portrait coin, level and kind, an engraved health bar, threat in words and auras. Elite and rare get a doubled line and the word. It shows for any target; a dead one dims and says <span class="w">DEAD</span>.</dd>
 <dt>Tank watch</dt><dd>For healers, a matching plaque at the upper left with the tank's health, shields and your buffs on them. Click-casting works on it.</dd>
 <dt>Reminders</dt><dd>A missing self-buff (an aura, a seal, Righteous Fury, Inner Fire, Shadowform, Mark of the Wild, a mage armor or Arcane Intellect) shows as a word under the Halo, and beside your role on the console.</dd>
+<dt>Mana</dt><dd>For every mana user, a small spark runs along the Halo's mana arc while the five-second rule holds back spirit regeneration, then pulses on each regeneration tick. While you cast, the mana the spell will take is shaded. Druids in cat or bear form see their mana as a slim bar under the power number. The console's mana bar does the same out of combat.</dd>
+<dt>Threat</dt><dd>In a group fight, up to five people by threat on your target (or your tank's) under the damage meters, the tank first. If you aren't tanking, the target plaque says <span class="w">PULLING AGGRO</span> with the percent once you reach 90%.</dd>
 </dl>
 </section>
 
@@ -241,6 +253,8 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <dt>Raids, otherwise</dt><dd>One column per group on the left, above the chat.</dd>
 <dt>Click-casting</dt><dd>Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. <code>/stoa clicks</code> to edit.</dd>
 <dt>Preview</dt><dd><code>/stoa test</code> shows a sample party; <code>/stoa test raid</code>, <code>raid10</code> or <code>raid40</code> a raid. <code>/stoa combat</code> practises the combat layout.</dd>
+<dt>Raid markers</dt><dd>Tanks and leaders get a strip of the eight markers and clear: click marks your target, Shift-click places a world marker.</dd>
+<dt>Group buffs</dt><dd>Out of combat, the Ready page says who in range is missing a buff you can cast, such as <span class="w">FORTITUDE</span> · 3 missing, and the same line shows during a ready check.</dd>
 </dl>
 </section>
 
@@ -264,6 +278,11 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <dt>Pull timer</dt><dd><code>/stoa pull</code> counts down ten seconds (or <code>/stoa pull 5</code>). It uses the game's own countdown when you're allowed to, otherwise 3, 2, 1 in group chat and a large number on screen. <code>/stoa pull 0</code> cancels.</dd>
 <dt>Ready check</dt><dd>The prompt in a Stoa panel, and each party card says <span class="w">READY</span>, <span class="w">NOT READY</span> or WAITING while the check runs.</dd>
 <dt>Interrupts</dt><dd>When a hostile target starts a cast you can interrupt, the target plaque says <span class="w">KICK</span>. It stays hidden when the game won't say.</dd>
+<dt>New ranks</dt><dd>When you train a new rank, the bars swap the old rank for it, out of combat, leaving macros alone. <code>/stoa uprank</code> runs it now.</dd>
+<dt>Quest rewards</dt><dd>With a choice of rewards, <span class="w">UPGRADE</span> marks the one that beats what you wear, or <span class="w">VALUE</span> the one that sells for most.</dd>
+<dt>Loot</dt><dd>Your last few loots fade above the chat, and gold an hour and loot value this session can sit in the tally. <code>/stoa loot</code> shows the totals.</dd>
+<dt>Gathering</dt><dd>A herb or ore node's tooltip shows the skill it needs against yours, with <span class="w">TOO LOW</span> when you're short.</dd>
+<dt>Map</dt><dd>The world map fades while you move, and shows the zone's level range under its title; the minimap's zone tooltip does too.</dd>
 </dl>
 </section>
 
@@ -273,6 +292,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <dt>Windows</dt><dd>Quest, gossip, merchant, trainer and the rest on dark rounded panels with light text: a lighter header band with the title in it and a soft shadow under it (warm for trade windows, cool for social ones), a dark footer tray, darker wells behind grouped things, and tabs left where Blizzard hangs them, dressed as dark tabs with the chosen one underlined. Tyler's stone sits in the body: faint rings and grain in the theme's colour, fading out towards the top.</dd>
 <dt>Tooltips</dt><dd>Cards with a header band behind the name. Rank gets an outline: a doubled gold line for elites, silver for rares, gold and silver for rare elites, a heavier gold for bosses, with that colour fading across the header; items above common fade their quality colour the same way. Enemies say how hard they are as a word (<span class="w">TRIVIAL</span> to <span class="w">DEADLY</span>, plus <span class="w">ELITE</span>, <span class="w">RARE</span> or <span class="w">BOSS</span>) instead of the game's red-green level colours, whom they target (<span class="w">YOU</span> in the warning colour), what they cast and your threat. Players show item level; gear says how it compares with what you wear ("+6 over your chest"); items show how many you own. In combat a card keeps only what matters then. Above the console or at the cursor.</dd>
 <dt>Bags</dt><dd>Rounded item slots. Quality is an edge colour plus a corner mark for epic (one) and legendary (two), so it never rests on colour alone. Item level on gear, free slots (or <span class="w">FULL</span>), money, a Sort button, and combined or separate bags.</dd>
+<dt>Junk</dt><dd>The Junk key on the bag turns on marking: click items to mark them, and they sell with the greys. <code>/stoa junk</code> lists or clears marks.</dd>
 <dt>More windows</dt><dd>Spellbook, talents, the world map's border (never the map itself), mail, auction house, group finder, and friends and guild, each dressed as it loads. The game menu and settings panel are left alone so they never cause blocked-action errors.</dd>
 <dt>Character sheet</dt><dd>Quality edges and item level on each slot, <span class="w">WORN</span> under 30% durability and <span class="w">BROKEN</span> at none, an average item level line, and item levels when you inspect someone.</dd>
 </dl>
@@ -290,6 +310,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <dt>Company</dt><dd><code>/stoa friends</code>, or click Company on the console. Online friends, Battle.net friends in Forever, and your guild, with level, zone and AWAY or BUSY. Click a name to whisper; Shift-click, right-click or Invite to bring them along.</dd>
 <dt>Auto-invite</dt><dd>Friends and guildmates who whisper <code>inv</code>, in game or over Battle.net, are invited. Optionally the keyword works in guild chat. Stoa says so when the group is full or you aren't the leader. Change the words with <code>/stoa keywords inv, invite</code>.</dd>
 <dt>Invites and duels</dt><dd>Accepts group invites from people you know. Declines duels and guild invites from strangers, and optionally their group invites. Each choice is noted in chat so nothing happens behind your back.</dd>
+<dt>Chat</dt><dd>Web addresses become links that open a box to copy them. The quiet copy mark (or Shift-click a tab) shows the last 200 lines to copy, and the main chat's last 100 lines come back after a reload.</dd>
 </dl>
 </section>
 
@@ -329,6 +350,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <p><code>/stoa unlock</code>, or Move frames in settings, puts a labelled overlay on the Halo, target plaque, cast bar, combat bar, party, raid, tank watch, click grid and meters.</p>
 <ul class="plain">
 <li>Drag to move. Click one to choose it, then the arrow keys nudge it one step, or ten with Shift.</li>
+<li>Frames snap to the screen's edges and centre and to each other, with a faint guide line; hold Shift to drop one freely. A frame snapped to another moves with it, so the plaques follow the Halo.</li>
 <li>Right-click an overlay to put that frame back. The small bar has Lock, Reset this layout and a Grid to line things up.</li>
 <li>Spots are saved per role, so your healing layout and damage layout differ. <code>/stoa reset</code> clears every role.</li>
 <li>Combat always locks the frames.</li>
@@ -343,7 +365,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <tr><td><code>/stoa</code></td><td>Open settings</td></tr>
 <tr><td><code>/stoa unlock</code></td><td>Toggle frame moving</td></tr>
 <tr><td><code>/stoa reset</code></td><td>Put moved frames back in their default spots, in every role</td></tr>
-<tr><td><code>/stoa safe</code></td><td>Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, tooltips, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload</td></tr>
+<tr><td><code>/stoa safe</code></td><td>Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, tooltips, bags, character sheet, top of screen, nameplates, swing timer, meters, map, chat, quest reward) and reload</td></tr>
 <tr><td><code>/stoa tooltip cursor</code></td><td>Tooltips at the cursor; <code>/stoa tooltip console</code> puts them back above the console</td></tr>
 <tr><td><code>/stoa vision</code></td><td>Cycle colour vision modes, or name one: <code>redgreen</code>, <code>blueyellow</code>, <code>nocolour</code> or <code>standard</code></td></tr>
 <tr><td><code>/stoa windows reset</code></td><td>Put every moved Blizzard window back in its usual place</td></tr>
@@ -357,6 +379,11 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <tr><td><code>/stoa backup</code></td><td>Copy your settings as text, or paste a backup to restore it</td></tr>
 <tr><td><code>/stoa xp</code></td><td>Experience this session, per hour, and time to level</td></tr>
 <tr><td><code>/stoa pull [seconds]</code></td><td>Pull countdown for the group (10 by default); <code>/stoa pull 0</code> cancels</td></tr>
+<tr><td><code>/stoa uprank</code></td><td>Put the best rank of each spell on your bars now</td></tr>
+<tr><td><code>/stoa junk add &lt;item></code></td><td>Mark an item as junk (link or ID); <code>remove &lt;item></code>, <code>list</code>, <code>clear</code></td></tr>
+<tr><td><code>/stoa loot</code></td><td>Gold an hour and loot value this session; <code>/stoa loot reset</code> starts again</td></tr>
+<tr><td><code>/stoa copychat</code></td><td>Copy the chosen chat window's last 200 lines</td></tr>
+<tr><td><code>/stoa preset full</code></td><td>Start from a preset: <code>full</code>, <code>quiet</code> or <code>classic</code>, then /reload</td></tr>
 <tr><td><code>/stoa state</code></td><td>Print the current state and role</td></tr>
 <tr><td><code>/stoa clicks</code></td><td>Edit click-cast bindings for your current role</td></tr>
 <tr><td><code>/stoa grid</code></td><td>Cycle the click grid: always open, folded until needed, or hidden; or name one: <code>open</code>, <code>fold</code>, <code>hidden</code></td></tr>
@@ -405,3 +432,6 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
   Object.keys(map).forEach(function(id){ var s = document.getElementById(id); if (s) io.observe(s); });
 })();
 </script>
+
+</body>
+</html>
