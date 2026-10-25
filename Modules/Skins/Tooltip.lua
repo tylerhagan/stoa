@@ -268,6 +268,10 @@ function Tooltip:DressItem(tip, data)
 
 	if tip ~= GameTooltip or InCombatLockdown() then return end
 	self:Upgrade(tip, link)
+	if link and not Stoa:IsSecret(link) and Stoa.Items.isMarkedJunk(link) then
+		tip:AddLine("Marked as junk", Stoa:Color("muted"))
+		tip:Show()
+	end
 	if not self.db.owned then return end
 	local id = data and known(data.id)
 	if not id or not (C_Item and C_Item.GetItemCount) then return end
