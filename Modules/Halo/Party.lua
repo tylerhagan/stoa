@@ -20,6 +20,7 @@ local Party = Stoa:NewModule("Party", {
 	-- until you hover a card or hold Shift, "hidden" never shows it.
 	clickGrid = "fold",
 })
+Stoa:SpecSettings(Party, { "clickGrid" })
 
 function Party:Quiet()
 	return self.db.quietCards and Stoa:GetRole() ~= "HEALER"
@@ -793,3 +794,7 @@ function Party:OnEnable()
 		self:UpdateWatch()
 	end)
 end
+
+Stoa:On("STOA_SPEC_SETTINGS", function()
+	if Party.grid then Party:SetGridMode(Party.db.clickGrid) end
+end)

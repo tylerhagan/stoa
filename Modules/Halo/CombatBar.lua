@@ -18,6 +18,8 @@ local Stoa = ns.Stoa
 local UI = Stoa.UI
 
 local Bar = Stoa:NewModule("CombatBar", { count = 12, rows = "2", healerRows = "1" })
+-- Each spec keeps its own number of rows.
+Stoa:SpecSettings(Bar, { "rows", "healerRows" })
 
 local SIZE = 38
 local GAP = 8
@@ -441,9 +443,7 @@ function Bar:OnEnable()
 	Stoa:On("ACTIONBAR_UPDATE_USABLE", function() self:UpdateState() end)
 	Stoa:On("SPELL_UPDATE_USABLE", function() self:UpdateState() end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateState() end)
-	Stoa:On("UNIT_POWER_FREQUENT", function(unit)
-		if unit == "player" then self:UpdateState() end
-	end)
+	Stoa:OnUnit("UNIT_POWER_FREQUENT", { "player" }, function() self:UpdateState() end)
 	Stoa:On("BAG_UPDATE_DELAYED", function() self:UpdateAll() end)
 	-- Range has no event. If an update ever errors the ticker stops rather
 	-- than repeating.
@@ -467,3 +467,8 @@ function Bar:OnEnable()
 	end)
 	layout()
 end
+
+-- A spec change can bring its own number of rows.
+Stoa:On("STOA_SPEC_SETTINGS", function()
+	if Bar.enabled then Stoa:AfterCombat(function() Bar:Layout() end) end
+end)

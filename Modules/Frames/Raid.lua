@@ -189,12 +189,22 @@ function Raid:OnEnable()
 	end
 
 	local party = Stoa.modules.Party
+	-- In a raid one unit can fire a dozen events in a moment (every aura,
+	-- every hit), so they're gathered and each cell is drawn once a tenth
+	-- of a second at most.
+	local dirty = {}
 	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_CONNECTION", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED" }) do
 		Stoa:On(event, function(unit)
-			if not unit or not IsInRaid() then return end
-			eachCellFor(unit, function(cell) party:UpdateCard(cell) end)
+			if unit and IsInRaid() then dirty[unit] = true end
 		end)
 	end
+	Stoa:NewTicker(0.1, function()
+		if not next(dirty) then return end
+		for unit in pairs(dirty) do
+			eachCellFor(unit, function(cell) party:UpdateCard(cell) end)
+		end
+		wipe(dirty)
+	end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function()
 		for cell in pairs(cells) do
 			if cell.unit then party:UpdateCard(cell) end

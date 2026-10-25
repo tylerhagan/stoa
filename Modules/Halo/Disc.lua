@@ -240,14 +240,11 @@ function Disc:OnEnable()
 	self:BuildCoins(halo.frame)
 
 	local function refresh() xpcall(self.Refresh, Stoa.catch, self) end
-	Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
-		if unit ~= "player" then return end
+	Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(unit, _, spellID)
 		xpcall(self.NoteCast, Stoa.catch, self, spellID)
 		refresh()
 	end)
-	Stoa:On("UNIT_AURA", function(unit)
-		if unit == "player" then refresh() end
-	end)
+	Stoa:OnUnit("UNIT_AURA", { "player" }, refresh)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", refresh)
 	Stoa:On("GROUP_ROSTER_UPDATE", refresh)
 	Stoa:On("STOA_ROLE_CHANGED", refresh)

@@ -78,7 +78,8 @@ function Stoa:OnUnit(event, units, fn)
 	local function handler(err)
 		if Stoa:Fail(err, owner) then listener:UnregisterAllEvents() end
 	end
-	listener:SetScript("OnEvent", function(_, _, unit, ...)
+	listener:SetScript("OnEvent", function(_, fired, unit, ...)
+		if fired ~= event then return end
 		local module = owner and Stoa.modules[owner]
 		if module and module.tripped then return end
 		xpcall(fn, handler, unit, ...)

@@ -293,10 +293,29 @@ function Tally:Defaults()
 	return out
 end
 
+-- What you've picked is kept per spec, so a healing spec and a damage
+-- spec each keep their own lines. A character saved before that keeps its
+-- one list for both until a spec picks its own.
+local function saved()
+	local char = Stoa.char
+	if not char then return nil end
+	local slot = Stoa.ActiveSpecSlot and Stoa.ActiveSpecSlot() or 1
+	local bySpec = char.tallyBySpec
+	if type(bySpec) == "table" and bySpec[slot] ~= nil then return bySpec[slot] or nil end
+	return char.tally
+end
+
+local function save(list)
+	local slot = Stoa.ActiveSpecSlot and Stoa.ActiveSpecSlot() or 1
+	Stoa.char.tallyBySpec = Stoa.char.tallyBySpec or {}
+	-- false marks "back to the role's set" for this spec.
+	Stoa.char.tallyBySpec[slot] = list or false
+end
+
 -- The chosen keys: yours if you've picked, otherwise the role's.
 function Tally:Chosen()
-	local saved = Stoa.char and Stoa.char.tally
-	if type(saved) == "table" then return saved end
+	local list = saved()
+	if type(list) == "table" then return list end
 	return self:Defaults()
 end
 
@@ -465,7 +484,7 @@ function Tally:Toggle(key)
 	for i, chosen in ipairs(list) do
 		if chosen == key then
 			table.remove(list, i)
-			Stoa.char.tally = list
+			save(list)
 			self:Refresh()
 			return false
 		end
@@ -475,13 +494,13 @@ function Tally:Toggle(key)
 		return false
 	end
 	list[#list + 1] = key
-	Stoa.char.tally = list
+	save(list)
 	self:Refresh()
 	return true
 end
 
 function Tally:Reset()
-	Stoa.char.tally = nil
+	save(nil)
 	self:Refresh()
 end
 
@@ -527,6 +546,7 @@ function Tally:OnEnable()
 	self:Build(console)
 	Stoa:NewTicker(REFRESH_SECONDS, function() self:Refresh() end)
 	Stoa:On("STOA_ROLE_CHANGED", function() self:Refresh() end)
+	Stoa:On("ACTIVE_TALENT_GROUP_CHANGED", function() self:Refresh() end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:Refresh() end)
 	Stoa:On("STOA_THEME_CHANGED", function() self:Refresh() end)
 end

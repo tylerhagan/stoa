@@ -12,6 +12,7 @@ local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Bars = Stoa:NewModule("ActionBars", { hoverTray = false, combatHide = true })
+Stoa:SpecSettings(Bars, { "hoverTray" })
 
 local PREFIXES = {
 	"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
@@ -266,3 +267,7 @@ function Bars:OnEnable()
 		end
 	end)
 end
+
+Stoa:On("STOA_SPEC_SETTINGS", function()
+	if Bars.enabled then Bars:SetOption("hoverTray", Bars.db.hoverTray) end
+end)

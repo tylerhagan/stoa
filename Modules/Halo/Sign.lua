@@ -390,17 +390,14 @@ function Sign.wire(module, extra)
 		if module.casts then module.casts:ForgetHidden() end
 		refresh()
 	end)
-	Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
-		if unit ~= "player" then return end
+	Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(unit, _, spellID)
 		if module.NoteCast and spellID and not Stoa:IsSecret(spellID) then
 			local name = C_Spell.GetSpellName(spellID)
 			if name then xpcall(module.NoteCast, Stoa.catch, module, name, spellID) end
 		end
 		refresh()
 	end)
-	Stoa:On("UNIT_AURA", function(unit)
-		if unit == "target" or unit == "player" then refresh() end
-	end)
+	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, refresh)
 	for _, event in ipairs({ "SPELL_UPDATE_COOLDOWN", "UPDATE_SHAPESHIFT_FORM", "UNIT_THREAT_LIST_UPDATE",
 		"GROUP_ROSTER_UPDATE", "STOA_ROLE_CHANGED", "STOA_STATE_CHANGED", "SPELLS_CHANGED" }) do
 		Stoa:On(event, refresh)
