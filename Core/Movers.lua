@@ -19,12 +19,18 @@ local showGrid = false
 
 local GRID_STEP = 100
 local BAR_WIDTH = 520
+local SNAP_RANGE = 8
 
 -- Saved positions -----------------------------------------------------------
 -- layouts[role][key] is { point, relativePoint, x, y }, or false once the
 -- player has reset that frame in that layout (so the older per-character
 -- spot stops applying there). Missing means "no opinion", and the older
 -- spot, if any, applies.
+--
+-- A frame dropped snapped to another mover is saved against that mover:
+-- { point, "mover:<key>", relativePoint, x, y, screenX, screenY }, so moving
+-- the one carries the other. The last two numbers are where it stood on the
+-- screen, used if the other mover is ever missing. Older spots are unchanged.
 
 local function layouts()
 	Stoa.char.layouts = Stoa.char.layouts or {}
@@ -56,10 +62,52 @@ local function store(key, value)
 	all[role][key] = value
 end
 
+local function anchorKey(saved)
+	if type(saved) == "table" and type(saved[2]) == "string" then
+		return saved[2]:match("^mover:(.+)$")
+	end
+end
+
+local function moverKeyOf(frame)
+	for key, mover in pairs(movers) do
+		if mover.frame == frame then return key end
+	end
+end
+
+-- True if following the saved anchors from `anchor` leads back to `key`
+-- (or never ends), which would leave two frames waiting on each other.
+local function loops(key, anchor)
+	for _ = 1, #order + 1 do
+		if anchor == key then return true end
+		local nextKey = anchorKey(lookup(anchor))
+		if not nextKey then return false end
+		anchor = nextKey
+	end
+	return true
+end
+
+-- True if `key` hangs off `onKey`, however indirectly.
+local function hangsOff(key, onKey)
+	for _ = 1, #order + 1 do
+		local nextKey = anchorKey(lookup(key))
+		if not nextKey then return false end
+		if nextKey == onKey then return true end
+		key = nextKey
+	end
+	return false
+end
+
 -- Where a frame is now, as an offset from the screen: its first anchor when
--- that is already the screen, otherwise worked out from its edges.
+-- that is already the screen, otherwise worked out from its edges. A frame
+-- hung on another mover keeps that link.
 local function currentPosition(frame)
 	local point, relativeTo, relativePoint, x, y = frame:GetPoint(1)
+	local other = relativeTo and relativeTo ~= UIParent and moverKeyOf(relativeTo)
+	if point and other and type(x) == "number" and type(y) == "number" then
+		local left, bottom = frame:GetLeft(), frame:GetBottom()
+		return { point, "mover:" .. other, relativePoint or point, x, y,
+			type(left) == "number" and left or 0, type(bottom) == "number" and bottom or 0 }
+	end
 	if point and (relativeTo == nil or relativeTo == UIParent) and type(x) == "number" and type(y) == "number" then
 		return { point, relativePoint or point, x, y }
 	end
@@ -69,9 +117,28 @@ local function currentPosition(frame)
 	end
 end
 
-local function place(frame, saved)
-	frame:ClearAllPoints()
-	frame:SetPoint(saved[1], UIParent, saved[2], saved[3], saved[4])
+-- Works out the SetPoint arguments for a saved spot. Nil when it points at a
+-- missing mover and has no screen spot to fall back on.
+local function resolve(mover, saved)
+	local other = anchorKey(saved)
+	if not other then
+		return saved[1], UIParent, saved[2], saved[3], saved[4]
+	end
+	local target = movers[other]
+	if target and target ~= mover and not loops(mover.key, other) then
+		return saved[1], target.frame, saved[3], saved[4], saved[5]
+	end
+	if type(saved[6]) == "number" and type(saved[7]) == "number" then
+		return "BOTTOMLEFT", UIParent, "BOTTOMLEFT", saved[6], saved[7]
+	end
+end
+
+local function place(mover, saved)
+	local point, relativeTo, relativePoint, x, y = resolve(mover, saved)
+	if not point then return false end
+	mover.frame:ClearAllPoints()
+	mover.frame:SetPoint(point, relativeTo, relativePoint, x, y)
+	return true
 end
 
 local function remember(frame)
@@ -121,8 +188,14 @@ end
 
 -- Moves a frame to a saved spot and keeps its overlay on it.
 local function commit(mover, saved)
-	local ok = xpcall(place, Stoa.catch, mover.frame, saved)
-	if ok then mover.moved = true end
+	local ok, placed = xpcall(place, Stoa.catch, mover, saved)
+	if ok and placed then
+		mover.moved = true
+	elseif ok and mover.moved then
+		-- Pointing at a mover that isn't there: back to where it began.
+		mover.moved = false
+		xpcall(putBack, Stoa.catch, mover)
+	end
 	fitOverlay(mover)
 end
 
@@ -161,10 +234,159 @@ local function choose(key)
 	for _, mover in pairs(movers) do styleOverlay(mover) end
 end
 
+-- Snapping ---------------------------------------------------------------------
+-- While a frame is dragged, its edges and centre line pull to the screen's
+-- edges and centre and to those of the other movers on show, when they are
+-- within a few pixels. Holding Shift drops it freely.
+
+-- The nearest pull on one axis. `mine` is {low, middle, high} of the dragged
+-- frame; `lines` is a list of {low, middle, high, key} to pull towards (key
+-- nil for the screen). Returns the shift, the line it lands on and whose.
+local function snapAxis(mine, lines, range)
+	local best, line, owner
+	for _, other in ipairs(lines) do
+		for i = 1, 3 do
+			for j = 1, 3 do
+				local d = other[i] - mine[j]
+				if math.abs(d) <= range and (not best or math.abs(d) < math.abs(best)) then
+					best, line, owner = d, other[i], other.key
+				end
+			end
+		end
+	end
+	return best, line, owner
+end
+
+-- rect is {l, b, r, t}; others is a list of {key=, l=, b=, r=, t=}. Returns
+-- the shift in x and y (0 for none), the guide lines, and the movers snapped
+-- to on each axis.
+local function snap(rect, others, width, height, range)
+	range = range or SNAP_RANGE
+	local xs = { { 0, width / 2, width } }
+	local ys = { { 0, height / 2, height } }
+	for _, o in ipairs(others) do
+		xs[#xs + 1] = { o.l, (o.l + o.r) / 2, o.r, key = o.key }
+		ys[#ys + 1] = { o.b, (o.b + o.t) / 2, o.t, key = o.key }
+	end
+	local dx, gx, kx = snapAxis({ rect.l, (rect.l + rect.r) / 2, rect.r }, xs, range)
+	local dy, gy, ky = snapAxis({ rect.b, (rect.b + rect.t) / 2, rect.t }, ys, range)
+	return { dx = dx or 0, dy = dy or 0, gx = gx, gy = gy, kx = kx, ky = ky }
+end
+
+-- Screen units per overlay unit.
+local function ratio(overlay)
+	local mine, parent = overlay:GetEffectiveScale(), UIParent:GetEffectiveScale()
+	if type(mine) == "number" and type(parent) == "number" and parent > 0 and mine > 0 then
+		return mine / parent
+	end
+	return 1
+end
+
+local function rectOf(frame, r)
+	local l, b, right, t = frame:GetLeft(), frame:GetBottom(), frame:GetRight(), frame:GetTop()
+	if type(l) == "number" and type(b) == "number" and type(right) == "number" and type(t) == "number" then
+		return { l = l * r, b = b * r, r = right * r, t = t * r }
+	end
+end
+
+-- The other movers on show to snap to. Ones hung off the dragged frame are
+-- left out: they travel with it, and anchoring to them would loop.
+local function snapTargets(mover)
+	local list = {}
+	for _, key in ipairs(order) do
+		local other = movers[key]
+		if other ~= mover and other.overlay:IsShown() and not hangsOff(key, mover.key) then
+			local rect = rectOf(other.overlay, ratio(other.overlay))
+			if rect then
+				rect.key = key
+				list[#list + 1] = rect
+			end
+		end
+	end
+	return list
+end
+
+local function screenSize()
+	local width, height = UIParent:GetWidth(), UIParent:GetHeight()
+	return type(width) == "number" and width or 1920, type(height) == "number" and height or 1080
+end
+
+local guides
+
+local function hideGuides()
+	if guides then
+		guides.v:Hide()
+		guides.h:Hide()
+	end
+end
+
+local function showGuides(result)
+	if not guides then
+		guides = CreateFrame("Frame", "StoaMoverGuides", UIParent)
+		guides:SetAllPoints(UIParent)
+		guides:SetFrameStrata("TOOLTIP")
+		guides:EnableMouse(false)
+		guides.v = guides:CreateTexture(nil, "OVERLAY")
+		guides.h = guides:CreateTexture(nil, "OVERLAY")
+	end
+	local r, g, b = Stoa:Color("accent")
+	guides.v:SetColorTexture(r, g, b, 0.45)
+	guides.h:SetColorTexture(r, g, b, 0.45)
+	guides.v:ClearAllPoints()
+	guides.h:ClearAllPoints()
+	if result and result.gx then
+		guides.v:SetWidth(1)
+		guides.v:SetPoint("TOP", guides, "TOPLEFT", result.gx, 0)
+		guides.v:SetPoint("BOTTOM", guides, "BOTTOMLEFT", result.gx, 0)
+		guides.v:Show()
+	else
+		guides.v:Hide()
+	end
+	if result and result.gy then
+		guides.h:SetHeight(1)
+		guides.h:SetPoint("LEFT", guides, "BOTTOMLEFT", 0, result.gy)
+		guides.h:SetPoint("RIGHT", guides, "BOTTOMRIGHT", 0, result.gy)
+		guides.h:Show()
+	else
+		guides.h:Hide()
+	end
+	guides:Show()
+end
+
+-- What a snap would do to the frame being dragged right now, or nil.
+local function snapNow(mover)
+	if IsShiftKeyDown() then return end
+	local rect = rectOf(mover.overlay, ratio(mover.overlay))
+	if not rect then return end
+	local width, height = screenSize()
+	local result = snap(rect, snapTargets(mover), width, height)
+	if result.gx or result.gy then
+		result.rect = rect
+		return result
+	end
+end
+
 local function dropped(mover)
 	local overlay = mover.overlay
 	overlay:StopMovingOrSizing()
-	local saved = currentPosition(overlay)
+	overlay:SetScript("OnUpdate", nil)
+	hideGuides()
+	local saved
+	local result = snapNow(mover)
+	if result then
+		local r = ratio(overlay)
+		local rect = result.rect
+		local left, bottom = rect.l + result.dx, rect.b + result.dy
+		overlay:ClearAllPoints()
+		overlay:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left / r, bottom / r)
+		local key = result.kx or result.ky
+		local target = key and movers[key]
+		local trect = target and rectOf(target.overlay, ratio(target.overlay))
+		if trect then
+			saved = { "BOTTOMLEFT", "mover:" .. key, "BOTTOMLEFT", (left - trect.l) / r, (bottom - trect.b) / r, left / r, bottom / r }
+		end
+	end
+	saved = saved or currentPosition(overlay)
 	if saved then
 		move(mover, saved)
 	else
@@ -193,6 +415,10 @@ local function makeOverlay(mover)
 		if InCombatLockdown() then return end
 		choose(mover.key)
 		f:StartMoving()
+		f:SetScript("OnUpdate", Stoa:GuardUpdate(function()
+			local result = snapNow(mover)
+			if result then showGuides(result) else hideGuides() end
+		end))
 	end)
 	overlay:SetScript("OnDragStop", function() dropped(mover) end)
 
@@ -228,6 +454,11 @@ function Stoa:RegisterMover(key, frame, label, options)
 	self:AfterCombat(function()
 		local saved = lookup(key)
 		if saved then commit(mover, saved) end
+		-- Frames saved against this one may have loaded first and fallen
+		-- back to the screen; hang them on it now.
+		for _, other in ipairs(order) do
+			if other ~= key and anchorKey(lookup(other)) == key then applyOne(movers[other]) end
+		end
 	end)
 	return mover
 end
@@ -316,7 +547,11 @@ local function nudge(dx, dy)
 	if not mover or InCombatLockdown() then return end
 	local saved = currentPosition(mover.frame)
 	if not saved then return end
-	move(mover, { saved[1], saved[2], saved[3] + dx, saved[4] + dy })
+	if anchorKey(saved) then
+		move(mover, { saved[1], saved[2], saved[3], saved[4] + dx, saved[5] + dy, saved[6] + dx, saved[7] + dy })
+	else
+		move(mover, { saved[1], saved[2], saved[3] + dx, saved[4] + dy })
+	end
 end
 
 local ARROWS = {
@@ -406,7 +641,7 @@ local function buildBar()
 
 	local hint = UI.text(bar, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	hint:SetPoint("BOTTOMLEFT", 14, 16)
-	hint:SetText("Drag a frame. Arrows nudge it, Shift for 10. Right-click resets it.")
+	hint:SetText("Drag a frame; it snaps to edges and other frames, Shift drops it free. Arrows nudge, right-click resets.")
 	hint:SetWidth(BAR_WIDTH - 14 - 80 - 8 - 170 - 8 - 70 - 30)
 	hint:SetWordWrap(true)
 	bar:Hide()
@@ -484,4 +719,4 @@ Stoa.commands.reset = function()
 end
 
 -- Exposed for tests.
-Stoa.Movers = { movers = movers, lookup = lookup, applyAll = applyAll, dropped = dropped, nudge = nudge, onKey = onKey, select = choose }
+Stoa.Movers = { movers = movers, lookup = lookup, applyAll = applyAll, dropped = dropped, nudge = nudge, onKey = onKey, select = choose, snap = snap, resolve = resolve, currentPosition = currentPosition }
