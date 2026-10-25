@@ -19,7 +19,8 @@
 --     threat; and for players their item level (read with an inspect, out
 --     of combat);
 --   * for gear, one line against what you wear in that slot ("+6 over your
---     chest"), and for any item how many you have in your bags and bank.
+--     chest"), and for any item how many you have in your bags and bank;
+--   * for herb and ore nodes, the skill they need against yours.
 -- In combat a card keeps only what matters then: name, difficulty, target,
 -- casting and threat. It can sit at the cursor instead of above the
 -- console, and unit cards can stay hidden in combat until you hold Shift.
@@ -35,6 +36,7 @@ local Tooltip = Stoa:NewModule("Tooltip", {
 	unitDetails = true,
 	itemLevel = true,
 	owned = true,
+	gathering = true,
 	combatHide = false,
 })
 
@@ -302,6 +304,81 @@ function Tooltip:Upgrade(tip, link)
 	end
 end
 
+-- Gathering ----------------------------------------------------------------------------
+-- Herb and ore nodes: the skill a node needs, from a table of the classic
+-- ones by their English names (other languages get no line), against your
+-- own. "Ooze Covered" nodes need what the plain ones do.
+
+local HERBS = {
+	Peacebloom = 1, Silverleaf = 1, Earthroot = 15, Mageroyal = 50, Briarthorn = 70,
+	Stranglekelp = 85, Bruiseweed = 100, ["Wild Steelbloom"] = 115, ["Grave Moss"] = 120,
+	Kingsblood = 125, Liferoot = 150, Fadeleaf = 160, Goldthorn = 170,
+	["Khadgar's Whisker"] = 185, Wintersbite = 195, Firebloom = 205, ["Purple Lotus"] = 210,
+	["Arthas' Tears"] = 220, Sungrass = 230, Blindweed = 235, ["Ghost Mushroom"] = 245,
+	Gromsblood = 250, ["Golden Sansam"] = 260, Dreamfoil = 270, ["Mountain Silversage"] = 280,
+	Plaguebloom = 285, Icecap = 290, ["Black Lotus"] = 300,
+}
+local ORES = {
+	["Copper Vein"] = 1, ["Tin Vein"] = 65, ["Silver Vein"] = 75, ["Iron Deposit"] = 125,
+	["Gold Vein"] = 155, ["Mithril Deposit"] = 175, ["Truesilver Deposit"] = 230,
+	["Dark Iron Deposit"] = 230, ["Small Thorium Vein"] = 245, ["Rich Thorium Vein"] = 275,
+	Incendicite = 65, ["Incendicite Mineral Vein"] = 65,
+	["Lesser Bloodstone"] = 75, ["Lesser Bloodstone Deposit"] = 75,
+	Indurium = 150, ["Indurium Mineral Vein"] = 150,
+}
+Tooltip.HERBS, Tooltip.ORES = HERBS, ORES
+
+-- The profession skill lines, which don't change with the game's language.
+local SKILL_LINES = { Herbalism = 182, Mining = 186 }
+
+-- What a node needs: profession name, skill. Nil for anything else.
+function Tooltip.NodeNeeds(name)
+	if type(name) ~= "string" or Stoa:IsSecret(name) then return nil end
+	name = name:gsub("^Ooze Covered ", "")
+	if HERBS[name] then return "Herbalism", HERBS[name] end
+	if ORES[name] then return "Mining", ORES[name] end
+end
+
+-- Your skill in Herbalism or Mining (with any bonus), or nil if unlearned.
+function Tooltip.GatherSkill(profession)
+	if GetProfessions and GetProfessionInfo then
+		local first, second = GetProfessions()
+		for _, index in ipairs({ first or false, second or false }) do
+			if index then
+				local name, _, rank, _, _, _, line, modifier = GetProfessionInfo(index)
+				rank = Stoa:PlainNumber(rank)
+				if rank and (line == SKILL_LINES[profession] or name == profession) then
+					return rank + (Stoa:PlainNumber(modifier) or 0)
+				end
+			end
+		end
+		return nil
+	end
+	if GetNumSkillLines and GetSkillLineInfo then
+		for i = 1, GetNumSkillLines() do
+			local name, isHeader, _, rank = GetSkillLineInfo(i)
+			if name == profession and not isHeader then return Stoa:PlainNumber(rank) end
+		end
+	end
+	return nil
+end
+
+function Tooltip:Gathering(tip)
+	if not self.db.gathering then return end
+	local first = line(tip, 1)
+	local profession, needed = Tooltip.NodeNeeds(first and first:GetText())
+	if not profession then return end
+	local mine = Tooltip.GatherSkill(profession)
+	if not mine then
+		tip:AddLine(("%s %d · you haven't learned it"):format(profession, needed), Stoa:Color("muted"))
+	elseif mine < needed then
+		tip:AddLine(("%s %d · you %d · TOO LOW"):format(profession, needed, mine), Stoa:Color("danger"))
+	else
+		tip:AddLine(("%s %d · you %d"):format(profession, needed, mine), Stoa:Color("text"))
+	end
+	tip:Show()
+end
+
 -- Dressing -----------------------------------------------------------------------------
 
 local TIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2" }
@@ -440,6 +517,12 @@ function Tooltip:OnEnable()
 		if not usable(tip) then return end
 		self:DressItem(tip, data)
 	end, "Tooltip"))
+	if Enum.TooltipDataType.Object then
+		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Object, Stoa:Guard(function(tip)
+			if not usable(tip) or tip ~= GameTooltip then return end
+			self:Gathering(tip)
+		end, "Tooltip"))
+	end
 	Stoa:On("INSPECT_READY", function(guid)
 		xpcall(self.InspectReady, Stoa.catch, self, guid)
 	end)
