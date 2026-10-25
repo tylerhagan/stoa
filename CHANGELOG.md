@@ -10,6 +10,7 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Minimap: a square with rounded corners by default, framed like Stoa's windows; the round map is a setting (new texture: restart the game once).
 - Shared core for every feature: spellbook ranks and costs, item worth and junk, the group as a list, mana and the five-second rule, show rules (combat, group, raid, solo, target, mouseover), settings per spec, and unit events for just the units that matter. Raid cells redraw at most ten times a second.
 - Combat rows, the click grid, the bar tray and the tally now keep their own setting in each spec.
 - Mana play: a quiet spark for the five-second rule and regen ticks, cast cost shaded on your mana, and druid mana while shapeshifted, on the Halo and the console.
