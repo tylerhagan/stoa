@@ -145,14 +145,96 @@ local function bagIDOf(button)
 	return parent and parent.GetID and parent:GetID()
 end
 
+-- Junk marking ----------------------------------------------------------------
+-- A "Junk" button on the bag turns marking on. While it is on, a clear
+-- overlay of Stoa's own sits over each item and takes the click, so the
+-- item underneath is never used or picked up by mistake. Blizzard's item
+-- buttons are not touched. Marking turns itself off when the bag closes or
+-- a fight starts.
+Bags.junkMode = false
+
+local function junkWord(button)
+	local word = button.stoaJunkWord
+	if not word and button.CreateFontString then
+		word = button:CreateFontString(nil, "OVERLAY", nil, 7)
+		Stoa:SetFont(word, "sans", Stoa.typeSize.caption - 1, "OUTLINE")
+		word:SetPoint("BOTTOM", button, "BOTTOM", 0, 3)
+		word:SetTextColor(Stoa:Color("muted"))
+		word:SetText("JUNK")
+		button.stoaJunkWord = word
+	end
+	return word
+end
+
+local function markJunkWord(button, itemID)
+	local marked = itemID and Stoa.Items.isMarkedJunk(itemID)
+	local word = marked and junkWord(button) or button.stoaJunkWord
+	if word then word:SetShown(marked and true or false) end
+	-- Dimmed as well as worded, so it reads at a glance.
+	local icon = button.icon or button.Icon
+	if icon and icon.SetAlpha then icon:SetAlpha(marked and 0.55 or 1) end
+end
+
+local function overlayClick(overlay)
+	local button = overlay:GetParent()
+	local bag, slot = bagIDOf(button), button.GetID and button:GetID()
+	local info = bag and slot and C_Container and C_Container.GetContainerItemInfo and C_Container.GetContainerItemInfo(bag, slot)
+	if type(info) ~= "table" or not info.itemID then return end
+	Stoa.Items.setJunk(info.itemID, not Stoa.Items.isMarkedJunk(info.itemID))
+end
+
+local function junkOverlay(button, on)
+	local overlay = button.stoaJunkOverlay
+	if not overlay then
+		if not on or not CreateFrame then return end
+		overlay = CreateFrame("Button", nil, button)
+		overlay:SetAllPoints(button)
+		overlay:SetFrameLevel((button:GetFrameLevel() or 1) + 5)
+		overlay:RegisterForClicks("LeftButtonUp")
+		overlay:SetScript("OnClick", function(self) xpcall(overlayClick, Stoa.catch, self) end)
+		button.stoaJunkOverlay = overlay
+	end
+	overlay:SetShown(on and true or false)
+end
+
+local function applyJunkMode(frame)
+	local parts = frame.stoaBag
+	if parts and parts.junk then parts.junk:SetSelected(Bags.junkMode) end
+	for _, button in ipairs(items(frame)) do junkOverlay(button, Bags.junkMode) end
+end
+
+function Bags:SetJunkMode(on)
+	on = on and not InCombatLockdown() or false
+	if on == self.junkMode then return end
+	self.junkMode = on
+	local list = self.frames or {}
+	for i = 1, 14 do
+		local frame = list[i]
+		if frame and frame.stoaBag then guarded(applyJunkMode, frame) end
+	end
+end
+
+local function addJunk(frame, parts)
+	local junk = UI.button(frame, "Junk", 48, function() Bags:SetJunkMode(not Bags.junkMode) end)
+	junk:SetHeight(20)
+	if parts.sort then
+		junk:SetPoint("RIGHT", parts.sort, "LEFT", -6, 0)
+	else
+		junk:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -90, -6)
+	end
+	parts.junk = junk
+end
+
 local function decorateButton(button)
 	local bag, slot = bagIDOf(button), button.GetID and button:GetID()
 	local info = bag and slot and C_Container and C_Container.GetContainerItemInfo and C_Container.GetContainerItemInfo(bag, slot)
 	if not info then
 		button.stoaLink = nil
 		Item.markSlot(button, 0, nil)
+		markJunkWord(button, nil)
 		return
 	end
+	markJunkWord(button, info.itemID)
 	local link = info.hyperlink
 	-- Reading the level costs a lookup, so an unchanged slot is left alone.
 	if button.stoaLink ~= link or button.stoaQuality ~= info.quality then
@@ -234,7 +316,10 @@ end
 
 local function decorateFrame(frame)
 	if not frame or not frame.stoaBag then return end
-	for _, button in ipairs(items(frame)) do guarded(decorateButton, button) end
+	for _, button in ipairs(items(frame)) do
+		guarded(decorateButton, button)
+		if Bags.junkMode then guarded(junkOverlay, button, true) end
+	end
 	updateFooter(frame)
 end
 
@@ -253,6 +338,7 @@ function Bags:Dress(frame)
 	-- Blizzard's coin display steps aside only now that ours exists.
 	if frame.MoneyFrame and frame.MoneyFrame.SetAlpha then frame.MoneyFrame:SetAlpha(0) end
 	addSort(frame, parts)
+	addJunk(frame, parts)
 
 	-- Update hooks: after Blizzard refreshes the item buttons, and when the
 	-- window opens.
@@ -260,6 +346,7 @@ function Bags:Dress(frame)
 		hooksecurefunc(frame, "UpdateItems", function() guarded(decorateFrame, frame) end)
 	end
 	frame:HookScript("OnShow", function() guarded(decorateFrame, frame) end)
+	frame:HookScript("OnHide", function() guarded(Bags.SetJunkMode, Bags, false) end)
 end
 
 local function allFrames()
@@ -292,10 +379,13 @@ end
 
 function Bags:OnEnable()
 	guarded(function() self:ApplyMode() end)
+	self.frames = allFrames()
 	for _, frame in ipairs(allFrames()) do
 		if frame then guarded(self.Dress, self, frame) end
 	end
 	Stoa:On("BAG_UPDATE_DELAYED", refreshShown)
+	Stoa:On("STOA_JUNK_CHANGED", refreshShown)
+	Stoa:On("PLAYER_REGEN_DISABLED", function() Bags:SetJunkMode(false) end)
 	Stoa:On("PLAYER_MONEY", refreshShown)
 	-- Item links load a moment after the bag does.
 	Stoa:On("GET_ITEM_INFO_RECEIVED", function()
