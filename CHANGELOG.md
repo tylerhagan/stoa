@@ -12,6 +12,7 @@ Everything below is on the launch branch and not yet in a numbered release.
 
 - Colour vision setting: Standard, Red-green, Blue-yellow or No colour, laid over any theme; also on the welcome page and `/stoa vision`. Each set is checked by `Tools/art/cvd_audit.py` (simulated colour blindness, CIEDE2000 difference, WCAG contrast).
 - Tide's text is a step dimmer so its white warnings stand out; Druid's warning is pale yellow rather than near-white.
+- Tooltip cards: edges in the unit's or item's colour, difficulty as a word (TRIVIAL to DEADLY, ELITE, RARE, BOSS), target, casting, threat, players' item level, an upgrade line against worn gear, owned counts, shorter cards in combat, cursor or console position.
 - Stone behind windows: faint rings and grain in the theme's colour behind quest, merchant, bag and other windows and Stoa's own pages (new texture: restart the game once). A setting turns it off.
 - Druid signatures (Balance, Cat, Bear, Restoration) and Mage signatures (Arcane, Fire, Frost), built on a shared signature kit (`Modules/Halo/Sign.lua`). Other classes get a main cooldown in the Halo's slot and the game's suggested next press. The power arc follows your power type. The launch check now only checks your own class's spells.
 - Click grid folds to its title by default and opens while you hover a party or raid card or hold Shift; click its title to keep it open. A Click grid setting and `/stoa grid` choose always open, folded or hidden.

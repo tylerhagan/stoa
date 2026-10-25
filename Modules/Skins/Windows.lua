@@ -361,6 +361,8 @@ local function dressTooltips()
 	if GameTooltip_SetDefaultAnchor then
 		hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
 			if (tooltip.IsForbidden and tooltip:IsForbidden()) or tooltip:GetOwner() ~= parent then return end
+			local cards = Stoa.modules.Tooltip
+			if cards and cards.Anchor and Stoa:IsModuleEnabled("Tooltip") and cards:Anchor(tooltip, parent) then return end
 			local console = Stoa.modules.Grimoire
 			local floor = console and console.db and console.db.enabled ~= false and console.OpenHeight and console:OpenHeight() or 0
 			tooltip:ClearAllPoints()

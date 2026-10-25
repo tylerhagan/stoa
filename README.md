@@ -45,6 +45,7 @@ What works today:
 | Top of screen | Buffs as cropped icons in a hairline square with the time under them (pale gold when it runs short, amber edge for debuffs). Quest tracker headers in the display face over a hairline, bone quest titles, quiet minus and plus to fold. The zone above the minimap on a dark rounded panel with the clock beside it; tracking, calendar and the addon button wait for the mouse |
 | Nameplates | Blizzard's plates in a rounded dark track: amber for every enemy, pale gold for neutral, blue for friends, grey only for tapped or dead; enemy players in class colour. A bone edge on your target, the level as a plain number shaded by difficulty, cast bars on the same rounded ground |
 | Swing timer | Blizzard's swing timer (place it in Edit Mode) as a flat bar in the nameplates' rounded dark track: pale gold for the main hand, blue for the off hand, bone for ranged; amber words when out of range |
+| Tooltips | Cards edged in the unit's colour (class, or the nameplates' reaction colours) or the item's quality, names in the serif. For enemies, how hard they are as a word (TRIVIAL, EASY, EVEN, HARD, DEADLY, plus ELITE, RARE or BOSS) rather than the game's red-green level colours; whom they target (YOU in the warning colour), what they cast and your threat. Players show their guild and, out of combat, item level. Gear says how it compares with what you wear in that slot ("+6 over your chest"); any item shows how many you own in bags and bank. In combat a card keeps only name, difficulty, target, casting and threat. Above the console or at the cursor (`/stoa tooltip`), and unit cards can hide in combat until you hold Shift |
 | Window stone | Tyler's stone art (faint rings and grain, `Tools/art/source/wizard-stone2.png`) behind every restyled window and Stoa's own pages, tinted with the theme's text colour so it sits on any theme; the console keeps its leather. A setting turns it off. The texture is cut by `Tools/art/window_stone.py` |
 | More windows | Spellbook, talents, world map border (never the map itself), mail, auction house, group finder, and friends and guild in the same dark panels (the game menu and settings panel are left alone, to avoid blocked-action errors), dressed when each loads |
 | Bags | Rounded item slots with a hairline edge; quality shown as an edge colour plus a corner mark for epic and above, item level on gear, free-slot count, money in g/s/c letters, a Sort button, and a combined or separate layout option |
@@ -67,7 +68,8 @@ Fonts are the main gap: see below.
 | `/stoa` | Open settings |
 | `/stoa unlock` | Toggle frame moving |
 | `/stoa reset` | Put moved frames back in their default spots, in every role |
-| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload |
+| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, tooltips, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload |
+| `/stoa tooltip cursor` | Tooltips at the cursor; `/stoa tooltip console` puts them back above the console |
 | `/stoa vision` | Cycle colour vision modes, or name one: `redgreen`, `blueyellow`, `nocolour` or `standard` |
 | `/stoa windows reset` | Put every moved Blizzard window back in its usual place |
 | `/stoa theme` | Cycle the themes (house, Your class, then each class) |

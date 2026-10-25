@@ -80,6 +80,15 @@ local function build()
 	end)
 	checkbox(Stoa.modules.Windows.db, "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on Stoa's dark panels with light text. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.MoreWindows.db, "enabled", "Restyle more windows", "Spellbook, talents, world map border, mail, auction house, group finder, friends and guild on the same dark panels. Takes effect after /reload.", true)
+	local tooltip = Stoa.modules.Tooltip.db
+	checkbox(tooltip, "enabled", "Tooltip cards", "Tooltips edged in the unit's colour or the item's quality, with whom a unit targets, what it casts, your threat, a player's item level and mount, and how many of an item you own. Takes effect after /reload.", true)
+	dropdown(tooltip, "anchor", "Tooltip position", "Where tooltips for the world and Stoa's frames appear. /stoa tooltip", "console", {
+		{ "console", "Above the console" }, { "cursor", "At the cursor" },
+	})
+	checkbox(tooltip, "unitDetails", "Tooltip details", "Target, casting, threat, DEAD, item level and mount lines on unit tooltips.", true)
+	checkbox(tooltip, "itemLevel", "Players' item level in tooltips", "Asks the game for a player's gear when you mouse over them, out of combat. Remembered for the session.", true)
+	checkbox(tooltip, "owned", "Owned counts on items", "How many of an item you have in your bags and bank.", true)
+	checkbox(tooltip, "combatHide", "Hide unit tooltips in combat", "Hold Shift to see them anyway.", false)
 	checkbox(Stoa.db, "windowStone", "Stone behind windows", "Faint rings and grain in the theme's colour behind windows and Stoa's own pages. The console keeps its leather.", true, function()
 		Stoa.UI.showStone(Stoa.db.windowStone)
 	end)
@@ -233,6 +242,7 @@ Stoa.commands.safe = function()
 	if m.ActionBars then m.ActionBars.db.enabled = false end
 	if m.Windows then m.Windows.db.enabled = false end
 	if m.MoreWindows then m.MoreWindows.db.enabled = false end
+	if m.Tooltip then m.Tooltip.db.enabled = false end
 	if m.Bags then m.Bags.db.enabled = false end
 	if m.Character then m.Character.db.enabled = false end
 	if m.Meters then m.Meters.db.enabled = false end

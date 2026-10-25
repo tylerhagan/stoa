@@ -53,6 +53,7 @@ Modules\Skins\ActionBars.lua
 Modules\Skins\Windows.lua
 Modules\Skins\MoreWindows.lua
 Modules\Skins\Bags.lua
+Modules\Skins\Tooltip.lua
 Modules\Skins\Character.lua
 Modules\Skins\Meters.lua
 Modules\Skins\Top.lua

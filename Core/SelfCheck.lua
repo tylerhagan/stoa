@@ -152,6 +152,10 @@ local APIS = {
 	{ "GetReadyCheckStatus", "READY and NOT READY on party cards" },
 	{ "UnitCastingInfo", "the KICK cue" },
 	{ "UnitChannelInfo", "the KICK cue" },
+	{ "TooltipDataProcessor.AddTooltipPostCall", "tooltip cards", true },
+	{ "C_PaperDollInfo.GetInspectItemLevel", "players' item level in tooltips" },
+	{ "NotifyInspect", "players' item level in tooltips" },
+	{ "UnitDetailedThreatSituation", "threat in tooltips" },
 }
 
 -- Blizzard frames Stoa dresses or takes the place of.
