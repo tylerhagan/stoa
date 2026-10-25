@@ -12,6 +12,7 @@ Everything below is on the launch branch and not yet in a numbered release.
 
 - Colour vision setting: Standard, Red-green, Blue-yellow or No colour, laid over any theme; also on the welcome page and `/stoa vision`. Each set is checked by `Tools/art/cvd_audit.py` (simulated colour blindness, CIEDE2000 difference, WCAG contrast).
 - Tide's text is a step dimmer so its white warnings stand out; Druid's warning is pale yellow rather than near-white.
+- Tally beside the chat: up to eight chosen numbers (stats, gear, gold, professions, world, LibDataBroker feeds), role defaults, right-click picker and /stoa tally.
 - Windows: header band (tinted by the window's job), shadow line, dark footer tray, wells, tabs dressed under the window, 10px corners; the stone softer and fading towards the top.
 - Tooltip cards: a header band with room around the name, rank outlines (elite gold, rare silver, boss heavier gold) with the rank or item quality colour fading across the header, difficulty as a word (TRIVIAL to DEADLY, ELITE, RARE, BOSS), target, casting, threat, players' item level, an upgrade line against worn gear, owned counts, shorter cards in combat, cursor or console position.
 - Stone behind windows: faint rings and grain in the theme's colour behind quest, merchant, bag and other windows and Stoa's own pages (new texture: restart the game once). A setting turns it off.

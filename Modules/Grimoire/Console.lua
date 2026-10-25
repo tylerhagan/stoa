@@ -580,6 +580,9 @@ function Console:SetOpen(open, instant)
 		frame:SetHeight(from + (target - from) * progress)
 		self.leftPage:SetAlpha(open and progress or 1 - progress)
 		self.rightPage:SetAlpha(open and progress or 1 - progress)
+		for _, page in ipairs(self.extraPages or {}) do
+			page:SetAlpha(open and progress or 1 - progress)
+		end
 		for _, part in ipairs(self.resourceParts) do
 			part:SetAlpha(open and progress or 1 - progress)
 		end
@@ -612,8 +615,17 @@ function Console:SetOpen(open, instant)
 			frame:SetScript("OnUpdate", nil)
 			self.leftPage:SetAlpha(pagesAlpha)
 			self.rightPage:SetAlpha(pagesAlpha)
+			for _, page in ipairs(self.extraPages or {}) do page:SetAlpha(pagesAlpha) end
 		end
 	end))
+end
+
+-- Another module's page on the console (the tally): it fades with the
+-- console's own pages as it folds and opens.
+function Console:AddPage(page)
+	self.extraPages = self.extraPages or {}
+	table.insert(self.extraPages, page)
+	page:SetAlpha(self.leftPage and self.leftPage:GetAlpha() or 1)
 end
 
 local function shouldBeOpen()

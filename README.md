@@ -22,6 +22,7 @@ What works today:
 | Moving windows | Hold Shift and drag a quest, gossip, merchant, bag, character, spellbook, mail, auction or similar window by its title or edge. Each keeps its spot whenever it opens again; Shift and right-click puts one back. Shift-clicking items still splits and links as usual |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` (in game or over Battle.net) get invited; optionally the keyword works in guild chat. Says so when the group is full or you aren't leader |
+| Tally | Up to eight numbers you choose, to the right of chat on the console (out of combat): stats (attack or spell power, healing, crit, hit, regen, armor, defense and more), gear wear, bag room, gold, professions, zone, watched reputation, time, latency and framerate, plus anything another addon publishes through LibDataBroker (the feeds Titan Panel shows). Right-click it or `/stoa tally` to choose; saved per character, and until then it follows your role |
 | Company | `/stoa friends` or a click on the console's Company page: online friends, Battle.net friends in this game, and guild, with level, zone and AWAY/BUSY. Click to whisper, Shift- or right-click to invite. The console names a few friends online when you're alone |
 | Grimoire console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait seal (click to target yourself) with health and mana either side, and a Ready, Journey and Company page. Holds chat on its left page, with leather tabs standing on its top edge, and keeps bags and the game menu in its bottom-right corner. Strips the action bar art. Folds to a spine in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
@@ -76,6 +77,7 @@ Fonts are the main gap: see below.
 | `/stoa theme` | Cycle the themes (house, Your class, then each class) |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa friends` | Open the Company roster |
+| `/stoa tally` | List what the tally can show; `/stoa tally add <name>`, `remove <name>`, `reset` |
 | `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build |
 | `/stoa report` | Your version, game build, spec, theme and any errors Stoa caught, ready to copy |

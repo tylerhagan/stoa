@@ -32,6 +32,7 @@ Modules\QoL\WindowMover.lua
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
 Modules\Grimoire\Minimap.lua
+Modules\Grimoire\Tally.lua
 
 Modules\Halo\Halo.lua
 Modules\Halo\Party.lua
