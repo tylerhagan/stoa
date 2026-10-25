@@ -369,7 +369,12 @@ function Console:BuildFellowship(frame, space)
 	note:SetWordWrap(false)
 	local kit = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
 	kit:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -4)
-	self.roleWord, self.roleNote, self.kit = role, note, kit
+	-- Group buffs you could cast that someone near you lacks.
+	local groupBuffs = text(page, "sans", Stoa.typeSize.caption + 1, "accent")
+	groupBuffs:SetPoint("TOPLEFT", kit, "BOTTOMLEFT", 0, -4)
+	groupBuffs:SetWidth(COLUMN_WIDTH)
+	groupBuffs:SetWordWrap(false)
+	self.roleWord, self.roleNote, self.kit, self.groupBuffs = role, note, kit, groupBuffs
 
 	-- Journey.
 	local journey = column(page, 2, "Journey")
@@ -467,6 +472,7 @@ function Console:UpdateSeal()
 		self.roleNote:SetText(note)
 		self.roleNote:SetShown(note ~= "")
 	end
+	if self.groupBuffs then self.groupBuffs:SetText(Stoa.groupBuffLine or "") end
 end
 
 function Console:UpdateResources()
