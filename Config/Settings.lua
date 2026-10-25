@@ -90,6 +90,7 @@ local function build()
 	checkbox(tooltip, "itemLevel", "Players' item level in tooltips", "Asks the game for a player's gear when you mouse over them, out of combat. Remembered for the session.", true)
 	checkbox(tooltip, "owned", "Owned counts on items", "How many of an item you have in your bags and bank.", true)
 	checkbox(tooltip, "combatHide", "Hide unit tooltips in combat", "Hold Shift to see them anyway.", false)
+	checkbox(tooltip, "gathering", "Herb and ore skill on nodes", "A herb or ore node's tooltip shows the skill it needs against yours, with TOO LOW when you are short. English node names for now.", true)
 	checkbox(Stoa.db, "windowStone", "Stone behind windows", "Faint rings and grain in the theme's colour behind windows and Stoa's own pages. The console keeps its leather.", true, function()
 		Stoa.UI.showStone(Stoa.db.windowStone)
 	end)
@@ -116,6 +117,18 @@ local function build()
 	checkbox(halo, "enabled", "Show the Halo in combat", "Health, mana, your signature spell, target and cast around your character. Takes effect after /reload.", true)
 	checkbox(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The seal and the Halo show the same. Also hides Blizzard's cast bar. Takes effect after /reload.", true)
 	checkbox(halo, "hideTargetFrame", "Hide Blizzard's target frame", "Stoa shows your target beside the Halo. Takes effect after /reload.", true)
+	local console = Stoa.modules.Grimoire.db
+	local function manaPlay()
+		local h, c = Stoa.modules.Halo.manaPlay, Stoa.modules.Grimoire.manaPlay
+		if h then h.Refresh() end
+		if c then c.Refresh() end
+	end
+	checkbox(halo, "manaRule", "Five-second rule and regen ticks", "A small spark runs along your mana on the Halo while spirit regeneration is paused after you spend mana, then pulses on each regeneration tick. Mana users only.", true, manaPlay)
+	checkbox(halo, "castCost", "Show what a cast will cost", "While you cast, the mana the spell will spend is shaded on the Halo's mana arc.", true, manaPlay)
+	checkbox(halo, "formMana", "Mana while shapeshifted", "Druids in cat or bear form see their mana as a slim bar under the Halo's power number.", true, manaPlay)
+	checkbox(console, "manaRule", "Five-second rule on the console", "The same spark on the console's mana bar.", true, manaPlay)
+	checkbox(console, "castCost", "Cast cost on the console", "The same shade on the console's mana bar.", true, manaPlay)
+	checkbox(console, "formMana", "Form mana on the console", "A druid's mana under the console's bar while shapeshifted.", true, manaPlay)
 	checkbox(party, "enabled", "Show Stoa party cards", "Large beside the Halo when you heal, compact on the left otherwise. Takes effect after /reload.", true)
 	checkbox(party, "quietCards", "Quiet group frames when not healing", "Tanking or dealing damage, party and raid cards show health and only the words you can act on: a debuff you can dispel, dead or offline. No buff words.", true, function()
 		if Stoa.modules.Party.cards then Stoa.modules.Party:UpdateAll() end
@@ -189,6 +202,32 @@ local function build()
 	checkbox(merchant, "autoRepair", "Repair gear", nil, true)
 	checkbox(merchant, "useGuildFunds", "Use guild funds when allowed", nil, true)
 
+	-- Items and loot
+	local uprank, reward, loot = Stoa.modules.Uprank.db, Stoa.modules.QuestReward.db, Stoa.modules.Loot.db
+	header("Items and loot")
+	checkbox(uprank, "enabled", "Upgrade spell ranks on your bars", "When you learn a new rank, bar slots holding an older rank get the new one, out of combat. Macros are left alone, and a quiet line says what changed. /stoa uprank runs it now. Takes effect after /reload.", true)
+	checkbox(reward, "enabled", "Mark the best quest reward", "With a choice of rewards, UPGRADE marks the one that beats what you wear, or VALUE the one that sells for most. Takes effect after /reload.", true)
+	checkbox(loot, "enabled", "Loot feed and gold an hour", "A short fading list of what you loot above the chat, plus gold an hour and loot value for the tally. /stoa loot shows the totals, /stoa loot reset starts again. Takes effect after /reload.", true)
+	dropdown(loot, "show", "Show the loot feed", "When the list above the chat shows.", "WORLD", Stoa.Rules.options({ "WORLD", "ALWAYS", "SOLO", "GROUP", "NEVER" }), function() Stoa:Fire("STOA_RULES_CHANGED") end)
+
+	-- Group
+	header("Group tools")
+	local groupRules = Stoa.Rules.options({ "GROUP", "RAID", "ALWAYS", "NEVER" })
+	dropdown(Stoa.modules.Threat.db, "show", "Threat meter", "Up to five people by threat on your target, or your tank's, under the damage meters.", "GROUP", groupRules, function() Stoa:Fire("STOA_RULES_CHANGED") end)
+	checkbox(Stoa.modules.Threat.db, "combatOnly", "Threat meter only in combat", "Hide the threat list out of combat.", true, function() Stoa:Fire("STOA_RULES_CHANGED") end)
+	dropdown(Stoa.modules.Markers.db, "show", "Raid marker strip", "Eight markers and clear for tanks and leaders. Click marks your target; Shift-click places a world marker.", "GROUP", groupRules, function() Stoa:Fire("STOA_RULES_CHANGED") end)
+	checkbox(Stoa.modules.Buffs.db, "enabled", "Group buff reminders", "Out of combat, the console's Ready page says who in range is missing a buff you can cast, such as FORTITUDE · 3 missing. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Buffs.db, "readyCheck", "Buff reminder at ready checks", "The same line on screen while a ready check runs.", true)
+
+	-- Chat and map
+	header("Chat and map")
+	local chat, map = Stoa.modules.Chat.db, Stoa.modules.Map.db
+	checkbox(chat, "links", "Clickable web addresses", "Web addresses in chat become links; a click shows the address in a box to copy. Takes effect after /reload.", true)
+	checkbox(chat, "copy", "Copy chat", "A quiet copy mark on the chat, or Shift-click a chat tab, shows the last 200 lines to copy. /stoa copychat. Takes effect after /reload.", true)
+	checkbox(chat, "history", "Keep chat across reloads", "The main chat window's last 100 lines come back after a reload or login, dimmed, above an earlier line.", true)
+	checkbox(map, "fade", "Fade the map while moving", "The world map goes see-through while you move, so you can walk with it open.", true, function() Stoa.modules.Map:Refresh() end)
+	checkbox(map, "levels", "Zone levels on the map", "A zone's level range under the map title and on the minimap's zone tooltip.", true, function() Stoa.modules.Map:Refresh() end)
+
 	-- Moving Blizzard windows
 	local windows = Stoa.modules.WindowMover.db
 	header("Moving windows")
@@ -250,5 +289,8 @@ Stoa.commands.safe = function()
 	if m.Top then m.Top.db.enabled = false end
 	if m.Plates then m.Plates.db.enabled = false end
 	if m.Swing then m.Swing.db.enabled = false end
+	if m.Map then m.Map.db.enabled = false end
+	if m.Chat then m.Chat.db.enabled = false end
+	if m.QuestReward then m.QuestReward.db.enabled = false end
 	ReloadUI()
 end

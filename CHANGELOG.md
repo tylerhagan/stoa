@@ -10,6 +10,22 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Shared core for every feature: spellbook ranks and costs, item worth and junk, the group as a list, mana and the five-second rule, show rules (combat, group, raid, solo, target, mouseover), settings per spec, and unit events for just the units that matter. Raid cells redraw at most ten times a second.
+- Combat rows, the click grid, the bar tray and the tally now keep their own setting in each spec.
+- Mana play: a quiet spark for the five-second rule and regen ticks, cast cost shaded on your mana, and druid mana while shapeshifted, on the Halo and the console.
+- Auto-uprank: new spell ranks replace older ones on your bars (`/stoa uprank`).
+- Quest rewards: the best choice is marked UPGRADE or VALUE.
+- Junk list: mark items from the bag, sold with the greys; `/stoa junk`.
+- Loot feed above the chat, with gold an hour and loot value for the tally; `/stoa loot`.
+- Threat meter under the damage meters, and PULLING AGGRO on the target plaque for non-tanks.
+- Raid marker strip for tanks and leaders, Shift-click for world markers.
+- Group buff reminders on the console's Ready page and during ready checks.
+- Chat: clickable web addresses with a copy box, copy chat, and chat kept across reloads.
+- Map: fades while you move; zone level ranges on the map and minimap.
+- Tooltips: herb and ore nodes show the skill they need against yours.
+- Unlock mode: frames snap to edges, centres and other frames (Shift drops freely); a frame snapped to another moves with it.
+- Welcome page presets: Full, Quiet and Classic feel; `/stoa preset`.
+- `StoaAPI` for other addons: tally lines, Stoa's messages, colours and fonts.
 - Colour vision setting: Standard, Red-green, Blue-yellow or No colour, laid over any theme; also on the welcome page and `/stoa vision`. Each set is checked by `Tools/art/cvd_audit.py` (simulated colour blindness, CIEDE2000 difference, WCAG contrast).
 - Tide's text is a step dimmer so its white warnings stand out; Druid's warning is pale yellow rather than near-white.
 - Tally beside the chat: up to eight chosen numbers (stats, gear, gold, professions, world, LibDataBroker feeds), role defaults, right-click picker and /stoa tally.

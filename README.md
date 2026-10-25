@@ -54,12 +54,28 @@ What works today:
 | Character sheet | A Stoa panel, quality edges and item level on every equipment slot, WORN (under 30%) and BROKEN words for durability, an average item level line, and item levels in the inspect window |
 | Damage meters | Blizzard's meter windows with no panel, just outlined words and faint bars (your own in the accent, names in class colour), side by side in the top-left corner |
 | Comforts | Each its own setting, and Shift stops any of it: faster auto loot, a further camera, skip one-option gossip (on by default); accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet red errors in combat (off by default) |
-| Merchants | Sells grey junk and repairs, from guild funds when allowed |
+| Merchants | Sells grey junk and anything you've marked as junk, and repairs, from guild funds when allowed |
 | Welcome | Once per character, a page to choose what each spec plays and the theme, with buttons to preview a party, practise combat or open settings |
 | Launch check | On the first login with a new game build, checks every spell ID, game function, Blizzard frame and event Stoa relies on, and says in one line if a feature is off because something moved. `/stoa check` (and `/stoa report`) list the details |
 | Error guard | Stoa records its own errors once each with a count. If one part keeps erroring (a loop), it is switched off until the next reload and Stoa says so in chat, so an error can't lock up the screen. `/stoa report` shows your setup and the errors, ready to copy |
 | Backup | All of Stoa's settings as one line of text to keep safe, and a place to paste one back to restore it |
-| Settings | Options > AddOns > Stoa |
+| Shared core | Shared helpers every feature leans on: the spellbook read once (best rank of each spell, costs), item worth (level, sell price, against what you wear, junk), your group as a list, mana and the five-second rule, one set of show rules (always, in or out of combat, in a group or raid, alone, with a target, on mouseover, never), settings kept per spec, and unit events asked of the game for just the units that matter |
+| Per spec | Combat rows, the click grid, the bar tray and the tally keep their own setting in each spec, so a healing spec and a damage spec each look right without changing anything |
+| Mana play | For every mana user: a small spark runs along the Halo's mana arc and the console's mana bar while the five-second rule holds back spirit regeneration, then pulses on each regeneration tick; while you cast, the mana the spell will take is shaded; druids in cat or bear form see their mana as a slim bar under the power number. Each has its own setting |
+| Auto-uprank | When you learn a new spell rank, bar slots holding an older rank get the new one, out of combat and never with something on your cursor; macros are left alone. A quiet line says what changed. `/stoa uprank` runs it now |
+| Quest reward | With a choice of rewards, the one that beats what you wear is marked UPGRADE (largest gain), otherwise the one that sells for most is marked VALUE, with a thin accent outline and a small word |
+| Junk list | A Junk button on Stoa's bag turns on marking: click items to mark or unmark them (it turns off when the bag closes or a fight starts). Marked items show JUNK, sell with the greys, and say so on their tooltip. `/stoa junk add\|remove <item>`, `list`, `clear` |
+| Loot feed | Your last few loots and money above the chat, out of combat by default, fading after about 8 seconds. Gold an hour and loot value this session are tally lines. `/stoa loot`, `/stoa loot reset` |
+| Threat meter | Up to five people by threat on your target, or your tank's, with the tank first and marked TANK, under the damage meters and in their style. In combat in a group by default. Non-tanks see PULLING AGGRO with the percent on the target plaque at 90% |
+| Raid markers | For tanks and leaders in a group, eight markers and clear: click marks your target, Shift-click places a world marker. Movable |
+| Group buffs | Out of combat, the console's Ready page says who in range is missing a buff you can cast (FORTITUDE · 3 missing; any blessing counts for paladins), and the same line shows during a ready check |
+| Chat | Web addresses in chat are links that open a box to copy them; a quiet copy mark (or Shift-click a chat tab, or `/stoa copychat`) shows the last 200 lines to copy; the main chat's last 100 lines come back, dimmed, after a reload or login |
+| Map | The world map fades while you move, and a zone's level range shows under the map title and on the minimap's zone tooltip (classic zones; English names for now) |
+| Gathering | Herb and ore node tooltips show the skill they need against yours, with TOO LOW when you're short (English names for now) |
+| Snapping | In unlock mode frames snap to the screen's edges and centre and to other frames within 8px, with a faint guide line; hold Shift to drop freely. A frame snapped to another is kept against it, so moving the Halo carries its plaques |
+| Presets | The welcome page offers a start: Full (everything), Quiet (fewer words: no tooltip details, quest line or tally, extra bar rows on mouseover) or Classic feel (Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates, with Stoa's console, Halo and frames). `/stoa preset` |
+| For other addons | `StoaAPI`: add tally lines, hear Stoa's state, role and theme changes, and borrow its colours and fonts. See `Core/API.lua` |
+| Settings | Options > AddOns > Stoa (the settings panel's own search box finds any Stoa setting) |
 
 Fonts are the main gap: see below.
 
@@ -70,7 +86,7 @@ Fonts are the main gap: see below.
 | `/stoa` | Open settings |
 | `/stoa unlock` | Toggle frame moving |
 | `/stoa reset` | Put moved frames back in their default spots, in every role |
-| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, tooltips, bags, character sheet, top of screen, nameplates, swing timer, meters) and reload |
+| `/stoa safe` | Turn off every skin that touches Blizzard frames (chat, bags and menu, bar art, buttons, windows, more windows, tooltips, bags, character sheet, top of screen, nameplates, swing timer, meters, map, chat, quest reward) and reload |
 | `/stoa tooltip cursor` | Tooltips at the cursor; `/stoa tooltip console` puts them back above the console |
 | `/stoa vision` | Cycle colour vision modes, or name one: `redgreen`, `blueyellow`, `nocolour` or `standard` |
 | `/stoa windows reset` | Put every moved Blizzard window back in its usual place |
@@ -84,6 +100,11 @@ Fonts are the main gap: see below.
 | `/stoa backup` | Copy your settings as text, or paste a backup to restore it |
 | `/stoa xp` | Experience this session, per hour, and time to level |
 | `/stoa pull [seconds]` | Pull countdown for the group (10 by default); `/stoa pull 0` cancels |
+| `/stoa uprank` | Put the best rank of each spell on your bars now |
+| `/stoa junk add <item>` | Mark an item as junk (link or ID); `remove <item>`, `list`, `clear` |
+| `/stoa loot` | Gold an hour and loot value this session; `/stoa loot reset` starts again |
+| `/stoa copychat` | Copy the chosen chat window's last 200 lines |
+| `/stoa preset full` | Start from a preset: `full`, `quiet` or `classic`, then /reload |
 | `/stoa state` | Print the current state and role |
 | `/stoa clicks` | Edit click-cast bindings for your current role |
 | `/stoa grid` | Cycle the click grid: always open, folded until needed, or hidden; or name one: `open`, `fold`, `hidden` |

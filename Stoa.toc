@@ -33,6 +33,10 @@ Modules\QoL\AutoInvite.lua
 Modules\QoL\Roster.lua
 Modules\QoL\Merchant.lua
 Modules\QoL\Comforts.lua
+Modules\QoL\Chat.lua
+Modules\QoL\Uprank.lua
+Modules\QoL\QuestReward.lua
+Modules\QoL\Loot.lua
 Modules\QoL\WindowMover.lua
 
 Modules\Grimoire\Console.lua
@@ -50,6 +54,9 @@ Modules\Halo\Disc.lua
 Modules\Halo\Druid.lua
 Modules\Halo\Mage.lua
 Modules\Halo\Kit.lua
+Modules\Halo\Threat.lua
+Modules\Halo\Buffs.lua
+Modules\QoL\Markers.lua
 
 Modules\Frames\ClickCast.lua
 Modules\Frames\Raid.lua
@@ -61,6 +68,7 @@ Modules\Skins\Windows.lua
 Modules\Skins\MoreWindows.lua
 Modules\Skins\Bags.lua
 Modules\Skins\Tooltip.lua
+Modules\Skins\Map.lua
 Modules\Skins\Character.lua
 Modules\Skins\Meters.lua
 Modules\Skins\Top.lua

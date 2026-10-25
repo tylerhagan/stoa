@@ -155,7 +155,21 @@ local APIS = {
 	{ "TooltipDataProcessor.AddTooltipPostCall", "tooltip cards", true },
 	{ "C_PaperDollInfo.GetInspectItemLevel", "players' item level in tooltips" },
 	{ "NotifyInspect", "players' item level in tooltips" },
-	{ "UnitDetailedThreatSituation", "threat in tooltips" },
+	{ "UnitDetailedThreatSituation", "the threat meter and threat in tooltips" },
+	{ "C_SpellBook.GetSpellBookItemInfo", "spell ranks for auto-uprank and buff reminders" },
+	{ "C_Spell.GetSpellPowerCost", "cast cost on the mana bar" },
+	{ "UnitPower", "the five-second rule and form mana", true },
+	{ "GetActionInfo", "auto-uprank" },
+	{ "PlaceAction", "auto-uprank" },
+	{ "C_Spell.PickupSpell", "auto-uprank" },
+	{ "GetNumQuestChoices", "the best quest reward" },
+	{ "GetQuestItemLink", "the best quest reward" },
+	{ "C_Container.UseContainerItem", "selling junk" },
+	{ "SetRaidTarget", "the raid marker strip" },
+	{ "PlaceRaidMarker", "world markers on the marker strip" },
+	{ "UnitInRange", "group buff reminders" },
+	{ "LinkUtil.RegisterLinkHandler", "clickable web addresses in chat" },
+	{ "GetProfessions", "gathering skill on tooltips and the tally" },
 }
 
 -- Blizzard frames Stoa dresses or takes the place of.
@@ -170,13 +184,14 @@ local FRAMES = {
 	{ "ContainerFrameCombinedBags", "combined bags" },
 	{ "CharacterFrame", "the character sheet" },
 	{ "GameTooltip", "tooltips" },
-	{ "WorldMapFrame", "the world map border" },
+	{ "WorldMapFrame", "the world map border, fade and zone levels" },
 	{ "MailFrame", "the mail window" },
 	{ "FriendsFrame", "the friends window" },
 	{ "DamageMeter", "damage meters" },
 	{ "SwingTimerMainHandFrame", "the swing timer" },
 	{ "ReadyCheckFrame", "the ready check skin" },
 	{ "ReadyCheckListenerFrame", "the ready check skin" },
+	{ "QuestInfoRewardsFrame", "the best quest reward" },
 }
 
 -- Events the signatures and frames need from this client.
@@ -190,6 +205,10 @@ local EVENTS = {
 	{ "PLAYER_XP_UPDATE", "experience pace" },
 	{ "UNIT_SPELLCAST_INTERRUPTIBLE", "the KICK cue" },
 	{ "UNIT_SPELLCAST_NOT_INTERRUPTIBLE", "the KICK cue" },
+	{ "UNIT_THREAT_LIST_UPDATE", "the threat meter" },
+	{ "UNIT_POWER_FREQUENT", "regen ticks" },
+	{ "PLAYER_STARTED_MOVING", "the map fading while you move" },
+	{ "CHAT_MSG_LOOT", "the loot feed" },
 }
 
 local function lookup(path)
