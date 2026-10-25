@@ -205,7 +205,7 @@ function Backup:Build()
 	page:SetScript("OnDragStop", page.StopMovingOrSizing)
 	page:Hide()
 	table.insert(UISpecialFrames, "StoaBackupPage")
-	UI.windowPanel(page, 0.97)
+	UI.windowPanel(page, 0.97, { header = 98, footer = 66 })
 	self.page = page
 
 	local title = UI.text(page, "serif", Stoa.typeSize.display, "text")
@@ -219,10 +219,8 @@ function Backup:Build()
 	-- The text sits in a scrolling box, since a backup is long.
 	local holder = CreateFrame("Frame", nil, page)
 	holder:SetPoint("TOPLEFT", PAD, -110)
-	holder:SetPoint("BOTTOMRIGHT", -PAD, 76)
-	local holderBg = holder:CreateTexture(nil, "BACKGROUND")
-	holderBg:SetAllPoints()
-	UI.paint(holderBg, "text", 0.06)
+	holder:SetPoint("BOTTOMRIGHT", -PAD, 100)
+	UI.well(holder, 0)
 	local scroll = CreateFrame("ScrollFrame", nil, holder, "UIPanelScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", 8, -8)
 	scroll:SetPoint("BOTTOMRIGHT", -28, 8)
@@ -239,7 +237,7 @@ function Backup:Build()
 	self.box = box
 
 	local status = UI.text(page, "sans", Stoa.typeSize.body, "muted", "LEFT")
-	status:SetPoint("BOTTOMLEFT", PAD, PAD + 34)
+	status:SetPoint("BOTTOMLEFT", PAD, 78)
 	status:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
 	self.status = status
 

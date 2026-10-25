@@ -118,16 +118,59 @@ local function dressButtonsIn(frame, depth)
 	end
 end
 
--- Window tabs (merchant's Merchant/Buyback) as plain words, the selected one
--- in the accent. Blizzard disables the selected tab.
+-- Window tabs stay where Blizzard hangs them, under the window, dressed as
+-- tabs of the window: a dark rounded tab tucked under its edge, the chosen
+-- one in the footer's shade with its word in the text colour over a short
+-- accent underline, the rest darker with quiet words. Blizzard disables
+-- the selected tab.
+local TAB_SHADE = { selected = 0.32, other = 0.5 }
+
+local function tabSelected(tab)
+	if tab.isSelected ~= nil then return tab.isSelected and true or false end
+	return tab.IsEnabled and not tab:IsEnabled()
+end
+
 local function colourTabs(frame)
 	for _, tab in ipairs(frame.stoaTabs or {}) do
+		local selected = tabSelected(tab)
 		local text = tab.Text or (tab.GetFontString and tab:GetFontString())
-		if text then
-			local selected = tab.IsEnabled and not tab:IsEnabled()
-			text:SetTextColor(Stoa:Color(selected and "accent" or "muted"))
+		if text then text:SetTextColor(Stoa:Color(selected and "text" or "muted")) end
+		if tab.stoaShade then
+			tab.stoaShade:SetVertexColor(0, 0, 0, selected and TAB_SHADE.selected or TAB_SHADE.other)
+			tab.stoaUnderline:SetShown(selected)
 		end
 	end
+end
+
+local function tabArt(tab)
+	if tab.stoaShade then return end
+	local base = UI.sliced(tab, "BACKGROUND", "TabFill.tga")
+	if not base then return end
+	-- Reaches up over the window's bottom edge so the tab reads as part of it.
+	base:SetPoint("TOPLEFT", 0, 3)
+	base:SetDrawLayer("BACKGROUND", -8)
+	UI.tint(base, "panel", 0.97)
+	local shade = UI.sliced(tab, "BACKGROUND", "TabFill.tga")
+	shade:SetPoint("TOPLEFT", 0, 3)
+	shade:SetDrawLayer("BACKGROUND", -7)
+	local edge = UI.sliced(tab, "BORDER", "TabEdge.tga")
+	if edge then
+		edge:SetPoint("TOPLEFT", 0, 3)
+		UI.tint(edge, "hairline")
+	end
+	local underline = tab:CreateTexture(nil, "ARTWORK")
+	underline:SetHeight(2)
+	local text = tab.Text or (tab.GetFontString and tab:GetFontString())
+	if text then
+		underline:SetPoint("TOPLEFT", text, "BOTTOMLEFT", -2, -3)
+		underline:SetPoint("TOPRIGHT", text, "BOTTOMRIGHT", 2, -3)
+	else
+		underline:SetPoint("BOTTOMLEFT", 10, 6)
+		underline:SetPoint("BOTTOMRIGHT", -10, 6)
+	end
+	UI.paint(underline, "accent")
+	tab.stoaShade, tab.stoaUnderline = shade, underline
+	UI.applyTheme()
 end
 
 local function dressTabs(frame)
@@ -152,6 +195,12 @@ local function dressTabs(frame)
 			Stoa:SetFont(text, "sans", Stoa.typeSize.body)
 			text:SetShadowOffset(0, 0)
 		end
+		xpcall(tabArt, Stoa.catch, tab)
+		tab:HookScript("OnEnter", function(self)
+			local words = self.Text or (self.GetFontString and self:GetFontString())
+			if words and not tabSelected(self) then words:SetTextColor(Stoa:Color("accent")) end
+		end)
+		tab:HookScript("OnLeave", function() colourTabs(frame) end)
 	end
 	colourTabs(frame)
 	frame:HookScript("OnShow", function() colourTabs(frame) end)
@@ -166,7 +215,39 @@ local function hookTabs()
 	end)
 end
 
--- The common window: no portrait, no stone border, a Stoa panel and title.
+-- Header tints by what a window is for (see UI.WINDOW_FAMILIES).
+local FAMILY = {
+	MerchantFrame = "trade", MailFrame = "trade", OpenMailFrame = "trade",
+	AuctionHouseFrame = "trade", BankFrame = "trade",
+	FriendsFrame = "social", CommunitiesFrame = "social", GuildFrame = "social",
+	PVEFrame = "social", LFDParentFrame = "social", RaidParentFrame = "social",
+}
+-- Without Blizzard's inset to show where content starts, the header is a
+-- band this tall behind the title.
+local HEADER_FALLBACK = 30
+local TITLE_INSET = 18
+Windows.FAMILY, Windows.HEADER_FALLBACK = FAMILY, HEADER_FALLBACK
+
+-- The band's height gives the title room above and below: the title sits
+-- in the middle of it on the left, the close cross on the right. Out of
+-- combat only, so moving them never touches a locked frame.
+local function seatTitle(frame, title, close)
+	local header = frame.stoaHeader
+	if not header or InCombatLockdown() then return end
+	if title then
+		title:ClearAllPoints()
+		title:SetPoint("LEFT", header, "LEFT", TITLE_INSET, 0)
+		title:SetJustifyH("LEFT")
+	end
+	if close then
+		close:ClearAllPoints()
+		close:SetPoint("RIGHT", header, "RIGHT", -8, 0)
+	end
+end
+
+-- The common window: no portrait, no stone border, a Stoa panel with a
+-- header band (down to where Blizzard's inset starts) and a dark footer
+-- tray (below it), and the title in the header.
 function Windows:Dress(frame)
 	if not frame or frame.stoaDressed then return end
 	frame.stoaDressed = true
@@ -181,16 +262,22 @@ function Windows:Dress(frame)
 		hide(inset.NineSlice)
 		hide(inset.Bg)
 	end
-	UI.windowPanel(frame)
-
+	local name = frame.GetName and frame:GetName()
 	local title = titleOf(frame)
+	UI.windowPanel(frame, nil, {
+		header = inset or (title and HEADER_FALLBACK) or nil,
+		footer = inset,
+		family = FAMILY[name or ""],
+	})
+
 	if title then
 		Stoa:SetFont(title, "serif", Stoa.typeSize.label + 2)
 		title:SetTextColor(Stoa:Color("text"))
 	end
 
-	local name = frame.GetName and frame:GetName()
-	dressClose(frame.CloseButton or (name and _G[name .. "CloseButton"]))
+	local close = frame.CloseButton or (name and _G[name .. "CloseButton"])
+	dressClose(close)
+	pcall(seatTitle, frame, title, close)
 	dressButtonsIn(frame, 5)
 	dressTabs(frame)
 	hookTabs()
@@ -267,6 +354,8 @@ local function dressQuest()
 	for _, name in ipairs({ "QuestDetailScrollFrame", "QuestProgressScrollFrame", "QuestRewardScrollFrame", "QuestGreetingScrollFrame" }) do
 		strip(_G[name])
 	end
+	-- The rewards sit together in a darker well.
+	if QuestInfoRewardsFrame then UI.well(QuestInfoRewardsFrame, 4) end
 	lightQuestText()
 end
 

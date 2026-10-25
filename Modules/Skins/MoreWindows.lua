@@ -62,7 +62,15 @@ local function dressBorder(frame)
 		hide(frame[key])
 	end
 	if frame.TitleContainer then hideOwnArt(frame.TitleContainer) end
-	UI.windowPanel(frame)
+	local windows = Stoa.modules.Windows
+	local name = frame.GetName and frame:GetName()
+	-- Header and footer as on the common windows, but nothing of the
+	-- window's own is moved.
+	UI.windowPanel(frame, nil, {
+		header = frame.Inset or (windows and windows.HEADER_FALLBACK) or 30,
+		footer = frame.Inset,
+		family = windows and windows.FAMILY and windows.FAMILY[name or ""],
+	})
 	local title = frame.TitleContainer and frame.TitleContainer.TitleText or frame.TitleText
 	if title and title.SetTextColor then
 		Stoa:SetFont(title, "serif", Stoa.typeSize.label + 2)

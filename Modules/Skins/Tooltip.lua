@@ -1,9 +1,15 @@
 -- Stoa: tooltips as cards.
 -- The panel itself comes from Windows.lua (dark rounded card, thin health
--- bar). This adds what a card says and how it's edged:
---   * the edge takes the unit's colour (class, or the nameplates' reaction
---     colours: amber enemy, pale gold neutral, blue friend) or the item's
---     quality;
+-- bar). This adds what a card says and how it's dressed:
+--   * a header band behind the name, lighter like a window's, with a soft
+--     shadow under it and room above and below the name;
+--   * the name takes the unit's colour (class, or the nameplates' reaction
+--     colours: amber enemy, pale gold neutral, blue friend); the card's edge
+--     stays a plain hairline, except for rank: elites get a doubled gold
+--     line, rares a doubled silver one, rare elites gold outside and silver
+--     inside, bosses a heavier doubled gold, and their header warms with
+--     that colour fading across it. Items above common fade their quality
+--     colour across the header the same way;
 --   * names in the serif, the rest in the sans, the level line quiet and
 --     the guild in the accent;
 --   * for units, the lines that change what you do next: how hard an enemy
@@ -31,6 +37,14 @@ local Tooltip = Stoa:NewModule("Tooltip", {
 	owned = true,
 	combatHide = false,
 })
+
+-- The rare's silver, as on the target plaque.
+local RARE_SILVER = { 0.79, 0.8, 0.82 }
+-- Room around the name: above it, and between the header and the lines.
+local HEADER_TOP = 14
+local HEADER_BELOW = 8
+local LINE_GAP = 18
+local FADE_ALPHA = 0.22
 
 local INSPECT_WAIT = 1.5
 local LEVELS_KEPT = 200
@@ -179,7 +193,7 @@ function Tooltip:DressUnit(tip)
 		name:SetTextColor(r, g, b)
 		Stoa:SetFont(name, "serif", Stoa.typeSize.label + 2)
 	end
-	tip.stoaEdge:Set(r, g, b, 0.75)
+	self:Rank(tip, known(UnitClassification(unit)))
 
 	-- The guild sits on the second line; the rest of Blizzard's lines go quiet.
 	local guild = known(UnitIsPlayer(unit)) and GetGuildInfo and known((GetGuildInfo(unit)))
@@ -247,7 +261,8 @@ function Tooltip:DressItem(tip, data)
 	local skin = Stoa.ItemSkin
 	local r, g, b
 	if skin and skin.qualityColour then r, g, b = skin.qualityColour(quality) end
-	if r then tip.stoaEdge:Set(r, g, b, 0.85) else tip.stoaEdge:Clear() end
+	tip.stoaEdge:Clear()
+	self:Fade(tip, r, g, b)
 	local name = line(tip, 1)
 	if name then Stoa:SetFont(name, "serif", Stoa.typeSize.label + 2) end
 
@@ -316,11 +331,96 @@ end
 
 local TIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2" }
 
+-- Rank outlines and the header fade ---------------------------------------------------
+
+-- Who gets a rank outline: the outer line's colour, the inner's, and
+-- whether the outer is doubled up to read heavier.
+local RANKS = {
+	elite = { "accent", "accent" },
+	rare = { RARE_SILVER, RARE_SILVER },
+	rareelite = { "accent", RARE_SILVER },
+	worldboss = { "accent", "accent", heavy = true },
+}
+
+local function rgb(colour)
+	if type(colour) == "table" then return colour[1], colour[2], colour[3] end
+	return Stoa:Color(colour)
+end
+
+-- A colour fading from the header's left across it; nothing clears it.
+function Tooltip:Fade(tip, r, g, b)
+	local fade = tip.stoaFade
+	if not fade then return end
+	if not r then fade:Hide() return end
+	UI.setGradient(fade, { "HORIZONTAL", 1, 0 }, r, g, b, FADE_ALPHA)
+	fade:Show()
+end
+
+function Tooltip:Rank(tip, classification)
+	local rank = RANKS[classification or ""]
+	local outlines = tip.stoaRank
+	if not outlines then return end
+	if not rank then
+		for _, outline in ipairs(outlines) do outline:Clear() end
+		self:Fade(tip)
+		return
+	end
+	local r, g, b = rgb(rank[1])
+	outlines[1]:Set(r, g, b, 1)
+	if rank.heavy then outlines[2]:Set(r, g, b, 1) else outlines[2]:Clear() end
+	local ir, ig, ib = rgb(rank[2])
+	outlines[3]:Set(ir, ig, ib, 0.55)
+	self:Fade(tip, r, g, b)
+end
+
+local function clear(tip)
+	tip.stoaEdge:Clear()
+	for _, outline in ipairs(tip.stoaRank or {}) do outline:Clear() end
+	if tip.stoaFade then tip.stoaFade:Hide() end
+end
+
+-- The header band behind the first line, its shadow, the fade over it,
+-- and the rank outlines: the outer line, a second one just inside it for
+-- a heavier boss line, and the inner line of the pair.
+local function header(tip)
+	local name = tip:GetName()
+	local first, second = name and _G[name .. "TextLeft1"], name and _G[name .. "TextLeft2"]
+	if not first then return end
+	first:ClearAllPoints()
+	first:SetPoint("TOPLEFT", tip, "TOPLEFT", 12, -HEADER_TOP)
+	if second then
+		second:ClearAllPoints()
+		second:SetPoint("TOPLEFT", first, "BOTTOMLEFT", 0, -LINE_GAP)
+	end
+	local band = UI.sliced(tip, "BACKGROUND", "CardTop.tga")
+	if not band then return end
+	band:ClearAllPoints()
+	band:SetPoint("TOPLEFT", tip, "TOPLEFT")
+	band:SetPoint("TOPRIGHT", tip, "TOPRIGHT")
+	band:SetPoint("BOTTOM", first, "BOTTOM", 0, -HEADER_BELOW)
+	band:SetDrawLayer("BACKGROUND", -6)
+	UI.tint(band, "text", 0.06)
+	local fade = UI.sliced(tip, "BACKGROUND", "CardTop.tga")
+	fade:ClearAllPoints()
+	fade:SetAllPoints(band)
+	fade:SetDrawLayer("BACKGROUND", -5)
+	fade:Hide()
+	tip.stoaFade = fade
+	UI.shadowLine(tip, band)
+	UI.applyTheme()
+end
+
 local function edge(tip)
 	if tip.stoaEdge then return end
 	tip.stoaEdge = UI.roundBorder(tip, "CardEdge.tga", 1)
-	tip:HookScript("OnTooltipCleared", function(self) self.stoaEdge:Clear() end)
-	tip:HookScript("OnHide", function(self) self.stoaEdge:Clear() end)
+	tip.stoaRank = {
+		UI.roundBorder(tip, "CardEdge.tga", 1),
+		UI.roundBorder(tip, "CardEdge.tga", 1, -1),
+		UI.roundBorder(tip, "CardEdge.tga", 1, -4),
+	}
+	xpcall(header, Stoa.catch, tip)
+	tip:HookScript("OnTooltipCleared", clear)
+	tip:HookScript("OnHide", clear)
 end
 
 local function fonts()

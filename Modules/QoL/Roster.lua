@@ -10,7 +10,7 @@ local Roster = Stoa:NewModule("Roster", {
 	tab = "friends",
 })
 
-local WIDTH, HEIGHT = 460, 470
+local WIDTH, HEIGHT = 460, 540
 local PAD = 24
 local ROWS = 14
 local ROW_HEIGHT = 24
@@ -130,7 +130,7 @@ end
 function Roster:BuildRow(page, i)
 	local row = CreateFrame("Button", nil, page)
 	row:SetHeight(ROW_HEIGHT)
-	row:SetPoint("TOPLEFT", PAD, -112 - (i - 1) * ROW_HEIGHT)
+	row:SetPoint("TOPLEFT", PAD, -140 - (i - 1) * ROW_HEIGHT)
 	row:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
 	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	local hover = row:CreateTexture(nil, "BACKGROUND")
@@ -174,7 +174,7 @@ function Roster:Build()
 	page:SetScript("OnDragStop", page.StopMovingOrSizing)
 	page:Hide()
 	table.insert(UISpecialFrames, "StoaRosterPage")
-	UI.windowPanel(page, 0.97)
+	UI.windowPanel(page, 0.97, { header = 92, footer = 60, family = "social" })
 	self.page = page
 
 	local title = UI.text(page, "serif", Stoa.typeSize.display, "text")
@@ -191,14 +191,14 @@ function Roster:Build()
 			self.offset = 0
 			self:Refresh()
 		end)
-		tab:SetPoint("TOPLEFT", PAD + (i - 1) * 104, -78)
+		tab:SetPoint("TOPLEFT", PAD + (i - 1) * 104, -104)
 		self.tabs[entry[1]] = tab
 	end
 
 	self.rows = {}
 	for i = 1, ROWS do self.rows[i] = self:BuildRow(page, i) end
 	self.empty = UI.text(page, "italic", Stoa.typeSize.label, "muted")
-	self.empty:SetPoint("TOPLEFT", PAD + 4, -118)
+	self.empty:SetPoint("TOPLEFT", PAD + 4, -146)
 
 	self.offset = 0
 	page:EnableMouseWheel(true)

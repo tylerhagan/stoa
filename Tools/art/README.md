@@ -8,3 +8,4 @@ Python (Pillow + NumPy) scripts that cut Stoa's console textures. The game never
 
 Gold `*Lines` textures are white with alpha, and the theme accent tints them in game.
 - `window_stone.py <source png> <WindowStone.tga>` cuts the window stone from `source/wizard-stone2.png` (the first version, `wizard-stone.png`, is kept): its rings and grain as white with alpha (the art's dark ground turns clear), 1024x1024. The theme's text colour tints it in game.
+- `window_corners.py <Media/Textures>` draws the window and tooltip pieces: `WindowFill`/`WindowEdge` (10px corners), `WindowTop` and `WindowBottom` (header band and footer tray, rounded on one side), `CardTop` (a tooltip's header band) and `TabFill`/`TabEdge` (window tabs, square on top so they tuck under the window). All 32x32, nine-sliced at 12px.

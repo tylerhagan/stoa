@@ -34,7 +34,7 @@ function Welcome:Build()
 	page:SetScript("OnHide", function() Stoa.char.welcomed = true end)
 	page:Hide()
 	table.insert(UISpecialFrames, "StoaWelcomePage")
-	UI.windowPanel(page, 0.97)
+	UI.windowPanel(page, 0.97, { header = 108, footer = 66 })
 	self.page = page
 
 	local title = UI.text(page, "serif", Stoa.typeSize.hero, "text")
@@ -43,9 +43,6 @@ function Welcome:Build()
 	local lede = UI.text(page, "italic", Stoa.typeSize.label, "muted")
 	lede:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
 	lede:SetText("Out of combat, the console. In combat, the Halo.")
-	local rule = UI.line(page)
-	rule:SetPoint("TOPLEFT", PAD, -104)
-	rule:SetPoint("TOPRIGHT", -PAD, -104)
 
 	-- What each spec slot plays. Layouts and signatures follow the role.
 	self.roleRows = {}

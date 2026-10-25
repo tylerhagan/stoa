@@ -24,7 +24,9 @@ function UI.applyTheme()
 	for _, entry in ipairs(themed) do
 		local r, g, b, a = Stoa:Color(entry.token)
 		a = entry.alpha or a
-		if entry.vertex then
+		if entry.gradient then
+			UI.setGradient(entry.region, entry.gradient, r, g, b, a)
+		elseif entry.vertex then
 			entry.region:SetVertexColor(r, g, b, a)
 		elseif entry.region.SetColorTexture then
 			entry.region:SetColorTexture(r, g, b, a)
@@ -37,6 +39,26 @@ function UI.applyTheme()
 end
 
 Stoa:On("STOA_THEME_CHANGED", UI.applyTheme)
+
+-- A colour that fades across a texture: `gradient` is { orientation, start,
+-- finish }, the alpha at each end as a share of `a`. HORIZONTAL runs left
+-- to right, VERTICAL bottom to top. Flat at the average where the client
+-- can't blend.
+function UI.setGradient(tex, gradient, r, g, b, a)
+	local orientation, from, to = gradient[1], gradient[2], gradient[3]
+	if tex.SetGradient and CreateColor then
+		tex:SetVertexColor(1, 1, 1, 1)
+		local ok = pcall(tex.SetGradient, tex, orientation, CreateColor(r, g, b, a * from), CreateColor(r, g, b, a * to))
+		if ok then return end
+	end
+	tex:SetVertexColor(r, g, b, a * (from + to) / 2)
+end
+
+-- Registers a themed fade (see UI.setGradient).
+function UI.gradient(tex, token, alpha, orientation, from, to)
+	table.insert(themed, { region = tex, token = token, alpha = alpha, gradient = { orientation, from, to } })
+	return tex
+end
 
 -- Tints a texture that has its own image (not a flat colour) with a token.
 function UI.tint(tex, token, alpha)
@@ -229,6 +251,8 @@ local function sliced(parent, layer, file, outset, margin)
 	return tex
 end
 
+UI.sliced = sliced
+
 -- A rounded border with the same Set and Clear as UI.border, falling back
 -- to it where slicing isn't available.
 function UI.roundBorder(frame, file, size, outset)
@@ -298,9 +322,12 @@ function UI.foldGlyph(button)
 end
 
 -- A rounded panel with a hairline edge behind a whole frame, for windows
--- Stoa restyles. Square where slicing isn't available.
-function UI.roundPanel(frame, alpha)
-	local bg = sliced(frame, "BACKGROUND", "CardFill.tga")
+-- Stoa restyles. `kind` "window" takes the window corners (10px) instead
+-- of the card ones. Square where slicing isn't available.
+function UI.roundPanel(frame, alpha, kind)
+	local fill, edgeFile = "CardFill.tga", "CardEdge.tga"
+	if kind == "window" then fill, edgeFile = "WindowFill.tga", "WindowEdge.tga" end
+	local bg = sliced(frame, "BACKGROUND", fill)
 	if bg then
 		bg:SetDrawLayer("BACKGROUND", -8)
 		UI.tint(bg, "panel", alpha or 0.96)
@@ -309,26 +336,64 @@ function UI.roundPanel(frame, alpha)
 		bg:SetAllPoints()
 		UI.paint(bg, "panel", alpha or 0.96)
 	end
-	local edge = UI.roundBorder(frame, "CardEdge.tga", 1)
+	local edge = UI.roundBorder(frame, edgeFile, 1)
 	for _, tex in ipairs(edge.edges) do
 		UI.tint(tex, "hairline")
 		tex:Show()
 	end
+	frame.stoaPanelEdge = edge
 	UI.applyTheme()
 	return bg
 end
 
+-- A hairline that fades out at both ends, for dividing sections. Returns a
+-- frame to place like any line (set its two side points).
+function UI.fadeRule(parent, token, alpha)
+	local rule = CreateFrame("Frame", nil, parent)
+	rule:SetHeight(1)
+	for i, side in ipairs({ "LEFT", "RIGHT" }) do
+		local tex = rule:CreateTexture(nil, "BORDER")
+		tex:SetTexture(UI.WHITE)
+		tex:SetPoint("TOP" .. side)
+		tex:SetPoint("BOTTOM" .. side)
+		tex:SetPoint(i == 1 and "RIGHT" or "LEFT", rule, "CENTER")
+		UI.gradient(tex, token or "text", alpha or 0.28, "HORIZONTAL", i == 1 and 0 or 1, i == 1 and 1 or 0)
+	end
+	UI.applyTheme()
+	return rule
+end
+
+-- A soft shadow under a raised band: a dark line and a short fade below it.
+function UI.shadowLine(parent, anchor)
+	local line = parent:CreateTexture(nil, "BORDER", nil, 2)
+	line:SetTexture(UI.WHITE)
+	line:SetVertexColor(0, 0, 0, 0.7)
+	line:SetHeight(1)
+	line:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT")
+	line:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT")
+	local fall = parent:CreateTexture(nil, "BORDER", nil, 1)
+	fall:SetTexture(UI.WHITE)
+	fall:SetHeight(4)
+	fall:SetPoint("TOPLEFT", line, "BOTTOMLEFT")
+	fall:SetPoint("TOPRIGHT", line, "BOTTOMRIGHT")
+	UI.setGradient(fall, { "VERTICAL", 0, 1 }, 0, 0, 0, 0.35)
+	return line, fall
+end
+
 -- Window stone ----------------------------------------------------------------
--- Tyler's stone, its faint rings and grain, laid over the panel of every
+-- Tyler's stone, its faint rings and grain, laid over the body of every
 -- window (quests, merchants, bags, Stoa's own pages) but never the console,
 -- buttons or tooltips. The texture is white with alpha and takes the
 -- theme's text colour, so it sits on any theme's panel. Each window shows
--- a slice of it at its natural size rather than stretching it.
+-- a slice of it at its natural size rather than stretching it, and it
+-- fades out towards the top, where titles and text start.
 
 local STONE = UI.MEDIA .. "Textures\\WindowStone"
 local STONE_SIZE = 1024
 local STONE_INSET = 2
-UI.STONE_STRENGTH = 0.32
+UI.STONE_STRENGTH = 0.26
+-- The stone's strength at the top of a body, as a share of the bottom's.
+local STONE_TOP = 0.3
 local stones = {}
 
 local function fitStone(tex)
@@ -337,13 +402,25 @@ local function fitStone(tex)
 	tex:SetTexCoord(0, width / STONE_SIZE, 0, height / STONE_SIZE)
 end
 
-function UI.stone(frame)
+-- `top` and `bottom` are what the stone sits between (the header and the
+-- footer), or nothing for the whole window.
+function UI.stone(frame, top, bottom)
 	if not frame or not frame.CreateTexture or frame.stoaStone then return end
 	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
 	tex:SetTexture(STONE, "REPEAT", "REPEAT")
-	tex:SetPoint("TOPLEFT", STONE_INSET, -STONE_INSET)
-	tex:SetPoint("BOTTOMRIGHT", -STONE_INSET, STONE_INSET)
-	UI.tint(tex, "text", UI.STONE_STRENGTH)
+	if top then
+		tex:SetPoint("TOPLEFT", top, "BOTTOMLEFT")
+		tex:SetPoint("TOPRIGHT", top, "BOTTOMRIGHT")
+	else
+		tex:SetPoint("TOPLEFT", STONE_INSET, -STONE_INSET)
+		tex:SetPoint("TOPRIGHT", -STONE_INSET, -STONE_INSET)
+	end
+	if bottom then
+		tex:SetPoint("BOTTOM", bottom, "TOP")
+	else
+		tex:SetPoint("BOTTOM", 0, STONE_INSET)
+	end
+	UI.gradient(tex, "text", UI.STONE_STRENGTH, "VERTICAL", 1, STONE_TOP)
 	frame.stoaStone = tex
 	stones[#stones + 1] = tex
 	if frame.HookScript then
@@ -355,11 +432,79 @@ function UI.stone(frame)
 	return tex
 end
 
--- A window's panel: the rounded panel with the stone over it.
-function UI.windowPanel(frame, alpha)
-	local bg = UI.roundPanel(frame, alpha)
-	UI.stone(frame)
+-- Header tints by what a window is for: warm for trade, cool for people,
+-- the plain light band for the rest.
+UI.WINDOW_FAMILIES = {
+	trade = { token = "accent", alpha = 0.10 },
+	social = { token = "mana", alpha = 0.10 },
+	plain = { token = "text", alpha = 0.06 },
+}
+local FOOTER_SHADE = 0.32
+
+-- A window's panel: the rounded panel, a lighter header band with a soft
+-- shadow under it, a dark footer tray, and the stone in the body between.
+-- `opts`: header and footer (pixels, or a region the band meets: the
+-- header ends at its top, the footer starts at its bottom), family (a
+-- UI.WINDOW_FAMILIES key). Either band can be left out.
+function UI.windowPanel(frame, alpha, opts)
+	opts = opts or {}
+	local bg = UI.roundPanel(frame, alpha, "window")
+	local header, footer
+	if opts.header then
+		header = sliced(frame, "BACKGROUND", "WindowTop.tga")
+		if header then
+			header:ClearAllPoints()
+			header:SetPoint("TOPLEFT")
+			header:SetPoint("TOPRIGHT")
+			if type(opts.header) == "number" then
+				header:SetHeight(opts.header)
+			else
+				header:SetPoint("BOTTOM", opts.header, "TOP")
+			end
+			header:SetDrawLayer("BACKGROUND", -6)
+			local family = UI.WINDOW_FAMILIES[opts.family or "plain"] or UI.WINDOW_FAMILIES.plain
+			UI.tint(header, family.token, family.alpha)
+			frame.stoaHeader = header
+			UI.shadowLine(frame, header)
+		end
+	end
+	if opts.footer then
+		footer = sliced(frame, "BACKGROUND", "WindowBottom.tga")
+		if footer then
+			footer:ClearAllPoints()
+			footer:SetPoint("BOTTOMLEFT")
+			footer:SetPoint("BOTTOMRIGHT")
+			if type(opts.footer) == "number" then
+				footer:SetHeight(opts.footer)
+			else
+				footer:SetPoint("TOP", opts.footer, "BOTTOM")
+			end
+			footer:SetDrawLayer("BACKGROUND", -6)
+			footer:SetVertexColor(0, 0, 0, FOOTER_SHADE)
+			local line = frame:CreateTexture(nil, "BORDER", nil, 2)
+			line:SetTexture(UI.WHITE)
+			line:SetVertexColor(0, 0, 0, 0.6)
+			line:SetHeight(1)
+			line:SetPoint("BOTTOMLEFT", footer, "TOPLEFT")
+			line:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT")
+			frame.stoaFooter = footer
+		end
+	end
+	UI.stone(frame, header, footer)
+	UI.applyTheme()
 	return bg
+end
+
+-- Darker rounded ground behind a group of things inside a window (quest
+-- rewards, bag slots).
+function UI.well(frame, outset)
+	if not frame or not frame.CreateTexture or frame.stoaWell then return end
+	local tex = sliced(frame, "BACKGROUND", "CardFill.tga", outset or 6)
+	if not tex then return end
+	tex:SetDrawLayer("BACKGROUND", -5)
+	tex:SetVertexColor(0, 0, 0, 0.22)
+	frame.stoaWell = tex
+	return tex
 end
 
 function UI.showStone(on)

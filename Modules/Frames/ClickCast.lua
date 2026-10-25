@@ -179,10 +179,7 @@ function ClickCast:BuildPage()
 	table.insert(UISpecialFrames, "StoaClickCastPage")
 	self.page = page
 
-	UI.windowPanel(page, 0.97)
-	local top = UI.line(page, "accent")
-	top:SetPoint("TOPLEFT")
-	top:SetPoint("TOPRIGHT")
+	UI.windowPanel(page, 0.97, { header = 84, footer = 64 })
 
 	local title = UI.text(page, "serif", Stoa.typeSize.display, "text")
 	title:SetPoint("TOPLEFT", 28, -22)
