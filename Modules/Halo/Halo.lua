@@ -521,7 +521,17 @@ function Halo:UpdateThreat()
 	end
 	local isTank = Stoa:GetRole() == "TANK"
 	local words = isTank and THREAT_WORDS.TANK or THREAT_WORDS.OTHER
-	threat:SetText(words[status] or "")
+	local text = words[status] or ""
+	-- Close to pulling the enemy off the tank: say so, with the number when
+	-- the game lets us read it.
+	if not isTank then
+		local ok, tanking, _, scaled = pcall(UnitDetailedThreatSituation, "player", "target")
+		scaled = ok and Stoa:PlainNumber(scaled)
+		if type(scaled) == "number" and scaled >= 90 and not Stoa:IsSecret(tanking) and tanking ~= true then
+			text = "PULLING AGGRO " .. math.floor(scaled + 0.5) .. "%"
+		end
+	end
+	threat:SetText(text)
 	-- Holding aggro as a tank is the calm case; everything else is a warning.
 	local calm = isTank and status == 3
 	threat:SetTextColor(Stoa:Color(calm and "muted" or "danger"))
