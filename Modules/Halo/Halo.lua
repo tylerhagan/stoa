@@ -13,6 +13,11 @@ local Halo = Stoa:NewModule("Halo", {
 	hidePlayerFrame = true,
 	hideTargetFrame = true,
 	scale = 1,
+	-- Quiet mana play: the five-second rule and regen ticks, the cost of
+	-- the spell you are casting, and a druid's mana while shapeshifted.
+	manaRule = true,
+	castCost = true,
+	formMana = true,
 })
 
 local SIZE = 300
@@ -148,6 +153,7 @@ function Halo:Build()
 	Stoa:SetFont(healthText, "serif", Stoa.typeSize.title, "OUTLINE")
 	Stoa:SetFont(manaText, "serif", Stoa.typeSize.title, "OUTLINE")
 	self.healthText, self.manaText = healthText, manaText
+	self:BuildManaPlay(frame, mana, manaText)
 
 	self:BuildSignature(frame)
 	self:BuildTarget(frame)
@@ -164,6 +170,43 @@ function Halo:Build()
 		end
 	end
 	for _, region in ipairs({ frame, self.target, self.cast }) do shade(region) end
+end
+
+-- Mana play on the right arc (shared with the console, see Power.dress).
+-- The arc is a half circle that fills upwards, so a fraction along it maps
+-- to a height, and the dot sits on the circle at that height. A druid's
+-- hidden mana gets a slim bar and number under the power number.
+local ARC_RADIUS = SIZE / 2 - 8
+
+function Halo:BuildManaPlay(frame, arcBar, manaText)
+	local form = UI.bar(frame, 70, 2, "mana")
+	form:SetPoint("TOPLEFT", manaText, "BOTTOMLEFT", 0, -4)
+	local number = UI.caption(frame, "")
+	number:SetPoint("TOPLEFT", form, "BOTTOMLEFT", 0, -3)
+	form:Hide()
+	local db = self.db
+	self.manaPlay = Stoa.Power.dress(arcBar, {
+		texture = UI.MEDIA .. "Textures\\HaloArcRight",
+		enabled = function(key) return db[key] end,
+		place = function(tex, f)
+			local y = f * SIZE - SIZE / 2
+			local x = math.sqrt(math.max(ARC_RADIUS * ARC_RADIUS - y * y, 0))
+			tex:ClearAllPoints()
+			tex:SetPoint("CENTER", arcBar, "LEFT", x, y)
+		end,
+		shade = function(tex, from, to)
+			tex:ClearAllPoints()
+			tex:SetPoint("BOTTOMLEFT", arcBar, "BOTTOMLEFT", 0, from * SIZE)
+			tex:SetPoint("TOPRIGHT", arcBar, "BOTTOMRIGHT", 0, to * SIZE)
+			-- Crop the arc's art to the same band so the shade keeps its curve.
+			tex:SetTexCoord(0, 1, 1 - to, 1 - from)
+		end,
+		form = {
+			bar = form,
+			show = function(current) number:SetText(current) number:Show() end,
+			hide = function() number:Hide() end,
+		},
+	})
 end
 
 function Halo:BuildSignature(frame)
