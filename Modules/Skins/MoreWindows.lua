@@ -62,7 +62,7 @@ local function dressBorder(frame)
 		hide(frame[key])
 	end
 	if frame.TitleContainer then hideOwnArt(frame.TitleContainer) end
-	UI.roundPanel(frame)
+	UI.windowPanel(frame)
 	local title = frame.TitleContainer and frame.TitleContainer.TitleText or frame.TitleText
 	if title and title.SetTextColor then
 		Stoa:SetFont(title, "serif", Stoa.typeSize.label + 2)

@@ -181,7 +181,7 @@ function Windows:Dress(frame)
 		hide(inset.NineSlice)
 		hide(inset.Bg)
 	end
-	UI.roundPanel(frame)
+	UI.windowPanel(frame)
 
 	local title = titleOf(frame)
 	if title then

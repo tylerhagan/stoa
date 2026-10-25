@@ -179,9 +179,7 @@ function ClickCast:BuildPage()
 	table.insert(UISpecialFrames, "StoaClickCastPage")
 	self.page = page
 
-	local bg = page:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	UI.paint(bg, "panel", 0.97)
+	UI.windowPanel(page, 0.97)
 	local top = UI.line(page, "accent")
 	top:SetPoint("TOPLEFT")
 	top:SetPoint("TOPRIGHT")

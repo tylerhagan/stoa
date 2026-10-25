@@ -318,6 +318,55 @@ function UI.roundPanel(frame, alpha)
 	return bg
 end
 
+-- Window stone ----------------------------------------------------------------
+-- Tyler's stone, its faint rings and grain, laid over the panel of every
+-- window (quests, merchants, bags, Stoa's own pages) but never the console,
+-- buttons or tooltips. The texture is white with alpha and takes the
+-- theme's text colour, so it sits on any theme's panel. Each window shows
+-- a slice of it at its natural size rather than stretching it.
+
+local STONE = UI.MEDIA .. "Textures\\WindowStone"
+local STONE_SIZE = 1024
+local STONE_INSET = 2
+UI.STONE_STRENGTH = 0.32
+local stones = {}
+
+local function fitStone(tex)
+	local width, height = tex:GetWidth(), tex:GetHeight()
+	if Stoa:IsSecret(width) or Stoa:IsSecret(height) or not width or width <= 0 then return end
+	tex:SetTexCoord(0, width / STONE_SIZE, 0, height / STONE_SIZE)
+end
+
+function UI.stone(frame)
+	if not frame or not frame.CreateTexture or frame.stoaStone then return end
+	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
+	tex:SetTexture(STONE, "REPEAT", "REPEAT")
+	tex:SetPoint("TOPLEFT", STONE_INSET, -STONE_INSET)
+	tex:SetPoint("BOTTOMRIGHT", -STONE_INSET, STONE_INSET)
+	UI.tint(tex, "text", UI.STONE_STRENGTH)
+	frame.stoaStone = tex
+	stones[#stones + 1] = tex
+	if frame.HookScript then
+		pcall(frame.HookScript, frame, "OnSizeChanged", function() pcall(fitStone, tex) end)
+	end
+	pcall(fitStone, tex)
+	tex:SetShown(Stoa.db == nil or Stoa.db.windowStone ~= false)
+	UI.applyTheme()
+	return tex
+end
+
+-- A window's panel: the rounded panel with the stone over it.
+function UI.windowPanel(frame, alpha)
+	local bg = UI.roundPanel(frame, alpha)
+	UI.stone(frame)
+	return bg
+end
+
+function UI.showStone(on)
+	Stoa.db.windowStone = on and true or false
+	for _, tex in ipairs(stones) do tex:SetShown(on and true or false) end
+end
+
 -- A Stoa button: a dark rounded panel with a word in the sans, warming to
 -- the accent under the mouse. SetSelected marks the chosen one of a row.
 function UI.button(parent, label, width, onClick)

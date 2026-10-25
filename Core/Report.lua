@@ -195,7 +195,7 @@ function Report:Build()
 	page:SetScript("OnDragStop", page.StopMovingOrSizing)
 	page:Hide()
 	table.insert(UISpecialFrames, "StoaReportPage")
-	UI.roundPanel(page, 0.97)
+	UI.windowPanel(page, 0.97)
 	self.page = page
 
 	local title = UI.text(page, "serif", Stoa.typeSize.display, "text")

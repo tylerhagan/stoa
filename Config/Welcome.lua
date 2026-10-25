@@ -34,7 +34,7 @@ function Welcome:Build()
 	page:SetScript("OnHide", function() Stoa.char.welcomed = true end)
 	page:Hide()
 	table.insert(UISpecialFrames, "StoaWelcomePage")
-	UI.roundPanel(page, 0.97)
+	UI.windowPanel(page, 0.97)
 	self.page = page
 
 	local title = UI.text(page, "serif", Stoa.typeSize.hero, "text")

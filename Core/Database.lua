@@ -10,6 +10,8 @@ local accountDefaults = {
 	schema = 1,
 	theme = "Bone",
 	vision = "Standard",
+	-- The stone behind windows.
+	windowStone = true,
 	modules = {},
 }
 
