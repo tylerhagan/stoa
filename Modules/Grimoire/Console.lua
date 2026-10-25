@@ -31,8 +31,10 @@ local ART_SEAL_SIZE = 92
 -- top edge along it, and the medallion around the seal, all cut from one
 -- painting and drawn at one scale so the medallion's flares run straight
 -- into the edge's lines. Texel sizes below are in the painting's pixels;
--- the top of the panel is texel 37 of the edge strip and 129 of the
+-- the top of the panel is texel 37 of the edge strip and 257 of the
 -- medallion, and the leather starts 17 texels down, under the gold lines.
+-- Tools/art/console_cut.py cuts the edge and medallion from the painting
+-- (Tools/art/source/console-basis.png) and prints these rows.
 local ART_HEIGHT = 176
 local ART_SCALE = 0.556
 Console.ART_SCALE = ART_SCALE
@@ -40,10 +42,10 @@ local LEATHER_W, LEATHER_H = 1024, 256
 local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 17
 local MEDALLION_WIDTH, MEDALLION_LINE = 512, 257
 -- The ring's centre row in the medallion texture; the seal sits on it.
-local MEDALLION_CENTRE = 253.5
+local MEDALLION_CENTRE = 257.8
 local MEDALLION_SCALE = ART_SCALE
 -- How far either side of centre the medallion's flares reach.
-local MEDALLION_REACH = 207 * MEDALLION_SCALE
+local MEDALLION_REACH = 186 * MEDALLION_SCALE
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30
