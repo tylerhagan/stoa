@@ -44,7 +44,7 @@ local MEDALLION_WIDTH, MEDALLION_LINE = 1024, 257
 -- The ring's centre row in the medallion texture; the seal sits on it.
 local MEDALLION_CENTRE = 258.3
 local MEDALLION_SCALE = ART_SCALE
--- How far either side of centre the medallion's flares reach.
+-- How far either side of centre the medallion's shoulders reach.
 local MEDALLION_REACH = 470 * MEDALLION_SCALE
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4

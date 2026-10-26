@@ -20,7 +20,7 @@ MED_W = int(sys.argv[4]) if len(sys.argv) > 4 else 1024  # medallion texture wid
 EDGE_LINE = 43        # edge strip row of the brass line's centre
 MED_LINE = 263        # medallion row of the same line
 MED_CX = MED_W / 2 - 0.5
-FOOT_FADE = 2 if RING > 110 else 16  # texels the rings fade over above the bottom line
+FULL_RING = RING < 110  # the first painting's rings stop above its bottom line
 
 img = Image.open(src).convert("RGBA")
 a = np.array(img).astype(float)
@@ -134,10 +134,19 @@ line_d = yy - MED_LINE
 band_keep = np.clip((9 - line_d) / 4, 0, 1)
 ring_keep = np.clip((RING * 1.23 - d) / 8, 0, 1)
 side = np.clip((MED_CX - 4 - np.abs(dx)) / 22, 0, 1)
-# The painting's bottom line runs just under the rings; the console has
-# no line there, so stop above it.
-foot = np.clip((yb - 2.5 - px_y) * s / FOOT_FADE, 0, 1)
-med[..., 3] *= np.maximum(band_keep, ring_keep * foot) * side
+if FULL_RING:
+    # The ring stays whole: keep everything inside the outer ring's outer
+    # edge (found straight up from the centre), so the painting's bottom
+    # line only shows where it runs under the ring.
+    up = brass(med)[:int(MED_CY), int(MED_CX)]
+    r_out = MED_CY - np.argmax(up > 0.3) + 1.5
+    ring_keep = np.clip((r_out - d) / 1.5, 0, 1)
+    med[..., 3] *= np.maximum(band_keep, ring_keep) * side
+else:
+    # The painting's bottom line runs just under the rings; the console has
+    # no line there, so stop above it.
+    foot = np.clip((yb - 2.5 - px_y) * s / 2, 0, 1)
+    med[..., 3] *= np.maximum(band_keep, ring_keep * foot) * side
 save(med, brass(med), "ConsoleMedallion")
 
 print(f"MEDALLION_CENTRE = {MED_CY:.1f}")
