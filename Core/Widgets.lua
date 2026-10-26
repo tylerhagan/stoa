@@ -622,6 +622,7 @@ end
 local PLAQUE_FILL = { 0.11, 0.096, 0.083, 0.95 }
 local SILVER = { 0.79, 0.8, 0.82 }
 local COIN = 52
+local PLAQUE_INLAY = 4
 
 function UI.plaque(frame, coinSide)
 	local plaque = {}
@@ -633,6 +634,24 @@ function UI.plaque(frame, coinSide)
 		fill:SetAllPoints()
 		fill:SetColorTexture(unpack(PLAQUE_FILL))
 	end
+	-- Painted: the console's leather inlaid in the card, a few points in
+	-- from the rounded edge, at the console's grain size.
+	if UI.ornate() then
+		local leather = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+		leather:SetTexture(UI.MEDIA .. "Textures\\ConsoleLeather", "REPEAT", "REPEAT")
+		leather:SetPoint("TOPLEFT", PLAQUE_INLAY, -PLAQUE_INLAY)
+		leather:SetPoint("BOTTOMRIGHT", -PLAQUE_INLAY, PLAQUE_INLAY)
+		leather:SetAlpha(0.8)
+		local function tile()
+			local width, height = leather:GetWidth(), leather:GetHeight()
+			if not width or width <= 0 then return end
+			local scale = Stoa.modules.Grimoire and Stoa.modules.Grimoire.ART_SCALE or 0.556
+			leather:SetTexCoord(0, width / scale / 1024, 0, height / scale / 256)
+		end
+		tile()
+		frame:HookScript("OnSizeChanged", tile)
+	end
+
 	-- The emboss: light catching the top edge, shadow under the bottom.
 	local light = frame:CreateTexture(nil, "BORDER")
 	light:SetColorTexture(1, 0.94, 0.82, 0.06)

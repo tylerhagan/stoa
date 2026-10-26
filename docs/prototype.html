@@ -357,6 +357,10 @@ a { color: var(--accent); }
 #mini { right: 70px; top: 88px; }
 #mini .mini { width: 200px; height: 200px; }
 /* Painted ornament: the leather and brass ring on the signature slot and the portrait coins. */
+.ornate .plaque::before { content: ""; position: absolute; inset: 4px; border-radius: 4px; background: var(--img-leather) repeat; background-size: 569px 142px; opacity: 0.8; pointer-events: none; z-index: 0; }
+.ornate .plaque > * { position: relative; z-index: 1; }
+.ornate .plaque > .coin-portrait { position: absolute; }
+
 .ornate .signature, .ornate .plaque .coin-portrait { border-color: transparent !important; }
 .ornate .signature::before, .ornate .signature::after, .ornate .plaque .coin-portrait::before, .ornate .plaque .coin-portrait::after {
   content: ""; position: absolute; left: 50%; top: 50%; width: 151.6%; height: 151.6%; transform: translate(-50%, -50%); pointer-events: none; }
@@ -1106,7 +1110,7 @@ $('#dock').addEventListener('click', e => {
     $('#stage').classList.toggle('ornate', painted);
     $$('#dock .seg[data-k="' + k + '"] button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     if (k === 'mini') say(b.textContent + ' minimap', v === 'square' ? 'Stoa\u2019s default: the map as a rounded square, like the windows and cards.' : 'The round setting: the map as a circle.');
-    else say(painted ? 'Painted ornament' : 'Plain ornament', painted ? 'Leather and brass frames on the few one-of-a-kind pieces: the minimap, the portrait coins on the target and tank plaques, and the Halo\u2019s signature slot. The brass takes the theme accent, like the console. Everything that repeats stays plain.' : 'Stoa\u2019s fine lines everywhere: a hairline and an accent line on the minimap, accent rings on the coins and the signature slot.');
+    else say(painted ? 'Painted ornament' : 'Plain ornament', painted ? 'Leather and brass frames on the few one-of-a-kind pieces: the minimap, the portrait coins on the target and tank plaques (with the console\u2019s leather inlaid in the plaques), and the Halo\u2019s signature slot. The brass takes the theme accent, like the console. Everything that repeats stays plain.' : 'Stoa\u2019s fine lines everywhere: a hairline and an accent line on the minimap, accent rings on the coins and the signature slot.');
     return;
   }
   if (k === 'scn') {
