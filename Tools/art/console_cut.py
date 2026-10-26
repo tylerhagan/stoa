@@ -2,10 +2,11 @@
 # each as a grey base plus white-with-alpha brass lines (the theme accent
 # tints the lines in game).
 #
-#   python3 console_cut.py source/console-basis.png ../../Media/Textures
+#   python3 console_cut.py source/console-basis.png ../../Media/Textures [ring] [width]
 #
-# The painting is scaled so the medallion's inner ring has a 122 texel
-# radius, and its slightly wide ring is pulled into a true circle. The
+# The painting is scaled so the first ring found going out from the centre
+# has a [ring] texel radius (default 106; the first painting,
+# source/console-basis-first.png, was cut with 122 and width 512), and its slightly wide ring is pulled into a true circle. The
 # medallion keeps both brass rings all the way round: the outer one runs
 # from the flares down under the seal and back up. Prints the rows the
 # console code needs (Modules/Grimoire/Console.lua).
@@ -14,10 +15,12 @@ from PIL import Image
 import numpy as np
 
 src, out_dir = sys.argv[1], sys.argv[2]
-RING = 122.0          # inner ring radius in texels
+RING = float(sys.argv[3]) if len(sys.argv) > 3 else 106.0  # ring radius in texels
+MED_W = int(sys.argv[4]) if len(sys.argv) > 4 else 1024  # medallion texture width
 EDGE_LINE = 43        # edge strip row of the brass line's centre
 MED_LINE = 263        # medallion row of the same line
-MED_CX = 255.5
+MED_CX = MED_W / 2 - 0.5
+FOOT_FADE = 2 if RING > 110 else 16  # texels the rings fade over above the bottom line
 
 img = Image.open(src).convert("RGBA")
 a = np.array(img).astype(float)
@@ -112,14 +115,14 @@ strip[:, 3] = haze(strip[:, 3])
 edge = np.repeat(strip[:, None, :], 16, 1)
 save(edge, brass(edge), "ConsoleEdge")
 
-# Medallion: 512x512 around the ring, at the same scale and line row.
-yy, xx = np.mgrid[0:512, 0:512].astype(float)
+# Medallion: MED_W x 512 around the ring, at the same scale and line row.
+yy, xx = np.mgrid[0:512, 0:MED_W].astype(float)
 MED_CY = MED_LINE - (yl - cy) * s
 dx, dy = xx - MED_CX, yy - MED_CY
 d = np.hypot(dx, dy)
 # pull the ring round: squash the wide axis near the ring, fading out
 # past the outer ring so the flares meet the line where they did
-w = np.clip((172 - d) / 18, 0, 1)
+w = np.clip((RING * 1.41 - d) / 18, 0, 1)
 px_x = cx + dx / s
 px_y = cy + dy / s * ((ry / rx) * w + (1 - w))
 med = unpremultiply(sample(px_x, px_y))
@@ -129,11 +132,11 @@ med[..., 3] = haze(med[..., 3])
 # where the edge strip carries on.
 line_d = yy - MED_LINE
 band_keep = np.clip((9 - line_d) / 4, 0, 1)
-ring_keep = np.clip((150 - d) / 8, 0, 1)
-side = np.clip((252 - np.abs(dx)) / 22, 0, 1)
+ring_keep = np.clip((RING * 1.23 - d) / 8, 0, 1)
+side = np.clip((MED_CX - 4 - np.abs(dx)) / 22, 0, 1)
 # The painting's bottom line runs just under the rings; the console has
 # no line there, so stop above it.
-foot = np.clip((yb - 2.5 - px_y) * s / 2, 0, 1)
+foot = np.clip((yb - 2.5 - px_y) * s / FOOT_FADE, 0, 1)
 med[..., 3] *= np.maximum(band_keep, ring_keep * foot) * side
 save(med, brass(med), "ConsoleMedallion")
 

@@ -40,12 +40,12 @@ local ART_SCALE = 0.556
 Console.ART_SCALE = ART_SCALE
 local LEATHER_W, LEATHER_H = 1024, 256
 local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 17
-local MEDALLION_WIDTH, MEDALLION_LINE = 512, 257
+local MEDALLION_WIDTH, MEDALLION_LINE = 1024, 257
 -- The ring's centre row in the medallion texture; the seal sits on it.
-local MEDALLION_CENTRE = 257.8
+local MEDALLION_CENTRE = 258.3
 local MEDALLION_SCALE = ART_SCALE
 -- How far either side of centre the medallion's flares reach.
-local MEDALLION_REACH = 186 * MEDALLION_SCALE
+local MEDALLION_REACH = 470 * MEDALLION_SCALE
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30
