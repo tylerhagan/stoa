@@ -1,6 +1,6 @@
-# The small brass ring for portrait coins and the Halo's
+# The small leather and brass ring for portrait coins and the Halo's
 # signature slot, cut from source/coin-ring.png (Tyler's painting, made with
-# fine double rims; the leather and bold versions are kept beside it).
+# a slim inner rim; the hairline, leather and bold versions are kept beside it).
 #
 #   python3 coin_frame.py source ../../Media/Textures
 #
