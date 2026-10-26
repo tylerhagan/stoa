@@ -1,5 +1,5 @@
-# Painted minimap frames: the rounded square with corner stars and the ring
-# with four points, each as a grey base plus white-with-alpha brass lines
+# Painted minimap frames: a slim leather-and-brass rounded square and ring
+# (the starred and pointed versions are kept as -stars and -points), each as a grey base plus white-with-alpha brass lines
 # (the theme accent tints the lines in game, as on the console).
 #
 #   python3 minimap_frames.py source ../../Media/Textures
@@ -31,7 +31,10 @@ for name, out in (("minimap-square", "MinimapFrameSquare"), ("minimap-ring", "Mi
     lab, n = ndimage.label(solid)
     sizes = ndimage.sum(solid, lab, range(1, n + 1))
     keep = ndimage.binary_dilation(np.isin(lab, 1 + np.where(sizes > 5000)[0]), iterations=3)
-    a[..., 3] = np.where(keep, a[..., 3], 0)
+    # and the reddish fringe some generated art carries
+    r, g = a[..., 0], a[..., 1]
+    fringe = (r > 120) & (g < 0.45 * r) & (a[..., 3] < 250)
+    a[..., 3] = np.where(keep & ~fringe, a[..., 3], 0)
     # The opening: the clear region holding the centre.
     lab, _ = ndimage.label(a[..., 3] < 128)
     ys, xs = np.where(lab == lab[h // 2, w // 2])
