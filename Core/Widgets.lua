@@ -75,7 +75,7 @@ end
 -- A small leather and brass ring (Tools/art/coin_frame.py) round a circle
 -- the given size, on the parent's overlay. Returns the leather and the
 -- brass; tint the brass yourself.
-local COIN_FRAME_SCALE = 1.455
+local COIN_FRAME_SCALE = 1.516
 function UI.coinFrame(parent, size)
 	local frameSize = size * COIN_FRAME_SCALE
 	local base = parent:CreateTexture(nil, "OVERLAY", nil, 0)
