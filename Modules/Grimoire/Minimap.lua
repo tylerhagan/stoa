@@ -3,14 +3,14 @@
 -- like Stoa's windows and cards, framed by a hairline and an accent line; it
 -- shows a little more of the world than a circle of the same width, and
 -- leaves the medallion as the one circle on the console. The round map, in
--- rings, is a setting, and either shape can wear its painted frame instead
--- of the lines (Tools/art/minimap_frames.py). The wheel zooms. Every Blizzard part is looked up carefully, so a renamed
+-- rings, is a setting, and with the Painted ornament either shape wears its
+-- leather and brass frame instead of the lines (Tools/art/minimap_frames.py). The wheel zooms. Every Blizzard part is looked up carefully, so a renamed
 -- frame costs one detail, not the map.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local MinimapStyle = Stoa:NewModule("Minimap", { shape = "square", frame = "plain" })
+local MinimapStyle = Stoa:NewModule("Minimap", { shape = "square" })
 
 local MASK = UI.MEDIA .. "Textures\\MinimapMask"
 -- The painted frames, centred on their openings: how much wider than the
@@ -42,7 +42,7 @@ function MinimapStyle:Style()
 	frame:SetAllPoints(map)
 	self.ring = frame
 
-	local painted = self.db.frame == "painted"
+	local painted = UI.ornate()
 	if self.db.shape == "square" then
 		self:Square(map, frame, painted)
 	elseif painted then

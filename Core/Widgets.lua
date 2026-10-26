@@ -66,6 +66,28 @@ function UI.tint(tex, token, alpha)
 	return tex
 end
 
+-- The Painted ornament (Stoa.db.ornament): leather and brass frames on the
+-- few one-of-a-kind pieces instead of fine lines.
+function UI.ornate()
+	return Stoa.db and Stoa.db.ornament == "painted"
+end
+
+-- A small leather and brass ring (Tools/art/coin_frame.py) round a circle
+-- the given size, on the parent's overlay. Returns the leather and the
+-- brass; tint the brass yourself.
+local COIN_FRAME_SCALE = 1.455
+function UI.coinFrame(parent, size)
+	local frameSize = size * COIN_FRAME_SCALE
+	local base = parent:CreateTexture(nil, "OVERLAY", nil, 0)
+	base:SetTexture(UI.MEDIA .. "Textures\\CoinFrame")
+	base:SetSize(frameSize, frameSize)
+	base:SetPoint("CENTER")
+	local lines = parent:CreateTexture(nil, "OVERLAY", nil, 1)
+	lines:SetTexture(UI.MEDIA .. "Textures\\CoinFrameLines")
+	lines:SetAllPoints(base)
+	return base, lines
+end
+
 function UI.circle(parent, layer, sublevel, size, token, alpha)
 	local tex = parent:CreateTexture(nil, layer, nil, sublevel)
 	tex:SetSize(size, size)
@@ -641,6 +663,13 @@ function UI.plaque(frame, coinSide)
 	local portrait = UI.circle(coin, "ARTWORK", 0, COIN - 10)
 	portrait:SetPoint("CENTER")
 	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
+	-- Painted: the brass ring stands in for the plain one and carries the rank.
+	local brass
+	if UI.ornate() then
+		ring:Hide()
+		local _
+		_, brass = UI.coinFrame(coin, COIN - 10)
+	end
 
 	-- Gold for everyone; elite doubles the gold, rare turns it silver.
 	function plaque:SetRank(rank)
@@ -650,6 +679,7 @@ function UI.plaque(frame, coinSide)
 		if outer then outer:SetVertexColor(r, g, b, strong and 1 or 0.55) end
 		if inner then inner:SetVertexColor(r, g, b, strong and 0.7 or 0.16) end
 		ring:SetVertexColor(r, g, b, 1)
+		if brass then brass:SetVertexColor(r, g, b, 1) end
 	end
 	plaque:SetRank(nil)
 	return plaque

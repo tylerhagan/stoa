@@ -226,6 +226,13 @@ function Halo:BuildSignature(frame)
 	icon:SetPoint("CENTER")
 	icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
 	slot.icon = icon
+	-- Painted: a leather and brass ring instead of the accent line.
+	if UI.ornate() then
+		ring:Hide()
+		gap:Hide()
+		local _, brass = UI.coinFrame(slot, SIGNATURE_SIZE)
+		UI.tint(brass, "accent")
+	end
 
 	local cooldown = CreateFrame("Cooldown", nil, slot, "CooldownFrameTemplate")
 	cooldown:SetAllPoints(icon)
