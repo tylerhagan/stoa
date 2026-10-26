@@ -1,5 +1,5 @@
 # Painted minimap frames: a lean leather-and-brass rounded square and ring
-# (the starred and pointed versions are kept as -stars and -points), each as a grey base plus white-with-alpha brass lines
+# (the wider-band, starred and pointed versions are kept beside them), each
 # (the theme accent tints the lines in game, as on the console).
 #
 #   python3 minimap_frames.py source ../../Media/Textures
