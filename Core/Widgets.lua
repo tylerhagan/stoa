@@ -673,6 +673,7 @@ function UI.plaque(frame, coinSide)
 
 	-- Gold for everyone; elite doubles the gold, rare turns it silver.
 	function plaque:SetRank(rank)
+		plaque.rank = rank
 		local r, g, b = Stoa:Color("accent")
 		if rank == "rare" then r, g, b = unpack(SILVER) end
 		local strong = rank == "elite" or rank == "rare"
@@ -682,6 +683,8 @@ function UI.plaque(frame, coinSide)
 		if brass then brass:SetVertexColor(r, g, b, 1) end
 	end
 	plaque:SetRank(nil)
+	-- The rank colours follow the theme's accent, so repaint on a change.
+	Stoa:On("STOA_THEME_CHANGED", function() plaque:SetRank(plaque.rank) end)
 	return plaque
 end
 
