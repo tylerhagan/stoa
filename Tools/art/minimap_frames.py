@@ -1,4 +1,4 @@
-# Painted minimap frames: a slim leather-and-brass rounded square and ring
+# Painted minimap frames: a lean leather-and-brass rounded square and ring
 # (the starred and pointed versions are kept as -stars and -points), each as a grey base plus white-with-alpha brass lines
 # (the theme accent tints the lines in game, as on the console).
 #

@@ -16,8 +16,8 @@ local MASK = UI.MEDIA .. "Textures\\MinimapMask"
 -- The painted frames, centred on their openings: how much wider than the
 -- map each one is.
 local PAINTED = {
-	square = { file = "MinimapFrameSquare", scale = 1.374 },
-	round = { file = "MinimapFrameRing", scale = 1.450 },
+	square = { file = "MinimapFrameSquare", scale = 1.384 },
+	round = { file = "MinimapFrameRing", scale = 1.332 },
 }
 
 local function hide(region)
