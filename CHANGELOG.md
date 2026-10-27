@@ -50,6 +50,15 @@ Everything below is on the launch branch and not yet in a numbered release.
 - Launch check (`/stoa check`): spell IDs, game functions and Blizzard frames are checked once per game build.
 - One-page docs site in `docs/`.
 - Release packaging: `Tools/package.sh`, a tag-triggered GitHub release workflow and a `.pkgmeta`.
+- Console art re-cut from the new leather painting: the brass ring runs whole under the seal. Painted ornament setting (minimap frame, plaque coins, Halo signature slot) with the lean leather-and-brass minimap frames and the slim-inner coin ring (new textures: restart the game once).
+- Raid markers go through the game's /tm command on secure buttons, as Forever blocks addons from marking directly.
+- Quest items: a small row beside the Halo with a button for each item your quests ask you to use.
+- Emergency item: your healthstone, best healing potion or bandage beside the Halo, lit with LOW when your health is under 40%.
+- Timers: flights show where you're going and the time left (known flight times, or timed and remembered the first time); breath, fatigue and feign death in the same slim bar. `/stoa timers` shows a sample.
+- Gear scores by Stoa's own stat weights for your class and role, shifting with level: tooltips show UPGRADE +n%, bags mark upgrades UP, quest rewards pick by score.
+- Trainer: Journey counts the new spells and ranks waiting at your trainer, with a note on level up and `/stoa trainer` to list them.
+- When the game hides auras, buff reminders and aura lists stand down instead of calling a buff missing.
+- `Tools/sim/run.py`: an offline load test that loads every file under a mock of the game, fires the login and combat events (with secret values) and runs every `/stoa` command.
 
 ## 0.9.0
 

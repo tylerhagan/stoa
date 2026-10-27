@@ -137,6 +137,8 @@ To cut a release:
 
 The workflow in `.github/workflows/release.yml` fails if the tag and the TOC version differ or the changelog section is missing. To build the same zip without CI, run `Tools/package.sh`; it writes `dist/Stoa-<version>.zip`. `.pkgmeta` is ready for the BigWigs packager (CurseForge, Wago); how to switch that on is in `CHANGELOG.md`.
 
+Before a build goes to the game, `python3 Tools/sim/run.py [CLASS]` (needs `pip install lupa`) loads every file in `Stoa.toc` under a rough mock of the game's API, fires the login events and a round of combat events with secret values, and runs every `/stoa` command. It prints any errors and the global names the mock didn't know. A clean run doesn't prove a feature works in game; it catches typos, nil calls and maths on secret values.
+
 ## Forever notes
 
 If a game patch raises the interface number before Stoa catches up, the AddOns list shows it as out of date: tick "Load out of date AddOns" there and it loads as before.
