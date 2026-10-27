@@ -75,6 +75,7 @@ What works today:
 | Quest items | A small row beside the Halo with a button for each item your quests ask you to use, filled from your quest log; counts and cooldowns keep up in combat, the row itself changes out of combat (secure buttons) |
 | Emergency item | One button beside the Halo for your healthstone, else your best healing potion, else your best bandage. In combat it stays in view, quietly (Forever can hide your own health from addons in a fight); out of combat it shows, with LOW, when you're under 40% health |
 | Timers | A slim bar near the top: flights show where you're going and the time left, from known flight times (Data/FlightTimes.lua) or timed the first time you fly a route and remembered; the flight map's tooltips show the time. Breath, fatigue and feign death use the same bar, worded, in place of Blizzard's. `/stoa timers` shows a sample |
+| Trainer | A line under Journey on the console counting the spells and ranks your class trainer would teach you now (Data/TrainerSpells.lua); later ranks only once you know the spell, other races' and factions' spells left out. A note when a new level brings some; `/stoa trainer` lists them |
 | Gathering | Herb and ore node tooltips show the skill they need against yours, with TOO LOW when you're short (English names for now) |
 | Snapping | In unlock mode frames snap to the screen's edges and centre and to other frames within 8px, with a faint guide line; hold Shift to drop freely. A frame snapped to another is kept against it, so moving the Halo carries its plaques |
 | Presets | The welcome page offers a start: Full (everything), Quiet (fewer words: no tooltip details, quest line or tally, extra bar rows on mouseover) or Classic feel (Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates, with Stoa's console, Halo and frames). `/stoa preset` |
@@ -107,6 +108,7 @@ Fonts are the main gap: see below.
 | `/stoa uprank` | Put the best rank of each spell on your bars now |
 | `/stoa junk add <item>` | Mark an item as junk (link or ID); `remove <item>`, `list`, `clear` |
 | `/stoa loot` | Gold an hour and loot value this session; `/stoa loot reset` starts again |
+| `/stoa trainer` | List the spells and ranks waiting at your class trainer |
 | `/stoa copychat` | Copy the chosen chat window's last 200 lines |
 | `/stoa preset full` | Start from a preset: `full`, `quiet` or `classic`, then /reload |
 | `/stoa state` | Print the current state and role |
@@ -140,7 +142,7 @@ The workflow in `.github/workflows/release.yml` fails if the tag and the TOC ver
 If a game patch raises the interface number before Stoa catches up, the AddOns list shows it as out of date: tick "Load out of date AddOns" there and it loads as before.
 
 
-Forever runs the modern client, so Stoa follows Midnight-era rules: unit values can be secret in combat, and the combat log is closed to addons. Stoa never does maths on a value without checking `issecretvalue` first (see `Core/Util.lua`), and it skins Blizzard's own data rather than recalculating it.
+Forever runs the modern client, so Stoa follows Midnight-era rules: unit values can be secret in combat, and the combat log is closed to addons. Stoa never does maths on a value without checking `issecretvalue` first (see `Core/Util.lua`), and it skins Blizzard's own data rather than recalculating it. When the game says auras are hidden (`C_Secrets.ShouldAurasBeSecret`), buff reminders and aura lists stand down rather than reading an empty list as "missing".
 
 ## Fonts
 

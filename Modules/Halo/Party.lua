@@ -423,7 +423,7 @@ local function timeLeft(aura)
 end
 
 local function scan(unit, filter, fn)
-	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
+	if Stoa:AurasHidden() or not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
 	for i = 1, 40 do
 		local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, filter)
 		if not ok or not aura then return end

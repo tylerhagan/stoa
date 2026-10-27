@@ -29,6 +29,7 @@ Core\Group.lua
 Core\Power.lua
 Core\Rules.lua
 Data\FlightTimes.lua
+Data\TrainerSpells.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
@@ -42,6 +43,7 @@ Modules\QoL\Loot.lua
 Modules\QoL\WindowMover.lua
 Modules\QoL\QuestItems.lua
 Modules\QoL\Timers.lua
+Modules\QoL\Trainer.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua

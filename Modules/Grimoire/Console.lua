@@ -403,7 +403,12 @@ function Console:BuildFellowship(frame, space)
 	quest:SetPoint("TOPLEFT", rate, "BOTTOMLEFT", 0, -3)
 	quest:SetWidth(COLUMN_WIDTH)
 	quest:SetWordWrap(false)
-	self.rateNote, self.questNote = rate, quest
+	-- New spells waiting at your trainer (Trainer.lua).
+	local trainer = text(page, "sans", Stoa.typeSize.caption + 1, "accent")
+	trainer:SetPoint("TOPLEFT", quest, "BOTTOMLEFT", 0, -3)
+	trainer:SetWidth(COLUMN_WIDTH)
+	trainer:SetWordWrap(false)
+	self.rateNote, self.questNote, self.trainerNote = rate, quest, trainer
 
 	-- Company.
 	local company = column(page, 3, "Company")
@@ -584,6 +589,8 @@ end
 function Console:UpdateKitLines()
 	local kit = Stoa.modules.Kit
 	if kit and kit.UpdateConsole and kit.enabled then kit:UpdateConsole() end
+	local trainer = Stoa.modules.Trainer
+	if trainer and trainer.UpdateConsole and trainer.enabled then trainer:UpdateConsole() end
 end
 
 function Console:AddNote(_, message)

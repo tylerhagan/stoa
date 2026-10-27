@@ -506,7 +506,7 @@ function Halo:UpdateTargetAuras()
 	if Stoa:IsSecret(hostile) then hostile = false end
 	local found, seen = {}, {}
 	local function collect(filter)
-		if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
+		if Stoa:AurasHidden() or not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
 		for i = 1, 40 do
 			if #found >= AURA_COUNT then return end
 			local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, filter)
@@ -592,6 +592,7 @@ end
 -- Your own buff names, or nil when any of them is hidden (secret) and a
 -- missing buff can't be told from an unreadable one.
 local function ownBuffNames()
+	if Stoa:AurasHidden() then return nil end
 	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return nil end
 	local names = {}
 	for i = 1, 40 do
