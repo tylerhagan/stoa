@@ -419,6 +419,7 @@ function Bags:OnEnable()
 	end
 	Stoa:On("PLAYER_EQUIPMENT_CHANGED", rescore)
 	Stoa:On("STOA_ROLE_CHANGED", rescore)
+	Stoa:On("PLAYER_LEVEL_UP", function() C_Timer.After(1, rescore) end)
 	-- Item links load a moment after the bag does.
 	Stoa:On("GET_ITEM_INFO_RECEIVED", function()
 		for _, frame in ipairs(allFrames()) do

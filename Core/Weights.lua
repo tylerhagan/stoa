@@ -2,7 +2,8 @@
 -- Item level says little in the old world: a +12 Intellect robe is no
 -- upgrade for a warrior. Each class and role here has a rough weight for
 -- each stat, so an item can be scored for the role you play and compared
--- with what you wear. The weights are Stoa's own, kept simple on purpose:
+-- with what you wear, scaled by level band as you go (see BANDS). The
+-- weights are Stoa's own, kept simple on purpose:
 -- they rank gear sensibly while levelling and in early raids, they don't
 -- replace a theorycrafted list.
 --
@@ -87,11 +88,35 @@ local function short(key)
 	return name
 end
 
+-- The lists above are for the level cap. Lower down, staying up and
+-- drinking less matter more and hit and crit less (mobs are your level and
+-- fights are short), so each band scales a few stats. Highest level first.
+local BANDS = {
+	{ from = 50, scale = {} },
+	{ from = 30, scale = { sta = 1.25, spi = 1.25, hit = 0.8, crit = 0.8, shit = 0.8, scrit = 0.8, def = 0.8 } },
+	{ from = 1, scale = { sta = 1.6, spi = 1.6, mp5 = 0.8, hit = 0.5, crit = 0.5, shit = 0.5, scrit = 0.5, def = 0.5, dodge = 0.7, parry = 0.7 } },
+}
+Weights.BANDS = BANDS
+
+local built = {}
+
 function Weights.current()
 	local _, class = UnitClass("player")
 	local role = Stoa:GetRole()
 	if not role then return nil end
-	return (W[class] and W[class][role]) or BY_ROLE[role]
+	local base = (W[class] and W[class][role]) or BY_ROLE[role]
+	local level = Stoa:PlainNumber(UnitLevel("player")) or 60
+	local band = BANDS[#BANDS]
+	for _, b in ipairs(BANDS) do
+		if level >= b.from then band = b break end
+	end
+	local key = tostring(base) .. band.from
+	if not built[key] then
+		local out = {}
+		for stat, weight in pairs(base) do out[stat] = weight * (band.scale[stat] or 1) end
+		built[key] = out
+	end
+	return built[key]
 end
 
 local getStats = (C_Item and C_Item.GetItemStats) or GetItemStats
