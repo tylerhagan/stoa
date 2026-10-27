@@ -42,7 +42,7 @@ What works today:
 | Other classes | Warriors, Rogues, Hunters, Warlocks and Shamans get their main cooldown in the Halo's slot and the game's own suggested next press outlined on the combat bar. The Halo's power arc follows your power: mana, pale gold energy or bone rage |
 | Blizzard windows | Quest, gossip, merchant, trainer, bags and tooltips on dark rounded panels, with light quest text in Stoa's type, dark rounded buttons, a quiet close cross and plain-word tabs |
 | Dungeon kit | Journey shows experience an hour and time to level (worked out over the last half hour, started again at each level, hidden at the highest level) and, when you are alone, the progress of the nearest watched quest. `/stoa pull` is a countdown: the game's own when you can use it, otherwise 3, 2, 1 in group chat and a large number on screen. A ready check dresses the prompt in a Stoa panel and puts READY, NOT READY or WAITING on each party card. The target plaque says KICK while the target casts something you can interrupt. Each has its own setting |
-| Minimap | A square with rounded corners like Stoa's windows (or round, in settings), framed by an accent line and a hairline; serif zone name, wheel to zoom |
+| Minimap | A square with rounded corners like Stoa's windows (or round, in settings), framed by an accent line and a hairline, or by a painted leather and brass frame (Ornament: Painted, which also frames the portrait coins and the Halo's signature slot); serif zone name, wheel to zoom |
 | Top of screen | Buffs as cropped icons in a hairline square with the time under them (pale gold when it runs short, amber edge for debuffs). Quest tracker headers in the display face over a hairline, bone quest titles, quiet minus and plus to fold. The zone above the minimap on a dark rounded panel with the clock beside it; tracking, calendar and the addon button wait for the mouse |
 | Nameplates | Blizzard's plates in a rounded dark track: amber for every enemy, pale gold for neutral, blue for friends, grey only for tapped or dead; enemy players in class colour. A bone edge on your target, the level as a plain number shaded by difficulty, cast bars on the same rounded ground |
 | Swing timer | Blizzard's swing timer (place it in Edit Mode) as a flat bar in the nameplates' rounded dark track: pale gold for the main hand, blue for the off hand, bone for ranged; amber words when out of range |
@@ -71,6 +71,11 @@ What works today:
 | Group buffs | Out of combat, the console's Ready page says who in range is missing a buff you can cast (FORTITUDE · 3 missing; any blessing counts for paladins), and the same line shows during a ready check |
 | Chat | Web addresses in chat are links that open a box to copy them; a quiet copy mark (or Shift-click a chat tab, or `/stoa copychat`) shows the last 200 lines to copy; the main chat's last 100 lines come back, dimmed, after a reload or login |
 | Map | The world map fades while you move, and a zone's level range shows under the map title and on the minimap's zone tooltip (classic zones; English names for now) |
+| Gear scores | Gear is scored for your class and role by Stoa's own stat weights (Core/Weights.lua), which shift with your level (more Stamina and Spirit early, more hit and crit near 60): the tooltip says UPGRADE +12% over your chest, for Healer; bag slots holding an upgrade show a small UP; the quest reward mark uses the same score. Item level is the fallback when an item can't be scored |
+| Quest items | A small row beside the Halo with a button for each item your quests ask you to use, filled from your quest log; counts and cooldowns keep up in combat, the row itself changes out of combat (secure buttons) |
+| Emergency item | One button beside the Halo for your healthstone, else your best healing potion, else your best bandage. In combat it stays in view, quietly (Forever can hide your own health from addons in a fight); out of combat it shows, with LOW, when you're under 40% health |
+| Timers | A slim bar near the top: flights show where you're going and the time left, from known flight times (Data/FlightTimes.lua) or timed the first time you fly a route and remembered; the flight map's tooltips show the time. Breath, fatigue and feign death use the same bar, worded, in place of Blizzard's. `/stoa timers` shows a sample |
+| Trainer | A line under Journey on the console counting the spells and ranks your class trainer would teach you now (Data/TrainerSpells.lua); later ranks only once you know the spell, other races' and factions' spells left out. A note when a new level brings some; `/stoa trainer` lists them |
 | Gathering | Herb and ore node tooltips show the skill they need against yours, with TOO LOW when you're short (English names for now) |
 | Snapping | In unlock mode frames snap to the screen's edges and centre and to other frames within 8px, with a faint guide line; hold Shift to drop freely. A frame snapped to another is kept against it, so moving the Halo carries its plaques |
 | Presets | The welcome page offers a start: Full (everything), Quiet (fewer words: no tooltip details, quest line or tally, extra bar rows on mouseover) or Classic feel (Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates, with Stoa's console, Halo and frames). `/stoa preset` |
@@ -103,6 +108,7 @@ Fonts are the main gap: see below.
 | `/stoa uprank` | Put the best rank of each spell on your bars now |
 | `/stoa junk add <item>` | Mark an item as junk (link or ID); `remove <item>`, `list`, `clear` |
 | `/stoa loot` | Gold an hour and loot value this session; `/stoa loot reset` starts again |
+| `/stoa trainer` | List the spells and ranks waiting at your class trainer |
 | `/stoa copychat` | Copy the chosen chat window's last 200 lines |
 | `/stoa preset full` | Start from a preset: `full`, `quiet` or `classic`, then /reload |
 | `/stoa state` | Print the current state and role |
@@ -131,12 +137,14 @@ To cut a release:
 
 The workflow in `.github/workflows/release.yml` fails if the tag and the TOC version differ or the changelog section is missing. To build the same zip without CI, run `Tools/package.sh`; it writes `dist/Stoa-<version>.zip`. `.pkgmeta` is ready for the BigWigs packager (CurseForge, Wago); how to switch that on is in `CHANGELOG.md`.
 
+Before a build goes to the game, `python3 Tools/sim/run.py [CLASS]` (needs `pip install lupa`) loads every file in `Stoa.toc` under a rough mock of the game's API, fires the login events and a round of combat events with secret values, and runs every `/stoa` command. It prints any errors and the global names the mock didn't know. A clean run doesn't prove a feature works in game; it catches typos, nil calls and maths on secret values.
+
 ## Forever notes
 
 If a game patch raises the interface number before Stoa catches up, the AddOns list shows it as out of date: tick "Load out of date AddOns" there and it loads as before.
 
 
-Forever runs the modern client, so Stoa follows Midnight-era rules: unit values can be secret in combat, and the combat log is closed to addons. Stoa never does maths on a value without checking `issecretvalue` first (see `Core/Util.lua`), and it skins Blizzard's own data rather than recalculating it.
+Forever runs the modern client, so Stoa follows Midnight-era rules: unit values can be secret in combat, and the combat log is closed to addons. Stoa never does maths on a value without checking `issecretvalue` first (see `Core/Util.lua`), and it skins Blizzard's own data rather than recalculating it. When the game says auras are hidden (`C_Secrets.ShouldAurasBeSecret`), buff reminders and aura lists stand down rather than reading an empty list as "missing".
 
 ## Fonts
 

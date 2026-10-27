@@ -66,6 +66,28 @@ function UI.tint(tex, token, alpha)
 	return tex
 end
 
+-- The Painted ornament (Stoa.db.ornament): leather and brass frames on the
+-- few one-of-a-kind pieces instead of fine lines.
+function UI.ornate()
+	return Stoa.db and Stoa.db.ornament == "painted"
+end
+
+-- A small leather and brass ring (Tools/art/coin_frame.py) round a circle
+-- the given size, on the parent's overlay. Returns the leather and the
+-- brass; tint the brass yourself.
+local COIN_FRAME_SCALE = 1.455
+function UI.coinFrame(parent, size)
+	local frameSize = size * COIN_FRAME_SCALE
+	local base = parent:CreateTexture(nil, "OVERLAY", nil, 0)
+	base:SetTexture(UI.MEDIA .. "Textures\\CoinFrame")
+	base:SetSize(frameSize, frameSize)
+	base:SetPoint("CENTER")
+	local lines = parent:CreateTexture(nil, "OVERLAY", nil, 1)
+	lines:SetTexture(UI.MEDIA .. "Textures\\CoinFrameLines")
+	lines:SetAllPoints(base)
+	return base, lines
+end
+
 function UI.circle(parent, layer, sublevel, size, token, alpha)
 	local tex = parent:CreateTexture(nil, layer, nil, sublevel)
 	tex:SetSize(size, size)
@@ -541,6 +563,57 @@ function UI.button(parent, label, width, onClick)
 	return button
 end
 
+-- A secure button that uses an item: the rounded slot of the bags, a count
+-- and a cooldown sweep. Attributes may only change out of combat, so callers
+-- set the item with button:SetItem(link) from Stoa:AfterCombat.
+function UI.itemButton(parent, name, size)
+	local button = CreateFrame("Button", name, parent, "SecureActionButtonTemplate")
+	button:SetSize(size, size)
+	button:RegisterForClicks("AnyUp")
+	button:SetAttribute("type", "item")
+	local icon = button:CreateTexture(nil, "ARTWORK")
+	icon:SetAllPoints()
+	button.icon = icon
+	if Stoa.ItemSkin and Stoa.ItemSkin.skinSlot then Stoa.ItemSkin.skinSlot(button) end
+	local count = button:CreateFontString(nil, "OVERLAY", nil, 7)
+	Stoa:SetFont(count, "sans", Stoa.typeSize.caption, "OUTLINE")
+	count:SetPoint("BOTTOMRIGHT", -3, 3)
+	button.count = count
+	local cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
+	cooldown:SetAllPoints()
+	button.cooldown = cooldown
+
+	function button:SetItem(link)
+		self.link = link
+		local id = link and Stoa.Items.id(link)
+		self:SetAttribute("item", id and ("item:" .. id) or nil)
+		local texture = id and (C_Item and C_Item.GetItemIconByID or GetItemIcon)
+		icon:SetTexture(texture and texture(id) or nil)
+		self:Refresh()
+	end
+	-- Count and cooldown; safe in combat, as neither touches attributes.
+	function button:Refresh()
+		local id = self.link and Stoa.Items.id(self.link)
+		local getCount = C_Item and C_Item.GetItemCount or GetItemCount
+		local n = id and getCount and Stoa:PlainNumber(getCount(id, false, true))
+		count:SetText(n and n > 1 and n or "")
+		local getCooldown = C_Container and C_Container.GetItemCooldown or GetItemCooldown
+		if id and getCooldown then
+			local start, duration = getCooldown(id)
+			if start and duration then pcall(cooldown.SetCooldown, cooldown, start, duration) end
+		end
+	end
+	button:SetScript("OnEnter", function(self)
+		if self.link and GameTooltip and GameTooltip.SetHyperlink then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			pcall(GameTooltip.SetHyperlink, GameTooltip, self.link)
+			GameTooltip:Show()
+		end
+	end)
+	button:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+	return button
+end
+
 function UI.unitCard(card, styleName)
 	local bg = sliced(card, "BACKGROUND", "CardFill.tga")
 	if bg then
@@ -600,6 +673,7 @@ end
 local PLAQUE_FILL = { 0.11, 0.096, 0.083, 0.95 }
 local SILVER = { 0.79, 0.8, 0.82 }
 local COIN = 52
+local PLAQUE_INLAY = 4
 
 function UI.plaque(frame, coinSide)
 	local plaque = {}
@@ -611,6 +685,24 @@ function UI.plaque(frame, coinSide)
 		fill:SetAllPoints()
 		fill:SetColorTexture(unpack(PLAQUE_FILL))
 	end
+	-- Painted: the console's leather inlaid in the card, a few points in
+	-- from the rounded edge, at the console's grain size.
+	if UI.ornate() then
+		local leather = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+		leather:SetTexture(UI.MEDIA .. "Textures\\ConsoleLeather", "REPEAT", "REPEAT")
+		leather:SetPoint("TOPLEFT", PLAQUE_INLAY, -PLAQUE_INLAY)
+		leather:SetPoint("BOTTOMRIGHT", -PLAQUE_INLAY, PLAQUE_INLAY)
+		leather:SetAlpha(0.8)
+		local function tile()
+			local width, height = leather:GetWidth(), leather:GetHeight()
+			if not width or width <= 0 then return end
+			local scale = Stoa.modules.Grimoire and Stoa.modules.Grimoire.ART_SCALE or 0.556
+			leather:SetTexCoord(0, width / scale / 1024, 0, height / scale / 256)
+		end
+		tile()
+		frame:HookScript("OnSizeChanged", tile)
+	end
+
 	-- The emboss: light catching the top edge, shadow under the bottom.
 	local light = frame:CreateTexture(nil, "BORDER")
 	light:SetColorTexture(1, 0.94, 0.82, 0.06)
@@ -641,17 +733,28 @@ function UI.plaque(frame, coinSide)
 	local portrait = UI.circle(coin, "ARTWORK", 0, COIN - 10)
 	portrait:SetPoint("CENTER")
 	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
+	-- Painted: the brass ring stands in for the plain one and carries the rank.
+	local brass
+	if UI.ornate() then
+		ring:Hide()
+		local _
+		_, brass = UI.coinFrame(coin, COIN - 10)
+	end
 
 	-- Gold for everyone; elite doubles the gold, rare turns it silver.
 	function plaque:SetRank(rank)
+		plaque.rank = rank
 		local r, g, b = Stoa:Color("accent")
 		if rank == "rare" then r, g, b = unpack(SILVER) end
 		local strong = rank == "elite" or rank == "rare"
 		if outer then outer:SetVertexColor(r, g, b, strong and 1 or 0.55) end
 		if inner then inner:SetVertexColor(r, g, b, strong and 0.7 or 0.16) end
 		ring:SetVertexColor(r, g, b, 1)
+		if brass then brass:SetVertexColor(r, g, b, 1) end
 	end
 	plaque:SetRank(nil)
+	-- The rank colours follow the theme's accent, so repaint on a change.
+	Stoa:On("STOA_THEME_CHANGED", function() plaque:SetRank(plaque.rank) end)
 	return plaque
 end
 

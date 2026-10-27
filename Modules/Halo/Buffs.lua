@@ -56,6 +56,7 @@ end
 -- true if the unit has one of the buffs, false if it has none, nil when
 -- that can't be read.
 local function hasAny(unit, names)
+	if Stoa:AurasHidden() then return nil end
 	local lookup = C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName
 	if lookup then
 		for _, name in ipairs(names) do

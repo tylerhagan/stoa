@@ -82,6 +82,30 @@ function Items.compare(link)
 	return level - worst, Items.SLOT_NAMES[worstSlot] or "slot", worst == 0
 end
 
+-- The item for your role against the weaker of its slots, by stat weight
+-- (Core/Weights.lua): the gain in percent, the slot's name, and true when
+-- the slot is empty. Nil when either can't be scored, so callers fall back
+-- to Items.compare.
+function Items.upgrade(link)
+	if not Stoa.Weights then return nil end
+	local score = Stoa.Weights.score(link)
+	if not score or score <= 0 then return nil end
+	local _, _, equipLoc = Items.info(link)
+	local slots = equipLoc and Items.SLOTS[equipLoc]
+	if not slots then return nil end
+	local worstSlot, worst
+	for _, slot in ipairs(slots) do
+		local worn = call(GetInventoryItemLink, "player", slot)
+		if worn == link then return nil end
+		local wornScore = worn and Stoa.Weights.score(worn) or 0
+		if not wornScore then return nil end
+		if not worst or wornScore < worst then worstSlot, worst = slot, wornScore end
+	end
+	local name = Items.SLOT_NAMES[worstSlot] or "slot"
+	if worst <= 0 then return 100, name, true end
+	return math.floor((score - worst) / worst * 100 + 0.5), name, false
+end
+
 -- Junk: grey items, plus anything you've marked. Marks are account-wide by
 -- itemID in StoaDB.junk, so a mark made on one character holds for all.
 function Items.isMarkedJunk(item)

@@ -12,6 +12,9 @@ local accountDefaults = {
 	vision = "Standard",
 	-- The stone behind windows.
 	windowStone = true,
+	-- "painted" puts the leather and brass frames on the minimap, the
+	-- portrait coins and the Halo's signature slot; "plain" keeps lines.
+	ornament = "plain",
 	-- Items marked as junk, by itemID, sold with the greys.
 	junk = {},
 	modules = {},

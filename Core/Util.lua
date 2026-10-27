@@ -22,6 +22,16 @@ function Stoa:PlainNumber(value)
 	return value
 end
 
+-- True while the game hides aura details from addons (C_Secrets). A list of
+-- auras read then can come back empty or unreadable, which must not be
+-- taken for "no auras": callers treat it as "can't tell".
+function Stoa:AurasHidden()
+	local secrets = _G.C_Secrets
+	if not (secrets and secrets.ShouldAurasBeSecret) then return false end
+	local ok, hidden = pcall(secrets.ShouldAurasBeSecret)
+	return ok and hidden == true
+end
+
 -- Combat lockdown -----------------------------------------------------------
 -- Protected changes (moving secure frames, changing bindings) cannot happen in
 -- combat. Queue them and run them when combat ends.

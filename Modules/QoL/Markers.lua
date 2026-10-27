@@ -4,8 +4,10 @@
 -- put that world marker on the ground. It sits under the tank watch by
 -- default and can be moved.
 --
--- World markers are a protected action, so each icon is a secure button,
--- made once out of combat. The strip hides and shows by its container, which
+-- Forever won't let an addon call SetRaidTarget, even from a click, so each
+-- icon is a secure button running the /tm macro ("!" sets the mark without
+-- toggling it off), and Shift-click places the world marker. They are made
+-- once out of combat. The strip hides and shows by its container, which
 -- is a plain frame, so that works in combat too.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -32,11 +34,6 @@ function Markers:Rule()
 	return self.db.show or "GROUP"
 end
 
-local function mark(index)
-	if not UnitExists("target") then return end
-	if SetRaidTarget then pcall(SetRaidTarget, "target", index) end
-end
-
 local function tip(button, text)
 	button:SetScript("OnEnter", function(self)
 		self:SetAlpha(1)
@@ -52,8 +49,7 @@ local function tip(button, text)
 	end)
 end
 
--- One icon. Secure, so a Shift-click can place a world marker; the plain
--- click marks the target from a post-click script.
+-- One icon: a plain click marks the target, Shift-click marks the ground.
 function Markers:MakeIcon(parent, index)
 	local button = CreateFrame("Button", "StoaMarker" .. index, parent, "SecureActionButtonTemplate")
 	button:SetSize(ICON, ICON)
@@ -64,27 +60,27 @@ function Markers:MakeIcon(parent, index)
 	tex:SetTexture(TEXTURE)
 	local col, row = (index - 1) % 4, math.floor((index - 1) / 4)
 	tex:SetTexCoord(col * 0.25, (col + 1) * 0.25, row * 0.25, (row + 1) * 0.25)
+	button:SetAttribute("type1", "macro")
+	button:SetAttribute("macrotext1", "/tm !" .. index)
 	if self.worldMarkers then
 		button:SetAttribute("shift-type1", "worldmarker")
 		button:SetAttribute("shift-marker1", index)
 		button:SetAttribute("shift-action1", "set")
 	end
-	button:SetScript("PostClick", function(_, mouse)
-		if mouse == "LeftButton" and not IsShiftKeyDown() then mark(index) end
-	end)
 	tip(button, NAMES[index] .. (self.worldMarkers and "  ·  Shift: on the ground" or ""))
 	return button
 end
 
 function Markers:MakeClear(parent)
-	local button = CreateFrame("Button", "StoaMarkerClear", parent)
+	local button = CreateFrame("Button", "StoaMarkerClear", parent, "SecureActionButtonTemplate")
 	button:SetSize(ICON, ICON)
-	button:RegisterForClicks("LeftButtonUp")
+	button:RegisterForClicks("AnyUp")
+	button:SetAttribute("type1", "macro")
+	button:SetAttribute("macrotext1", "/tm 0")
 	button:SetAlpha(QUIET)
 	local word = UI.text(button, "sans", Stoa.typeSize.caption, "text", "CENTER")
 	word:SetPoint("CENTER")
 	word:SetText("×")
-	button:SetScript("OnClick", function() mark(0) end)
 	tip(button, "Clear the mark")
 	return button
 end
