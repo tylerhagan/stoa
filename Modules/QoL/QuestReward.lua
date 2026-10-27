@@ -54,7 +54,7 @@ function Reward:Pick()
 	for i = 1, count do
 		local link = call(GetQuestItemLink, "choice", i)
 		if link and not Stoa:IsSecret(link) then
-			local delta = Stoa.Items.compare(link)
+			local delta = Stoa.Items.upgrade(link) or Stoa.Items.compare(link)
 			if delta and delta > bestGain then bestGain, gainIndex = delta, i end
 			local _, _, amount = call(GetQuestItemInfo, "choice", i)
 			amount = Stoa:PlainNumber(amount) or 1

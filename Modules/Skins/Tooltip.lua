@@ -288,9 +288,24 @@ function Tooltip:DressItem(tip, data)
 	tip:Show()
 end
 
--- Gear against what you wear, from the weaker of the slots it goes in.
+-- Gear against what you wear, from the weaker of the slots it goes in:
+-- by stat weight for your role when the item can be scored, else by level.
 function Tooltip:Upgrade(tip, link)
 	if not link or Stoa:IsSecret(link) then return end
+	local gain, slot, none = Stoa.Items.upgrade(link)
+	if gain then
+		local role = Stoa.ROLE_LABELS[Stoa:GetRole() or ""] or "you"
+		if none then
+			tip:AddLine("Fills your empty " .. slot, Stoa:Color("accent"))
+		elseif gain > 0 then
+			tip:AddLine(("UPGRADE  +%d%% over your %s, for %s"):format(gain, slot, role), Stoa:Color("accent"))
+		elseif gain < 0 then
+			tip:AddLine(("%d%% below your %s, for %s"):format(-gain, slot, role), Stoa:Color("muted"))
+		else
+			tip:AddLine("As good as your " .. slot, Stoa:Color("muted"))
+		end
+		return
+	end
 	local delta, where, empty = Stoa.Items.compare(link)
 	if not delta then return end
 	if empty then

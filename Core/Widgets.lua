@@ -563,6 +563,57 @@ function UI.button(parent, label, width, onClick)
 	return button
 end
 
+-- A secure button that uses an item: the rounded slot of the bags, a count
+-- and a cooldown sweep. Attributes may only change out of combat, so callers
+-- set the item with button:SetItem(link) from Stoa:AfterCombat.
+function UI.itemButton(parent, name, size)
+	local button = CreateFrame("Button", name, parent, "SecureActionButtonTemplate")
+	button:SetSize(size, size)
+	button:RegisterForClicks("AnyUp")
+	button:SetAttribute("type", "item")
+	local icon = button:CreateTexture(nil, "ARTWORK")
+	icon:SetAllPoints()
+	button.icon = icon
+	if Stoa.ItemSkin and Stoa.ItemSkin.skinSlot then Stoa.ItemSkin.skinSlot(button) end
+	local count = button:CreateFontString(nil, "OVERLAY", nil, 7)
+	Stoa:SetFont(count, "sans", Stoa.typeSize.caption, "OUTLINE")
+	count:SetPoint("BOTTOMRIGHT", -3, 3)
+	button.count = count
+	local cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
+	cooldown:SetAllPoints()
+	button.cooldown = cooldown
+
+	function button:SetItem(link)
+		self.link = link
+		local id = link and Stoa.Items.id(link)
+		self:SetAttribute("item", id and ("item:" .. id) or nil)
+		local texture = id and (C_Item and C_Item.GetItemIconByID or GetItemIcon)
+		icon:SetTexture(texture and texture(id) or nil)
+		self:Refresh()
+	end
+	-- Count and cooldown; safe in combat, as neither touches attributes.
+	function button:Refresh()
+		local id = self.link and Stoa.Items.id(self.link)
+		local getCount = C_Item and C_Item.GetItemCount or GetItemCount
+		local n = id and getCount and Stoa:PlainNumber(getCount(id, false, true))
+		count:SetText(n and n > 1 and n or "")
+		local getCooldown = C_Container and C_Container.GetItemCooldown or GetItemCooldown
+		if id and getCooldown then
+			local start, duration = getCooldown(id)
+			if start and duration then pcall(cooldown.SetCooldown, cooldown, start, duration) end
+		end
+	end
+	button:SetScript("OnEnter", function(self)
+		if self.link and GameTooltip and GameTooltip.SetHyperlink then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			pcall(GameTooltip.SetHyperlink, GameTooltip, self.link)
+			GameTooltip:Show()
+		end
+	end)
+	button:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+	return button
+end
+
 function UI.unitCard(card, styleName)
 	local bg = sliced(card, "BACKGROUND", "CardFill.tga")
 	if bg then

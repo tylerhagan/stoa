@@ -24,9 +24,11 @@ Core\Movers.lua
 Core\Widgets.lua
 Core\Spells.lua
 Core\Items.lua
+Core\Weights.lua
 Core\Group.lua
 Core\Power.lua
 Core\Rules.lua
+Data\FlightTimes.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
@@ -38,6 +40,8 @@ Modules\QoL\Uprank.lua
 Modules\QoL\QuestReward.lua
 Modules\QoL\Loot.lua
 Modules\QoL\WindowMover.lua
+Modules\QoL\QuestItems.lua
+Modules\QoL\Timers.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
@@ -56,6 +60,7 @@ Modules\Halo\Mage.lua
 Modules\Halo\Kit.lua
 Modules\Halo\Threat.lua
 Modules\Halo\Buffs.lua
+Modules\Halo\Emergency.lua
 Modules\QoL\Markers.lua
 
 Modules\Frames\ClickCast.lua

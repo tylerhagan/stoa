@@ -210,6 +210,8 @@ local function build()
 	checkbox(uprank, "enabled", "Upgrade spell ranks on your bars", "When you learn a new rank, bar slots holding an older rank get the new one, out of combat. Macros are left alone, and a quiet line says what changed. /stoa uprank runs it now. Takes effect after /reload.", true)
 	checkbox(reward, "enabled", "Mark the best quest reward", "With a choice of rewards, UPGRADE marks the one that beats what you wear, or VALUE the one that sells for most. Takes effect after /reload.", true)
 	checkbox(loot, "enabled", "Loot feed and gold an hour", "A short fading list of what you loot above the chat, plus gold an hour and loot value for the tally. /stoa loot shows the totals, /stoa loot reset starts again. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.QuestItems.db, "enabled", "Quest item buttons", "A small row of buttons for items your quests ask you to use, beside the Halo. Move it with /stoa move. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Emergency.db, "enabled", "Emergency item", "A button for your healthstone, best healing potion or bandage. It stays in view in combat and lights with LOW when your health is under 40%. Takes effect after /reload.", true)
 	dropdown(loot, "show", "Show the loot feed", "When the list above the chat shows.", "WORLD", Stoa.Rules.options({ "WORLD", "ALWAYS", "SOLO", "GROUP", "NEVER" }), function() Stoa:Fire("STOA_RULES_CHANGED") end)
 
 	-- Group
@@ -227,6 +229,8 @@ local function build()
 	checkbox(chat, "links", "Clickable web addresses", "Web addresses in chat become links; a click shows the address in a box to copy. Takes effect after /reload.", true)
 	checkbox(chat, "copy", "Copy chat", "A quiet copy mark on the chat, or Shift-click a chat tab, shows the last 200 lines to copy. /stoa copychat. Takes effect after /reload.", true)
 	checkbox(chat, "history", "Keep chat across reloads", "The main chat window's last 100 lines come back after a reload or login, dimmed, above an earlier line.", true)
+	checkbox(Stoa.modules.Timers.db, "flights", "Flight timer", "Where you're flying and how long is left, in a slim bar near the top, with times on the flight map. A route without a known time is timed the first time you fly it. /stoa timers shows a sample.", true)
+	checkbox(Stoa.modules.Timers.db, "mirror", "Breath and fatigue in Stoa's bar", "Breath, fatigue and feign death timers in the same slim bar, worded, in place of Blizzard's.", true)
 	checkbox(map, "fade", "Fade the map while moving", "The world map goes see-through while you move, so you can walk with it open.", true, function() Stoa.modules.Map:Refresh() end)
 	checkbox(map, "levels", "Zone levels on the map", "A zone's level range under the map title and on the minimap's zone tooltip.", true, function() Stoa.modules.Map:Refresh() end)
 

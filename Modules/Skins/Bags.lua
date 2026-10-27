@@ -128,6 +128,22 @@ function Item.markSlot(button, quality, level)
 	return parts
 end
 
+-- A small UP in the slot's foot for gear that beats what you wear, scored
+-- for your role (Stoa.Items.upgrade).
+function Item.markUpgrade(button, parts, on)
+	if not parts then return end
+	if on and not parts.up then
+		parts.up = button:CreateFontString(nil, "OVERLAY", nil, 7)
+		Stoa:SetFont(parts.up, "sans", Stoa.typeSize.caption - 1, "OUTLINE")
+		parts.up:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 3, 3)
+		parts.up:SetText("UP")
+	end
+	if parts.up then
+		parts.up:SetTextColor(Stoa:Color("accent"))
+		parts.up:SetShown(on and true or false)
+	end
+end
+
 -- Bags ----------------------------------------------------------------------
 
 local function items(frame)
@@ -230,7 +246,7 @@ local function decorateButton(button)
 	local info = bag and slot and C_Container and C_Container.GetContainerItemInfo and C_Container.GetContainerItemInfo(bag, slot)
 	if not info then
 		button.stoaLink = nil
-		Item.markSlot(button, 0, nil)
+		Item.markUpgrade(button, Item.markSlot(button, 0, nil), false)
 		markJunkWord(button, nil)
 		return
 	end
@@ -240,8 +256,11 @@ local function decorateButton(button)
 	if button.stoaLink ~= link or button.stoaQuality ~= info.quality then
 		button.stoaLink, button.stoaQuality = link, info.quality
 		button.stoaLevel = Item.itemLevel(link)
+		local gain = Stoa.Items.upgrade(link)
+		button.stoaUpgrade = gain and gain > 0
 	end
-	Item.markSlot(button, info.quality, button.stoaLevel)
+	local parts = Item.markSlot(button, info.quality, button.stoaLevel)
+	Item.markUpgrade(button, parts, button.stoaUpgrade)
 end
 
 -- Gold, silver and copper as letters, so nothing rests on coin colour.
@@ -387,6 +406,19 @@ function Bags:OnEnable()
 	Stoa:On("STOA_JUNK_CHANGED", refreshShown)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Bags:SetJunkMode(false) end)
 	Stoa:On("PLAYER_MONEY", refreshShown)
+	-- What counts as an upgrade moves with your gear and your role.
+	local function rescore()
+		for _, frame in ipairs(allFrames()) do
+			if frame and frame.stoaBag then
+				guarded(function()
+					for _, button in ipairs(items(frame)) do button.stoaLink = nil end
+				end)
+			end
+		end
+		refreshShown()
+	end
+	Stoa:On("PLAYER_EQUIPMENT_CHANGED", rescore)
+	Stoa:On("STOA_ROLE_CHANGED", rescore)
 	-- Item links load a moment after the bag does.
 	Stoa:On("GET_ITEM_INFO_RECEIVED", function()
 		for _, frame in ipairs(allFrames()) do
