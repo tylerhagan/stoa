@@ -11,6 +11,7 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 Everything below is on the launch branch and not yet in a numbered release.
 
 - Tally is now called At a glance; `/stoa glance` (the old `/stoa tally` still works).
+- At a glance follows where you are (world, dungeon, raid sets, with pinned lines in all), explains each line on hover and opens the matching window on click.
 - Procs: the game's own proc art either side of the Halo and its proc glow on the combat bar, for the game's proc events and for procs Stoa reads itself (a spell turning usable, costing nothing or casting much faster); `/stoa procs test`.
 - Game-drawn auras: a helper for Forever's aura container, which shows buffs and debuffs with real timers in combat; `/stoa auras` tests it on launch day.
 - Nameplate styles: Stoa, Bold, Inline, Brass and Slim; the target marked by edge, arrows or glow; other plates can fade and the target can grow.
