@@ -207,7 +207,7 @@ function Party:BuildGrid()
 	handle:SetScript("OnEnter", function(button)
 		self:Peek("handle", true)
 		GameTooltip:SetOwner(button, "ANCHOR_TOPLEFT")
-		GameTooltip:SetText("Your hands")
+		GameTooltip:SetText("Click grid")
 		GameTooltip:AddLine(self:GridMode() == "open" and "Click to fold it to this line. It opens while you hover a card or hold Shift."
 			or "Click to keep it open.", 1, 1, 1, true)
 		GameTooltip:Show()
@@ -241,7 +241,14 @@ function Party:BuildGrid()
 		line:SetPoint("TOPRIGHT", 0, -20 - row * GRID_ROW_HEIGHT)
 		cell(row, 0, "caption"):SetText(mod.label:upper())
 		for col, column in ipairs(GRID_COLUMNS) do
-			grid.cells[mod.prefix .. column.id] = cell(row, col)
+			local fs = cell(row, col)
+			-- What the spell costs, quietly at the cell's right (as Healbot's
+			-- hover card did), so you see what a click spends.
+			local price = UI.caption(body, "")
+			price:SetPoint("RIGHT", body, "TOPLEFT", GRID_LABEL_WIDTH + col * GRID_CELL_WIDTH - 6, -20 - row * GRID_ROW_HEIGHT - GRID_ROW_HEIGHT / 2)
+			fs:SetWidth(GRID_CELL_WIDTH - 44)
+			fs.price = price
+			grid.cells[mod.prefix .. column.id] = fs
 		end
 	end
 	Stoa:RegisterMover("clickgrid", grid, "Click grid")
@@ -260,7 +267,7 @@ function Party:UpdateGridBody()
 	if not grid then return end
 	local open = self:GridMode() == "open" or next(self.peeks) ~= nil
 	grid.body:SetShown(open)
-	grid.title:SetText(open and "YOUR HANDS · CLICK-CAST ON ANY CARD" or "YOUR HANDS · HOVER A CARD OR HOLD SHIFT")
+	grid.title:SetText(open and "CLICK GRID · CLICK-CAST ON ANY CARD" or "CLICK GRID · HOVER A CARD OR HOLD SHIFT")
 end
 
 function Party:UpdateGrid()
@@ -269,12 +276,39 @@ function Party:UpdateGrid()
 	local bindings = clickCast and clickCast.Bindings and clickCast:Bindings() or {}
 	for key, fs in pairs(grid.cells) do
 		fs:SetText(shortName(bindings[key]))
+		fs.spell = bindings[key]
 	end
+	self:UpdateGridCosts()
 	local cards = Stoa.previewing or IsInGroup()
 	local wanted = layoutFor(Stoa:GetRole()).grid and cards and self:GridMode() ~= "hidden"
 	grid:SetShown(wanted and true or false)
 	grid:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 1 or 0.8)
 	self:UpdateGridBody()
+end
+
+-- Each binding's cost, and a dimmed cell when you can't pay it right now.
+local function spellCost(spell)
+	if type(spell) ~= "string" or not (C_Spell and C_Spell.GetSpellPowerCost) then return nil end
+	local ok, list = pcall(C_Spell.GetSpellPowerCost, spell)
+	local first = ok and type(list) == "table" and list[1]
+	return first and Stoa:PlainNumber(first.cost) or nil
+end
+
+function Party:UpdateGridCosts()
+	local grid = self.grid
+	if not grid then return end
+	local check = (C_Spell and C_Spell.IsSpellUsable) or IsUsableSpell
+	for _, fs in pairs(grid.cells) do
+		local price = fs.spell and spellCost(fs.spell)
+		fs.price:SetText(price and price > 0 and tostring(price) or "")
+		local short = false
+		if fs.spell and check then
+			local ok, _, noPower = pcall(check, fs.spell)
+			short = ok and noPower == true
+		end
+		fs:SetAlpha(short and 0.45 or 1)
+		fs.price:SetAlpha(short and 0.45 or 1)
+	end
 end
 
 function Party:SetGridMode(mode)
@@ -725,6 +759,9 @@ end
 -- Lifecycle -----------------------------------------------------------------
 
 function Party:OnEnable()
+	Stoa:On("SPELL_UPDATE_USABLE", function()
+		if self.grid and self.grid:IsShown() then xpcall(self.UpdateGridCosts, Stoa.catch, self) end
+	end)
 	self:Build()
 	self:BuildWatch()
 	self:UpdateAll()

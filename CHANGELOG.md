@@ -10,6 +10,13 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Procs: the game's own proc art either side of the Halo and its proc glow on the combat bar, for the game's proc events and for procs Stoa reads itself (a spell turning usable, costing nothing or casting much faster); `/stoa procs test`.
+- Game-drawn auras: a helper for Forever's aura container, which shows buffs and debuffs with real timers in combat; `/stoa auras` tests it on launch day.
+- Nameplate styles: Stoa, Bold, Inline, Brass and Slim; the target marked by edge, arrows or glow; other plates can fade and the target can grow.
+- Chat: a time column on each line, more space between lines, the chat buttons in one quiet column, and a quiet typing strip.
+- Buffs as a list (name and time left), click grid shows each spell's cost and dims what you can't afford.
+- Comforts: hide other people's duel results and drunken lines, decline duels, release in battlegrounds, accept resurrections.
+
 - Minimap: a square with rounded corners by default, framed like Stoa's windows; the round map is a setting (new texture: restart the game once).
 - Shared core for every feature: spellbook ranks and costs, item worth and junk, the group as a list, mana and the five-second rule, show rules (combat, group, raid, solo, target, mouseover), settings per spec, and unit events for just the units that matter. Raid cells redraw at most ten times a second.
 - Combat rows, the click grid, the bar tray and the tally now keep their own setting in each spec.
@@ -65,7 +72,7 @@ Everything below is on the launch branch and not yet in a numbered release.
 First numbered build, for the WoW Forever beta (interface 16001).
 
 - Core: event bus, modules, account and per-character saved settings, a schema version, and a settings backup you can copy as text (`/stoa backup`).
-- Two states: the Grimoire console out of combat (leather panel, chat on its left page, Ready, Journey and Company pages) and the Halo in combat (health and mana arcs, signature spell, target and cast bar), with a 3 second calm-down.
+- Two states: the Console out of combat (leather panel, chat on its left page, Ready, Journey and Company pages) and the Halo in combat (health and mana arcs, signature spell, target and cast bar), with a 3 second calm-down.
 - Layouts per role (Tank, Healer, Melee DPS, Ranged DPS) following your dual-spec slots.
 - Bone, Tide and Graphite themes.
 - Tank watch and target plaques, party cards, raid frames for healing, and fifteen click-casting bindings per role.

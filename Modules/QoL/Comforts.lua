@@ -2,9 +2,11 @@
 --   On by default: loot lands the moment the window would open, the camera
 --   pulls further out, and an NPC with nothing to say but one option skips
 --   straight past it.
+--   Also on: other people's duel results and drunken lines stay out of chat.
 --   Off by default: accepting and handing in quests (a quest with a choice
---   of reward always waits for you), skipping cinematics, and quieting the
---   red error text in combat.
+--   of reward always waits for you), skipping cinematics, quieting the
+--   red error text in combat, declining duels, releasing your spirit in
+--   battlegrounds and accepting a resurrection.
 -- Holding Shift stops any of the automation for that window.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -17,6 +19,11 @@ local Comforts = Stoa:NewModule("Comforts", {
 	turnInQuests = false,
 	skipCinematics = false,
 	quietErrors = false,
+	quietDuels = true,
+	quietDrunk = true,
+	declineDuels = false,
+	releaseInPvP = false,
+	acceptRes = false,
 })
 
 local FAR_CAMERA = 2.6
@@ -144,6 +151,74 @@ function Comforts:Errors(fighting)
 	end
 end
 
+-- Chat noise ------------------------------------------------------------------
+-- System lines about other people's duels and drinking, matched from the
+-- game's own wording so any language works.
+
+local function pattern(format)
+	if type(format) ~= "string" then return nil end
+	format = format:gsub("%%%d%$", "%%")
+	format = format:gsub("([%(%)%.%+%-%*%?%[%]%^%$])", "%%%1")
+	format = format:gsub("%%[sd]", ".+")
+	return "^" .. format .. "$"
+end
+
+local function patterns(names)
+	local list = {}
+	for _, name in ipairs(names) do
+		local each = pattern(_G[name])
+		if each then list[#list + 1] = each end
+	end
+	return list
+end
+
+function Comforts:ChatNoise()
+	local duels = patterns({ "DUEL_WINNER_KNOCKOUT", "DUEL_WINNER_RETREAT" })
+	local drunk = patterns({ "DRUNK_MESSAGE_OTHER1", "DRUNK_MESSAGE_OTHER2", "DRUNK_MESSAGE_OTHER3", "DRUNK_MESSAGE_OTHER4",
+		"DRUNK_MESSAGE_ITEM_OTHER1", "DRUNK_MESSAGE_ITEM_OTHER2", "DRUNK_MESSAGE_ITEM_OTHER3", "DRUNK_MESSAGE_ITEM_OTHER4" })
+	local me = UnitName("player")
+	local function matches(list, text)
+		for _, each in ipairs(list) do
+			if text:find(each) then return true end
+		end
+		return false
+	end
+	if not ChatFrame_AddMessageEventFilter then return end
+	ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", function(_, _, text)
+		if type(text) ~= "string" or Stoa:IsSecret(text) then return false end
+		if self.db.quietDuels and matches(duels, text) and not (me and text:find(me, 1, true)) then return true end
+		if self.db.quietDrunk and matches(drunk, text) then return true end
+		return false
+	end)
+end
+
+-- Duels, death and resurrection ----------------------------------------------
+
+function Comforts:Duel()
+	if not self.db.declineDuels or held() then return end
+	if CancelDuel then CancelDuel() end
+	if StaticPopup_Hide then StaticPopup_Hide("DUEL_REQUESTED") end
+end
+
+function Comforts:Dead()
+	if not self.db.releaseInPvP or held() then return end
+	local _, kind = IsInInstance()
+	if kind ~= "pvp" then return end
+	-- A soulstone or reincarnation is yours to use.
+	if HasSoulstone and HasSoulstone() then return end
+	C_Timer.After(0.5, function()
+		if UnitIsDead("player") and not UnitIsGhost("player") then pcall(RepopMe) end
+	end)
+end
+
+function Comforts:Resurrect(from)
+	if not self.db.acceptRes or held() then return end
+	-- Not mid-fight: a resurrection then is usually better taken later.
+	if from and UnitAffectingCombat and UnitExists(from) and UnitAffectingCombat(from) then return end
+	AcceptResurrect()
+	if StaticPopup_Hide then StaticPopup_Hide("RESURRECT") StaticPopup_Hide("RESURRECT_NO_SICKNESS") StaticPopup_Hide("RESURRECT_NO_TIMER") end
+end
+
 -- -----------------------------------------------------------------------------
 
 function Comforts:OnEnable()
@@ -164,4 +239,8 @@ function Comforts:OnEnable()
 	on("PLAYER_REGEN_DISABLED", "Errors", true)
 	on("PLAYER_REGEN_ENABLED", "Errors", false)
 	on("PLAYER_ENTERING_WORLD", "Camera")
+	on("DUEL_REQUESTED", "Duel")
+	on("PLAYER_DEAD", "Dead")
+	Stoa:On("RESURRECT_REQUEST", function(from) xpcall(self.Resurrect, Stoa.catch, self, from) end)
+	xpcall(self.ChatNoise, Stoa.catch, self)
 end
