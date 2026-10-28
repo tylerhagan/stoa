@@ -2,13 +2,19 @@
 -- choose beside the chat.
 -- Out of combat the console carries a small block to the right of chat:
 -- up to eight label and value rows in two columns, like the right page's
--- columns. What it shows is yours to pick (right-click it, or /stoa
--- tally), saved per character, and until you pick it follows your role:
+-- columns. It follows where you are: one set out in the world (gold,
+-- loot, professions, reputation, gear and bags), one in a dungeon and one
+-- in a raid (your role's stats, then gear, bags or latency). Each set is
+-- yours to change (right-click it, or /stoa glance), saved per character
+-- and spec, and a line you pin shows in every set. Until you change a set
+-- it follows your role:
 --   Healer: healing, mana regen, spell crit, intellect;
 --   Ranged: spell power, spell crit, hit, intellect;
 --   Melee: attack power, crit, hit, agility or strength;
---   Tank: armor, defense, dodge, stamina;
--- then gear wear, bag room, gold and your first profession for everyone.
+--   Tank: armor, defense, dodge, stamina.
+-- Hovering a line shows where its number comes from, and clicking it opens
+-- the window you'd go to next (the character sheet for stats, bags for bag
+-- room, reputation for a faction, and so on).
 --
 -- Anything another addon publishes through LibDataBroker (the feeds Titan
 -- Panel and similar bars show) can be picked too: its text shows as the
@@ -20,7 +26,9 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Tally = Stoa:NewModule("Tally", {})
+local Tally = Stoa:NewModule("Tally", {
+	follow = true,
+})
 
 local MAX_ROWS = 8
 local ROWS_PER_COLUMN = 4
@@ -82,6 +90,84 @@ local function money()
 	return ("%ds %02dc"):format(silver, copper % 100)
 end
 
+-- Hover and click ------------------------------------------------------------------
+-- An entry's detail(add) calls add(left, right) for each line of its
+-- breakdown; its open() opens the window you'd go to next, and its action
+-- names that window in the tooltip.
+
+local function run(name, ...)
+	local fn = _G[name]
+	if type(fn) ~= "function" then return false end
+	return (pcall(fn, ...))
+end
+
+local OPEN = {
+	character = { "Character sheet", function() return run("ToggleCharacter", "PaperDollFrame") end },
+	reputation = { "Reputation", function() return run("ToggleCharacter", "ReputationFrame") end },
+	bags = { "Bags", function() return run("ToggleAllBags") end },
+	money = { "Currencies", function()
+		if _G.TokenFrame and run("ToggleCharacter", "TokenFrame") then return true end
+		return run("ToggleAllBags")
+	end },
+	professions = { "Professions", function()
+		if _G.ProfessionsBookFrame and run("ToggleProfessionsBook") then return true end
+		if _G.SkillFrame and run("ToggleCharacter", "SkillFrame") then return true end
+		return run("ToggleSpellBook", "professions")
+	end },
+	map = { "Map", function() return run("ToggleWorldMap") end },
+	clock = { "Clock", function() return run("ToggleTimeManager") or run("TimeManager_Toggle") end },
+}
+
+local function signed(value)
+	value = math.floor(value + 0.5)
+	return (value >= 0 and "+" or "") .. value
+end
+
+local SCHOOLS = { "Holy", "Fire", "Nature", "Frost", "Shadow", "Arcane" }
+
+-- Each school with a value, for spell power and spell crit.
+local function bySchool(fn, format)
+	return function(add)
+		for school = 2, 7 do
+			local value = plain(call(fn, school))
+			if value and value > 0 then add(SCHOOLS[school - 1], format(value)) end
+		end
+	end
+end
+
+local function statDetail(index)
+	return function(add)
+		local base, effective, up, down = call(UnitStat, "player", index)
+		base, effective = plain(base), plain(effective)
+		if not (base and effective) then return end
+		add("Base", whole(base))
+		up, down = plain(up) or 0, plain(down) or 0
+		if effective ~= base or up ~= 0 or down ~= 0 then add("From gear and buffs", signed(effective - base)) end
+	end
+end
+
+local function powerDetail(fn)
+	return function(add)
+		local base, plus, minus = call(fn, "player")
+		base, plus, minus = plain(base), plain(plus) or 0, plain(minus) or 0
+		if not base then return end
+		add("Base", whole(base))
+		if plus ~= 0 then add("Buffs", signed(plus)) end
+		if minus ~= 0 then add("Debuffs", signed(minus)) end
+	end
+end
+
+-- Money and reputation at login, for "this session".
+local session = {}
+
+local function moneyText(copper)
+	local sign = copper < 0 and "-" or "+"
+	copper = math.abs(copper)
+	local gold, silver = math.floor(copper / 10000), math.floor(copper / 100) % 100
+	if gold > 0 then return ("%s%dg %02ds"):format(sign, gold, silver) end
+	return ("%s%ds %02dc"):format(sign, silver, copper % 100)
+end
+
 -- Professions -------------------------------------------------------------------
 -- The modern list where the game has it (GetProfessions), otherwise the
 -- skill lines under the professions headers.
@@ -133,6 +219,14 @@ local function profession(key, fallback)
 			if not rank then return nil end
 			return max and ("%d / %d"):format(rank, max) or tostring(rank)
 		end,
+		detail = function(add)
+			local p = professions[key]
+			local rank, max = p and plain(p[2]), p and plain(p[3])
+			if not (rank and max) then return end
+			add("Skill", ("%d of %d"):format(rank, max))
+			if rank >= max then add("Next", "Visit a trainer") else add("To go", tostring(max - rank)) end
+		end,
+		open = "professions",
 	}
 end
 
@@ -141,46 +235,71 @@ end
 -- words to show and whether they warn, and the group the picker lists it in.
 
 local ENTRIES = {
-	strength = { label = "Strength", group = "Stats", value = stat(1) },
-	agility = { label = "Agility", group = "Stats", value = stat(2) },
-	stamina = { label = "Stamina", group = "Stats", value = stat(3) },
-	intellect = { label = "Intellect", group = "Stats", value = stat(4) },
-	spirit = { label = "Spirit", group = "Stats", value = stat(5) },
+	strength = { label = "Strength", group = "Stats", value = stat(1), detail = statDetail(1), open = "character" },
+	agility = { label = "Agility", group = "Stats", value = stat(2), detail = statDetail(2), open = "character" },
+	stamina = { label = "Stamina", group = "Stats", value = stat(3), detail = statDetail(3), open = "character" },
+	intellect = { label = "Intellect", group = "Stats", value = stat(4), detail = statDetail(4), open = "character" },
+	spirit = { label = "Spirit", group = "Stats", value = stat(5), detail = statDetail(5), open = "character" },
 	attackPower = { label = "Attack power", group = "Stats", value = function()
 		local base, plus, minus = call(UnitAttackPower, "player")
 		base, plus, minus = plain(base), plain(plus) or 0, plain(minus) or 0
 		return base and whole(base + plus + minus)
-	end },
+	end, detail = powerDetail(UnitAttackPower), open = "character" },
 	rangedPower = { label = "Ranged power", group = "Stats", value = function()
 		local base, plus, minus = call(UnitRangedAttackPower, "player")
 		base, plus, minus = plain(base), plain(plus) or 0, plain(minus) or 0
 		return base and whole(base + plus + minus)
-	end },
-	spellPower = { label = "Spell power", group = "Stats", value = function() return whole(bestSchool(GetSpellBonusDamage)) end },
-	healing = { label = "Healing", group = "Stats", value = function() return whole(call(GetSpellBonusHealing)) end },
-	crit = { label = "Crit", group = "Stats", value = function() return percent(call(GetCritChance)) end },
-	spellCrit = { label = "Spell crit", group = "Stats", value = function() return percent(bestSchool(GetSpellCritChance)) end },
+	end, detail = powerDetail(UnitRangedAttackPower), open = "character" },
+	spellPower = { label = "Spell power", group = "Stats", value = function() return whole(bestSchool(GetSpellBonusDamage)) end,
+		detail = bySchool(GetSpellBonusDamage, whole), open = "character" },
+	healing = { label = "Healing", group = "Stats", value = function() return whole(call(GetSpellBonusHealing)) end, open = "character" },
+	crit = { label = "Crit", group = "Stats", value = function() return percent(call(GetCritChance)) end, detail = function(add)
+		local ranged = plain(call(GetRangedCritChance))
+		if ranged then add("Ranged", percent(ranged)) end
+	end, open = "character" },
+	spellCrit = { label = "Spell crit", group = "Stats", value = function() return percent(bestSchool(GetSpellCritChance)) end,
+		detail = bySchool(GetSpellCritChance, percent), open = "character" },
 	hit = { label = "Hit", group = "Stats", value = function()
 		local bonus = plain(call(GetHitModifier))
 		return bonus and ("+%d%%"):format(bonus)
-	end },
+	end, detail = function(add)
+		local spell = plain(call(GetSpellHitModifier))
+		if spell then add("Spell hit", ("+%d%%"):format(spell)) end
+	end, open = "character" },
 	regen = { label = "Mana / 5s", group = "Stats", value = function()
 		local _, casting = call(GetManaRegen)
 		casting = plain(casting)
 		return casting and whole(casting * 5)
-	end },
+	end, detail = function(add)
+		local resting, casting = call(GetManaRegen)
+		resting, casting = plain(resting), plain(casting)
+		if casting then add("While casting", whole(casting * 5)) end
+		if resting then add("Outside the five-second rule", whole(resting * 5)) end
+	end, open = "character" },
 	armor = { label = "Armor", group = "Stats", value = function()
 		local _, effective = call(UnitArmor, "player")
 		return whole(effective)
-	end },
+	end, detail = function(add)
+		local base, effective = call(UnitArmor, "player")
+		base, effective = plain(base), plain(effective)
+		if base then add("Base", whole(base)) end
+		if base and effective and effective ~= base then add("From buffs", signed(effective - base)) end
+		local reduce = effective and plain(call(PaperDollFrame_GetArmorReduction, effective, UnitLevel("player")))
+		if reduce then add("Physical damage taken", ("-%.1f%%"):format(reduce)) end
+	end, open = "character" },
 	defense = { label = "Defense", group = "Stats", value = function()
 		local base, bonus = call(UnitDefense, "player")
 		base, bonus = plain(base), plain(bonus) or 0
 		return base and whole(base + bonus)
-	end },
-	dodge = { label = "Dodge", group = "Stats", value = function() return percent(call(GetDodgeChance)) end },
-	parry = { label = "Parry", group = "Stats", value = function() return percent(call(GetParryChance)) end },
-	block = { label = "Block", group = "Stats", value = function() return percent(call(GetBlockChance)) end },
+	end, detail = function(add)
+		local base, bonus = call(UnitDefense, "player")
+		base, bonus = plain(base), plain(bonus) or 0
+		if base then add("Skill", whole(base)) end
+		if bonus ~= 0 then add("From gear", signed(bonus)) end
+	end, open = "character" },
+	dodge = { label = "Dodge", group = "Stats", value = function() return percent(call(GetDodgeChance)) end, open = "character" },
+	parry = { label = "Parry", group = "Stats", value = function() return percent(call(GetParryChance)) end, open = "character" },
+	block = { label = "Block", group = "Stats", value = function() return percent(call(GetBlockChance)) end, open = "character" },
 
 	durability = { label = "Gear", group = "Kit", value = function()
 		local lowest
@@ -191,15 +310,42 @@ local ENTRIES = {
 		end
 		if not lowest then return "Whole" end
 		return math.floor(lowest * 100 + 0.5) .. "%", lowest < LOW_WEAR
-	end },
+	end, detail = function(add)
+		local worn = {}
+		for _, slot in ipairs(GEAR_SLOTS) do
+			local current, max = call(GetInventoryItemDurability, slot)
+			current, max = plain(current), plain(max)
+			if current and max and max > 0 and current < max then
+				local link = call(GetInventoryItemLink, "player", slot)
+				local name = link and call(GetItemInfo, link)
+				worn[#worn + 1] = { name or ("Slot " .. slot), current / max }
+			end
+		end
+		table.sort(worn, function(a, b) return a[2] < b[2] end)
+		for i = 1, math.min(3, #worn) do add(worn[i][1], math.floor(worn[i][2] * 100 + 0.5) .. "%") end
+		if #worn == 0 then add("Everything", "Whole") end
+	end, open = "character" },
 	bags = { label = "Bags free", group = "Kit", value = function()
 		local getFree = C_Container and C_Container.GetContainerNumFreeSlots or GetContainerNumFreeSlots
 		if not getFree then return nil end
 		local free = 0
 		for bag = 0, 4 do free = free + (plain(call(getFree, bag)) or 0) end
 		return tostring(free), free <= LOW_BAGS
-	end },
-	gold = { label = "Gold", group = "Kit", value = money },
+	end, detail = function(add)
+		local getFree = C_Container and C_Container.GetContainerNumFreeSlots or GetContainerNumFreeSlots
+		local getSize = C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
+		if not (getFree and getSize) then return end
+		for bag = 0, 4 do
+			local size = plain(call(getSize, bag))
+			if size and size > 0 then
+				add(bag == 0 and "Backpack" or ("Bag " .. bag), ("%d of %d free"):format(plain(call(getFree, bag)) or 0, size))
+			end
+		end
+	end, open = "bags" },
+	gold = { label = "Gold", group = "Kit", value = money, detail = function(add)
+		local copper = plain(call(GetMoney))
+		if copper and session.money then add("This session", moneyText(copper - session.money)) end
+	end, open = "money" },
 
 	prof1 = profession("prof1", "Profession"),
 	prof2 = profession("prof2", "Second profession"),
@@ -210,7 +356,13 @@ local ENTRIES = {
 	zone = { label = "Zone", group = "World", value = function()
 		local sub, zone = call(GetSubZoneText), call(GetZoneText)
 		return (sub and sub ~= "" and sub) or zone
-	end },
+	end, detail = function(add)
+		local zone = call(GetZoneText)
+		if zone and zone ~= "" then add("Zone", zone) end
+		local kind = call(GetZonePVPInfo)
+		local words = { sanctuary = "Sanctuary", friendly = "Friendly", hostile = "Hostile", contested = "Contested", combat = "Combat zone" }
+		if kind and words[kind] then add("Territory", words[kind]) end
+	end, open = "map" },
 	reputation = { label = function()
 		local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
 		if type(data) == "table" and data.name then return data.name end
@@ -229,12 +381,35 @@ local ENTRIES = {
 		low, high, value = plain(low), plain(high), plain(value)
 		if not (low and high and value) or high <= low then return nil end
 		return ("%d / %d"):format(value - low, high - low)
-	end },
-	clock = { label = "Time", group = "World", value = function() return date("%H:%M") end },
+	end, detail = function(add)
+		local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
+		local name, reaction, value
+		if type(data) == "table" and data.name then
+			name, reaction, value = data.name, data.reaction, data.currentStanding
+		else
+			local standing, _, _, current
+			name, standing, _, _, current = call(GetWatchedFactionInfo)
+			reaction, value = standing, current
+		end
+		reaction, value = plain(reaction), plain(value)
+		local word = reaction and _G["FACTION_STANDING_LABEL" .. reaction]
+		if word then add("Standing", word) end
+		if name and value and session.rep and session.rep[1] == name then add("This session", signed(value - session.rep[2])) end
+	end, open = "reputation" },
+	clock = { label = "Time", group = "World", value = function() return date("%H:%M") end, detail = function(add)
+		local hour, minute = call(GetGameTime)
+		hour, minute = plain(hour), plain(minute)
+		if hour and minute then add("Realm time", ("%02d:%02d"):format(hour, minute)) end
+	end, open = "clock" },
 	latency = { label = "Latency", group = "World", value = function()
 		local _, _, home, world = call(GetNetStats)
 		local ms = plain(world) or plain(home)
 		return ms and (ms .. " ms")
+	end, detail = function(add)
+		local _, _, home, world = call(GetNetStats)
+		home, world = plain(home), plain(world)
+		if home then add("Home", home .. " ms") end
+		if world then add("World", world .. " ms") end
 	end },
 	framerate = { label = "Framerate", group = "World", value = function()
 		local fps = plain(call(GetFramerate))
@@ -278,9 +453,34 @@ local ROLE_STATS = {
 	RANGED = { "spellPower", "spellCrit", "hit", "intellect" },
 	TANK = { "armor", "defense", "dodge", "stamina" },
 }
-local SHARED = { "durability", "bags", "gold", "prof1" }
 
-function Tally:Defaults()
+-- Situations: out in the world, in a dungeon, in a raid. Battlegrounds
+-- and arenas count as dungeons.
+local SITUATIONS = { "world", "dungeon", "raid" }
+local SITUATION_WORDS = { world = "Out in the world", dungeon = "In a dungeon", raid = "In a raid" }
+local AFTER_STATS = {
+	dungeon = { "durability", "bags", "gold", "prof1" },
+	raid = { "durability", "latency", "framerate", "gold" },
+}
+local WORLD = { "gold", "goldHour", "lootValue", "prof1", "prof2", "reputation", "durability", "bags" }
+
+function Tally:Situation()
+	if not self.db.follow then return "world" end
+	local inside, kind = call(IsInInstance)
+	if inside and kind == "raid" then return "raid" end
+	if inside and (kind == "party" or kind == "pvp" or kind == "arena" or kind == "scenario") then return "dungeon" end
+	return "world"
+end
+
+function Tally:Defaults(situation)
+	situation = situation or self:Situation()
+	local out = {}
+	if situation == "world" then
+		for _, key in ipairs(WORLD) do
+			if ENTRIES[key] then out[#out + 1] = key end
+		end
+		return out
+	end
 	local role = Stoa:GetRole()
 	local list = ROLE_STATS[role or ""]
 	if not list then
@@ -288,36 +488,90 @@ function Tally:Defaults()
 		list = { "attackPower", "crit", "hit", AGILE[class or ""] and "agility" or "strength" }
 		if class == "HUNTER" then list[1] = "rangedPower" end
 	end
-	local out = {}
 	for _, key in ipairs(list) do out[#out + 1] = key end
-	for _, key in ipairs(SHARED) do out[#out + 1] = key end
+	for _, key in ipairs(AFTER_STATS[situation] or AFTER_STATS.dungeon) do out[#out + 1] = key end
 	return out
 end
 
--- What you've picked is kept per spec, so a healing spec and a damage
--- spec each keep their own lines. A character saved before that keeps its
--- one list for both until a spec picks its own.
-local function saved()
+-- What you've picked is kept per spec and per situation, so a healing spec
+-- and a damage spec each keep their own lines. A list saved before sets
+-- followed the situation stands in for any set you haven't changed since.
+local function slot()
+	return Stoa.ActiveSpecSlot and Stoa.ActiveSpecSlot() or 1
+end
+
+local function older()
 	local char = Stoa.char
-	if not char then return nil end
-	local slot = Stoa.ActiveSpecSlot and Stoa.ActiveSpecSlot() or 1
 	local bySpec = char.tallyBySpec
-	if type(bySpec) == "table" and bySpec[slot] ~= nil then return bySpec[slot] or nil end
+	if type(bySpec) == "table" and bySpec[slot()] ~= nil then return bySpec[slot()] or nil end
 	return char.tally
 end
 
-local function save(list)
-	local slot = Stoa.ActiveSpecSlot and Stoa.ActiveSpecSlot() or 1
-	Stoa.char.tallyBySpec = Stoa.char.tallyBySpec or {}
-	-- false marks "back to the role's set" for this spec.
-	Stoa.char.tallyBySpec[slot] = list or false
+local function saved(situation)
+	local char = Stoa.char
+	if not char then return nil end
+	local sets = type(char.glanceBySpec) == "table" and char.glanceBySpec[slot()]
+	local list = type(sets) == "table" and sets[situation]
+	if list == false then return nil end
+	if type(list) == "table" then return list end
+	return older()
 end
 
--- The chosen keys: yours if you've picked, otherwise the role's.
-function Tally:Chosen()
-	local list = saved()
+local function save(situation, list)
+	local char = Stoa.char
+	char.glanceBySpec = char.glanceBySpec or {}
+	char.glanceBySpec[slot()] = char.glanceBySpec[slot()] or {}
+	-- false marks "back to the default set" for this spec and situation.
+	char.glanceBySpec[slot()][situation] = list or false
+end
+
+-- Pinned lines show in every situation, before the situation's own.
+function Tally:Pins()
+	local char = Stoa.char
+	local pins = char and type(char.glancePins) == "table" and char.glancePins[slot()]
+	return type(pins) == "table" and pins or {}
+end
+
+function Tally:IsPinned(key)
+	for _, pinned in ipairs(self:Pins()) do
+		if pinned == key then return true end
+	end
+	return false
+end
+
+function Tally:Pin(key)
+	local list = {}
+	for _, pinned in ipairs(self:Pins()) do
+		if pinned ~= key then list[#list + 1] = pinned end
+	end
+	local on = not self:IsPinned(key)
+	if on then list[#list + 1] = key end
+	Stoa.char.glancePins = Stoa.char.glancePins or {}
+	Stoa.char.glancePins[slot()] = list
+	self:Refresh()
+	return on
+end
+
+-- The situation's own keys: yours if you've picked, otherwise the default.
+function Tally:Own(situation)
+	situation = situation or self:Situation()
+	local list = saved(situation)
 	if type(list) == "table" then return list end
-	return self:Defaults()
+	return self:Defaults(situation)
+end
+
+-- What shows: the pins, then the situation's keys, at most MAX_ROWS.
+function Tally:Chosen()
+	local out, seen = {}, {}
+	local function put(key)
+		if not seen[key] and #out < MAX_ROWS then
+			seen[key] = true
+			out[#out + 1] = key
+		end
+	end
+	for _, key in ipairs(self:Pins()) do put(key) end
+	for _, key in ipairs(self:Own()) do put(key) end
+	return out
 end
 
 -- Feeds -------------------------------------------------------------------------
@@ -361,6 +615,36 @@ function Tally:Read(key)
 	return label, value, warn
 end
 
+-- The tooltip for one of Stoa's own lines: the number, where it comes
+-- from, and what a click opens.
+function Tally:ShowDetail(row)
+	local entry = ENTRIES[row.key]
+	local label, value = self:Read(row.key)
+	GameTooltip:SetOwner(row, "ANCHOR_TOP")
+	local tr, tg, tb = Stoa:Color("text")
+	local mr, mg, mb = Stoa:Color("muted")
+	local ar, ag, ab = Stoa:Color("accent")
+	GameTooltip:AddDoubleLine(label or "At a glance", value or "", tr, tg, tb, tr, tg, tb)
+	if entry and type(entry.detail) == "function" then
+		pcall(entry.detail, function(left, right)
+			GameTooltip:AddDoubleLine(tostring(left), tostring(right or ""), mr, mg, mb, tr, tg, tb)
+		end)
+	end
+	local open = entry and OPEN[entry.open or ""]
+	local action = open and open[1] or entry and entry.action
+	if action then GameTooltip:AddDoubleLine("Click", action, mr, mg, mb, ar, ag, ab) end
+	GameTooltip:AddDoubleLine("Right-click", "Choose lines", mr, mg, mb, mr, mg, mb)
+	GameTooltip:Show()
+end
+
+function Tally:Open(key)
+	local entry = ENTRIES[key]
+	if not entry then return end
+	local open = OPEN[entry.open or ""]
+	if open then return open[2]() end
+	if type(entry.open) == "function" then pcall(entry.open) end
+end
+
 -- Building ----------------------------------------------------------------------
 
 function Tally:BuildRow(page, index)
@@ -378,15 +662,35 @@ function Tally:BuildRow(page, index)
 	value:SetPoint("RIGHT")
 	value:SetWidth(COLUMN_WIDTH - 40)
 	value:SetWordWrap(false)
-	row.label, row.value = label, value
+	local pin = row:CreateTexture(nil, "OVERLAY")
+	pin:SetSize(4, 4)
+	pin:SetPoint("RIGHT", row, "LEFT", -5, 0)
+	pin:SetTexture("Interface\\Buttons\\WHITE8x8")
+	UI.tint(pin, "accent")
+	if pin.SetMask then pcall(pin.SetMask, pin, "Interface\\CharacterFrame\\TempPortraitAlphaMask") end
+	pin:Hide()
+	local glow = row:CreateTexture(nil, "BACKGROUND")
+	glow:SetPoint("TOPLEFT", -4, 1)
+	glow:SetPoint("BOTTOMRIGHT", 4, -1)
+	glow:SetTexture("Interface\\Buttons\\WHITE8x8")
+	UI.tint(glow, "text", 0.08)
+	glow:Hide()
+	row.label, row.value, row.pin, row.glow = label, value, pin, glow
 	row:SetScript("OnClick", function(button, mouse)
 		if mouse == "RightButton" then return self:OpenPicker(button) end
 		local object = button.key and feed(button.key)
-		if object and object.OnClick then call(object.OnClick, button, mouse) end
+		if object then
+			if object.OnClick then call(object.OnClick, button, mouse) end
+		elseif button.key and not InCombatLockdown() then
+			self:Open(button.key)
+		end
 	end)
 	row:SetScript("OnEnter", function(button)
+		button.glow:Show()
 		local object = button.key and feed(button.key)
-		if object and object.OnTooltipShow then
+		if button.key and not object and ENTRIES[button.key] then
+			self:ShowDetail(button)
+		elseif object and object.OnTooltipShow then
 			GameTooltip:SetOwner(button, "ANCHOR_TOP")
 			call(object.OnTooltipShow, GameTooltip)
 			GameTooltip:Show()
@@ -400,6 +704,7 @@ function Tally:BuildRow(page, index)
 		end
 	end)
 	row:SetScript("OnLeave", function(button)
+		button.glow:Hide()
 		local object = button.key and feed(button.key)
 		if object and object.OnLeave then call(object.OnLeave, button) end
 		GameTooltip:Hide()
@@ -422,7 +727,10 @@ function Tally:Build(console)
 	local rule = UI.line(page)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
 	rule:SetPoint("RIGHT", page, "RIGHT")
-	self.heading, self.rule = heading, rule
+	-- Where you are, in the accent, at the right end of the heading.
+	local where = UI.text(page, "sans", Stoa.typeSize.caption, "accent", "RIGHT")
+	where:SetPoint("BOTTOMRIGHT", rule, "TOPRIGHT", 0, 6)
+	self.heading, self.rule, self.where = heading, rule, where
 
 	self.rows = {}
 	for i = 1, MAX_ROWS do self.rows[i] = self:BuildRow(page, i) end
@@ -452,6 +760,9 @@ function Tally:Refresh()
 	professions = readProfessions()
 	local shown = (self.columns or 2) * ROWS_PER_COLUMN
 	local keys = self:Chosen()
+	if self.where then
+		self.where:SetText(self.db.follow and (SITUATION_WORDS[self:Situation()] or ""):upper() or "")
+	end
 	for i, row in ipairs(self.rows) do
 		local key = i <= shown and keys[i]
 		local label, value, warn
@@ -461,6 +772,7 @@ function Tally:Refresh()
 			row.label:SetText(label)
 			row.value:SetText(value or "–")
 			row.value:SetTextColor(Stoa:Color(warn and "danger" or "text"))
+			row.pin:SetShown(self:IsPinned(key))
 			row:Show()
 		else
 			row:Hide()
@@ -471,37 +783,39 @@ end
 -- Choosing ----------------------------------------------------------------------
 
 function Tally:Has(key)
-	for _, chosen in ipairs(self:Chosen()) do
+	for _, chosen in ipairs(self:Own()) do
 		if chosen == key then return true end
 	end
 	return false
 end
 
--- Adds or removes a key, keeping the rest in order. Picking starts from
--- the role's list, so the first change keeps what was showing.
+-- Adds or removes a key in the current situation's set, keeping the rest
+-- in order. Picking starts from the default set, so the first change
+-- keeps what was showing.
 function Tally:Toggle(key)
+	local situation = self:Situation()
 	local list = {}
-	for _, chosen in ipairs(self:Chosen()) do list[#list + 1] = chosen end
+	for _, chosen in ipairs(self:Own(situation)) do list[#list + 1] = chosen end
 	for i, chosen in ipairs(list) do
 		if chosen == key then
 			table.remove(list, i)
-			save(list)
+			save(situation, list)
 			self:Refresh()
 			return false
 		end
 	end
-	if #list >= MAX_ROWS then
+	if #list + #self:Pins() >= MAX_ROWS then
 		Stoa:Print(("At a glance holds %d. Take one off first."):format(MAX_ROWS))
 		return false
 	end
 	list[#list + 1] = key
-	save(list)
+	save(situation, list)
 	self:Refresh()
 	return true
 end
 
 function Tally:Reset()
-	save(nil)
+	save(self:Situation(), nil)
 	self:Refresh()
 end
 
@@ -519,7 +833,8 @@ function Tally:OpenPicker(owner)
 		return
 	end
 	MenuUtil.CreateContextMenu(owner, function(_, root)
-		root:CreateTitle("At a glance")
+		local word = self.db.follow and SITUATION_WORDS[self:Situation()]
+		root:CreateTitle(word and ("At a glance: " .. word:lower()) or "At a glance")
 		for _, group in ipairs(GROUPS) do
 			local sub = root:CreateButton(group[1])
 			for _, key in ipairs(group[2]) do
@@ -534,8 +849,15 @@ function Tally:OpenPicker(owner)
 				sub:CreateCheckbox(name, function() return self:Has(key) end, function() self:Toggle(key) end)
 			end
 		end
+		local shown = self:Chosen()
+		if #shown > 0 then
+			local sub = root:CreateButton("Pin to every situation")
+			for _, key in ipairs(shown) do
+				sub:CreateCheckbox(key:match("^ldb:(.+)$") or labelOf(key), function() return self:IsPinned(key) end, function() self:Pin(key) end)
+			end
+		end
 		root:CreateDivider()
-		root:CreateButton("Back to my role's set", function() self:Reset() end)
+		root:CreateButton("Back to the default set", function() self:Reset() end)
 	end)
 end
 
@@ -544,8 +866,18 @@ end
 function Tally:OnEnable()
 	local console = Stoa.modules.Grimoire
 	if not (console and console.frame and Stoa:IsModuleEnabled("Grimoire")) then return end
+	session.money = plain(call(GetMoney))
+	local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
+	if type(data) == "table" and data.name and plain(data.currentStanding) then
+		session.rep = { data.name, plain(data.currentStanding) }
+	else
+		local name, _, _, _, current = call(GetWatchedFactionInfo)
+		if name and plain(current) then session.rep = { name, plain(current) } end
+	end
 	self:Build(console)
 	Stoa:NewTicker(REFRESH_SECONDS, function() self:Refresh() end)
+	Stoa:On("PLAYER_ENTERING_WORLD", function() self:Refresh() end)
+	Stoa:On("ZONE_CHANGED_NEW_AREA", function() self:Refresh() end)
 	Stoa:On("STOA_ROLE_CHANGED", function() self:Refresh() end)
 	Stoa:On("ACTIVE_TALENT_GROUP_CHANGED", function() self:Refresh() end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:Refresh() end)
@@ -558,7 +890,10 @@ Stoa.commands.glance = function(rest)
 	verb = verb and verb:lower()
 	if verb == "reset" then
 		Tally:Reset()
-		Stoa:Print("At a glance follows your role again.")
+		Stoa:Print("At a glance is back to the default set here.")
+	elseif verb == "pin" and key ~= "" then
+		if not (ENTRIES[key] or key:match("^ldb:")) then return Stoa:Print("No such entry: " .. key .. ". /stoa glance lists them.") end
+		Stoa:Print((Tally:Pin(key) and "Pinned " or "Unpinned ") .. labelOf(key) .. ".")
 	elseif (verb == "add" or verb == "remove") and key ~= "" then
 		local known = ENTRIES[key] or key:match("^ldb:")
 		if not known then return Stoa:Print("No such entry: " .. key .. ". /stoa glance lists them.") end
@@ -570,9 +905,9 @@ Stoa.commands.glance = function(rest)
 			for _, name in ipairs(group[2]) do names[#names + 1] = name end
 		end
 		for _, name in ipairs(Tally:Feeds()) do names[#names + 1] = feedKey(name) end
-		Stoa:Print("Showing: " .. table.concat(Tally:Chosen(), ", "))
+		Stoa:Print(("Showing (%s): %s"):format((SITUATION_WORDS[Tally:Situation()] or ""):lower(), table.concat(Tally:Chosen(), ", ")))
 		Stoa:Print("Names: " .. table.concat(names, ", "))
-		Stoa:Print("/stoa glance add <name>, /stoa glance remove <name>, /stoa glance reset. Or right-click At a glance.")
+		Stoa:Print("/stoa glance add <name>, remove <name>, pin <name>, reset. Changes apply where you are now. Or right-click At a glance.")
 	end
 end
 Stoa.commands.tally = Stoa.commands.glance

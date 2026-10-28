@@ -101,6 +101,31 @@ for _, word in ipairs(words) do
 	drain()
 end
 updates()
+-- At a glance: every situation, hover and click each line, pin and reset.
+local glance = Stoa.modules.Tally
+if glance and glance.rows then
+	local realInstance = IsInInstance
+	for _, kind in ipairs({ "none", "party", "raid" }) do
+		IsInInstance = function() return kind ~= "none", kind end
+		local ok, e = xpcall(function()
+			glance:Refresh()
+			for _, row in ipairs(glance.rows) do
+				if row.key then
+					local enter, click, leave = row:GetScript("OnEnter"), row:GetScript("OnClick"), row:GetScript("OnLeave")
+					if enter then enter(row) end
+					if click then click(row, "LeftButton") end
+					if leave then leave(row) end
+				end
+			end
+			local first = glance:Chosen()[1]
+			if first then glance:Pin(first); glance:Pin(first) end
+			glance:Toggle("clock"); glance:Toggle("clock"); glance:Reset()
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "At a glance (" .. kind .. "): " .. e end
+		drain()
+	end
+	IsInInstance = realInstance
+end
 -- And again in combat, with secret values.
 SIM_ENTER_COMBAT()
 fire("PLAYER_REGEN_DISABLED")

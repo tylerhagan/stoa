@@ -188,10 +188,19 @@ function Loot:OnEnable()
 				if not rate then return "Counting" end
 				return Stoa.Items.money(rate) .. " / h"
 			end,
+			detail = function(add)
+				local gold, value = self:Totals()
+				add("Gold this session", Stoa.Items.money(gold))
+				add("Loot at vendor prices", Stoa.Items.money(value))
+			end,
+			action = "Totals in chat",
+			open = function() Stoa.commands.loot("") end,
 		}, "Kit")
 		tally:Register("lootValue", {
 			label = "Loot value",
 			value = function() return Stoa.Items.money(session.value) end,
+			action = "Totals in chat",
+			open = function() Stoa.commands.loot("") end,
 		}, "Kit")
 	end
 end
