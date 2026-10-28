@@ -339,6 +339,55 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
 .foot-note { max-width: 1240px; margin: 48px auto 0; color: var(--ink-quiet); font-size: 13px; }
 @media (max-width: 640px) { .world { padding: 18px; } }
 @media (prefers-reduced-motion: no-preference) { .picker button { transition: border-color 0.15s, color 0.15s; } }
+
+/* Procs, plate styles, clean chat (2026-10-28) ------------------------------- */
+.proc-art { position: absolute; top: 40px; width: 70px; height: 220px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255,214,120,0.55), rgba(255,170,60,0.18) 45%, transparent 70%);
+  filter: blur(1px); animation: procPulse 1.6s ease-in-out infinite; }
+.proc-art.l { left: 170px; } .proc-art.r { left: 560px; }
+.proc-art::after { content: ""; position: absolute; inset: 18% 30%; border-radius: 50%; border: 2px solid rgba(255,226,150,0.55); }
+@keyframes procPulse { 50% { opacity: 0.6; } }
+@media (prefers-reduced-motion: reduce) { .proc-art, .key.proc::before { animation: none; } }
+.key.proc::before { content: ""; position: absolute; inset: -5px; border-radius: 12px; border: 2px solid rgba(255,214,120,0.9);
+  box-shadow: 0 0 10px rgba(255,190,80,0.7); animation: procPulse 1.2s ease-in-out infinite; }
+.proc-note { position: absolute; left: 600px; top: 330px; width: 250px; font: italic 12px/1.45 var(--sans); color: var(--muted); }
+
+.plate-np .track .val { position: absolute; inset: 0; display: grid; place-items: center; font: 600 10px/1 var(--sans); color: #fff; text-shadow: 0 1px 1px #000; }
+.plate-np .track .nm { position: absolute; left: 6px; top: 0; bottom: 0; display: flex; align-items: center; font: 600 11px/1 var(--sans); color: #fff; text-shadow: 0 1px 1px #000; }
+.plate-np .track .val.r { justify-items: end; padding-right: 6px; }
+.plate-np.bold .track { height: 16px; border-radius: 2px; box-shadow: 0 0 0 1px #000; }
+.plate-np.bold .track i, .plate-np.brass .track i, .plate-np.inline .track i { background-image: linear-gradient(rgba(255,255,255,0.18), transparent 55%, rgba(0,0,0,0.25)); }
+.plate-np.inline .track { height: 18px; border-radius: 9px; }
+.plate-np.inline .track i { border-radius: 8px; }
+.plate-np.brass .track { height: 12px; border-radius: 3px; box-shadow: 0 0 0 1px #b08d4c, 0 0 0 2px #000; }
+.plate-np .badge { position: absolute; left: -16px; top: -1px; width: 14px; height: 14px; border-radius: 50%; display: grid; place-items: center;
+  background: #1b1714; border: 1px solid #b08d4c; font: 600 8px/1 var(--sans); color: var(--text); }
+.plate-np.brass { position: relative; }
+.plate-np.brass .wrap { position: relative; }
+.plate-np.slim .track { height: 5px; border-radius: 3px; }
+.plate-np.slim .track i { inset: 0 auto 0 0; border-radius: 3px; }
+.plate-np.arrows .wrap { position: relative; }
+.plate-np.arrows .wrap::before, .plate-np.arrows .wrap::after { position: absolute; top: -3px; font: 600 13px/1 var(--sans); color: var(--accent); }
+.plate-np.arrows .wrap::before { content: "▶"; left: -16px; } .plate-np.arrows .wrap::after { content: "◀"; right: -16px; }
+.plate-np.glow .track { box-shadow: 0 0 8px 2px color-mix(in srgb, var(--accent) 70%, transparent); }
+.plate-np.faded { opacity: 0.5; }
+.plate-np.big { transform: scale(1.15); }
+.plates .wrap { width: 140px; }
+
+.chat.clean p { display: grid; grid-template-columns: 52px 1fr; }
+.chat.clean p em { font-style: normal; color: var(--muted); }
+.chat.clean p em::after { content: " |"; color: color-mix(in srgb, var(--text) 25%, transparent); }
+.chat.clean p { margin-bottom: 3px; }
+.chat-rail { position: absolute; left: 8px; top: 30px; display: grid; gap: 6px; opacity: 0.55; }
+.chat-rail span { width: 18px; height: 18px; border-radius: 5px; border: 1px solid color-mix(in srgb, var(--text) 30%, transparent); display: grid; place-items: center; font: 600 9px var(--sans); color: var(--text); }
+.chat-type { position: absolute; left: 32px; width: 448px; bottom: 4px; height: 22px; background: color-mix(in srgb, var(--panel) 85%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--text) 20%, transparent); font: 12px/22px var(--sans); color: var(--muted); padding-left: 8px; }
+.grid-mock td small { display: block; color: var(--muted); font-size: 9px; }
+.grid-mock td.dim { opacity: 0.4; }
+.bufflist { display: grid; gap: 4px; font: 12px var(--sans); color: var(--text); }
+.bufflist div { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.bufflist i { width: 22px; height: 22px; border-radius: 5px; background: linear-gradient(160deg, #5a4a3a, #221c18); border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); }
+.bufflist small { color: var(--muted); font-size: 11px; min-width: 32px; text-align: right; }
 </style>
 
 <header class="mast">
@@ -370,7 +419,7 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
 </section>
 
 <section class="plate" id="console">
-  <header><h2>Console</h2><p>The world state, out of combat: chat on the left with leather tabs, the tally beside it, your portrait in the medallion with health and mana either side, and the Ready, Journey and Company pages on the right. In combat it folds down flat. Drawn at 2480 wide, as on an ultrawide screen: scroll sideways.</p></header>
+  <header><h2>Console</h2><p>The world state, out of combat: chat on the left with leather tabs, a quiet time column, its buttons in a dim rail and a dark typing strip under it, the tally beside it, your portrait in the medallion with health and mana either side, and the Ready, Journey and Company pages on the right. In combat it folds down flat. Drawn at 2480 wide, as on an ultrawide screen: scroll sideways.</p></header>
   <div class="world" id="console-world">
     <div class="console-wrap">
       <div class="console">
@@ -380,12 +429,14 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
         <div class="res left"><div class="num t-text">2,140</div><div class="bar"><i style="width:92%"></i></div><div class="cap">Health</div></div>
         <div class="res right"><div class="num t-mana">3,880</div><div class="bar"><i style="width:71%"></i></div><div class="cap" style="text-align:left">Mana</div></div>
         <div class="tabs"><div class="tab on">General</div><div class="tab">Combat</div><div class="tab">Guild</div></div>
-        <div class="chat">
-          <p class="g">[Guild] [Aelra]: anyone up for Deadmines?</p>
-          <p class="w">[Corvin] whispers: on my way</p>
-          <p class="p">[Party] [Gwyn]: ready when you are</p>
-          <p>You receive loot: Linen Cloth x3.</p>
+        <div class="chat-rail" title="Chat buttons in one quiet column"><span>F</span><span>#</span><span>≡</span></div>
+        <div class="chat clean">
+          <p class="g"><em>17:14</em><span>[Guild] [Aelra]: anyone up for Deadmines?</span></p>
+          <p class="w"><em>17:15</em><span>[Corvin] whispers: on my way</span></p>
+          <p class="p"><em>17:16</em><span>[Party] [Gwyn]: ready when you are</span></p>
+          <p><em>17:16</em><span>You receive loot: Linen Cloth x3.</span></p>
         </div>
+        <div class="chat-type">Say: </div>
         <div class="pages tally-page">
           <div class="col"><div class="cap">Tally</div><div class="hair"></div>
             <div class="tally-row"><span>Healing</span><b>412</b></div>
@@ -421,7 +472,7 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
 </section>
 
 <section class="plate" id="halo">
-  <header><h2>Halo</h2><p>The combat state around your character: health on the left arc, power on the right, signature coins on the power side (here a Shadow Priest's Pain, Plague and Embrace timers), a caption under them, the signature cooldown in the middle, the cast bar, and the combat bar with the next press outlined and long cooldowns faded.</p></header>
+  <header><h2>Halo</h2><p>The combat state around your character: health on the left arc, power on the right, signature coins on the power side (here a Shadow Priest's Pain, Plague and Embrace timers), a caption under them, the signature cooldown in the middle, the cast bar, and the combat bar with the next press outlined and long cooldowns faded. When something procs, the game's own proc art lights either side of the Halo and the matching key glows.</p></header>
   <div class="world">
     <div class="halo-stage">
       <div class="halo">
@@ -437,10 +488,12 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
         <div class="coin t-muted" style="left:289px;top:244px">V</div>
         <div class="caption">WEAVING ●●●●○</div>
       </div>
+      <div class="proc-art l" aria-hidden="true"></div><div class="proc-art r" aria-hidden="true"></div>
+      <div class="proc-note">Stand-in glow: in game these are Blizzard's own proc art (the Spell Activation Overlay) either side of the Halo, and the game's proc flipbook on the combat bar key.</div>
       <div class="castbar"><div><span>Mind Blast</span><span class="t-muted">0.9</span></div><div class="bar"><i></i></div></div>
       <div class="combatbar"><div class="cap">Combat bar</div>
         <div class="keys">
-          <div class="key"><kbd>1</kbd>SW</div><div class="key next"><kbd>2</kbd>MB</div><div class="key"><kbd>3</kbd>MF</div>
+          <div class="key"><kbd>1</kbd>SW</div><div class="key next"><kbd>2</kbd>MB</div><div class="key proc"><kbd>3</kbd>MF</div>
           <div class="key cool" data-cd="5"><kbd>4</kbd>VT</div><div class="key"><kbd>5</kbd>PW</div><div class="key cool" data-cd="2m"><kbd>Q</kbd>PS</div>
         </div></div>
     </div>
@@ -476,7 +529,7 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
 </section>
 
 <section class="plate" id="plates">
-  <header><h2>Nameplates</h2><p>Every enemy in the warning colour, neutral in pale gold, friends in blue, grey only when tapped or dead. The target gets a bone edge. Levels are plain numbers shaded by how they compare with yours.</p></header>
+  <header><h2>Nameplates</h2><p>Every enemy in the warning colour, neutral in pale gold, friends in blue, grey only when tapped or dead. The target gets a bone edge. Levels are plain numbers shaded by how they compare with yours. Five styles (Stoa, Bold, Inline, Brass, Slim) and three ways to mark your target.</p></header>
   <div class="world">
     <div class="plates">
       <div class="plate-np target"><div class="n"><span class="t-danger">36</span>Kobold Miner</div><div class="track"><i style="width:84%;background:var(--danger)"></i></div><div class="cast"><i></i></div></div>
@@ -484,6 +537,23 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
       <div class="plate-np"><div class="n"><span class="t-muted">31</span>Young Wolf</div><div class="track"><i style="width:100%;background:var(--accent)"></i></div></div>
       <div class="plate-np"><div class="n">Marshal Dughan</div><div class="track"><i style="width:100%;background:var(--mana)"></i></div></div>
       <div class="plate-np"><div class="n"><span class="t-muted">35</span>Gnoll Brute</div><div class="track"><i style="width:60%;background:var(--muted)"></i></div></div>
+    </div>
+    <div style="height:30px"></div>
+    <div class="label">Styles</div>
+    <div class="plates" style="align-items:start;gap:26px 64px;padding-left:18px">
+      <div class="spec"><div class="label">Stoa</div><div class="plate-np"><div class="n"><span class="t-text">38</span>Defias Thug</div><div class="track"><i style="width:72%;background:var(--danger)"></i></div></div></div>
+      <div class="spec"><div class="label">Bold</div><div class="plate-np bold"><div class="n"><span class="t-text">38</span>Defias Thug</div><div class="track"><i style="width:72%;background:var(--danger)"></i><span class="val">1,240</span></div></div></div>
+      <div class="spec"><div class="label">Inline</div><div class="plate-np inline"><div class="track"><i style="width:72%;background:var(--danger)"></i><span class="nm">Defias Thug</span><span class="val r">1,240</span></div></div></div>
+      <div class="spec"><div class="label">Brass</div><div class="plate-np brass"><div class="n">Defias Thug</div><div class="wrap"><span class="badge">38</span><div class="track"><i style="width:72%;background:var(--danger)"></i></div></div></div></div>
+      <div class="spec"><div class="label">Slim</div><div class="plate-np slim"><div class="n"><span class="t-text">38</span>Defias Thug</div><div class="track"><i style="width:72%;background:var(--danger)"></i></div></div></div>
+    </div>
+    <div style="height:30px"></div>
+    <div class="label">Marking your target, with other plates faded and the target a little larger</div>
+    <div class="plates" style="align-items:start;gap:26px 64px;padding-left:18px">
+      <div class="spec"><div class="label">Edge</div><div class="plate-np target big"><div class="n">Kobold Miner</div><div class="track"><i style="width:84%;background:var(--danger)"></i></div></div></div>
+      <div class="spec"><div class="label">Arrows</div><div class="plate-np arrows big"><div class="n">Kobold Miner</div><div class="wrap"><div class="track"><i style="width:84%;background:var(--danger)"></i></div></div></div></div>
+      <div class="spec"><div class="label">Glow</div><div class="plate-np glow big"><div class="n">Kobold Miner</div><div class="track"><i style="width:84%;background:var(--danger)"></i></div></div></div>
+      <div class="spec"><div class="label">Not targeted, faded</div><div class="plate-np faded"><div class="n">Kobold Digger</div><div class="track"><i style="width:100%;background:var(--danger)"></i></div></div></div>
     </div>
   </div>
 </section>
@@ -545,13 +615,13 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
 </section>
 
 <section class="plate" id="controls">
-  <header><h2>Buttons and click grid</h2><p>Dark rounded keys with light words that warm to the accent under the mouse. The click-casting grid folds to its title until you hover a card or hold Shift.</p></header>
+  <header><h2>Buttons and click grid</h2><p>Dark rounded keys with light words that warm to the accent under the mouse. The click-casting grid folds to its title until you hover a card or hold Shift. Each cell shows its mana cost and dims when you can't afford it.</p></header>
   <div class="world">
     <div class="row" style="gap:30px 40px">
       <div class="spec"><div class="label">Buttons</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="btn">Repair all</span><span class="btn hover">Hover</span><span class="btn sel">Selected</span><span class="btn off">Disabled</span></div></div>
       <div class="spec"><div class="label">Click grid, folded</div><div class="grid-mock"><div class="gh"><span class="cap">Click grid</span><span class="t-muted">+</span></div></div></div>
       <div class="spec"><div class="label">Click grid, open</div><div class="grid-mock"><div class="gh"><span class="cap">Click grid</span><span class="t-muted">–</span></div>
-        <table><tr><th></th><th>LEFT</th><th>RIGHT</th></tr><tr><td class="t-muted">—</td><td>Flash Heal</td><td>Renew</td></tr><tr><td class="t-muted">Shift</td><td>Greater Heal</td><td>Shield</td></tr><tr><td class="t-muted">Ctrl</td><td>Dispel</td><td>Abolish</td></tr></table></div></div>
+        <table><tr><th></th><th>LEFT</th><th>RIGHT</th></tr><tr><td class="t-muted">—</td><td>Flash Heal<small>125</small></td><td>Renew<small>155</small></td></tr><tr><td class="t-muted">Shift</td><td class="dim">Greater Heal<small>370</small></td><td>Shield<small>210</small></td></tr><tr><td class="t-muted">Ctrl</td><td>Dispel<small>85</small></td><td>Abolish<small>95</small></td></tr></table></div></div>
     </div>
   </div>
 </section>
@@ -571,7 +641,7 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
 </section>
 
 <section class="plate" id="top">
-  <header><h2>Top of screen</h2><p>Blizzard's damage meters restyled as outlined words over faint bars, side by side in the top left, and the minimap in theme rings with its zone in the serif.</p></header>
+  <header><h2>Top of screen</h2><p>Blizzard's damage meters restyled as outlined words over faint bars, side by side in the top left, and the minimap in theme rings with its zone in the serif. Buffs can show as a list with names and time left.</p></header>
   <div class="world">
     <div class="row" style="gap:34px 56px;align-items:center">
       <div class="meters">
@@ -584,6 +654,10 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
           <div class="mrow" style="--w:24%;--c:#f58cba"><span class="outlined">Aelra</span><b class="outlined">71</b></div></div>
       </div>
       <div class="mini" style="margin-top:34px"><span>Westfall</span></div>
+      <div class="spec"><div class="label">Buffs as a list (setting)</div><div class="bufflist">
+        <div><small>28m</small>Power Word: Fortitude<i></i></div>
+        <div><small>9m</small>Inner Fire<i></i></div>
+        <div><small>42s</small>Renew<i></i></div></div></div>
     </div>
   </div>
 </section>
