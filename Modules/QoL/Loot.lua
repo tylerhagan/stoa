@@ -28,6 +28,7 @@ local session = { gold = 0, value = 0, start = nil }
 function Loot:ResetSession()
 	session.gold, session.value, session.start = 0, 0, GetTime()
 	self.entries = {}
+	if self.ClearRate then self:ClearRate() end
 	self:Render()
 end
 
@@ -165,6 +166,23 @@ local function perHour()
 end
 
 function Loot:Rate() return perHour() end
+
+-- Gold an hour once a minute, the last twelve, for At a glance's line chart.
+local history, historyAt = {}, nil
+function Loot:RecordRate()
+	local rate = perHour()
+	if not rate then return end
+	local now = GetTime()
+	if historyAt and now - historyAt < 60 then return end
+	historyAt = now
+	table.insert(history, rate)
+	while #history > 12 do table.remove(history, 1) end
+end
+
+function Loot:ClearRate()
+	for i = #history, 1, -1 do history[i] = nil end
+	historyAt = nil
+end
 function Loot:Totals() return session.gold, session.value end
 
 function Loot:OnEnable()
@@ -177,7 +195,7 @@ function Loot:OnEnable()
 	Stoa:On("PLAYER_MONEY", function() self:OnPlayerMoney() end)
 	Stoa:On("MERCHANT_SHOW", function() self.atVendor, self.looted = true, 0 end)
 	Stoa:On("MERCHANT_CLOSED", function() self.atVendor = false end)
-	Stoa:NewTicker(1, function() self:Render() end)
+	Stoa:NewTicker(1, function() self:Render() self:RecordRate() end)
 
 	local tally = Stoa.modules.Tally
 	if tally and tally.Register then
@@ -188,6 +206,7 @@ function Loot:OnEnable()
 				if not rate then return "Counting" end
 				return Stoa.Items.money(rate) .. " / h"
 			end,
+			figure = function() return "spark", history end,
 			detail = function(add)
 				local gold, value = self:Totals()
 				add("Gold this session", Stoa.Items.money(gold))

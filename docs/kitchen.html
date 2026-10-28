@@ -415,6 +415,32 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
 .tab.off b.l { -webkit-mask-image: var(--img-chatTabClosedLinesL); mask-image: var(--img-chatTabClosedLinesL); } .tab.off b.m { -webkit-mask-image: var(--img-chatTabClosedLinesM); mask-image: var(--img-chatTabClosedLinesM); } .tab.off b.r { -webkit-mask-image: var(--img-chatTabClosedLinesR); mask-image: var(--img-chatTabClosedLinesR); }
 .tab.on b.l { -webkit-mask-image: var(--img-chatTabOpenLinesL); mask-image: var(--img-chatTabOpenLinesL); } .tab.on b.m { -webkit-mask-image: var(--img-chatTabOpenLinesM); mask-image: var(--img-chatTabOpenLinesM); } .tab.on b.r { -webkit-mask-image: var(--img-chatTabOpenLinesR); mask-image: var(--img-chatTabOpenLinesR); }
 .tab.on { color: var(--accent); }
+/* Small figures: gear in cells, bag columns, the XP bar with rest and an
+   hour mark, a pace line chart, and mini figures in At a glance lines. */
+.tally-row .fig { margin-left: auto; margin-right: 8px; align-self: center; }
+.tally-row b { min-width: 0; }
+.segrow { display: grid; grid-template-columns: 40px 1fr auto; gap: 8px; align-items: center; font: 12px var(--sans); color: var(--muted); }
+.segrow b { font: 600 13px var(--sans); color: var(--text); }
+.segs { display: flex; gap: 2px; }
+.segs i { flex: 1; height: 6px; border-radius: 1.5px; background: color-mix(in srgb, var(--text) 13%, transparent); }
+.bagrow { display: flex; gap: 8px; align-items: flex-end; }
+.bagrow b { display: block; font: 17px/1.1 var(--serif); color: var(--text); }
+.bagrow span { font: 11px var(--sans); color: var(--muted); }
+.bagcols { display: flex; gap: 3px; align-items: flex-end; height: 22px; }
+.bagcols .bc { width: 6px; height: 100%; border-radius: 2px; background: color-mix(in srgb, var(--text) 12%, transparent); position: relative; overflow: hidden; }
+.bagcols .bc i { position: absolute; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--text) 60%, transparent); }
+.bagcols.small { height: 12px; gap: 2px; }
+.bagcols.small .bc { width: 3px; }
+.xpb { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--text) 12%, transparent); position: relative; margin: 2px 0 0; }
+.xpb i, .xpb s { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+.xpb i { background: var(--text); }
+.xpb s { background: color-mix(in srgb, var(--mana) 55%, transparent); }
+.xpb u { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--accent); border-radius: 1px; }
+.xlegend { display: flex; gap: 8px; font: 11px var(--sans); color: var(--muted); white-space: nowrap; }
+.xlegend i { display: inline-block; width: 8px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.pace { display: flex; gap: 8px; align-items: center; }
+.pace b { display: block; font: 17px/1.1 var(--serif); color: var(--text); white-space: nowrap; }
+.pace span { font: 11px var(--sans); color: var(--muted); }
 </style>
 
 <header class="mast">
@@ -472,21 +498,21 @@ section.plate { max-width: 1240px; margin: 40px auto 0; display: grid; gap: 12px
             <div class="tally-row"><span>Intellect</span><b>187</b></div>
           </div>
           <div class="col"><div class="cap">&nbsp;</div><div class="hair" style="opacity:0"></div>
-            <div class="tally-row"><span>Gear</span><b class="t-danger">21%</b></div>
-            <div class="tally-row"><span>Bags free</span><b>14</b></div>
-            <div class="tally-row"><span>Gold</span><b>42g 18s</b></div>
-            <div class="tally-row"><span>Herbalism</span><b>212 / 225</b></div>
+            <div class="tally-row"><span>Gear</span><svg class="fig" width="34" height="4" viewBox="0 0 34 4" aria-hidden="true"><rect width="34" height="4" rx="2" style="fill:color-mix(in srgb, var(--text) 14%, transparent)"/><rect width="7.1" height="4" rx="2" style="fill:var(--danger)"/></svg><b class="t-danger">21%</b></div>
+            <div class="tally-row"><span>Bags free</span><div class="bagcols small fig" style="height:12px"><div class="bc"><i style="height:10px;"></i></div><div class="bc"><i style="height:9px;"></i></div><div class="bc"><i style="height:10px;"></i></div><div class="bc"><i style="height:8px;"></i></div><div class="bc"><i style="height:12px;background:var(--danger)"></i></div></div><b>14</b></div>
+            <div class="tally-row"><span>Gold an hour</span><svg class="fig" width="34" height="12" viewBox="0 -1 34 14" aria-hidden="true"><path d="M0 10.4 L4.9 7.2 L9.7 8.8 L14.6 4.8 L19.4 3.2 L24.3 1.6 L29.1 4.0 L34 3.2" fill="none" stroke-width="1.5" style="stroke:var(--text)"/><circle cx="34" cy="3.2" r="2" style="fill:var(--accent)"/></svg><b>4g 20s</b></div>
+            <div class="tally-row"><span>Herbalism</span><svg class="fig" width="34" height="4" viewBox="0 0 34 4" aria-hidden="true"><rect width="34" height="4" rx="2" style="fill:color-mix(in srgb, var(--text) 14%, transparent)"/><rect width="32.0" height="4" rx="2" style="fill:var(--text)"/></svg><b>212 / 225</b></div>
           </div>
         </div>
         <div class="pages right-page">
           <div class="col"><div class="cap">Ready</div><div class="hair"></div>
             <div class="serif t-accent" style="font-size:20px">Healer</div>
             <div class="t-danger" style="font: italic 14px var(--sans)">No Inner Fire</div>
-            <div class="t-muted" style="font-size:12px">Gear 21% · 14 bag slots free</div></div>
+            <div class="segrow"><span>Gear</span><div class="segs"><i style="background:var(--danger)"></i><i style="background:var(--danger)"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><b class="t-danger">21%</b></div><div class="bagrow"><div class="bagcols" style="height:22px"><div class="bc"><i style="height:18px;"></i></div><div class="bc"><i style="height:16px;"></i></div><div class="bc"><i style="height:19px;"></i></div><div class="bc"><i style="height:14px;"></i></div><div class="bc"><i style="height:22px;background:var(--danger)"></i></div></div><div><b>14 free</b><span>of 70</span></div></div></div>
           <div class="col"><div class="cap">Journey</div><div class="hair"></div>
-            <div class="serif t-text" style="font-size:20px">Level 38</div><div class="xp"></div>
-            <div class="t-muted" style="font-size:12px">58% · rested to 74%</div>
-            <div class="t-muted" style="font-size:12px">31k xp/h · level in 1h 10m</div></div>
+            <div class="serif t-text" style="font-size:20px">Level 38</div><div class="xpb"><s style="width:74%"></s><i style="width:58%"></i><u style="left:88%"></u></div>
+            <div class="xlegend"><span><i style="background:var(--text)"></i>58%</span><span><i style="background:color-mix(in srgb, var(--mana) 55%, transparent)"></i>Rested to 74%</span><span><i style="background:var(--accent)"></i>In an hour</span></div>
+            <div class="pace"><svg width="54" height="18" viewBox="0 -1 54 20" aria-hidden="true"><path d="M0 16 L7.7 11 L15.4 13.5 L23.1 7.4 L30.9 5 L38.6 2.5 L46.3 6.2 L54 5" fill="none" stroke-width="1.5" style="stroke:var(--text)"/><circle cx="54" cy="5" r="2" style="fill:var(--accent)"/></svg><div><b>31k</b><span>xp an hour</span></div><div><b>1h 10m</b><span>to 39</span></div></div></div>
           <div class="col"><div class="cap">Company</div><div class="hair"></div>
             <div class="member"><span>Aelra</span><i style="--w:100%"></i></div>
             <div class="member"><span>Corvin</span><i style="--w:64%"></i></div>

@@ -11,6 +11,7 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 Everything below is on the launch branch and not yet in a numbered release.
 
 - Tally is now called At a glance; `/stoa glance` (the old `/stoa tally` still works).
+- Small figures: gear wear as ten cells and bags as a column each on Ready; the XP bar shows rest and where an hour at your pace takes you, with a pace line chart; At a glance lines carry slim bars, bag columns and a gold-an-hour chart.
 - At a glance follows where you are (world, dungeon, raid sets, with pinned lines in all), explains each line on hover and opens the matching window on click.
 - Procs: the game's own proc art either side of the Halo and its proc glow on the combat bar, for the game's proc events and for procs Stoa reads itself (a spell turning usable, costing nothing or casting much faster); `/stoa procs test`.
 - Game-drawn auras: a helper for Forever's aura container, which shows buffs and debuffs with real timers in combat; `/stoa auras` tests it on launch day.

@@ -101,10 +101,44 @@ for _, word in ipairs(words) do
 	drain()
 end
 updates()
+-- Small figures: bags with room, worn gear, a pace and gold history.
+do
+	local realSlots, realFree, realDurability = C_Container.GetContainerNumSlots, C_Container.GetContainerNumFreeSlots, GetInventoryItemDurability
+	C_Container.GetContainerNumSlots = function(bag) return bag == 4 and 0 or 16 end
+	C_Container.GetContainerNumFreeSlots = function(bag) return bag == 1 and 0 or 3, 0 end
+	GetInventoryItemDurability = function(slot) return slot == 5 and 12 or 80, 100 end
+	local ok, e = xpcall(function()
+		local console, kit, loot = Stoa.modules.Grimoire, Stoa.modules.Kit, Stoa.modules.Loot
+		if kit and kit.enabled then
+			kit.windowStart = GetTime() - 600
+			kit.samples = { { at = GetTime() - 300, gain = 2000 } }
+			for i = 1, 4 do kit.pacedAt = nil; kit:RecordPace() end
+		end
+		if loot and loot.RecordRate then for i = 1, 3 do loot:RecordRate() end end
+		if console and console.UpdateKit then console:UpdateKit(); console:UpdateJourney() end
+		for _, button in ipairs({ console and console.gear, console and console.bags }) do
+			for _, script in ipairs({ "OnEnter", "OnClick", "OnLeave" }) do
+				local fn = button and button:GetScript(script)
+				if fn then fn(button) end
+			end
+		end
+		local glance = Stoa.modules.Tally
+		if glance and glance.rows then
+			glance.columns = 2
+			for _, key in ipairs({ "durability", "bags", "goldHour", "reputation", "prof1" }) do glance:Pin(key) end
+			glance:Refresh()
+			for _, key in ipairs({ "durability", "bags", "goldHour", "reputation", "prof1" }) do glance:Pin(key) end
+		end
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Small figures: " .. e end
+	C_Container.GetContainerNumSlots, C_Container.GetContainerNumFreeSlots, GetInventoryItemDurability = realSlots, realFree, realDurability
+	drain()
+end
 -- At a glance: every situation, hover and click each line, pin and reset.
 local glance = Stoa.modules.Tally
 if glance and glance.rows then
 	local realInstance = IsInInstance
+	glance.columns = 2
 	for _, kind in ipairs({ "none", "party", "raid" }) do
 		IsInInstance = function() return kind ~= "none", kind end
 		local ok, e = xpcall(function()
