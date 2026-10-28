@@ -1,4 +1,5 @@
--- Stoa: the tally, a few numbers you choose beside the chat.
+-- Stoa: At a glance (the module is still called Tally), a few numbers you
+-- choose beside the chat.
 -- Out of combat the console carries a small block to the right of chat:
 -- up to eight label and value rows in two columns, like the right page's
 -- columns. What it shows is yours to pick (right-click it, or /stoa
@@ -393,7 +394,7 @@ function Tally:BuildRow(page, index)
 			call(object.OnEnter, button)
 		else
 			GameTooltip:SetOwner(button, "ANCHOR_TOP")
-			GameTooltip:AddLine("Tally")
+			GameTooltip:AddLine("At a glance")
 			GameTooltip:AddLine("Right-click to choose what shows here.", 1, 1, 1)
 			GameTooltip:Show()
 		end
@@ -416,7 +417,7 @@ function Tally:Build(console)
 	page:SetScript("OnClick", function(button) self:OpenPicker(button) end)
 	self.page = page
 
-	local heading = UI.caption(page, "Tally")
+	local heading = UI.caption(page, "At a glance")
 	heading:SetPoint("TOPLEFT")
 	local rule = UI.line(page)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
@@ -490,7 +491,7 @@ function Tally:Toggle(key)
 		end
 	end
 	if #list >= MAX_ROWS then
-		Stoa:Print(("The tally holds %d. Take one off first."):format(MAX_ROWS))
+		Stoa:Print(("At a glance holds %d. Take one off first."):format(MAX_ROWS))
 		return false
 	end
 	list[#list + 1] = key
@@ -514,11 +515,11 @@ end
 
 function Tally:OpenPicker(owner)
 	if not (MenuUtil and MenuUtil.CreateContextMenu) then
-		Stoa:Print("Choose with /stoa tally add <name> or /stoa tally remove <name>; /stoa tally lists the names.")
+		Stoa:Print("Choose with /stoa glance add <name> or /stoa glance remove <name>; /stoa glance lists the names.")
 		return
 	end
 	MenuUtil.CreateContextMenu(owner, function(_, root)
-		root:CreateTitle("Tally")
+		root:CreateTitle("At a glance")
 		for _, group in ipairs(GROUPS) do
 			local sub = root:CreateButton(group[1])
 			for _, key in ipairs(group[2]) do
@@ -551,16 +552,16 @@ function Tally:OnEnable()
 	Stoa:On("STOA_THEME_CHANGED", function() self:Refresh() end)
 end
 
--- /stoa tally: list the names; add or remove one; reset to the role's set.
-Stoa.commands.tally = function(rest)
+-- /stoa glance (or /stoa tally): list the names; add or remove one; reset to the role's set.
+Stoa.commands.glance = function(rest)
 	local verb, key = (rest or ""):match("^(%a*)%s*(%S*)")
 	verb = verb and verb:lower()
 	if verb == "reset" then
 		Tally:Reset()
-		Stoa:Print("The tally follows your role again.")
+		Stoa:Print("At a glance follows your role again.")
 	elseif (verb == "add" or verb == "remove") and key ~= "" then
 		local known = ENTRIES[key] or key:match("^ldb:")
-		if not known then return Stoa:Print("No such entry: " .. key .. ". /stoa tally lists them.") end
+		if not known then return Stoa:Print("No such entry: " .. key .. ". /stoa glance lists them.") end
 		if Tally:Has(key) == (verb == "add") then return end
 		Tally:Toggle(key)
 	else
@@ -571,6 +572,7 @@ Stoa.commands.tally = function(rest)
 		for _, name in ipairs(Tally:Feeds()) do names[#names + 1] = feedKey(name) end
 		Stoa:Print("Showing: " .. table.concat(Tally:Chosen(), ", "))
 		Stoa:Print("Names: " .. table.concat(names, ", "))
-		Stoa:Print("/stoa tally add <name>, /stoa tally remove <name>, /stoa tally reset. Or right-click the tally.")
+		Stoa:Print("/stoa glance add <name>, /stoa glance remove <name>, /stoa glance reset. Or right-click At a glance.")
 	end
 end
+Stoa.commands.tally = Stoa.commands.glance

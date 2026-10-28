@@ -673,7 +673,7 @@ function renderConsole() {
   $('#seal-role').textContent = r.label;
   const fl = k => S.flash[k] ? ' class="fl"' : '';
   $('#tally').innerHTML =
-    '<div class="col"><div class="cap">Tally</div><div class="hair"></div>' +
+    '<div class="col"><div class="cap">At a glance</div><div class="hair"></div>' +
     r.stats.map(s => '<div class="tally-row"><span>' + s[0] + '</span><b>' + s[1] + '</b></div>').join('') +
     '<div class="tally-row"><span>Gold / hour</span><b' + fl('gph') + '>' + S.gph.toFixed(1) + 'g</b></div></div>' +
     '<div class="col"><div class="cap">&nbsp;</div><div class="hair" style="opacity:0"></div>' +
@@ -902,7 +902,7 @@ function setWant(w, quiet) {
 function finishCalm() {
   S.shown = false; S.calm = 0;
   if (S.pull) { /* leave pulling as it is */ }
-  say('Back to the world', 'The console opens along the bottom with chat, the tally and the three pages, and the Halo fades away.');
+  say('Back to the world', 'The console opens along the bottom with chat, At a glance and the three pages, and the Halo fades away.');
   renderAll(); focusView();
   if (afterWorld) { const f = afterWorld; afterWorld = null; f(); }
 }
@@ -970,7 +970,7 @@ function pullStep(dt) {
 function scnLoot() {
   clearGroup('loot');
   const go = () => {
-    say('Looting', 'What you pick up appears above the chat in each item’s own quality colour, then fades after a few seconds. Gold an hour and loot value in the tally update when the money lands.');
+    say('Looting', 'What you pick up appears above the chat in each item’s own quality colour, then fades after a few seconds. Gold an hour and loot value in At a glance update when the money lands.');
     const box = $('#loot'); box.innerHTML = '';
     const items = [['[Worn Shortsword]', '#9d9d9d', ' x1'], ['[Linen Cloth]', '#fff', ' x3'], ['[Defias Mask]', '#1eff00', ''], ['[Blackened Defias Belt]', '#0070dd', '']];
     const add = (html) => {
@@ -984,7 +984,7 @@ function scnLoot() {
     later('loot', 400 + items.length * 800, () => {
       add('<span class="t-accent">+12s 40c</span>');
       S.gold += 1240; S.lootVal += 1240 + 2600; S.gph += 3.1; S.flash = { gph: 1, gold: 1, loot: 1 }; renderConsole();
-      say('The tally keeps count', 'Gold an hour and the loot value for this session went up. They flash in the accent colour for a moment, in the tally beside the chat.');
+      say('At a glance keeps count', 'Gold an hour and the loot value for this session went up. They flash in the accent colour for a moment, in At a glance beside the chat.');
       later('loot', 1800, () => { S.flash = {}; renderConsole(); });
     });
   };
@@ -1156,7 +1156,7 @@ if (window.ResizeObserver) new ResizeObserver(() => { fit(); }).observe(wrap); e
 let saved = 'Bone'; try { saved = localStorage.getItem('stoa-proto-theme') || 'Bone'; } catch (e) {}
 applyTheme(THEMES[saved] ? saved : 'Bone', true);
 fit(); renderAll(); renderRes();
-say('Out of combat', 'The Console is open along the bottom: chat on the left with its tabs, the tally beside it, your portrait medallion in the middle with health and mana either side, and the Ready, Journey and Company pages on the right. Press In combat to see it fold away.');
+say('Out of combat', 'The Console is open along the bottom: chat on the left with its tabs, At a glance beside it, your portrait medallion in the middle with health and mana either side, and the Ready, Journey and Company pages on the right. Press In combat to see it fold away.');
 startLoop();
 window.__stoa = { S, setWant, scnCast, scnPull, scnLoot, scnReady, scnLevel, scnNode, scnCat, renderAll };
 })();
