@@ -219,6 +219,11 @@ local function profession(key, fallback)
 			if not rank then return nil end
 			return max and ("%d / %d"):format(rank, max) or tostring(rank)
 		end,
+		figure = function()
+			local p = professions[key]
+			local rank, max = p and plain(p[2]), p and plain(p[3])
+			if rank and max and max > 0 then return "bar", rank / max, "text" end
+		end,
 		detail = function(add)
 			local p = professions[key]
 			local rank, max = p and plain(p[2]), p and plain(p[3])
@@ -230,9 +235,56 @@ local function profession(key, fallback)
 	}
 end
 
+-- How far into the watched faction's current standing you are, and its size.
+local function standing()
+	local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
+	local low, high, value
+	if type(data) == "table" and data.name then
+		low, high, value = data.currentReactionThreshold, data.nextReactionThreshold, data.currentStanding
+	else
+		local name, _, min, max, current = call(GetWatchedFactionInfo)
+		if not name then return nil end
+		low, high, value = min, max, current
+	end
+	low, high, value = plain(low), plain(high), plain(value)
+	if not (low and high and value) or high <= low then return nil end
+	return value - low, high - low
+end
+
+-- Gear and bags, shared by the words and the small figures.
+local function lowestWear()
+	local lowest
+	for _, slot in ipairs(GEAR_SLOTS) do
+		local current, max = call(GetInventoryItemDurability, slot)
+		current, max = plain(current), plain(max)
+		if current and max and max > 0 and (not lowest or current / max < lowest) then lowest = current / max end
+	end
+	return lowest
+end
+
+-- Free slots in all bags, and one { used share, full } per bag.
+local function bagRoom()
+	local getFree = C_Container and C_Container.GetContainerNumFreeSlots or GetContainerNumFreeSlots
+	local getSize = C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
+	if not (getFree and getSize) then return nil end
+	local free, list = 0, {}
+	for bag = 0, 4 do
+		local size = plain(call(getSize, bag)) or 0
+		if size > 0 then
+			local open = plain(call(getFree, bag)) or 0
+			free = free + open
+			list[#list + 1] = { (size - open) / size, open == 0 }
+		end
+	end
+	return free, list
+end
+
 -- Entries -----------------------------------------------------------------------
 -- Each: a label (or a function giving one), a value function returning the
 -- words to show and whether they warn, and the group the picker lists it in.
+-- A figure function draws the number as well, beside the words: it returns
+-- "bar", share, colour; "columns", a list of { share, full }; or "spark", a
+-- list of recent values.
 
 local ENTRIES = {
 	strength = { label = "Strength", group = "Stats", value = stat(1), detail = statDetail(1), open = "character" },
@@ -302,14 +354,12 @@ local ENTRIES = {
 	block = { label = "Block", group = "Stats", value = function() return percent(call(GetBlockChance)) end, open = "character" },
 
 	durability = { label = "Gear", group = "Kit", value = function()
-		local lowest
-		for _, slot in ipairs(GEAR_SLOTS) do
-			local current, max = call(GetInventoryItemDurability, slot)
-			current, max = plain(current), plain(max)
-			if current and max and max > 0 and (not lowest or current / max < lowest) then lowest = current / max end
-		end
+		local lowest = lowestWear()
 		if not lowest then return "Whole" end
 		return math.floor(lowest * 100 + 0.5) .. "%", lowest < LOW_WEAR
+	end, figure = function()
+		local share = lowestWear() or 1
+		return "bar", share, Stoa.Figures.wear(share)
 	end, detail = function(add)
 		local worn = {}
 		for _, slot in ipairs(GEAR_SLOTS) do
@@ -326,11 +376,12 @@ local ENTRIES = {
 		if #worn == 0 then add("Everything", "Whole") end
 	end, open = "character" },
 	bags = { label = "Bags free", group = "Kit", value = function()
-		local getFree = C_Container and C_Container.GetContainerNumFreeSlots or GetContainerNumFreeSlots
-		if not getFree then return nil end
-		local free = 0
-		for bag = 0, 4 do free = free + (plain(call(getFree, bag)) or 0) end
+		local free = bagRoom()
+		if not free then return nil end
 		return tostring(free), free <= LOW_BAGS
+	end, figure = function()
+		local _, list = bagRoom()
+		if list then return "columns", list end
 	end, detail = function(add)
 		local getFree = C_Container and C_Container.GetContainerNumFreeSlots or GetContainerNumFreeSlots
 		local getSize = C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
@@ -369,18 +420,12 @@ local ENTRIES = {
 		local name = call(GetWatchedFactionInfo)
 		return name or "Reputation"
 	end, group = "World", value = function()
-		local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
-		local low, high, value
-		if type(data) == "table" and data.name then
-			low, high, value = data.currentReactionThreshold, data.nextReactionThreshold, data.currentStanding
-		else
-			local name, _, min, max, current = call(GetWatchedFactionInfo)
-			if not name then return nil end
-			low, high, value = min, max, current
-		end
-		low, high, value = plain(low), plain(high), plain(value)
-		if not (low and high and value) or high <= low then return nil end
-		return ("%d / %d"):format(value - low, high - low)
+		local into, span = standing()
+		if not into then return nil end
+		return ("%d / %d"):format(into, span)
+	end, figure = function()
+		local into, span = standing()
+		if into then return "bar", into / span, "text" end
 	end, detail = function(add)
 		local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
 		local name, reaction, value
@@ -617,9 +662,10 @@ end
 
 -- The tooltip for one of Stoa's own lines: the number, where it comes
 -- from, and what a click opens.
-function Tally:ShowDetail(row)
-	local entry = ENTRIES[row.key]
-	local label, value = self:Read(row.key)
+function Tally:ShowDetail(row, key)
+	key = key or row.key
+	local entry = ENTRIES[key]
+	local label, value = self:Read(key)
 	GameTooltip:SetOwner(row, "ANCHOR_TOP")
 	local tr, tg, tb = Stoa:Color("text")
 	local mr, mg, mb = Stoa:Color("muted")
@@ -676,6 +722,7 @@ function Tally:BuildRow(page, index)
 	UI.tint(glow, "text", 0.08)
 	glow:Hide()
 	row.label, row.value, row.pin, row.glow = label, value, pin, glow
+	row.figures = {}
 	row:SetScript("OnClick", function(button, mouse)
 		if mouse == "RightButton" then return self:OpenPicker(button) end
 		local object = button.key and feed(button.key)
@@ -773,11 +820,48 @@ function Tally:Refresh()
 			row.value:SetText(value or "–")
 			row.value:SetTextColor(Stoa:Color(warn and "danger" or "text"))
 			row.pin:SetShown(self:IsPinned(key))
+			self:DrawFigure(row, key)
 			row:Show()
 		else
 			row:Hide()
 		end
 	end
+end
+
+-- The small figure between a line's label and its value, made on first use.
+local FIGURE_WIDTH = 34
+local FIGURES = {
+	bar = function(row) return Stoa.Figures.bar(row, FIGURE_WIDTH, 3) end,
+	columns = function(row) return Stoa.Figures.columns(row, 5, 3, 12, 2) end,
+	spark = function(row) return Stoa.Figures.spark(row, FIGURE_WIDTH, 12) end,
+}
+
+function Tally:DrawFigure(row, key)
+	local entry = ENTRIES[key]
+	local kind, a, b
+	if entry and type(entry.figure) == "function" then
+		local ok, k, x, y = pcall(entry.figure)
+		if ok then kind, a, b = k, x, y end
+	end
+	if kind == "spark" and (type(a) ~= "table" or #a < 2) then kind = nil end
+	for name, figure in pairs(row.figures) do
+		if name ~= kind then figure:Hide() end
+	end
+	local valueWidth = plain(row.value:GetStringWidth()) or 30
+	if not FIGURES[kind] then
+		row.label:SetWidth(COLUMN_WIDTH - valueWidth - 8)
+		return
+	end
+	local figure = row.figures[kind]
+	if not figure then
+		figure = FIGURES[kind](row)
+		row.figures[kind] = figure
+	end
+	figure:ClearAllPoints()
+	figure:SetPoint("RIGHT", row, "RIGHT", -(valueWidth + 8), 0)
+	figure:Set(a, b)
+	figure:Show()
+	row.label:SetWidth(math.max(40, COLUMN_WIDTH - valueWidth - 8 - FIGURE_WIDTH - 6))
 end
 
 -- Choosing ----------------------------------------------------------------------

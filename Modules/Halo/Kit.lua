@@ -187,14 +187,48 @@ function Kit:QuestLine()
 	end
 end
 
--- The two lines on the console. Out of combat only (the console is folded
--- then anyway) and only when travelling alone, as the Company column holds
--- the party otherwise.
+-- The pace over the last while, one reading a minute, for the console's
+-- small line chart (twelve readings, the oldest first).
+local HISTORY = 12
+
+function Kit:RecordPace()
+	local rate = self:Rate()
+	if not rate then return end
+	local now = GetTime()
+	if self.pacedAt and now - self.pacedAt < 60 then return end
+	self.pacedAt = now
+	self.history = self.history or {}
+	table.insert(self.history, rate)
+	while #self.history > HISTORY do table.remove(self.history, 1) end
+end
+
+-- The pace row on the console (a line chart, xp an hour and time to level)
+-- and the nearest quest line. The quest line is out of combat only (the
+-- console is folded then anyway) and only when travelling alone, as the
+-- Company column holds the party otherwise.
 function Kit:UpdateConsole()
 	local console = Stoa.modules.Grimoire
 	if not (console and console.rateNote) then return end
-	local rate = self.db.xpRate and self:XPLine() or ""
-	console.rateNote:SetText(rate or "")
+	local rate = self.db.xpRate and not self:AtMaxLevel() and self:Rate()
+	local pace = console.pace
+	if pace then
+		if rate then
+			self:RecordPace()
+			pace.spark:Set(self.history or {})
+			pace.perHour:SetText(shortNumber(rate))
+			pace.perHourCap:SetText("xp an hour")
+			local left = self:SecondsToLevel()
+			local level = UnitLevel("player")
+			pace.toLevel:SetText(left and duration(left) or "")
+			pace.toLevelCap:SetText(left and ("to " .. (level + 1)) or "")
+		end
+		pace:SetShown(rate and true or false)
+	end
+	-- Words while the pace is still being worked out.
+	local words = ""
+	if self.db.xpRate and not rate then words = self:XPLine() or "" end
+	console.rateNote:SetText(words)
+	console.rateNote:SetShown(words ~= "")
 	local quest = ""
 	if self.db.questLine and not IsInGroup() and Stoa:GetState() ~= Stoa.STATE_COMBAT then
 		quest = self:QuestLine() or ""
