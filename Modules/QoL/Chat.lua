@@ -332,11 +332,14 @@ function Chat:Restore()
 	if not (frame and frame.AddMessage) or type(lines) ~= "table" or #lines == 0 then return end
 	local r, g, b = Stoa:Color("muted")
 	local colour = hex(r, g, b)
+	-- Old lines keep the times they were stamped with.
+	Stoa.chatQuiet = true
 	for _, text in ipairs(lines) do
 		if type(text) == "string" then frame:AddMessage(colour .. text .. "|r", r, g, b) end
 	end
 	local dr, dg, db = Stoa:Color("hairline")
 	frame:AddMessage(hex(dr, dg, db) .. EARLIER .. "|r", dr, dg, db)
+	Stoa.chatQuiet = false
 end
 
 -- Switching on --------------------------------------------------------------------------

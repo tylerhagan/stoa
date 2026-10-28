@@ -16,7 +16,10 @@ local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
-local Top = Stoa:NewModule("Top")
+local Top = Stoa:NewModule("Top", {
+	-- Buffs as a list: each with its name and time left beside the icon.
+	buffList = false,
+})
 
 local function guarded(fn, ...)
 	xpcall(fn, Stoa.catch, ...)
@@ -42,6 +45,40 @@ local function auraDuration(button)
 	local left = button.timeLeft
 	local short = left and not Stoa:IsSecret(left) and BUFF_DURATION_WARNING_TIME and left < BUFF_DURATION_WARNING_TIME
 	mine:SetTextColor(Stoa:Color(short and "accent" or "muted"))
+end
+
+-- List style: the buff's name to the left of its icon and the time before
+-- it, as "59m  Gift of the Wild". Names can be hidden in combat; the last
+-- one read stays until the button shows another aura.
+local function auraName(button)
+	local name = button.stoaName
+	if not name then return end
+	local list = Top.db.buffList and button.auraType ~= "Debuff" and button.auraType ~= "DeadlyDebuff"
+	name:SetShown(list and true or false)
+	if button.stoaDuration then
+		button.stoaDuration:ClearAllPoints()
+		if list then
+			button.stoaDuration:SetPoint("RIGHT", name, "LEFT", -8, 0)
+		else
+			button.stoaDuration:SetPoint("TOP", button.Icon, "BOTTOM", 0, -3)
+		end
+	end
+	if not list then return end
+	local info = button.buttonInfo
+	local id = info and info.auraInstanceID
+	if id ~= button.stoaNameFor then
+		local text
+		if info and info.auraType == "TempEnchant" then
+			text = "Weapon"
+		elseif id and C_UnitAuras and C_UnitAuras.GetAuraDataByAuraInstanceID then
+			local ok, data = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, "player", id)
+			if ok and data and not Stoa:IsSecret(data.name) then text = data.name end
+		end
+		if text then
+			name:SetText(text)
+			button.stoaNameFor = id
+		end
+	end
 end
 
 local function auraEdge(button)
@@ -79,6 +116,15 @@ local function dressAura(button)
 		mine:Hide()
 		button.stoaDuration = mine
 	end
+	local name = frame:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(name, "sans", Stoa.typeSize.label)
+	name:SetPoint("RIGHT", button.Icon, "LEFT", -6, 0)
+	name:SetJustifyH("RIGHT")
+	name:SetTextColor(Stoa:Color("text"))
+	UI.legible(name)
+	name:Hide()
+	button.stoaName = name
+	if button.Update then hooksecurefunc(button, "Update", function(own) guarded(auraName, own) end) end
 	if button.Count then
 		Stoa:SetFont(button.Count, "sans", Stoa.typeSize.body, "OUTLINE")
 		button.Count:SetTextColor(Stoa:Color("text"))
@@ -89,6 +135,7 @@ local function dressAura(button)
 	if button.UpdateAuraType then hooksecurefunc(button, "UpdateAuraType", auraEdge) end
 	auraEdge(button)
 	auraDuration(button)
+	auraName(button)
 end
 
 local function dressAuraFrame(frame)
@@ -105,6 +152,13 @@ end
 function Top:Buffs()
 	for _, frame in ipairs({ _G.BuffFrame, _G.DebuffFrame, _G.ExternalDefensivesFrame }) do
 		guarded(dressAuraFrame, frame)
+	end
+end
+
+function Top:RefreshBuffList()
+	for _, button in ipairs(_G.BuffFrame and _G.BuffFrame.auraFrames or {}) do
+		button.stoaNameFor = nil
+		guarded(auraName, button)
 	end
 end
 

@@ -28,6 +28,7 @@ Core\Weights.lua
 Core\Group.lua
 Core\Power.lua
 Core\Rules.lua
+Core\GameAuras.lua
 Data\FlightTimes.lua
 Data\TrainerSpells.lua
 
@@ -37,6 +38,7 @@ Modules\QoL\Roster.lua
 Modules\QoL\Merchant.lua
 Modules\QoL\Comforts.lua
 Modules\QoL\Chat.lua
+Modules\QoL\ChatLook.lua
 Modules\QoL\Uprank.lua
 Modules\QoL\QuestReward.lua
 Modules\QoL\Loot.lua
@@ -63,6 +65,7 @@ Modules\Halo\Kit.lua
 Modules\Halo\Threat.lua
 Modules\Halo\Buffs.lua
 Modules\Halo\Emergency.lua
+Modules\Halo\Procs.lua
 Modules\QoL\Markers.lua
 
 Modules\Frames\ClickCast.lua

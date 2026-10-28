@@ -103,7 +103,22 @@ local function build()
 	end)
 	checkbox(Stoa.modules.Character.db, "enabled", "Restyle the character sheet", "A dark panel, item level and quality edges on every slot, the words WORN and BROKEN on gear that needs repair, and an average item level line. The inspect window gets item levels too. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Top.db, "enabled", "Restyle the top of the screen", "Buffs as cropped icons with quiet timers, the quest tracker in Stoa's type without the gold bars, and the minimap's zone header on a dark panel with its buttons waiting for the mouse. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Top.db, "buffList", "Buffs as a list", "Each buff's name and time left beside its icon, easy to scan before a pull. Works best with the buff frame set to one column in Edit Mode (vertical, 1 per row).", false, function() Stoa.modules.Top:RefreshBuffList() end)
 	checkbox(Stoa.modules.Plates.db, "enabled", "Restyle nameplates", "Flat bars coloured by what you can do: amber for enemies, pale gold for neutral, blue for friends, and grey only for tapped or dead. A bone edge marks your target. Takes effect after /reload.", true)
+	local plates = Stoa.modules.Plates.db
+	local restyle = function() Stoa.modules.Plates:Restyle() end
+	dropdown(plates, "style", "Nameplate style", "Stoa: a rounded track. Bold: a heavy dark frame with the health value in the bar. Inline: name and health inside the bar. Brass: a brass edge with a level badge. Slim: a thin bar under the name.", "stoa", {
+		{ "stoa", "Stoa" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" },
+	}, restyle)
+	dropdown(plates, "marker", "Mark your target's plate", "A bone edge round it, arrows either side, or a soft glow behind it.", "edge", {
+		{ "edge", "Edge" }, { "arrows", "Arrows" }, { "glow", "Glow" },
+	}, restyle)
+	dropdown(plates, "fadeChoice", "Fade other plates", "While you have a target, plates you aren't targeting fade by this much.", "0", {
+		{ "0", "Not at all" }, { "25", "A little" }, { "45", "Half" }, { "65", "Mostly" },
+	}, function(_, value) plates.fade = tonumber(value) or 0; restyle() end)
+	dropdown(plates, "scaleChoice", "Target plate size", "Makes your target's plate a little larger (the game's own setting).", "100", {
+		{ "100", "Normal" }, { "115", "A little larger" }, { "130", "Larger" },
+	}, function(_, value) plates.targetScale = tonumber(value) or 100; restyle() end)
 	checkbox(Stoa.modules.Swing.db, "enabled", "Restyle the swing timer", "Blizzard's swing timer as a flat bar in a rounded dark track: pale gold for the main hand, blue for the off hand. Place it in Edit Mode. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Meters.db, "enabled", "Restyle the damage meter", "Blizzard's damage and healing meters as words over the world with no panel: faint bone bars, your own bar in the accent, class colour on names only. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Meters.db, "place", "Meters in the top-left corner", "Every meter window shown sits side by side in one strip flush with the top-left corner of the screen, the same size, in and out of combat. Off leaves them where Edit Mode and your dragging put them.", true, function(_, value)
@@ -197,6 +212,11 @@ local function build()
 	checkbox(comforts, "turnInQuests", "Hand in quests", "Hands in finished quests. A quest with a choice of reward always waits for you. Hold Shift to stop.", false)
 	checkbox(comforts, "skipCinematics", "Skip cinematics", "Cancels cinematics and movies as they start. Hold Shift to watch.", false)
 	checkbox(comforts, "quietErrors", "Quiet errors in combat", "Hides the red \"Not enough mana\" and \"Out of range\" text while you fight; it comes back after.", false)
+	checkbox(comforts, "quietDuels", "Hide other people's duel results", "Lines like \"X has defeated Y in a duel\" stay out of chat, unless they name you.", true)
+	checkbox(comforts, "quietDrunk", "Hide drunken chatter", "Lines about other people getting tipsy or drunk stay out of chat.", true)
+	checkbox(comforts, "declineDuels", "Decline duels", "Turns down duel requests as they come. Hold Shift to see one.", false)
+	checkbox(comforts, "releaseInPvP", "Release in battlegrounds", "Releases your spirit when you die in a battleground, unless you have a soulstone. Hold Shift to stay.", false)
+	checkbox(comforts, "acceptRes", "Accept resurrections", "Takes a resurrection as soon as it's offered, unless whoever cast it is still fighting. Hold Shift to wait.", false)
 
 	-- Merchant
 	local merchant = Stoa.modules.Merchant.db
@@ -215,6 +235,18 @@ local function build()
 	checkbox(Stoa.modules.Emergency.db, "enabled", "Emergency item", "A button for your healthstone, best healing potion or bandage. It stays in view in combat and lights with LOW when your health is under 40%. Takes effect after /reload.", true)
 	dropdown(loot, "show", "Show the loot feed", "When the list above the chat shows.", "WORLD", Stoa.Rules.options({ "WORLD", "ALWAYS", "SOLO", "GROUP", "NEVER" }), function() Stoa:Fire("STOA_RULES_CHANGED") end)
 
+	-- Procs
+	local procs = Stoa.modules.Procs.db
+	header("Procs")
+	checkbox(procs, "art", "Proc art by the Halo", "When something lights up (Clearcasting, Overpower, Shadow Trance...), the game's own proc art shows either side of the Halo. /stoa procs test", true, function()
+		Stoa.modules.Procs:TakeOver(procs.takeOver and procs.art)
+	end)
+	checkbox(procs, "glow", "Glow on the combat bar", "The game's proc glow round the combat bar button that holds the spell.", true, function() Stoa.modules.Procs:UpdateGlows() end)
+	checkbox(procs, "sound", "Proc sound", "The game's own proc chime when Stoa shows proc art.", true)
+	checkbox(procs, "takeOver", "Move the game's proc art to the Halo", "Turns the game's mid-screen proc art off and shows it by the Halo instead, so it never shows twice. Off puts the game's back.", true, function()
+		Stoa.modules.Procs:TakeOver(procs.takeOver and procs.art)
+	end)
+
 	-- Group
 	header("Group tools")
 	local groupRules = Stoa.Rules.options({ "GROUP", "RAID", "ALWAYS", "NEVER" })
@@ -230,6 +262,11 @@ local function build()
 	checkbox(chat, "links", "Clickable web addresses", "Web addresses in chat become links; a click shows the address in a box to copy. Takes effect after /reload.", true)
 	checkbox(chat, "copy", "Copy chat", "A quiet copy mark on the chat, or Shift-click a chat tab, shows the last 200 lines to copy. /stoa copychat. Takes effect after /reload.", true)
 	checkbox(chat, "history", "Keep chat across reloads", "The main chat window's last 100 lines come back after a reload or login, dimmed, above an earlier line.", true)
+	local look = Stoa.modules.ChatLook.db
+	checkbox(look, "times", "Times on chat lines", "Each line starts with a quiet time and a thin rule, so messages line up in a column. Skipped when the game's own timestamps are on.", true)
+	checkbox(look, "air", "More space between chat lines", nil, true, function() Stoa.modules.ChatLook:Air() end)
+	checkbox(look, "rail", "Chat buttons in a column", "Friends, channels, voice and the chat menu in one quiet column down the chat's left side. Takes effect after /reload.", true)
+	checkbox(look, "input", "Quiet typing box", "The box you type in becomes a dark strip under the messages with a fine rule above. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Timers.db, "flights", "Flight timer", "Where you're flying and how long is left, in a slim bar near the top, with times on the flight map. A route without a known time is timed the first time you fly it. /stoa timers shows a sample.", true)
 	checkbox(Stoa.modules.Timers.db, "mirror", "Breath and fatigue in Stoa's bar", "Breath, fatigue and feign death timers in the same slim bar, worded, in place of Blizzard's.", true)
 	checkbox(map, "fade", "Fade the map while moving", "The world map goes see-through while you move, so you can walk with it open.", true, function() Stoa.modules.Map:Refresh() end)

@@ -38,6 +38,9 @@ local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
 	local bottom = CHAT_BOTTOM
+	-- Stoa's typing strip sits under the messages, inside the console.
+	local look = Stoa.modules.ChatLook
+	if look and look.db and look.db.enabled ~= false and look.db.input then bottom = bottom + 8 end
 	local top = artOn() and ART_CHAT_GAP or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
 	chat:ClearAllPoints()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), bottom)
