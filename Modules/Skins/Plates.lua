@@ -264,6 +264,7 @@ local function buildParts(frame)
 		local arrow = holder:CreateTexture(nil, "OVERLAY")
 		arrow:SetSize(14, 22)
 		arrowTexture(arrow, flip)
+		UI.tint(arrow, "text")
 		arrow:SetVertexColor(Stoa:Color("text"))
 		if i == 1 then arrow:SetPoint("RIGHT", bar, "LEFT", -6, 0) else arrow:SetPoint("LEFT", bar, "RIGHT", 6, 0) end
 		arrow:Hide()
@@ -275,6 +276,8 @@ local function buildParts(frame)
 	glow:SetTexture("Interface\\GLUES\\Models\\UI_Draenei\\GenericGlow64")
 	glow:SetBlendMode("ADD")
 	UI.tint(glow, "accent", 0.55)
+	glow:SetVertexColor(Stoa:Color("accent"))
+	glow:SetAlpha(0.55)
 	glow:Hide()
 	parts.glow = glow
 
@@ -464,7 +467,7 @@ function Plates:OnEnable()
 			if frame and frame.stoaDressed then
 				guarded(colourHealth, frame)
 				guarded(colourName, frame)
-				guarded(targetEdge, frame)
+				guarded(applyStyle, frame)
 			end
 		end
 	end)
