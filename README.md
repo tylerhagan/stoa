@@ -2,8 +2,8 @@
 
 A calm, two-state UI suite for **WoW Forever** (interface 16001).
 
-- **World state:** the Grimoire console is open, with chat, party, minimap and quest notes in a bone-and-ink manuscript style.
-- **Combat state:** the console folds to a thin spine and the **Halo** rises around your character: health and mana arcs, your spec's signature in the top slot, core buttons in a ring.
+- **World state:** the Console is open along the bottom: black leather and brass, with chat, party, minimap and notes.
+- **Combat state:** the console folds down flat and the **Halo** rises around your character: health and mana arcs, your spec's signature in the top slot, core buttons in a ring.
 
 Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a small **spec signature** on top. Changing spec swaps the layout automatically.
 
@@ -24,7 +24,7 @@ What works today:
 | Auto-invite | Friends and guildmates who whisper `inv` (in game or over Battle.net) get invited; optionally the keyword works in guild chat. Says so when the group is full or you aren't leader |
 | Tally | Up to eight numbers you choose, to the right of chat on the console (out of combat): stats (attack or spell power, healing, crit, hit, regen, armor, defense and more), gear wear, bag room, gold, professions, zone, watched reputation, time, latency and framerate, plus anything another addon publishes through LibDataBroker (the feeds Titan Panel shows). Right-click it or `/stoa tally` to choose; saved per character, and until then it follows your role |
 | Company | `/stoa friends` or a click on the console's Company page: online friends, Battle.net friends in this game, and guild, with level, zone and AWAY/BUSY. Click to whisper, Shift- or right-click to invite. The console names a few friends online when you're alone |
-| Grimoire console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait seal (click to target yourself) with health and mana either side, and a Ready, Journey and Company page. Holds chat on its left page, with leather tabs standing on its top edge, and keeps bags and the game menu in its bottom-right corner. Strips the action bar art. Folds to a spine in combat |
+| Console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait medallion (click to target yourself) with health and mana either side, and a Ready, Journey and Company page. Holds chat on its left page, with leather tabs standing on its top edge, and keeps bags and the game menu in its bottom-right corner. Strips the action bar art. Folds down flat in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
 | Procs | The game's own proc art either side of the Halo and its proc glow on the combat bar button, from the game's proc events and from Stoa's own reading (usable, free or faster casts) while buffs are hidden; `/stoa procs test` |
 | Game auras | Forever's aura container draws chosen buffs and debuffs with real timers even in combat; `/stoa auras` checks it |

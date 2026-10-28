@@ -500,7 +500,7 @@ a { color: var(--accent); }
             <div class="markstrip" id="marks"></div>
           </div>
 
-          <!-- Grimoire console -->
+          <!-- Console -->
           <div id="console" class="console">
             <div class="leather"></div><div class="edge"></div><div class="edge-lines"></div>
             <div class="medal"></div><div class="medal-lines"></div>
@@ -890,7 +890,7 @@ function setWant(w, quiet) {
   S.want = w;
   if (w) {
     S.calm = 0; S.shown = true;
-    if (!quiet) say('A fight starts', 'The console folds down to a thin spine and the Halo fades in around your character: health on the left, ' + (isCat() ? 'energy' : 'mana') + ' on the right, your spec’s coins beside it and the combat bar underneath.');
+    if (!quiet) say('A fight starts', 'The Console folds down flat and the Halo fades in around your character: health on the left, ' + (isCat() ? 'energy' : 'mana') + ' on the right, your spec’s coins beside it and the combat bar underneath.');
     S.foeHp = 84;
     renderAll(); focusView();
   } else if (S.shown) {
@@ -1156,7 +1156,7 @@ if (window.ResizeObserver) new ResizeObserver(() => { fit(); }).observe(wrap); e
 let saved = 'Bone'; try { saved = localStorage.getItem('stoa-proto-theme') || 'Bone'; } catch (e) {}
 applyTheme(THEMES[saved] ? saved : 'Bone', true);
 fit(); renderAll(); renderRes();
-say('Out of combat', 'The Grimoire console is open along the bottom: chat on the left with its tabs, the tally beside it, your seal in the middle with health and mana either side, and the Ready, Journey and Company pages on the right. Press In combat to see it fold away.');
+say('Out of combat', 'The Console is open along the bottom: chat on the left with its tabs, the tally beside it, your portrait medallion in the middle with health and mana either side, and the Ready, Journey and Company pages on the right. Press In combat to see it fold away.');
 startLoop();
 window.__stoa = { S, setWant, scnCast, scnPull, scnLoot, scnReady, scnLevel, scnNode, scnCat, renderAll };
 })();

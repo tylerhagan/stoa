@@ -207,7 +207,7 @@ function Party:BuildGrid()
 	handle:SetScript("OnEnter", function(button)
 		self:Peek("handle", true)
 		GameTooltip:SetOwner(button, "ANCHOR_TOPLEFT")
-		GameTooltip:SetText("Your hands")
+		GameTooltip:SetText("Click grid")
 		GameTooltip:AddLine(self:GridMode() == "open" and "Click to fold it to this line. It opens while you hover a card or hold Shift."
 			or "Click to keep it open.", 1, 1, 1, true)
 		GameTooltip:Show()
@@ -267,7 +267,7 @@ function Party:UpdateGridBody()
 	if not grid then return end
 	local open = self:GridMode() == "open" or next(self.peeks) ~= nil
 	grid.body:SetShown(open)
-	grid.title:SetText(open and "YOUR HANDS · CLICK-CAST ON ANY CARD" or "YOUR HANDS · HOVER A CARD OR HOLD SHIFT")
+	grid.title:SetText(open and "CLICK GRID · CLICK-CAST ON ANY CARD" or "CLICK GRID · HOVER A CARD OR HOLD SHIFT")
 end
 
 function Party:UpdateGrid()

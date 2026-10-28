@@ -63,8 +63,8 @@ local function build()
 		Stoa:SetVision(value)
 	end)
 	dropdown(Stoa.db, "ornament", "Ornament", "Plain keeps Stoa's fine lines. Painted puts leather and brass frames on the few one-of-a-kind pieces: the minimap (a slim leather and brass rim on the square or round map), the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent. Takes effect after /reload.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } })
-	checkbox(Stoa.modules.Grimoire.db, "enabled", "Show the Grimoire console", "The ink console along the bottom of the screen. Takes effect after /reload.", true)
-	checkbox(Stoa.modules.Grimoire.db, "art", "Leather console", "Dress the console in tooled leather, its lines in your theme's accent. Off gives the plain ink panel. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Grimoire.db, "enabled", "Show the console", "The leather console along the bottom of the screen. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Grimoire.db, "art", "Leather console", "Dress the console in tooled leather, its lines in your theme's accent. Off gives a plain dark panel. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Grimoire.db, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and Stoa's notes appear in chat. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Tally.db, "enabled", "Tally beside the chat", "Up to eight numbers you choose (stats, gear, gold, professions, other addons' feeds) to the right of chat on the console. Right-click it or use /stoa tally to choose. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.Minimap.db, "enabled", "Style the minimap", "Theme-coloured edge, serif zone name, wheel to zoom. Takes effect after /reload.", true)
@@ -125,14 +125,14 @@ local function build()
 		if value then Stoa.modules.Meters:Place() end
 	end)
 	checkbox(Stoa.modules.Grimoire.db, "houseMenu", "Bags and menu in the console corner", "Moves the bag slots and game menu off the action bar row into the console's bottom-right corner, quiet until you mouse over them. Takes effect after /reload.", true)
-	checkbox(Stoa.modules.Grimoire.db, "hideBarArt", "Hide action bar art", "Removes the gryphons and border so the bar sits on the ink. Takes effect after /reload.", true)
+	checkbox(Stoa.modules.Grimoire.db, "hideBarArt", "Hide action bar art", "Removes the gryphons and border so the bar sits on the console. Takes effect after /reload.", true)
 
 	-- Halo
 	local halo = Stoa.modules.Halo.db
 	local party = Stoa.modules.Party.db
 	header("Combat")
 	checkbox(halo, "enabled", "Show the Halo in combat", "Health, mana, your signature spell, target and cast around your character. Takes effect after /reload.", true)
-	checkbox(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The seal and the Halo show the same. Also hides Blizzard's cast bar. Takes effect after /reload.", true)
+	checkbox(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar. Takes effect after /reload.", true)
 	checkbox(halo, "hideTargetFrame", "Hide Blizzard's target frame", "Stoa shows your target beside the Halo. Takes effect after /reload.", true)
 	local console = Stoa.modules.Grimoire.db
 	local function manaPlay()

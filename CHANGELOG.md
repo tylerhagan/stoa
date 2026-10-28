@@ -72,7 +72,7 @@ Everything below is on the launch branch and not yet in a numbered release.
 First numbered build, for the WoW Forever beta (interface 16001).
 
 - Core: event bus, modules, account and per-character saved settings, a schema version, and a settings backup you can copy as text (`/stoa backup`).
-- Two states: the Grimoire console out of combat (leather panel, chat on its left page, Ready, Journey and Company pages) and the Halo in combat (health and mana arcs, signature spell, target and cast bar), with a 3 second calm-down.
+- Two states: the Console out of combat (leather panel, chat on its left page, Ready, Journey and Company pages) and the Halo in combat (health and mana arcs, signature spell, target and cast bar), with a 3 second calm-down.
 - Layouts per role (Tank, Healer, Melee DPS, Ranged DPS) following your dual-spec slots.
 - Bone, Tide and Graphite themes.
 - Tank watch and target plaques, party cards, raid frames for healing, and fifteen click-casting bindings per role.
