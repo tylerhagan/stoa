@@ -4,7 +4,7 @@
 -- up when something is added.
 --
 --   StoaAPI:RegisterTally(key, { label = "Name", value = function() return "12", warn end }, "Group")
---       A line other players can pick for the tally beside the chat.
+--       A line other players can pick for At a glance, beside the chat.
 --   StoaAPI:On(message, fn)
 --       Stoa's own messages: STOA_STATE_CHANGED (state), STOA_ROLE_CHANGED
 --       (role, previous), STOA_THEME_CHANGED, STOA_GROUP_CHANGED (kind).

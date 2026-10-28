@@ -22,7 +22,7 @@ What works today:
 | Moving windows | Hold Shift and drag a quest, gossip, merchant, bag, character, spellbook, mail, auction or similar window by its title or edge. Each keeps its spot whenever it opens again; Shift and right-click puts one back. Shift-clicking items still splits and links as usual |
 | Social | Accept invites from friends and guild; decline duels, party and guild invites from strangers |
 | Auto-invite | Friends and guildmates who whisper `inv` (in game or over Battle.net) get invited; optionally the keyword works in guild chat. Says so when the group is full or you aren't leader |
-| Tally | Up to eight numbers you choose, to the right of chat on the console (out of combat): stats (attack or spell power, healing, crit, hit, regen, armor, defense and more), gear wear, bag room, gold, professions, zone, watched reputation, time, latency and framerate, plus anything another addon publishes through LibDataBroker (the feeds Titan Panel shows). Right-click it or `/stoa tally` to choose; saved per character, and until then it follows your role |
+| At a glance | Up to eight numbers you choose, to the right of chat on the console (out of combat): stats (attack or spell power, healing, crit, hit, regen, armor, defense and more), gear wear, bag room, gold, professions, zone, watched reputation, time, latency and framerate, plus anything another addon publishes through LibDataBroker (the feeds Titan Panel shows). Right-click it or `/stoa tally` to choose; saved per character, and until then it follows your role |
 | Company | `/stoa friends` or a click on the console's Company page: online friends, Battle.net friends in this game, and guild, with level, zone and AWAY/BUSY. Click to whisper, Shift- or right-click to invite. The console names a few friends online when you're alone |
 | Console | Out of combat, on a tooled leather panel whose lines take your theme accent: portrait medallion (click to target yourself) with health and mana either side, and a Ready, Journey and Company page. Holds chat on its left page, with leather tabs standing on its top edge, and keeps bags and the game menu in its bottom-right corner. Strips the action bar art. Folds down flat in combat |
 | Halo | In combat: health and mana arcs, signature spell with cooldown, target and cast bar around your character |
@@ -62,12 +62,12 @@ What works today:
 | Error guard | Stoa records its own errors once each with a count. If one part keeps erroring (a loop), it is switched off until the next reload and Stoa says so in chat, so an error can't lock up the screen. `/stoa report` shows your setup and the errors, ready to copy |
 | Backup | All of Stoa's settings as one line of text to keep safe, and a place to paste one back to restore it |
 | Shared core | Shared helpers every feature leans on: the spellbook read once (best rank of each spell, costs), item worth (level, sell price, against what you wear, junk), your group as a list, mana and the five-second rule, one set of show rules (always, in or out of combat, in a group or raid, alone, with a target, on mouseover, never), settings kept per spec, and unit events asked of the game for just the units that matter |
-| Per spec | Combat rows, the click grid, the bar tray and the tally keep their own setting in each spec, so a healing spec and a damage spec each look right without changing anything |
+| Per spec | Combat rows, the click grid, the bar tray and At a glance keep their own setting in each spec, so a healing spec and a damage spec each look right without changing anything |
 | Mana play | For every mana user: a small spark runs along the Halo's mana arc and the console's mana bar while the five-second rule holds back spirit regeneration, then pulses on each regeneration tick; while you cast, the mana the spell will take is shaded; druids in cat or bear form see their mana as a slim bar under the power number. Each has its own setting |
 | Auto-uprank | When you learn a new spell rank, bar slots holding an older rank get the new one, out of combat and never with something on your cursor; macros are left alone. A quiet line says what changed. `/stoa uprank` runs it now |
 | Quest reward | With a choice of rewards, the one that beats what you wear is marked UPGRADE (largest gain), otherwise the one that sells for most is marked VALUE, with a thin accent outline and a small word |
 | Junk list | A Junk button on Stoa's bag turns on marking: click items to mark or unmark them (it turns off when the bag closes or a fight starts). Marked items show JUNK, sell with the greys, and say so on their tooltip. `/stoa junk add\|remove <item>`, `list`, `clear` |
-| Loot feed | Your last few loots and money above the chat, out of combat by default, fading after about 8 seconds. Gold an hour and loot value this session are tally lines. `/stoa loot`, `/stoa loot reset` |
+| Loot feed | Your last few loots and money above the chat, out of combat by default, fading after about 8 seconds. Gold an hour and loot value this session are lines for At a glance. `/stoa loot`, `/stoa loot reset` |
 | Threat meter | Up to five people by threat on your target, or your tank's, with the tank first and marked TANK, under the damage meters and in their style. In combat in a group by default. Non-tanks see PULLING AGGRO with the percent on the target plaque at 90% |
 | Raid markers | For tanks and leaders in a group, eight markers and clear: click marks your target, Shift-click places a world marker. Movable |
 | Group buffs | Out of combat, the console's Ready page says who in range is missing a buff you can cast (FORTITUDE · 3 missing; any blessing counts for paladins), and the same line shows during a ready check |
@@ -80,8 +80,8 @@ What works today:
 | Trainer | A line under Journey on the console counting the spells and ranks your class trainer would teach you now (Data/TrainerSpells.lua); later ranks only once you know the spell, other races' and factions' spells left out. A note when a new level brings some; `/stoa trainer` lists them |
 | Gathering | Herb and ore node tooltips show the skill they need against yours, with TOO LOW when you're short (English names for now) |
 | Snapping | In unlock mode frames snap to the screen's edges and centre and to other frames within 8px, with a faint guide line; hold Shift to drop freely. A frame snapped to another is kept against it, so moving the Halo carries its plaques |
-| Presets | The welcome page offers a start: Full (everything), Quiet (fewer words: no tooltip details, quest line or tally, extra bar rows on mouseover) or Classic feel (Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates, with Stoa's console, Halo and frames). `/stoa preset` |
-| For other addons | `StoaAPI`: add tally lines, hear Stoa's state, role and theme changes, and borrow its colours and fonts. See `Core/API.lua` |
+| Presets | The welcome page offers a start: Full (everything), Quiet (fewer words: no tooltip details, quest line or At a glance, extra bar rows on mouseover) or Classic feel (Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates, with Stoa's console, Halo and frames). `/stoa preset` |
+| For other addons | `StoaAPI`: add lines to At a glance, hear Stoa's state, role and theme changes, and borrow its colours and fonts. See `Core/API.lua` |
 | Settings | Options > AddOns > Stoa (the settings panel's own search box finds any Stoa setting) |
 
 Fonts are the main gap: see below.
@@ -100,7 +100,7 @@ Fonts are the main gap: see below.
 | `/stoa theme` | Cycle the themes (house, Your class, then each class) |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa friends` | Open the Company roster |
-| `/stoa tally` | List what the tally can show; `/stoa tally add <name>`, `remove <name>`, `reset` |
+| `/stoa glance` | List what At a glance can show; `/stoa glance add <name>`, `remove <name>`, `reset` (`/stoa tally` still works) |
 | `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build |
 | `/stoa report` | Your version, game build, spec, theme and any errors Stoa caught, ready to copy |

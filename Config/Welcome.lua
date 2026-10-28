@@ -29,7 +29,7 @@ end
 local PRESET_ORDER = { "full", "quiet", "classic" }
 local PRESET_WORDS = {
 	full = { "Full", "Everything on, as Stoa ships." },
-	quiet = { "Quiet", "Fewer words: no unit details, quest line or Tally." },
+	quiet = { "Quiet", "Fewer words: no unit details, quest line or At a glance." },
 	classic = { "Classic feel", "Blizzard's look for windows, bags and tooltips." },
 }
 local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "Tooltip", "Top", "Plates" }

@@ -174,7 +174,7 @@ local APIS = {
 	{ "C_Item.GetItemStats", "gear scores for your role" },
 	{ "UnitInRange", "group buff reminders" },
 	{ "LinkUtil.RegisterLinkHandler", "clickable web addresses in chat" },
-	{ "GetProfessions", "gathering skill on tooltips and the tally" },
+	{ "GetProfessions", "gathering skill on tooltips and At a glance" },
 }
 
 -- Blizzard frames Stoa dresses or takes the place of.
