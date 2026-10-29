@@ -130,6 +130,12 @@ strip = sample(XX, YY).mean(1)
 strip = unpremultiply(strip[:, None, :].repeat(1, 1))[:, 0]
 strip[:, 3] = haze(strip[:, 3])
 edge = np.repeat(strip[:, None, :], 16, 1)
+if FRAME:
+    # The painting's band under the line is flat (averaged along it) and
+    # reads as a grey stripe over the console's own grained leather: keep a
+    # soft shadow just under the line and let the leather tile show below.
+    under = np.clip((EDGE_LINE + 7.5 - rows) / 3, 0, 1)
+    edge[..., 3] *= under[:, None]
 if not CLEAN:
     save(edge, brass(edge), "ConsoleEdge")
 
