@@ -21,6 +21,13 @@ EDGE_LINE = 43        # edge strip row of the brass line's centre
 MED_LINE = 263        # medallion row of the same line
 MED_CX = MED_W / 2 - 0.5
 FULL_RING = RING < 110  # the first painting's rings stop above its bottom line
+# "frame": the flourish painting (source/console-basis-flourish.png), one
+# big ring with a bracket either side, the top line through the ring's
+# centre. Its ring is found further out, the plain stretch of line is short,
+# and the brackets are kept as well as the ring.
+FRAME = len(sys.argv) > 5 and sys.argv[5] == "frame"
+if FRAME:
+    FULL_RING = True
 
 img = Image.open(src).convert("RGBA")
 a = np.array(img).astype(float)
@@ -37,10 +44,10 @@ def brass(px):
 # Find the ring in the painting: the inner ring's brass ridge along rays
 # from a rough centre, then an axis-aligned ellipse through it.
 B = brass(a) * (a[..., 3] > 200)
-cx0, cy0 = a.shape[1] / 2 - 1, 446.0
+cx0, cy0 = a.shape[1] / 2 - 1, (340.0 if FRAME else 446.0)
 pts = []
 for t in np.radians(np.r_[200:340:4, 25:155:4]):  # below the line, and the dome
-    rs = np.arange(85, 118, 0.5)
+    rs = np.arange(280, 330, 0.5) if FRAME else np.arange(85, 118, 0.5)
     xs, ys = cx0 + rs * np.cos(t), cy0 + rs * np.sin(t)
     v = B[ys.astype(int), xs.astype(int)]
     if v.max() > 0.3:
@@ -57,15 +64,18 @@ k = 1 + D_ ** 2 / (4 * A_) + E_ ** 2 / (4 * C_)
 rx, ry = np.sqrt(k / A_), np.sqrt(k / C_)
 
 # The brass line along the top: weighted row over the plain panel.
-col = B[:, 200:int(cx - 400)].mean(1)
-band = np.arange(int(cy), int(cy) + 30)
+PLAIN = (20, 260) if FRAME else (200, int(cx - 400))
+col = B[:, PLAIN[0]:PLAIN[1]].mean(1)
+band = np.arange(int(cy) - 30, int(cy) + 10) if FRAME else np.arange(int(cy), int(cy) + 30)
 yl = (band * col[band] ** 2).sum() / (col[band] ** 2).sum()
 
 # and the bottom line, the first strong brass row under the ring
-colb = B[:, 200:int(cx - 400)].mean(1)
-yb = int(cy + ry) + np.argmax(colb[int(cy + ry):] > 0.3)
+colb = B[:, PLAIN[0]:PLAIN[1]].mean(1)
+start = int(cy + 60) if FRAME else int(cy + ry)  # the frame's line runs inside the ring
+yb = start + np.argmax(colb[start:] > 0.3)
 
 s = RING / rx
+print("bottom line row", yb)
 print(f"painting ring centre {cx:.1f},{cy:.1f} radii {rx:.1f}x{ry:.1f}, line row {yl:.1f}, scale {s:.3f}")
 
 # premultiplied, so soft edges don't pick up dark fringes
@@ -107,7 +117,7 @@ def save(px, lines_alpha, name):
 # Edge strip: 16x64, the panel's profile averaged along the plain stretch.
 rows = np.arange(64, dtype=float)
 py = yl + (rows - EDGE_LINE) / s
-xs = np.arange(200, int(cx - 400), 2, dtype=float)
+xs = np.arange(PLAIN[0], PLAIN[1], 2, dtype=float)
 XX, YY = np.meshgrid(xs, py)
 strip = sample(XX, YY).mean(1)
 strip = unpremultiply(strip[:, None, :].repeat(1, 1))[:, 0]
@@ -139,8 +149,21 @@ if FULL_RING:
     # edge (found straight up from the centre), so the painting's bottom
     # line only shows where it runs under the ring.
     up = brass(med)[:int(MED_CY), int(MED_CX)]
-    r_out = MED_CY - np.argmax(up > 0.3) + 1.5
+    r_out = MED_CY - np.argmax(up > (0.5 * up.max() if FRAME else 0.3)) + 1.5
     ring_keep = np.clip((r_out - d) / 1.5, 0, 1)
+    print("outer ring radius", r_out)
+    if FRAME:
+        # The brackets outside the ring stay too: their brass and its
+        # shading, down to just above the painting's bottom line.
+        from PIL import ImageFilter
+        lit = Image.fromarray((np.clip(brass(med) * 8, 0, 1) * 255).astype(np.uint8))
+        lit = lit.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(1.2))
+        # The lower ends run into the painting's bottom line, which the
+        # console doesn't have (health and mana sit there): they fade out
+        # just above it.
+        foot = np.clip((yb - 4 - px_y) * s / 8, 0, 1)
+        bracket = np.array(lit).astype(float) / 255 * (d < r_out * 1.45) * foot
+        ring_keep = np.maximum(ring_keep, bracket)
     med[..., 3] *= np.maximum(band_keep, ring_keep) * side
 else:
     # The painting's bottom line runs just under the rings; the console has

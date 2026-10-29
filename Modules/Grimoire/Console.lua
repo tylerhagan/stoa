@@ -25,7 +25,7 @@ local Console = Stoa:NewModule("Grimoire", {
 local SPINE_HEIGHT = 22
 local ARCH_SIZE = 220
 local SEAL_SIZE = 76
-local ART_SEAL_SIZE = 92
+local ART_SEAL_SIZE = 110
 
 -- The leather panel art: a repeating leather tile for the panel, a gold
 -- top edge along it, and the medallion around the seal, all cut from one
@@ -34,18 +34,19 @@ local ART_SEAL_SIZE = 92
 -- the top of the panel is texel 37 of the edge strip and 257 of the
 -- medallion, and the leather starts 17 texels down, under the gold lines.
 -- Tools/art/console_cut.py cuts the edge and medallion from the painting
--- (Tools/art/source/console-basis.png) and prints these rows.
+-- (Tools/art/source/console-basis-flourish.png, cut with ring 124, width
+-- 1024 and "frame") and prints these rows.
 local ART_HEIGHT = 176
 local ART_SCALE = 0.556
 Console.ART_SCALE = ART_SCALE
 local LEATHER_W, LEATHER_H = 1024, 256
-local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 17
+local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 36, 17
 local MEDALLION_WIDTH, MEDALLION_LINE = 1024, 257
 -- The ring's centre row in the medallion texture; the seal sits on it.
-local MEDALLION_CENTRE = 258.3
+local MEDALLION_CENTRE = 267.6
 local MEDALLION_SCALE = ART_SCALE
 -- How far either side of centre the medallion's shoulders reach.
-local MEDALLION_REACH = 470 * MEDALLION_SCALE
+local MEDALLION_REACH = 310 * MEDALLION_SCALE
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30
@@ -257,7 +258,8 @@ end
 -- nearest the seal, the caption at the outer end, and the bar fills
 -- towards the seal.
 local RESOURCE_WIDTH = 170
-local RING_RADIUS = 122.5 * ART_SCALE
+-- Out to the brackets either side of the ring.
+local RING_RADIUS = 150 * ART_SCALE
 local RESOURCE_Y = -44
 
 function Console:BuildResources(frame)

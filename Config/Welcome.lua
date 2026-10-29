@@ -113,11 +113,15 @@ function Welcome:Build()
 	UI.windowPanel(page, 0.97, { header = 108, footer = 66 })
 	self.page = page
 
-	local title = UI.text(page, "serif", Stoa.typeSize.hero, "text")
-	title:SetPoint("TOPLEFT", PAD, -PAD)
-	title:SetText("Stoa")
+	-- The wordmark, in the theme's accent (white with alpha, 1024x256; the
+	-- letters fill 4-1020 across and 32-224 down).
+	local title = page:CreateTexture(nil, "ARTWORK")
+	title:SetTexture(UI.MEDIA .. "Textures\\Wordmark")
+	title:SetSize(200, 50)
+	title:SetPoint("TOPLEFT", PAD - 1, -PAD + 6)
+	UI.tint(title, "accent")
 	local lede = UI.text(page, "italic", Stoa.typeSize.label, "muted")
-	lede:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
+	lede:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 1, 0)
 	lede:SetText("Out of combat, the console. In combat, the Halo.")
 
 	-- What each spec slot plays. Layouts and signatures follow the role.
