@@ -7,8 +7,8 @@
 --   other addon is later removed, Stoa's part comes back by itself.
 --   Use Stoa's: the other addon is turned off and the UI reloads.
 -- Until a choice is made, Stoa's part steps aside, so nothing fights.
--- A full UI suite (ElvUI and the like) covers everything, so that question
--- is which of the two addons to run at all.
+-- A whole UI (ElvUI, SpartanUI and the like) can't share the screen with
+-- Stoa: Stoa says so and asks the player to turn one of the two off.
 -- /stoa addons lists what was found and asks again.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -164,7 +164,7 @@ function Conflicts:Build()
 
 	local title = UI.text(page, "serif", Stoa.typeSize.title, "text", "LEFT")
 	title:SetPoint("TOPLEFT", PAD, -PAD + 4)
-	title:SetText("Two addons, one job")
+	page.title = title
 
 	local body = UI.text(page, "sans", Stoa.typeSize.label, "text", "LEFT")
 	body:SetPoint("TOPLEFT", PAD, -82)
@@ -192,12 +192,17 @@ function Conflicts:Ask(entry)
 	local single = #entry.loaded == 1
 	local everyone = { unpack(entry.loaded) }
 	everyone[#everyone + 1] = { "Stoa", "Stoa" }
-	page.body:SetText(("%s %s look after %s. Pick one so they don't get in each other's way."):format(names(everyone), single and "both" or "all", rule.job))
-	page.theirs.text:SetText(single and ("Keep " .. them) or "Keep theirs")
 	if rule.suite then
-		page.ours.text:SetText("Use Stoa")
-		page.note:SetText("Either way the other one is turned off and the game reloads.")
+		-- A whole UI and Stoa can't share the screen: no keeping both.
+		page.title:SetText("These don't work together")
+		page.body:SetText(("Stoa and %s are both whole interfaces and don't work together. Please turn one of them off."):format(them))
+		page.note:SetText("Either button turns that addon off and reloads.")
+		page.theirs.text:SetText("Turn Stoa off")
+		page.ours.text:SetText(single and ("Turn " .. them .. " off") or "Turn the others off")
 	else
+		page.title:SetText("Two addons, one job")
+		page.body:SetText(("%s %s look after %s. Pick one so they don't get in each other's way."):format(names(everyone), single and "both" or "all", rule.job))
+		page.theirs.text:SetText(single and ("Keep " .. them) or "Keep theirs")
 		page.ours.text:SetText("Use Stoa's")
 		page.note:SetText(("Stoa's part waits until you choose. Using Stoa's turns %s off and reloads; /stoa addons asks again."):format(them))
 	end

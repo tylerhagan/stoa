@@ -10,7 +10,7 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
-- Other addons: when a known bag, nameplate, chat, tooltip, bar, minimap, group frame, click-casting, window mover or map addon (or a whole UI like ElvUI) is loaded, Stoa asks which one should do the job, and its own part waits until you choose; `/stoa addons` asks again.
+- Other addons: when a known bag, nameplate, chat, tooltip, bar, minimap, group frame, click-casting, window mover or map addon is loaded, Stoa asks which one should do the job, and its own part waits until you choose; `/stoa addons` asks again. A whole UI like ElvUI or SpartanUI doesn't work beside Stoa: Stoa says so and offers to turn either off.
 - Tally is now called At a glance; `/stoa glance` (the old `/stoa tally` still works).
 - New console art: a bigger medallion ring held by a slender brass bracket either side; the portrait is a size larger (new textures: restart the game once).
 - The Stoa wordmark on the welcome page and the logo as the addon's icon.
