@@ -26,6 +26,7 @@ FULL_RING = RING < 110  # the first painting's rings stop above its bottom line
 # centre. Its ring is found further out, the plain stretch of line is short,
 # and the brackets are kept as well as the ring.
 FRAME = len(sys.argv) > 5 and sys.argv[5] == "frame"
+BRACKET_RUN = float(sys.argv[6]) if len(sys.argv) > 6 else 1.35  # how far the bottom line runs, in ring radii
 if FRAME:
     FULL_RING = True
 
@@ -161,8 +162,11 @@ if FULL_RING:
         # The lower ends run into the painting's bottom line, which the
         # console doesn't have (health and mana sit there): they fade out
         # just above it.
-        foot = np.clip((yb - 4 - px_y) * s / 8, 0, 1)
-        bracket = np.array(lit).astype(float) / 255 * (d < r_out * 1.45) * foot
+        # Down through the curve where they meet that line, then the line
+        # itself fades out within a short stretch either side.
+        foot = np.clip((yb + 22 - px_y) * s / 3, 0, 1)
+        line = np.where(px_y > yb - 6, np.clip((r_out * BRACKET_RUN - np.abs(dx)) / (r_out * 0.18), 0, 1), 1)
+        bracket = np.array(lit).astype(float) / 255 * (d < r_out * 1.6) * foot * line
         ring_keep = np.maximum(ring_keep, bracket)
     med[..., 3] *= np.maximum(band_keep, ring_keep) * side
 else:
