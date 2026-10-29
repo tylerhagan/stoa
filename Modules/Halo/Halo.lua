@@ -458,10 +458,7 @@ function Halo:UpdateTarget()
 
 	-- Level and kind on the caption; elite and rare say so and change the
 	-- plaque's line.
-	local function plain(value)
-		if Stoa:IsSecret(value) then return nil end
-		return value
-	end
+	local plain = Stoa.safe.plain
 	local rank = plain(UnitClassification("target"))
 	local level = plain(UnitLevel("target"))
 	local kind = plain(UnitCreatureType("target"))

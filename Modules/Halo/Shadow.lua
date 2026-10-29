@@ -84,12 +84,7 @@ local function findAura(unit, key, filter)
 	end
 end
 
--- Seconds left on an aura, or nil when the times are hidden.
-local function auraLeft(aura)
-	local expires = Stoa:PlainNumber(aura and aura.expirationTime)
-	if not expires or expires == 0 then return nil end
-	return expires - GetTime()
-end
+local auraLeft = Stoa.aura.left
 
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.

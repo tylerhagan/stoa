@@ -56,11 +56,7 @@ local function nameOf(key)
 	return names[key]
 end
 
-local function auraByName(unit, name, filter)
-	if not name or not (C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName) then return nil end
-	local ok, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, unit, name, filter)
-	if ok then return aura end
-end
+local auraByName = Stoa.aura.byName
 
 -- When a spell comes back and its cooldown's length; nil when it's ready.
 -- The third value says whether the game would say at all (it won't in

@@ -48,10 +48,7 @@ local IsActionInRange = api("IsActionInRange")
 local GetActionCount = api("GetActionCount")
 local GetActionInfo = api("GetActionInfo")
 
-local function plain(value)
-	if Stoa:IsSecret(value) then return nil end
-	return value
-end
+local plain = Stoa.safe.plain
 
 -- "SHIFT-Q" reads as "s-Q", like Blizzard's short labels.
 local function shortKey(key)

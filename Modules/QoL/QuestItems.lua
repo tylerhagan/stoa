@@ -16,11 +16,7 @@ local QuestItems = Stoa:NewModule("QuestItems", {
 local SIZE = 38
 local GAP = 6
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b, c, d = pcall(fn, ...)
-	if ok then return a, b, c, d end
-end
+local call = Stoa.safe.call
 
 -- The quest items in your log, as links, one per quest, in log order.
 function QuestItems:Collect()

@@ -95,17 +95,9 @@ local function hasTalent(key)
 	return id and not Stoa:IsSecret(id) and knows(id) or false
 end
 
-local function auraByName(unit, name, filter)
-	if not name or not (C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName) then return nil end
-	local ok, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, unit, name, filter)
-	if ok then return aura end
-end
+local auraByName = Stoa.aura.byName
 
-local function auraLeft(aura)
-	local expires = Stoa:PlainNumber(aura and aura.expirationTime)
-	if not expires or expires == 0 then return nil end
-	return expires - GetTime()
-end
+local auraLeft = Stoa.aura.left
 
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.

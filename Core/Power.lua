@@ -20,16 +20,7 @@ local MANA = Enum and Enum.PowerType and Enum.PowerType.Mana or 0
 
 local lastSpend, lastTick, lastMana = 0, nil, nil
 
--- Passes on every result after a clean pcall, not just two: UnitCastingInfo's
--- spell ID is its ninth.
-local function passOn(ok, ...)
-	if ok then return ... end
-end
-
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	return passOn(pcall(fn, ...))
-end
+local call = Stoa.safe.call
 
 -- Mana and its maximum as plain numbers, whatever form you're in, or nil
 -- when the game keeps them hidden.
