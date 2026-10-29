@@ -218,9 +218,13 @@ function Welcome:Build()
 
 	local done = UI.button(page, "Done", 96, function() page:Hide() end)
 	done:SetPoint("BOTTOMRIGHT", -PAD, PAD - 8)
+	-- A setup another character saved (Config/Setups.lua): only when there is one.
+	local setups = UI.button(page, "Use a saved setup", 150, function(button) Stoa.Setups:Menu(button) end)
+	setups:SetPoint("RIGHT", done, "LEFT", -8, 0)
+	setups:SetShown(Stoa.Setups and #Stoa.Setups:List() > 0)
 	local foot = UI.text(page, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	foot:SetPoint("BOTTOMLEFT", PAD, PAD)
-	foot:SetPoint("RIGHT", done, "LEFT", -16, 0)
+	foot:SetPoint("RIGHT", setups:IsShown() and setups or done, "LEFT", -16, 0)
 	foot:SetText("/stoa welcome brings this back. If a skin ever breaks Blizzard's UI, /stoa safe turns them off.")
 
 	UI.applyTheme()

@@ -95,4 +95,8 @@ end
 
 Stoa:On("PLAYER_LOGIN", function() Stoa:SwapSpecSettings() end)
 Stoa:On("ACTIVE_TALENT_GROUP_CHANGED", function() Stoa:SwapSpecSettings() end)
-Stoa:On("PLAYER_LOGOUT", function() store(currentSlot) end)
+Stoa:On("PLAYER_LOGOUT", function()
+	-- A saved setup being loaded (Config/Setups.lua) brings its own values.
+	if Stoa.loadingSetup then return end
+	store(currentSlot)
+end)

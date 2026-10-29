@@ -1,5 +1,6 @@
 -- Stoa: addons made to sit beside Stoa.
--- Some addons aren't rivals but companions. OneForAll brings what Stoa
+-- Some addons aren't rivals but companions. Leatrix Plus is a box of small
+-- helpers, many of which Stoa has too. OneForAll brings what Stoa
 -- doesn't (dungeons and loot, quests, professions, Library Books, talent
 -- plans) plus a handful of small helpers Stoa has too. Where both would do
 -- the same small job, such as selling junk, looting faster, moving windows
@@ -37,11 +38,14 @@ local JOBS = {
 	keywordInvites = "invites by keyword",
 	duels = "declining duels",
 	squareMinimap = "a square minimap",
+	skipGossip = "skipping one-option gossip",
+	releaseInPvP = "releasing in battlegrounds",
+	acceptRes = "accepting resurrections",
 }
 local JOB_ORDER = {
 	"fastLoot", "sellJunk", "repair", "lootFeed", "acceptQuests", "turnInQuests", "camera",
 	"windows", "chatCopy", "tooltipTarget", "gearUpgrade", "invites", "keywordInvites", "duels",
-	"squareMinimap",
+	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes",
 }
 
 -- Each companion: its folder, the name players know, and how to read its
@@ -67,6 +71,23 @@ local COMPANIONS = {
 		end,
 		-- Its welcome page, shown once on a first login.
 		welcome = "OneForAllWelcome",
+	},
+	{
+		folder = "Leatrix_Plus", name = "Leatrix Plus",
+		-- Leatrix Plus keeps each switch in LeaPlusDB as "On" or "Off". The
+		-- names are Leatrix Plus's own; one it renames simply stops counting
+		-- as shared, and Stoa's copy does the job again.
+		keys = {
+			fastLoot = "FasterLooting", sellJunk = "AutoSellJunk", repair = "AutoRepairGear",
+			acceptQuests = "AutomateQuests", turnInQuests = "AutomateQuests", skipGossip = "AutomateGossip",
+			camera = "MaxCameraZoom", invites = "AcceptPartyFriends", keywordInvites = "InviteFromWhisper",
+			duels = "NoDuelRequests", squareMinimap = "SquareMinimap",
+			releaseInPvP = "AutoReleasePvP", acceptRes = "AutoAcceptRes",
+		},
+		get = function(key)
+			local db = _G.LeaPlusDB
+			return type(db) == "table" and db[key] == "On"
+		end,
 	},
 }
 

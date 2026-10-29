@@ -137,6 +137,8 @@ local function paintCoin(coin, state)
 	local r, g, b = Stoa:Color(token)
 	coin.ring:SetVertexColor(r, g, b, state == "cooling" and 0.6 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "cooling" and "muted" or token))
+	UI.coinArt(coin, SPELLS[coin.key])
+	UI.coinLit(coin, state ~= "cooling")
 end
 
 function Disc:CoinState(coin)
