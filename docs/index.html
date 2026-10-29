@@ -379,6 +379,7 @@ p code,li code,dd code{white-space:normal;overflow-wrap:anywhere}
 <tr><td><code>/stoa welcome</code></td><td>Open the welcome page: roles per spec, theme, previews</td></tr>
 <tr><td><code>/stoa check</code></td><td>Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build</td></tr>
 <tr><td><code>/stoa report</code></td><td>Your version, game build, spec, theme and any errors Stoa caught, ready to copy</td></tr>
+<tr><td><code>/stoa addons</code></td><td>List other addons doing one of Stoa's jobs and ask again which to keep</td></tr>
 <tr><td><code>/stoa backup</code></td><td>Copy your settings as text, or paste a backup to restore it</td></tr>
 <tr><td><code>/stoa procs test</code></td><td>Show the proc art and glow to check them</td></tr>
 <tr><td><code>/stoa auras</code></td><td>Check the game's aura container</td></tr>
@@ -403,6 +404,7 @@ p code,li code,dd code{white-space:normal;overflow-wrap:anywhere}
 <ol class="steps">
 <li><strong>After a game patch.</strong> On the first login with a new game build, Stoa checks every spell, game function and Blizzard frame it relies on, and says in one line if something moved. <code>/stoa check</code> lists the details.</li>
 <li><strong>A skin looks wrong or errors.</strong> <code>/stoa safe</code> turns off every skin that touches Blizzard's frames and reloads. Stoa's own frames keep working.</li>
+<li><strong>Another addon does the same job.</strong> With a bag, nameplate, chat, tooltip, bar, minimap, group frame or click-casting addon (or a whole UI such as ElvUI) loaded, Stoa asks once which should do that job, and its own part waits until you choose. <code>/stoa addons</code> asks again.</li>
 <li><strong>Something keeps erroring.</strong> If one part of Stoa errors over and over, Stoa switches that part off for the session and says so in chat, so an error can't lock up your screen.</li>
 <li><strong>To report it.</strong> <code>/stoa report</code> opens a page with your version, game build, spec, theme and the errors Stoa caught. Copy it and send it along.</li>
 <li><strong>Before big changes.</strong> <code>/stoa backup</code> gives all your settings as one line of text to keep; paste one back to restore it.</li>

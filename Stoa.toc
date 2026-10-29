@@ -22,6 +22,7 @@ Core\Roles.lua
 Core\State.lua
 Core\Movers.lua
 Core\Widgets.lua
+Core\Conflicts.lua
 Core\Figures.lua
 Core\Spells.lua
 Core\Items.lua
