@@ -749,8 +749,10 @@ function Console:AddPage(page)
 end
 
 -- Folded in combat, unless the player keeps it open (Settings: In combat).
+-- The console only folds when the Halo is there to take its place.
 local function shouldBeOpen()
-	return Stoa:GetState() == Stoa.STATE_WORLD or Stoa.db.combatConsole == "open"
+	return Stoa:GetState() == Stoa.STATE_WORLD or Stoa.db.combatConsole ~= "fold"
+		or not Stoa:IsModuleEnabled("Halo")
 end
 
 function Console:Refold()

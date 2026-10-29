@@ -134,15 +134,20 @@ local function build()
 	local party = Stoa.modules.Party.db
 	header("Combat")
 	local function refold() local c = Stoa.modules.Grimoire; if c and c.Refold then c:Refold() end end
-	dropdown(Stoa.db, "combatConsole", "In combat", "Fold the console to a thin line while you fight, so the Halo has the screen, or keep it open with chat and pages as they are. The Halo shows either way (turn it off below).", "fold", {
-		{ "fold", "Fold the console" }, { "open", "Keep the console open" },
-	}, refold)
-	dropdown(Stoa.db, "calm", "After a fight", "How long things must be calm before the console opens again. Longer keeps quick pulls together.", "3", {
+	-- The console and the Halo are one choice, so the console never folds
+	-- away with no Halo to take its place. "none" also turns the Halo off.
+	if halo.enabled == false then Stoa.db.combatConsole = "none" end
+	dropdown(Stoa.db, "combatConsole", "In combat", "Fold the console to a thin line while the Halo rises around your character, keep the console open with the Halo as well, or keep the console open with no Halo for players who use other unit frames. Turning the Halo on or off takes effect after /reload.", "fold", {
+		{ "fold", "Fold the console, the Halo rises" }, { "open", "Console open, the Halo rises too" }, { "none", "Console open, no Halo" },
+	}, function(_, value)
+		halo.enabled = value ~= "none"
+		refold()
+	end)
+	dropdown(Stoa.db, "calm", "After a fight", "When the console folds: how long things must be calm before it opens again. Longer keeps quick pulls together.", "3", {
 		{ "1", "1 second" }, { "3", "3 seconds" }, { "5", "5 seconds" }, { "8", "8 seconds" },
 	})
-	checkbox(Stoa.db, "calmGroup", "Wait for your group", "In a group, the console waits while anyone near you is still fighting (up to 20 seconds), so a chain of pulls stays one fight.", true)
+	checkbox(Stoa.db, "calmGroup", "Wait for your group", "When the console folds, in a group it waits while anyone near you is still fighting (up to 20 seconds), so a chain of pulls stays one fight.", true)
 	checkbox(Stoa.db, "foldInstant", "Fold without the slide", "The console folds and opens at once rather than sliding.", false)
-	checkbox(halo, "enabled", "Show the Halo in combat", "Health, mana, your signature spell, target and cast around your character. Takes effect after /reload.", true)
 	checkbox(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar. Takes effect after /reload.", true)
 	checkbox(halo, "hideTargetFrame", "Hide Blizzard's target frame", "Stoa shows your target beside the Halo. Takes effect after /reload.", true)
 	local console = Stoa.modules.Grimoire.db
