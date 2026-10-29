@@ -123,6 +123,31 @@ function Conflicts:SteppedAside(name)
 	return aside[name]
 end
 
+-- For the welcome page (Config/Welcome.lua): each clash found, its saved
+-- answer, and a way to settle one there without the question page.
+Conflicts.names = names
+
+function Conflicts:Found()
+	return found
+end
+
+function Conflicts:Saved(entry)
+	return choices()[entry.rule.key]
+end
+
+-- "theirs" keeps the other addon; "ours" turns it off and returns true, as
+-- it only takes effect after a reload.
+function Conflicts:Settle(entry, choice)
+	entry.asked = true
+	if choice == "ours" then
+		for _, addon in ipairs(entry.loaded) do disable(addon[1]) end
+		choices()[entry.rule.key] = nil
+		return true
+	end
+	choices()[entry.rule.key] = "theirs"
+	return false
+end
+
 -- Called once at login, before modules are enabled.
 function Conflicts:Check()
 	wipe(aside)
@@ -241,18 +266,21 @@ function Conflicts:Answer(choice)
 	end
 end
 
--- Asks about each clash not settled before, one at a time.
+-- Asks about each clash not settled before, one at a time. While the
+-- welcome page is still to come or open, it asks those itself; only a
+-- whole UI is asked about here.
 function Conflicts:Next()
 	local saved = choices()
+	local welcoming = Stoa.Welcome and Stoa.Welcome:Pending()
 	for _, entry in ipairs(found) do
-		if not entry.asked and saved[entry.rule.key] ~= "theirs" then
+		if not entry.asked and saved[entry.rule.key] ~= "theirs" and (entry.rule.suite or not welcoming) then
 			entry.asked = true
 			Stoa:AfterCombat(function() self:Ask(entry) end)
 			return
 		end
 	end
 	-- Settled: Stoa's look for the addons kept (Core/Looks.lua).
-	if Stoa.Looks then Stoa.Looks:Next() end
+	if Stoa.Looks and not welcoming then Stoa.Looks:Next() end
 end
 
 Stoa:On("STOA_READY", function()

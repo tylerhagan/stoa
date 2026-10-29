@@ -73,7 +73,7 @@ What works today:
 | Damage meters | Blizzard's meter windows with no panel, just outlined words and faint bars (your own in the accent, names in class colour), side by side in the top-left corner |
 | Comforts | Each its own setting, and Shift stops any of it: faster auto loot, a further camera, skip one-option gossip (on by default); accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet red errors in combat (off by default); hide other people's duel results and drunken lines (on); decline duels, release in battlegrounds, accept resurrections (off) |
 | Merchants | Sells grey junk and anything you've marked as junk, and repairs, from guild funds when allowed |
-| Welcome | Once per character, a page to choose what each spec plays and the theme, with buttons to preview a party, practise combat or open settings |
+| Welcome | Once per character, a short wizard in one window, with a step rail to go back: start by hand, from another character's saved setup or as Stoa ships; what each spec plays; theme (house and every class), ornament and colour vision; what a fight does (fold the console with the Halo, keep it open with the Halo, or no Halo, with the calm seconds and group wait under folding); how much (Full, Quiet, Classic feel); the other addons Stoa found (only when there are some: who does each job and Stoa's look for Bagnon, Details, Questie); then a summary with ways to try it. Choices that need a reload wait for Finish, which reloads once. Other addons questions wait for it on a first login |
 | Launch check | On the first login with a new game build, checks every spell ID, game function, Blizzard frame and event Stoa relies on, and says in one line if a feature is off because something moved. `/stoa check` (and `/stoa report`) list the details |
 | Error guard | Stoa records its own errors once each with a count. If one part keeps erroring (a loop), it is switched off until the next reload and Stoa says so in chat, so an error can't lock up the screen. `/stoa report` shows your setup and the errors, ready to copy |
 | Other addons | Spots a known bag, nameplate, chat, tooltip, bar, minimap, group frame, click-casting or damage meter addon (Details, Skada, Recount) and asks once which should do that job; Stoa's part waits meanwhile. A whole UI such as ElvUI or SpartanUI doesn't work beside Stoa, and Stoa asks you to turn one off |
@@ -122,7 +122,7 @@ Fonts are the main gap: see below.
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
 | `/stoa friends` | Open the Company roster |
 | `/stoa glance` | List what At a glance can show; `/stoa glance add <name>`, `remove <name>`, `reset` (`/stoa tally` still works) |
-| `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
+| `/stoa welcome` | Open the welcome wizard again |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build |
 | `/stoa report` | Your version, game build, spec, theme and any errors Stoa caught, ready to copy |
 | `/stoa addons` | List other addons doing one of Stoa's jobs and ask again which to keep |
