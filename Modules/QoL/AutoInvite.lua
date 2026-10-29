@@ -56,6 +56,8 @@ function AutoInvite:OnEnable()
 
 	local function wants(text)
 		if not db.enabled or not text or Stoa:IsSecret(text) then return false end
+		-- Another addon inviting by keyword already (Core/Companions.lua).
+		if Stoa:SharedBy("keywordInvites") then return false end
 		return keywordSet(db.keywords)[strtrim(text):lower()] or false
 	end
 

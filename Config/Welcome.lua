@@ -265,7 +265,10 @@ Stoa.commands.welcome = function() Welcome:Show() end
 Stoa:On("STOA_READY", function()
 	if Stoa.char.welcomed then return end
 	-- Let the world and the rest of the UI settle first.
-	C_Timer.After(4, function() Welcome:Show() end)
+	-- A companion's own welcome page (Core/Companions.lua) goes first.
+	C_Timer.After(5, function()
+		Stoa.Companions:AfterWelcomes(function() Welcome:Show() end)
+	end)
 end)
 
 -- /stoa preset full|quiet|classic
