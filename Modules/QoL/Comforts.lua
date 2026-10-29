@@ -79,7 +79,7 @@ function Comforts:Gossip()
 			return
 		end
 	end
-	if db.skipGossip then
+	if db.skipGossip and not Stoa:SharedBy("skipGossip") then
 		local options = C_GossipInfo.GetOptions() or {}
 		local quests = C_GossipInfo.GetNumAvailableQuests() + C_GossipInfo.GetNumActiveQuests()
 		local only = options[1]
@@ -210,7 +210,7 @@ function Comforts:Duel()
 end
 
 function Comforts:Dead()
-	if not self.db.releaseInPvP or held() then return end
+	if not self.db.releaseInPvP or held() or Stoa:SharedBy("releaseInPvP") then return end
 	local _, kind = IsInInstance()
 	if kind ~= "pvp" then return end
 	-- A soulstone or reincarnation is yours to use.
@@ -221,7 +221,7 @@ function Comforts:Dead()
 end
 
 function Comforts:Resurrect(from)
-	if not self.db.acceptRes or held() then return end
+	if not self.db.acceptRes or held() or Stoa:SharedBy("acceptRes") then return end
 	-- Not mid-fight: a resurrection then is usually better taken later.
 	if from and UnitAffectingCombat and UnitExists(from) and UnitAffectingCombat(from) then return end
 	AcceptResurrect()

@@ -1,6 +1,6 @@
 -- Stoa: other addons doing the same job.
 -- When a bag, nameplate, chat, tooltip, bar, minimap, group frame or
--- click-casting addon is loaded beside Stoa, the two would dress the same
+-- click-casting addon (or a damage meter) is loaded beside Stoa, the two would dress the same
 -- Blizzard frames (or draw two sets of frames). At login Stoa looks for the
 -- well-known ones and asks once which should do the job:
 --   Keep theirs: Stoa's own part steps aside, remembered account-wide. If the
@@ -80,6 +80,10 @@ local RULES = {
 		addons = { { "BlizzMove", "BlizzMove" }, { "MoveAny", "MoveAny" } },
 	},
 	{
+		key = "meters", job = "damage and healing meters", modules = { "Meters" },
+		addons = { { "Details", "Details" }, { "Skada", "Skada" }, { "Recount", "Recount" } },
+	},
+	{
 		key = "map", job = "the world map", modules = { "Map" },
 		addons = { { "Mapster", "Mapster" } },
 	},
@@ -148,8 +152,10 @@ end
 local WIDTH, HEIGHT = 460, 220
 local PAD = 26
 
-function Conflicts:Build()
-	local page = CreateFrame("Frame", "StoaAddonsPage", UIParent)
+-- A small question page with a title, a few lines and two buttons; Stoa's
+-- other questions about addons (Core/Looks.lua) use it too.
+function Conflicts:Page(name, onLeft, onRight)
+	local page = CreateFrame("Frame", name, UIParent)
 	page:SetSize(WIDTH, HEIGHT)
 	page:SetPoint("CENTER", 0, 120)
 	page:SetFrameStrata("DIALOG")
@@ -160,7 +166,6 @@ function Conflicts:Build()
 	page:SetScript("OnDragStop", page.StopMovingOrSizing)
 	page:Hide()
 	UI.windowPanel(page, 0.97, { header = 64, footer = 58 })
-	self.page = page
 
 	local title = UI.text(page, "serif", Stoa.typeSize.title, "text", "LEFT")
 	title:SetPoint("TOPLEFT", PAD, -PAD + 4)
@@ -178,10 +183,17 @@ function Conflicts:Build()
 	note:SetWordWrap(true)
 	page.note = note
 
-	page.theirs = UI.button(page, "", 200, function() self:Answer("theirs") end)
-	page.theirs:SetPoint("BOTTOMLEFT", PAD, PAD - 10)
-	page.ours = UI.button(page, "", 200, function() self:Answer("ours") end)
-	page.ours:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
+	page.left = UI.button(page, "", 200, onLeft)
+	page.left:SetPoint("BOTTOMLEFT", PAD, PAD - 10)
+	page.right = UI.button(page, "", 200, onRight)
+	page.right:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
+	return page
+end
+
+function Conflicts:Build()
+	local page = self:Page("StoaAddonsPage", function() self:Answer("theirs") end, function() self:Answer("ours") end)
+	page.theirs, page.ours = page.left, page.right
+	self.page = page
 end
 
 function Conflicts:Ask(entry)
@@ -239,6 +251,8 @@ function Conflicts:Next()
 			return
 		end
 	end
+	-- Settled: Stoa's look for the addons kept (Core/Looks.lua).
+	if Stoa.Looks then Stoa.Looks:Next() end
 end
 
 Stoa:On("STOA_READY", function()

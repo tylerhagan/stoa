@@ -193,6 +193,8 @@ local function paintCoin(coin, state)
 	local r, g, b = Stoa:Color(token)
 	coin.ring:SetVertexColor(r, g, b, state == "on" and 0.7 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "on" and "text" or token))
+	UI.coinArt(coin, SPELLS[coin.key])
+	UI.coinLit(coin, state ~= "off")
 end
 
 function Shadow:UpdateCoins()

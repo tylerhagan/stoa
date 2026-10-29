@@ -12,6 +12,8 @@ local accountDefaults = {
 	vision = "Standard",
 	-- The stone behind windows.
 	windowStone = true,
+	-- The spell's art behind the letter in the Halo's coins.
+	coinArt = true,
 	-- "painted" puts the leather and brass frames on the minimap, the
 	-- portrait coins and the Halo's signature slot; "plain" keeps lines.
 	ornament = "plain",

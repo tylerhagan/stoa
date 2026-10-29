@@ -214,7 +214,7 @@ function Backup:Build()
 	local lede = UI.text(page, "italic", Stoa.typeSize.label, "muted", "LEFT")
 	lede:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
 	lede:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
-	lede:SetText("All of Stoa's settings, account-wide and this character's. Copy it somewhere safe, or paste one in and import it.")
+	lede:SetText("All of Stoa's settings, account-wide and this character's. Copy it somewhere safe, or paste one in and import it. To take another character's setup, Load a setup.")
 
 	-- The text sits in a scrolling box, since a backup is long.
 	local holder = CreateFrame("Frame", nil, page)
@@ -271,6 +271,9 @@ function Backup:Build()
 	import:SetPoint("LEFT", clear, "RIGHT", 8, 0)
 	local close = UI.button(page, "Close", 80, function() page:Hide() end)
 	close:SetPoint("BOTTOMRIGHT", -PAD, PAD - 8)
+	-- Another character's setup, saved when it last logged out (Config/Setups.lua).
+	local setups = UI.button(page, "Load a setup", 120, function(button) Stoa.Setups:Menu(button) end)
+	setups:SetPoint("RIGHT", close, "LEFT", -8, 0)
 
 	UI.applyTheme()
 end

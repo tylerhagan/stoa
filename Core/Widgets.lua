@@ -88,6 +88,36 @@ function UI.coinFrame(parent, size)
 	return base, lines
 end
 
+-- A spell's own art inside a Halo coin, behind its letter: round, quiet, and
+-- in colour only while the coin is lit (running or ready); grey and fainter
+-- while it is off or coming back. A setting (Stoa.db.coinArt) turns it off.
+function UI.coinArt(coin, spell)
+	if not coin.art then
+		local art = UI.circle(coin, "BORDER", 2, coin:GetWidth() - 4)
+		art:SetPoint("CENTER")
+		art:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		coin.art = art
+	end
+	local on = Stoa.db == nil or Stoa.db.coinArt ~= false
+	if not on then spell = nil end
+	if coin.artSpell == spell then return end
+	coin.artSpell = spell
+	local icon
+	if spell and C_Spell and C_Spell.GetSpellTexture then
+		local ok, value = pcall(C_Spell.GetSpellTexture, spell)
+		if ok and value and not Stoa:IsSecret(value) then icon = value end
+	end
+	coin.art:SetTexture(icon)
+	coin.art:SetShown(icon ~= nil)
+end
+
+function UI.coinLit(coin, lit)
+	local art = coin.art
+	if not art then return end
+	art:SetDesaturated(not lit)
+	art:SetAlpha(lit and 0.5 or 0.22)
+end
+
 function UI.circle(parent, layer, sublevel, size, token, alpha)
 	local tex = parent:CreateTexture(nil, layer, nil, sublevel)
 	tex:SetSize(size, size)

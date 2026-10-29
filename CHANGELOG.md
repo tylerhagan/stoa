@@ -10,6 +10,10 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Saved setups: each character's setup is kept account-wide at logout; load it on an alt from the backup page, the welcome page or `/stoa setups`.
+- Stoa's look for Questie's tracker, Bagnon's bags and Details' meters, offered once (`/stoa looks`); Stoa's fonts in LibSharedMedia.
+- Details, Skada and Recount join the "two addons, one job" check; Leatrix Plus's switches win where it and Stoa do the same job.
+- Spell art behind the letter in the Halo's coins (a setting).
 - OneForAll: Stoa works beside it. Small jobs both do (fast loot, junk, repairs, loot feed, quest help, camera, window moving, chat copy, upgrade marks, invites, duels) go to OneForAll while its switch is on; Stoa keeps the minimap and chat rail and waits for OneForAll's welcome page. At a glance gets Library Books and Dungeon guide lines.
 - Other addons: when a known bag, nameplate, chat, tooltip, bar, minimap, group frame, click-casting, window mover or map addon is loaded, Stoa asks which one should do the job, and its own part waits until you choose; `/stoa addons` asks again. A whole UI like ElvUI or SpartanUI doesn't work beside Stoa: Stoa says so and offers to turn either off.
 - Tally is now called At a glance; `/stoa glance` (the old `/stoa tally` still works).

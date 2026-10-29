@@ -314,6 +314,7 @@ local function paintCoin(coin, state)
 	local r, g, b = Stoa:Color(token)
 	coin.ring:SetVertexColor(r, g, b, state == "on" and 0.7 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "on" and "text" or token))
+	UI.coinLit(coin, state ~= "off")
 end
 
 -- Shows a coin running until `ends` out of `length`, or off.
@@ -363,6 +364,17 @@ function Paladin:CoinState(key, coin)
 	end
 end
 
+-- The spell whose art sits behind a coin's letter: the seal you run (Seal of
+-- Fury for a tank), Judgement for the mark, or the coin's own spell.
+function Paladin:CoinSpell(key)
+	if key == "seal" then
+		if self:Role() == "TANK" and knows(SPELLS.sealFury) then return SPELLS.sealFury end
+		return self:Seal() or SPELLS.righteousness
+	end
+	if key == "mark" then return SPELLS.judgement end
+	return SPELLS[key]
+end
+
 local function coinApplies(self, key)
 	if key == "seal" then return true end
 	if key == "mark" then return knows(SPELLS.judgement) and self.judges end
@@ -379,6 +391,7 @@ function Paladin:UpdateCoins()
 			index = index + 1
 			local coin = self.coins[index]
 			coin.letter:SetText(entry.letter)
+			UI.coinArt(coin, self:CoinSpell(entry.key))
 			self.state[entry.key] = self:CoinState(entry.key, coin)
 			coin:Show()
 		end
