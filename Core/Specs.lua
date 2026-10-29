@@ -8,6 +8,10 @@
 -- starts from the current one, so nothing changes until you change it.
 --
 -- Values are kept per character in StoaCharDB.specs[slot][module][key].
+-- That table is the one that counts: module.db is account-wide, so on
+-- login every spec key is set from this character's table (or the key's
+-- default when the character has none yet), never left holding whatever
+-- the last character played with.
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -40,17 +44,37 @@ local function store(slot)
 	end
 end
 
+local function same(a, b)
+	if type(a) ~= "table" or type(b) ~= "table" then return a == b end
+	for k, v in pairs(a) do if not same(v, b[k]) then return false end end
+	for k in pairs(b) do if a[k] == nil then return false end end
+	return true
+end
+
+-- A character from before spec tables were kept this way has nothing saved
+-- but has been playing with the values in module.db: keep those for them
+-- once. A character seen for the first time starts from the defaults.
+local function seedFromCurrent()
+	return Stoa.char.specs == nil and Stoa.char.welcomed == true
+end
+
 local function restore(slot)
 	local saved = Stoa.char.specs and Stoa.char.specs[slot]
-	if not saved then return false end
+	local keep = seedFromCurrent()
 	local changed = false
 	for name, list in pairs(keys) do
 		local module = Stoa.modules[name]
-		local values = saved[name]
-		if module and module.db and values then
+		local values = saved and saved[name]
+		if module and module.db then
 			for _, key in ipairs(list) do
-				if values[key] ~= nil then
-					module.db[key] = copy(values[key])
+				local value
+				if values and values[key] ~= nil then
+					value = values[key]
+				elseif not keep then
+					value = module.defaults and module.defaults[key]
+				end
+				if value ~= nil and not same(module.db[key], value) then
+					module.db[key] = copy(value)
 					changed = true
 				end
 			end
