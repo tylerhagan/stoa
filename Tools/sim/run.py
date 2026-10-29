@@ -225,6 +225,20 @@ try:
 except BrokenPipeError:
     pass
 
+# Every texture and font Stoa asked for from its own folder must exist.
+import glob
+paths = G.SIM_PATHS
+missing = []
+for path in list(paths.keys()):
+    norm = path.replace("\\", "/")
+    if "/AddOns/Stoa/" not in norm:
+        continue
+    rel = norm.split("/AddOns/Stoa/", 1)[1]
+    base = os.path.join(ROOT, rel)
+    if not (os.path.exists(base) or glob.glob(base + ".*")):
+        missing.append(rel)
+print("Own files used:", sum(1 for p in paths.keys() if "AddOns" in p.replace("\\", "/")), "missing:", " ".join(sorted(missing)) or "none")
+
 if "-v" in sys.argv:
     prints = G.SIM_PRINTS
     for i in range(1, len(prints) + 1):
