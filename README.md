@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo/stoa-essence.png" alt="Stoa" width="420"></p>
+
 # Stoa
 
 A calm, two-state UI suite for **WoW Forever** (interface 16001).

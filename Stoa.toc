@@ -1,11 +1,11 @@
 ## Interface: 16001
 ## Title: Stoa
-## Notes: A calm, two-state UI suite for WoW Forever: the Grimoire console out of combat, the Halo in combat.
+## Notes: A calm, two-state UI suite for WoW Forever: the Console out of combat, the Halo in combat.
 ## Author: Tyler
 ## Version: 0.9.0
 ## SavedVariables: StoaDB
 ## SavedVariablesPerCharacter: StoaCharDB
-## IconTexture: Interface\Icons\Spell_Holy_PowerWordShield
+## IconTexture: Interface\AddOns\Stoa\Media\Textures\Icon
 ## AddonCompartmentFunc: Stoa_OnCompartmentClick
 ## AddonCompartmentFuncOnEnter: Stoa_OnCompartmentEnter
 ## AddonCompartmentFuncOnLeave: Stoa_OnCompartmentLeave
