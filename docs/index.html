@@ -103,6 +103,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
   dl.feat dd{padding-top:4px}
 }
 @media (prefers-reduced-motion:no-preference){.halo-art .spin{transform-origin:150px 150px;animation:turn 60s linear infinite}@keyframes turn{to{transform:rotate(360deg)}}}
+p code,li code,dd code{white-space:normal;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -207,6 +208,8 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <dt>Tank watch</dt><dd>For healers, a matching plaque at the upper left with the tank's health, shields and your buffs on them. Click-casting works on it.</dd>
 <dt>Reminders</dt><dd>A missing self-buff (an aura, a seal, Righteous Fury, Inner Fire, Shadowform, Mark of the Wild, a mage armor or Arcane Intellect) shows as a word under the Halo, and beside your role on the console.</dd>
 <dt>Mana</dt><dd>For every mana user, a small spark runs along the Halo's mana arc while the five-second rule holds back spirit regeneration, then pulses on each regeneration tick. While you cast, the mana the spell will take is shaded. Druids in cat or bear form see their mana as a slim bar under the power number. The console's mana bar does the same out of combat.</dd>
+<dt>Procs</dt><dd>The game's own proc art either side of the Halo, and its proc glow on the combat bar button. It fires on the game's proc events and on what Stoa reads itself (a spell turning usable, costing nothing or casting much faster) while buffs are hidden. <code>/stoa procs test</code> shows it.</dd>
+<dt>Game auras</dt><dd>Forever's own aura container draws chosen buffs and debuffs with real timers, even in combat. <code>/stoa auras</code> checks it on launch day.</dd>
 <dt>Threat</dt><dd>In a group fight, up to five people by threat on your target (or your tank's) under the damage meters, the tank first. If you aren't tanking, the target plaque says <span class="w">PULLING AGGRO</span> with the percent once you reach 90%.</dd>
 </dl>
 </section>
@@ -251,7 +254,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <dt>Party cards</dt><dd>Rounded cards with name and health percent, a thick health bar with shields on its end, and word pips for your buffs, Weakened Soul, dispels and <span class="w">LOW</span> health.</dd>
 <dt>Raids, healing</dt><dd>Always a row under the combat bar. Ten players are two rows of party cards, twenty are compact cells with one word (MAG, DIS, LOW, DEAD), forty are two blocks side by side, groups 1 to 4 and 5 to 8.</dd>
 <dt>Raids, otherwise</dt><dd>One column per group on the left, above the chat.</dd>
-<dt>Click-casting</dt><dd>Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. <code>/stoa clicks</code> to edit.</dd>
+<dt>Click-casting</dt><dd>Fifteen bindings per role on party and raid cards: five mouse buttons, plain, Shift and Ctrl. <code>/stoa clicks</code> to edit. When you heal, a grid beside the cards spells out each click with its spell's cost, dimming what you can't afford. It folds to its title until you hover a card or hold Shift; click the title to keep it open, or use <code>/stoa grid</code>.</dd>
 <dt>Preview</dt><dd><code>/stoa test</code> shows a sample party; <code>/stoa test raid</code>, <code>raid10</code> or <code>raid40</code> a raid. <code>/stoa combat</code> practises the combat layout.</dd>
 <dt>Raid markers</dt><dd>Tanks and leaders get a strip of the eight markers and clear: click marks your target, Shift-click places a world marker.</dd>
 <dt>Group buffs</dt><dd>Out of combat, the Ready page says who in range is missing a buff you can cast, such as <span class="w">FORTITUDE</span> · 3 missing, and the same line shows during a ready check.</dd>
@@ -261,11 +264,11 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <section id="world">
 <h2>Out of combat</h2>
 <dl class="feat">
-<dt>Console</dt><dd>Portrait seal (click to target yourself), health and mana either side, chat on the left page with leather tabs, bags and the game menu in the corner. The right page shows Ready (role, missing buffs, gear wear, bag room), Journey (level and rested experience) and Company (your party, or who's online).</dd>
+<dt>Console</dt><dd>Black leather with a brass line along its top edge, opening at the centre into a large brass ring held by a slender bracket on each side. Your portrait sits in the ring (click it to target yourself), with health and mana either side. Chat is on the left page with leather tabs, and bags and the game menu are in the corner. The right page shows Ready, Journey and Company (your party, or who's online). Ready shows your role, missing buffs, your most worn piece of gear as ten cells, and your bags as a small column each with the free count beside them. Journey shows experience on a bar with your rest in blue behind it and an accent mark where an hour at your pace would take you, with a key underneath.</dd>
 <dt>Action bars</dt><dd>Rounded-square icons with a hairline edge and dim sockets for empty slots. Every row shows out of combat, or only the main bar with the rest on mouseover.</dd>
 <dt>Minimap</dt><dd>A rounded square (or round, in settings) with a hairline and accent line, or a painted leather and brass frame; the zone in the display face, wheel to zoom.</dd>
-<dt>Top of screen</dt><dd>Buffs as cropped icons with their time beneath, the quest tracker in Stoa's type, the zone and clock on a dark panel.</dd>
-<dt>Nameplates</dt><dd>Amber for every enemy, pale gold for neutral, blue for friends, grey only for tapped or dead. A bone edge on your target and the level as a plain number.</dd>
+<dt>Top of screen</dt><dd>Buffs as cropped icons with their time beneath (or as a list of names and times), the quest tracker in Stoa's type, the zone and clock on a dark panel.</dd>
+<dt>Nameplates</dt><dd>Amber for every enemy, pale gold for neutral, blue for friends, grey only for tapped or dead. A bone edge on your target and the level as a plain number. Five styles: Stoa, Bold (heavy frame, health value), Inline (name and health in the bar), Brass (brass edge, level badge) and Slim. The target is marked by its edge, arrows or a glow; other plates can fade, and the target can grow.</dd>
 <dt>Meters and swing</dt><dd>Blizzard's damage meters as outlined words and faint bars in the top-left corner; its swing timer as a flat bar (place it in Edit Mode).</dd>
 </dl>
 </section>
@@ -273,7 +276,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <section id="dungeons">
 <h2>Levelling and dungeons</h2>
 <dl class="feat">
-<dt>Pace</dt><dd>Journey on the console shows experience an hour and time to level, worked out over the last half hour and started again at each level. <code>/stoa xp</code> prints it with the session's total.</dd>
+<dt>Pace</dt><dd>Journey on the console shows experience an hour and time to level beside a small line chart of your pace, worked out over the last half hour and started again at each level. <code>/stoa xp</code> prints it with the session's total.</dd>
 <dt>Next quest</dt><dd>When you're travelling alone, the nearest watched quest's next objective sits under Journey, or "Hand in" once it's done.</dd>
 <dt>Pull timer</dt><dd><code>/stoa pull</code> counts down ten seconds (or <code>/stoa pull 5</code>). It uses the game's own countdown when you're allowed to, otherwise 3, 2, 1 in group chat and a large number on screen. <code>/stoa pull 0</code> cancels.</dd>
 <dt>Ready check</dt><dd>The prompt in a Stoa panel, and each party card says <span class="w">READY</span>, <span class="w">NOT READY</span> or WAITING while the check runs.</dd>
@@ -306,11 +309,11 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <section id="social">
 <h2>Social</h2>
 <dl class="feat">
-<dt>At a glance</dt><dd>To the right of chat on the console: up to eight numbers you choose, such as your key stats, gear wear, bag room, gold, professions, latency, or another addon's feed (anything that works on Titan Panel). Right-click it or use <code>/stoa glance</code> to choose. Until you do, it follows your role.</dd>
+<dt>At a glance</dt><dd>To the right of chat on the console: up to eight numbers you choose, such as your key stats, gear wear, bag room, gold, professions, latency, or another addon's feed (anything that works on Titan Panel). It follows where you are, with one set out in the world (gold, gold an hour, loot, professions, reputation, gear, bags), one in a dungeon and one in a raid (your role's stats first), and names the situation beside its heading. Gear, reputation and professions carry a slim bar, bags a column per bag, and gold an hour a small line chart. Hover a line to see where its number comes from; click it to open the window you'd go to next. Right-click it or use <code>/stoa glance</code> to choose for each situation, and pin a line to show it everywhere. Until you choose, it follows your role.</dd>
 <dt>Company</dt><dd><code>/stoa friends</code>, or click Company on the console. Online friends, Battle.net friends in Forever, and your guild, with level, zone and AWAY or BUSY. Click a name to whisper; Shift-click, right-click or Invite to bring them along.</dd>
 <dt>Auto-invite</dt><dd>Friends and guildmates who whisper <code>inv</code>, in game or over Battle.net, are invited. Optionally the keyword works in guild chat. Stoa says so when the group is full or you aren't the leader. Change the words with <code>/stoa keywords inv, invite</code>.</dd>
 <dt>Invites and duels</dt><dd>Accepts group invites from people you know. Declines duels and guild invites from strangers, and optionally their group invites. Each choice is noted in chat so nothing happens behind your back.</dd>
-<dt>Chat</dt><dd>Web addresses become links that open a box to copy them. The quiet copy mark (or Shift-click a tab) shows the last 200 lines to copy, and the main chat's last 100 lines come back after a reload.</dd>
+<dt>Chat</dt><dd>A time column on each line, more space between lines, the chat buttons in one quiet column and a quiet typing strip. Web addresses become links that open a box to copy them. The quiet copy mark (or Shift-click a tab) shows the last 200 lines to copy, and the main chat's last 100 lines come back after a reload.</dd>
 </dl>
 </section>
 
@@ -318,8 +321,8 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <h2>Comforts</h2>
 <p>Each is its own setting, and holding <kbd>Shift</kbd> stops any of them in the moment.</p>
 <dl class="feat">
-<dt>On by default</dt><dd>Faster auto loot, a further camera, skip gossip with only one option, sell grey junk and repair (from guild funds when allowed).</dd>
-<dt>Off by default</dt><dd>Accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet the red error text in combat.</dd>
+<dt>On by default</dt><dd>Faster auto loot, a further camera, skip gossip with only one option, sell grey junk and repair (from guild funds when allowed), and hide other people's duel results and drunken lines.</dd>
+<dt>Off by default</dt><dd>Accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet the red error text in combat, decline duels, release in battlegrounds and accept resurrections.</dd>
 </dl>
 </section>
 
@@ -377,6 +380,8 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);color:v
 <tr><td><code>/stoa check</code></td><td>Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build</td></tr>
 <tr><td><code>/stoa report</code></td><td>Your version, game build, spec, theme and any errors Stoa caught, ready to copy</td></tr>
 <tr><td><code>/stoa backup</code></td><td>Copy your settings as text, or paste a backup to restore it</td></tr>
+<tr><td><code>/stoa procs test</code></td><td>Show the proc art and glow to check them</td></tr>
+<tr><td><code>/stoa auras</code></td><td>Check the game's aura container</td></tr>
 <tr><td><code>/stoa xp</code></td><td>Experience this session, per hour, and time to level</td></tr>
 <tr><td><code>/stoa pull [seconds]</code></td><td>Pull countdown for the group (10 by default); <code>/stoa pull 0</code> cancels</td></tr>
 <tr><td><code>/stoa uprank</code></td><td>Put the best rank of each spell on your bars now</td></tr>
