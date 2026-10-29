@@ -115,7 +115,12 @@ function Loot:Build()
 		fs:Hide()
 		self.rows[i] = fs
 	end
-	Stoa.Rules.watch(frame, function() return self.db.show end)
+	-- Another addon's loot feed shows the same loot (Core/Companions.lua); the
+	-- gold-an-hour and loot value lines for At a glance keep counting.
+	Stoa.Rules.watch(frame, function()
+		if Stoa:SharedBy("lootFeed") then return "NEVER" end
+		return self.db.show
+	end)
 end
 
 -- Events ------------------------------------------------------------------------

@@ -27,6 +27,24 @@ local function hide(region)
 	end
 end
 
+-- Square when Stoa's setting says so, or when another addon beside Stoa was
+-- asked for a square map (Core/Companions.lua): then Stoa draws its own square
+-- rather than a ring round someone else's.
+function MinimapStyle:Shape()
+	if self.db.shape == "square" or Stoa:SharedBy("squareMinimap") then return "square" end
+	return self.db.shape
+end
+
+-- Runs when Stoa's saved settings load, before any addon's login code: other
+-- addons ask GetMinimapShape() whether the map is square already, and leave
+-- it to Stoa when it is.
+function MinimapStyle:OnInitialize()
+	if not Stoa:IsModuleEnabled("Minimap") or self:Shape() ~= "square" then return end
+	if not _G.GetMinimapShape or _G.GetMinimapShape() ~= "SQUARE" then
+		_G.GetMinimapShape = function() return "SQUARE" end
+	end
+end
+
 function MinimapStyle:Style()
 	local map = Minimap
 	if not map then return end
@@ -43,7 +61,7 @@ function MinimapStyle:Style()
 	self.ring = frame
 
 	local painted = UI.ornate()
-	if self.db.shape == "square" then
+	if self:Shape() == "square" then
 		self:Square(map, frame, painted)
 	elseif painted then
 		self:Painted(map, "round")

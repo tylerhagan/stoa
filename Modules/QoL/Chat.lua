@@ -286,6 +286,11 @@ function Chat:BuildCopyButton()
 		xpcall(Chat.CopyFrame, Stoa.catch, Chat, SELECTED_CHAT_FRAME or ChatFrame1)
 	end)
 	self.copyButton = button
+	-- Another addon's copy button sits in this same corner (Core/Companions.lua);
+	-- Shift-click on a tab still copies.
+	local function shared() button:SetShown(not Stoa:SharedBy("chatCopy")) end
+	shared()
+	Stoa:On("PLAYER_ENTERING_WORLD", shared)
 
 	for i = 1, type(NUM_CHAT_WINDOWS) == "number" and NUM_CHAT_WINDOWS or 10 do
 		local tab, frame = _G["ChatFrame" .. i .. "Tab"], _G["ChatFrame" .. i]

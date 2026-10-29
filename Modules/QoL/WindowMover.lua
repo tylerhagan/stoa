@@ -40,14 +40,21 @@ local function canMove(frame)
 end
 
 local function place(name, frame)
+	if Stoa:SharedBy("windows") then return end
 	local spot = spots()[name]
 	if not spot or not frame:IsShown() or not canMove(frame) then return end
 	frame:ClearAllPoints()
 	frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", spot[1], spot[2])
 end
 
+-- Another addon moving these windows already (Core/Companions.lua) keeps
+-- them: Stoa neither starts a drag nor puts a window back on its own spot.
+local function shared()
+	return Stoa:SharedBy("windows")
+end
+
 function WindowMover:Wants()
-	return IsShiftKeyDown()
+	return IsShiftKeyDown() and not shared()
 end
 
 function WindowMover:Hook(name)

@@ -41,12 +41,12 @@ function Social:OnEnable()
 
 	Stoa:On("PARTY_INVITE_REQUEST", function(name, _, _, _, _, _, inviterGUID)
 		if Stoa:IsTrusted(inviterGUID, name) then
-			if db.acceptFriendInvites then
+			if db.acceptFriendInvites and not Stoa:SharedBy("invites") then
 				AcceptGroup()
 				StaticPopup_Hide("PARTY_INVITE")
 				Stoa:Note("social", ("Joined %s's group."):format(name))
 			end
-		elseif db.declineStrangerInvites then
+		elseif db.declineStrangerInvites and not Stoa:SharedBy("invites") then
 			DeclineGroup()
 			StaticPopup_Hide("PARTY_INVITE")
 			Stoa:Note("social", ("Declined a group invite from %s."):format(name))
@@ -54,7 +54,7 @@ function Social:OnEnable()
 	end)
 
 	Stoa:On("DUEL_REQUESTED", function(name)
-		if db.declineStrangerDuels and not Stoa:IsTrusted(nil, name) then
+		if db.declineStrangerDuels and not Stoa:SharedBy("duels") and not Stoa:IsTrusted(nil, name) then
 			CancelDuel()
 			StaticPopup_Hide("DUEL_REQUESTED")
 			Stoa:Note("social", ("Declined a duel from %s."):format(name))

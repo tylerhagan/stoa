@@ -247,6 +247,7 @@ Stoa:On("STOA_READY", function()
 end)
 
 Stoa.commands.addons = function()
+	if Stoa.Companions then Stoa.Companions:Report() end
 	if #found == 0 then
 		Stoa:Print("No other addon is doing one of Stoa's jobs.")
 		return

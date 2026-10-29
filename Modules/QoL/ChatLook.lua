@@ -72,8 +72,9 @@ end
 
 -- Rail --------------------------------------------------------------------------
 
+-- OneForAll's hide-chat button would sit on top of the column; it joins it.
 local RAIL_BUTTONS = {
-	"QuickJoinToastButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
+	"OneForAllChatHideButton", "QuickJoinToastButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
 	"ChatFrameToggleVoiceMuteButton", "ChatFrameMenuButton",
 }
 
