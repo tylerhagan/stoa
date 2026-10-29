@@ -16,11 +16,7 @@ local Loot = Stoa:NewModule("Loot", {
 local FADE_SECONDS = 2
 local MIN_SECONDS_FOR_RATE = 60
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b = pcall(fn, ...)
-	if ok then return a, b end
-end
+local call = Stoa.safe.call
 
 -- Session totals.
 local session = { gold = 0, value = 0, start = nil }

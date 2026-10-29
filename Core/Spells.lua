@@ -12,11 +12,7 @@ Stoa.Spells = Spells
 -- best[name] = { id = spellID, rank = number }; ids[spellID] = name.
 local best, ids = {}, {}
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b, c, d = pcall(fn, ...)
-	if ok then return a, b, c, d end
-end
+local call = Stoa.safe.call
 
 -- "Rank 3" in any language ends in its number; spells without ranks are 0.
 local function rankOf(subName)

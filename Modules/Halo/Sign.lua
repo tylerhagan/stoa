@@ -403,10 +403,10 @@ function Sign.wire(module, extra)
 		Stoa:On(event, refresh)
 	end
 	for _, event in ipairs(extra or {}) do Stoa:On(event, refresh) end
-	local ticker
-	ticker = Stoa:NewTicker(0.2, function()
-		if not Sign.inCombat() or not module:Active() then return end
-		if not xpcall(module.Refresh, Stoa.catch, module) then ticker:Cancel() end
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not Sign.inCombat() or not module:Active() then return end
+		if not xpcall(module.Refresh, Stoa.catch, module) then ticking = false end
 	end)
 	refresh()
 end

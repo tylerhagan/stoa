@@ -36,9 +36,7 @@ local TARGETS = {
 	{ name = "WorldMapFrame", mode = "map" },
 }
 
-local function hide(frame)
-	if frame and frame.SetAlpha then frame:SetAlpha(0) end
-end
+local hide = Stoa.frames.hide
 
 local function hideOwnArt(frame)
 	if not (frame and frame.GetRegions) then return end

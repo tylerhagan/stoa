@@ -4,20 +4,31 @@ Loads every file in Stoa.toc under a mock of the game's API (mock.lua), fires
 the login events and a round of common game events, runs every /stoa command,
 then prints the errors and the global names the mock didn't know.
 
-    python3 Tools/sim/run.py [CLASS]     # needs: pip install lupa
+    python3 Tools/sim/run.py [CLASS] [-v] [--lenient]     # needs: pip install lupa
     STOA_SIM_ADDONS=Bagnon,ElvUI python3 Tools/sim/run.py   # other addons loaded
+
+Names are checked against Tools/sim/api.txt (what Forever's own UI source
+has, see apilist.py) and Tools/sim/known_missing.txt. A call to a global
+function, C_ function or named frame that is in neither is INVENTED, and the
+run exits 1 unless --lenient is given. Names Stoa only tests for existence
+(`if C_Foo and C_Foo.Bar then`) are not counted: names outside the lists read
+as nil, as in the game, and only an unguarded use fails.
 """
 import os
+import re
 import sys
 
 from lupa import lua51
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CLASS = (sys.argv[1] if len(sys.argv) > 1 else "PRIEST").upper()
+ARGS = [a for a in sys.argv[1:] if not a.startswith("-")]
+CLASS = (ARGS[0] if ARGS else "PRIEST").upper()
+LENIENT = "--lenient" in sys.argv
 
 lua = lua51.LuaRuntime(unpack_returned_tuples=True)
 G = lua.globals()
 G.SIM_CLASS = CLASS
+G.SIM_DIR = os.path.join(ROOT, "Tools/sim") + "/"
 lua.execute(open(os.path.join(ROOT, "Tools/sim/mock.lua")).read())
 others = lua.table()
 for folder in filter(None, os.environ.get("STOA_SIM_ADDONS", "").split(",")):
@@ -43,6 +54,8 @@ for line in open(os.path.join(ROOT, "Stoa.toc"), encoding="utf-8"):
     line = line.strip()
     if line and not line.startswith("#") and line.endswith(".lua"):
         files.append(line.replace("\\", "/"))
+if os.environ.get("SIM_EXTRA"):  # a scratch Lua file run after the toc, to try the checks
+    files.append(os.environ["SIM_EXTRA"])
 for f in files:
     loader(open(os.path.join(ROOT, f), encoding="utf-8").read(), f, ns)
 
@@ -209,6 +222,27 @@ updates()
 KNOWN = ["Modules/Skins/Meters.lua:41"]
 errs = [errors[i] for i in range(1, len(errors) + 1)]
 errs = [e for e in errs if not any(k in e for k in KNOWN)]
+
+# A call that reached a name the client does not have shows up as Lua's
+# "attempt to call/index ... (a nil value)" at the line that made it.
+invented = {}
+GLOBAL_USE = re.compile(r"(\S+?\.lua:\d+): attempt to (?:call|index) global '([A-Z]\w*)'")
+FIELD_CALL = re.compile(r"(\S+?\.lua:\d+): attempt to call field '(\w+)'")
+rest = []
+for e in errs:
+    head = e.split("\n")[0]
+    m = GLOBAL_USE.search(head)
+    if m and not G.SIM_ALLOWED(m.group(2)):
+        invented.setdefault(m.group(2), set()).add(m.group(1))
+        continue
+    m = FIELD_CALL.search(head)
+    if m:
+        full = G.SIM_FIELD_MISSES[m.group(1) + ":" + m.group(2)]
+        if full:
+            invented.setdefault(full, set()).add(m.group(1))
+            continue
+    rest.append(e)
+errs = rest
 seen = set()
 print(f"Class {CLASS}: {len(files)} files, {len(errs)} errors")
 print("Commands run:", G.SIM_RAN)
@@ -222,6 +256,13 @@ unknown = G.SIM_UNKNOWN
 names = sorted(k for k in unknown.keys())
 try:
     print("UNKNOWN GLOBALS:", " ".join(names))
+    methods = G.SIM_UNKNOWN_METHODS
+    print("UNKNOWN METHODS (not in the widget list; informational):", " ".join(sorted(k for k in methods.keys())))
+    absent = set(k for k in G.SIM_ABSENT.keys()) | set(v for v in G.SIM_FIELD_MISSES.values())
+    print("ABSENT (read but not in api.txt; Stoa guarded them or never called them; informational):", " ".join(sorted(absent - set(invented))))
+    for name in sorted(invented):
+        print("INVENTED", name, " ".join(sorted(invented[name])))
+    print("INVENTED:", len(invented))
 except BrokenPipeError:
     pass
 
@@ -243,3 +284,8 @@ if "-v" in sys.argv:
     prints = G.SIM_PRINTS
     for i in range(1, len(prints) + 1):
         print("PRINT", prints[i])
+
+if "-v" in sys.argv:
+    print("MOCK STAND-INS DROPPED (not in api.txt):", " ".join(sorted(k for k in G.SIM_REMOVED.keys())))
+if invented and not LENIENT:
+    sys.exit(1)

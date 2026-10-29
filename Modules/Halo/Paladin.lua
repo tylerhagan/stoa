@@ -95,17 +95,9 @@ local function hasTalent(key)
 	return id and not Stoa:IsSecret(id) and knows(id) or false
 end
 
-local function auraByName(unit, name, filter)
-	if not name or not (C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName) then return nil end
-	local ok, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, unit, name, filter)
-	if ok then return aura end
-end
+local auraByName = Stoa.aura.byName
 
-local function auraLeft(aura)
-	local expires = Stoa:PlainNumber(aura and aura.expirationTime)
-	if not expires or expires == 0 then return nil end
-	return expires - GetTime()
-end
+local auraLeft = Stoa.aura.left
 
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.
@@ -504,12 +496,12 @@ function Paladin:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", refresh)
 	Stoa:On("STOA_STATE_CHANGED", refresh)
 	Stoa:On("SPELLS_CHANGED", refresh)
-	-- Timers tick without events. If an update ever errors the ticker
-	-- stops rather than repeating the error.
-	local ticker
-	ticker = Stoa:NewTicker(0.2, function()
-		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Role() then return end
-		if not xpcall(self.Refresh, Stoa.catch, self) then ticker:Cancel() end
+	-- Timers tick without events, on the combat clock. If an update ever
+	-- errors the listener stops rather than repeating the error.
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not self:Role() then return end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticking = false end
 	end)
 	refresh()
 end

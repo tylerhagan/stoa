@@ -56,11 +56,7 @@ local function nameOf(key)
 	return names[key]
 end
 
-local function auraByName(unit, name, filter)
-	if not name or not (C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName) then return nil end
-	local ok, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, unit, name, filter)
-	if ok then return aura end
-end
+local auraByName = Stoa.aura.byName
 
 -- When a spell comes back and its cooldown's length; nil when it's ready.
 -- The third value says whether the game would say at all (it won't in
@@ -250,11 +246,12 @@ function Disc:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", refresh)
 	Stoa:On("STOA_STATE_CHANGED", refresh)
 	Stoa:On("SPELLS_CHANGED", refresh)
-	-- Timers tick without events; the group's auras are counted here too.
-	local ticker
-	ticker = Stoa:NewTicker(0.25, function()
-		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Active() then return end
-		if not xpcall(self.Refresh, Stoa.catch, self) then ticker:Cancel() end
+	-- Timers tick without events, on the combat clock; the group's auras are
+	-- counted here too.
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not self:Active() then return end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticking = false end
 	end)
 	refresh()
 end

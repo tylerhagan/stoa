@@ -54,9 +54,7 @@ end
 -- How far the rounded track reaches past the bar's own edges.
 local PAD = 2
 
-local function guarded(fn, ...)
-	xpcall(fn, Stoa.catch, ...)
-end
+local guarded = Stoa.safe.guarded
 
 local function isPlate(frame)
 	local unit = frame and frame.unit

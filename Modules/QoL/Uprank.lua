@@ -8,11 +8,7 @@ local Uprank = Stoa:NewModule("Uprank", {})
 
 local SLOTS = 120
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b = pcall(fn, ...)
-	if ok then return a, b end
-end
+local call = Stoa.safe.call
 
 local function pickup(spellID)
 	if C_Spell and C_Spell.PickupSpell then

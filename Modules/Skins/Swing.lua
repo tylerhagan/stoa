@@ -18,9 +18,7 @@ local FRAMES = {
 	{ name = "SwingTimerRangedFrame", token = "text" },
 }
 
-local function guarded(fn, ...)
-	xpcall(fn, Stoa.catch, ...)
-end
+local guarded = Stoa.safe.guarded
 
 -- Textures moved here never draw again, whatever Blizzard does to them.
 local vault = CreateFrame("Frame")

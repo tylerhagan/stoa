@@ -19,9 +19,7 @@ local UI = Stoa.UI
 
 local Bags = Stoa:NewModule("Bags", { bagMode = "combined" })
 
-local function guarded(fn, ...)
-	xpcall(fn, Stoa.catch, ...)
-end
+local guarded = Stoa.safe.guarded
 
 -- Item slot helpers ---------------------------------------------------------
 

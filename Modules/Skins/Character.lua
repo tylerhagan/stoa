@@ -16,9 +16,7 @@ local UI = Stoa.UI
 
 local Character = Stoa:NewModule("Character")
 
-local function guarded(fn, ...)
-	xpcall(fn, Stoa.catch, ...)
-end
+local guarded = Stoa.safe.guarded
 
 local SLOTS = {
 	"Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist",

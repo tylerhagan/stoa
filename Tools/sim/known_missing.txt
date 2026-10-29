@@ -1,0 +1,7 @@
+# Names the Forever client has that api.txt (from Blizzard source) does not show.
+# One per line, with the reason after #.
+StoaDB  # saved variable declared in Stoa.toc, created by the client on load
+StoaCharDB  # per-character saved variable declared in Stoa.toc
+StoaHalo  # Stoa own frame, created by Stoa at load (Modules/Halo)
+UIParent  # engine-created root frame, not in any Blizzard file
+WorldFrame  # engine-created 3D world frame

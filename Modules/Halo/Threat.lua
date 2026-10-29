@@ -22,16 +22,9 @@ local WIDTH, ROW_HEIGHT = 220, 16
 local THROTTLE = 0.25
 local INSET = 6
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b, c, d, e = pcall(fn, ...)
-	if ok then return a, b, c, d, e end
-end
+local call = Stoa.safe.call
 
-local function plain(value)
-	if value == nil or Stoa:IsSecret(value) then return nil end
-	return value
-end
+local plain = Stoa.safe.plain
 
 -- The enemy to read: your target if you can attack it, else whatever your
 -- group's tank is facing.
