@@ -12,6 +12,14 @@ local accountDefaults = {
 	vision = "Standard",
 	-- The stone behind windows.
 	windowStone = true,
+	-- In combat the console folds ("fold") or stays open ("open"); after a
+	-- fight it opens again once things have been calm this many seconds
+	-- ("1", "3", "5" or "8"), waiting for the group nearby when calmGroup.
+	combatConsole = "fold",
+	calm = "3",
+	calmGroup = true,
+	-- Fold and open at once, without the short slide.
+	foldInstant = false,
 	-- The spell's art behind the letter in the Halo's coins.
 	coinArt = true,
 	-- "painted" puts the leather and brass frames on the minimap, the

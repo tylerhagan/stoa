@@ -10,6 +10,7 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Combat switch: choose how long the console waits after a fight (1, 3, 5 or 8 seconds), wait for your group between pulls, keep the console open in combat, or fold without the slide.
 - Saved setups: each character's setup is kept account-wide at logout; load it on an alt from the backup page, the welcome page or `/stoa setups`.
 - Stoa's look for Questie's tracker, Bagnon's bags and Details' meters, offered once (`/stoa looks`); Stoa's fonts in LibSharedMedia.
 - Details, Skada and Recount join the "two addons, one job" check; Leatrix Plus's switches win where it and Stoa do the same job.
