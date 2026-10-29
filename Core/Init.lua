@@ -104,6 +104,7 @@ end
 
 function Stoa:IsModuleEnabled(name)
 	local settings = self.db and self.db.modules[name]
+	if self.Conflicts and self.Conflicts:SteppedAside(name) then return false end
 	return not settings or settings.enabled ~= false
 end
 
@@ -137,6 +138,8 @@ Stoa:On("ADDON_LOADED", function(name)
 end)
 
 Stoa:On("PLAYER_LOGIN", function()
+	-- Parts another addon already does step aside first (Core/Conflicts.lua).
+	if Stoa.Conflicts then xpcall(Stoa.Conflicts.Check, Stoa.catch, Stoa.Conflicts) end
 	enableModules()
 	Stoa:Fire("STOA_READY")
 end)

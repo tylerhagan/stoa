@@ -5,6 +5,7 @@ the login events and a round of common game events, runs every /stoa command,
 then prints the errors and the global names the mock didn't know.
 
     python3 Tools/sim/run.py [CLASS]     # needs: pip install lupa
+    STOA_SIM_ADDONS=Bagnon,ElvUI python3 Tools/sim/run.py   # other addons loaded
 """
 import os
 import sys
@@ -18,6 +19,15 @@ lua = lua51.LuaRuntime(unpack_returned_tuples=True)
 G = lua.globals()
 G.SIM_CLASS = CLASS
 lua.execute(open(os.path.join(ROOT, "Tools/sim/mock.lua")).read())
+others = lua.table()
+for folder in filter(None, os.environ.get("STOA_SIM_ADDONS", "").split(",")):
+    others[folder.strip()] = True
+G.SIM_OTHER_ADDONS = others
+lua.execute("""
+C_AddOns.IsAddOnLoaded = function(name) return SIM_OTHER_ADDONS[name] or false end
+C_AddOns.DisableAddOn = function(name) SIM_OTHER_ADDONS[name] = nil end
+ReloadUI = ReloadUI or function() end
+""")
 
 errors = G.SIM_ERRORS
 loader = lua.eval("""function(src, name, ns)
@@ -133,6 +143,23 @@ do
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Small figures: " .. e end
 	C_Container.GetContainerNumSlots, C_Container.GetContainerNumFreeSlots, GetInventoryItemDurability = realSlots, realFree, realDurability
 	drain()
+end
+-- Other addons: answer each question, keeping theirs and then Stoa's.
+do
+	local ok, e = xpcall(function()
+		local c = Stoa.Conflicts
+		for _, choice in ipairs({ "theirs", "ours" }) do
+			for i = 1, 12 do
+				local page = c.page
+				if not (page and page:IsShown()) then break end
+				page[choice]:GetScript("OnClick")(page[choice])
+				drain()
+			end
+			SlashCmdList.STOA("addons")
+			drain()
+		end
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Other addons: " .. e end
 end
 -- At a glance: every situation, hover and click each line, pin and reset.
 local glance = Stoa.modules.Tally

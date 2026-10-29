@@ -62,6 +62,7 @@ What works today:
 | Welcome | Once per character, a page to choose what each spec plays and the theme, with buttons to preview a party, practise combat or open settings |
 | Launch check | On the first login with a new game build, checks every spell ID, game function, Blizzard frame and event Stoa relies on, and says in one line if a feature is off because something moved. `/stoa check` (and `/stoa report`) list the details |
 | Error guard | Stoa records its own errors once each with a count. If one part keeps erroring (a loop), it is switched off until the next reload and Stoa says so in chat, so an error can't lock up the screen. `/stoa report` shows your setup and the errors, ready to copy |
+| Other addons | Spots a known bag, nameplate, chat, tooltip, bar, minimap, group frame or click-casting addon (or a whole UI such as ElvUI) and asks once which should do that job; Stoa's part waits meanwhile |
 | Backup | All of Stoa's settings as one line of text to keep safe, and a place to paste one back to restore it |
 | Shared core | Shared helpers every feature leans on: the spellbook read once (best rank of each spell, costs), item worth (level, sell price, against what you wear, junk), your group as a list, mana and the five-second rule, one set of show rules (always, in or out of combat, in a group or raid, alone, with a target, on mouseover, never), settings kept per spec, and unit events asked of the game for just the units that matter |
 | Per spec | Combat rows, the click grid, the bar tray and At a glance keep their own setting in each spec, so a healing spec and a damage spec each look right without changing anything |
@@ -106,6 +107,7 @@ Fonts are the main gap: see below.
 | `/stoa welcome` | Open the welcome page: roles per spec, theme, previews |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build |
 | `/stoa report` | Your version, game build, spec, theme and any errors Stoa caught, ready to copy |
+| `/stoa addons` | List other addons doing one of Stoa's jobs and ask again which to keep |
 | `/stoa backup` | Copy your settings as text, or paste a backup to restore it |
 | `/stoa xp` | Experience this session, per hour, and time to level |
 | `/stoa pull [seconds]` | Pull countdown for the group (10 by default); `/stoa pull 0` cancels |
