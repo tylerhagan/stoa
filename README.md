@@ -96,7 +96,7 @@ What works today:
 | Trainer | A line under Journey on the console counting the spells and ranks your class trainer would teach you now (Data/TrainerSpells.lua); later ranks only once you know the spell, other races' and factions' spells left out. A note when a new level brings some; `/stoa trainer` lists them |
 | Gathering | Herb and ore node tooltips show the skill they need against yours, with TOO LOW when you're short (English names for now) |
 | Snapping | In unlock mode frames snap to the screen's edges and centre and to other frames within 8px, with a faint guide line; hold Shift to drop freely. A frame snapped to another is kept against it, so moving the Halo carries its plaques |
-| Presets | The welcome page offers a start: Full (everything), Quiet (fewer words: no tooltip details, quest line or At a glance, extra bar rows on mouseover) or Classic feel (Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates, with Stoa's console, Halo and frames). `/stoa preset` |
+| Presets | A new account starts Quiet (fewer words: no tooltip details, quest line or At a glance, extra bar rows on mouseover). The welcome page offers the others: Full (everything) or Classic feel (Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates, with Stoa's console, Halo and frames). `/stoa preset` |
 | For other addons | `StoaAPI`: add lines to At a glance, hear Stoa's state, role and theme changes, and borrow its colours and fonts. See `Core/API.lua` |
 | Settings | Options > AddOns > Stoa (the settings panel's own search box finds any Stoa setting) |
 

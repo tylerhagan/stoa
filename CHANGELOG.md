@@ -74,6 +74,7 @@ Everything below is on the launch branch and not yet in a numbered release.
 - Settings kept per spec (combat rows, click grid, bar tray, At a glance) now stay with the character: a second character no longer starts with the first one's values.
 - Small helpers every module used its own copy of (safe calls, aura lookups, hiding textures) live once in `Core/Util.lua`.
 - The README says what Stoa is not.
+- A new account starts on the Quiet preset; Full and Classic feel stay a click away on the welcome page.
 - One combat clock: the Halo's coins, combat bar and procs share a single 0.2 s tick that runs only in combat, and the Halo and console listen to player and target events only, so a raid's unit events no longer wake them.
 - The offline load test fails on any game function Stoa calls that Forever's UI source doesn't have (`Tools/sim/api.txt`, built by `Tools/sim/apilist.py` from Blizzard's source).
 - `Tools/sim/run.py`: an offline load test that loads every file under a mock of the game, fires the login and combat events (with secret values) and runs every `/stoa` command.

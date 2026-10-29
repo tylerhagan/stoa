@@ -34,6 +34,8 @@ local characterDefaults = {
 }
 
 function Stoa:InitializeDatabase()
+	-- A first login on this account: the Quiet preset is applied (Config/Welcome.lua).
+	self.freshInstall = StoaDB == nil
 	StoaDB = self:ApplyDefaults(StoaDB or {}, accountDefaults)
 	StoaCharDB = self:ApplyDefaults(StoaCharDB or {}, characterDefaults)
 

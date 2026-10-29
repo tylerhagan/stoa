@@ -2,7 +2,7 @@
 -- Shown once per character, a few seconds into the first login, out of
 -- combat: what each spec slot plays, the theme, and the ways to see the UI
 -- before a real fight. /stoa welcome brings it back.
-local _, ns = ...
+local ADDON, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
@@ -28,8 +28,8 @@ end
 -- after /reload.
 local PRESET_ORDER = { "full", "quiet", "classic" }
 local PRESET_WORDS = {
-	full = { "Full", "Everything on, as Stoa ships." },
-	quiet = { "Quiet", "Fewer words: no unit details, quest line or At a glance." },
+	full = { "Full", "Everything on." },
+	quiet = { "Quiet", "Fewer words: no unit details, quest line or At a glance. How Stoa starts." },
 	classic = { "Classic feel", "Blizzard's look for windows, bags and tooltips." },
 }
 local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "Tooltip", "Top", "Plates" }
@@ -74,8 +74,10 @@ local function defaultOf(module, key)
 	return m and m.defaults[key]
 end
 
--- Returns true, or false for a name that isn't a preset.
-function Welcome:ApplyPreset(name)
+-- Returns true, or false for a name that isn't a preset. atLoad applies it
+-- before the UI is built (the first login on an account), so nothing needs
+-- a reload or a redraw.
+function Welcome:ApplyPreset(name, atLoad)
 	if not PRESET_WORDS[name] then return false end
 	for _, entry in ipairs(TOUCHED) do setValue(entry[1], entry[2], defaultOf(entry[1], entry[2])) end
 	for _, module in ipairs(SKINS) do setValue(module, "enabled", true) end
@@ -85,6 +87,7 @@ function Welcome:ApplyPreset(name)
 	end
 	for _, change in ipairs(changesFor(name)) do setValue(change[1], change[2], change[3]) end
 	Stoa.db.preset = name
+	if atLoad then return true end
 	-- Until the next reload the page asks for one.
 	self.applied = name
 	-- The settings these change are read when the UI loads.
@@ -248,6 +251,14 @@ function Welcome:Show()
 end
 
 Stoa.commands.welcome = function() Welcome:Show() end
+
+-- The first login on an account starts quiet; Full is one click away on
+-- this page. Runs after the saved settings load and before any module reads them.
+Stoa:On("ADDON_LOADED", function(name)
+	if name == ADDON and Stoa.freshInstall and not Stoa.db.preset then
+		Welcome:ApplyPreset("quiet", true)
+	end
+end)
 
 Stoa:On("STOA_READY", function()
 	if Stoa.char.welcomed then return end
