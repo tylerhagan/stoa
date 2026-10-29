@@ -237,6 +237,16 @@ local function ready(look)
 	return ok and yes
 end
 
+-- For the welcome page: whether a look can be offered, and whether it's on.
+function Looks:Ready(look)
+	return ready(look)
+end
+
+function Looks:IsOn(look)
+	local entry = saved()[look.key]
+	return type(entry) == "table" and entry.on or false
+end
+
 -- Puts a look on (true) or takes it off (false), remembering the answer.
 function Looks:Set(look, on)
 	local entry = saved()[look.key]
@@ -296,6 +306,8 @@ end
 -- Offers each look not answered before, one at a time.
 function Looks:Next()
 	if Stoa.Conflicts.asking then return end
+	-- The welcome page offers them itself.
+	if Stoa.Welcome and Stoa.Welcome:Pending() then return end
 	for _, look in ipairs(LOOKS) do
 		local entry = saved()[look.key]
 		if not look.offered and type(entry) ~= "table" and ready(look) then

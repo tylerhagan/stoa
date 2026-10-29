@@ -37,7 +37,7 @@ local function build()
 	if CreateSettingsButtonInitializer then
 		layout:AddInitializer(CreateSettingsButtonInitializer("Welcome page", "Open", function()
 			Stoa.Welcome:Show()
-		end, "Choose what each spec plays and your theme, and preview the party frames and combat. /stoa welcome", true))
+		end, "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of Stoa, and other addons. /stoa welcome", true))
 		layout:AddInitializer(CreateSettingsButtonInitializer("Backup", "Open", function()
 			Stoa.Backup:Show()
 		end, "All of Stoa's settings as one line of text to keep safe, and a place to paste one back. /stoa backup", true))
