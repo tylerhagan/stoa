@@ -442,12 +442,12 @@ function Bar:OnEnable()
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateState() end)
 	Stoa:OnUnit("UNIT_POWER_FREQUENT", { "player" }, function() self:UpdateState() end)
 	Stoa:On("BAG_UPDATE_DELAYED", function() self:UpdateAll() end)
-	-- Range has no event. If an update ever errors the ticker stops rather
-	-- than repeating.
-	local ticker
-	ticker = Stoa:NewTicker(0.25, function()
-		if not InCombatLockdown() then return end
-		if not xpcall(self.UpdateState, Stoa.catch, self) then ticker:Cancel() end
+	-- Range has no event, so it rides the combat clock. If an update ever
+	-- errors the listener stops rather than repeating.
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not InCombatLockdown() then return end
+		if not xpcall(self.UpdateState, Stoa.catch, self) then ticking = false end
 	end)
 	-- /stoa combat practice: the game only shows the row in real combat,
 	-- so the filled buttons are shown by hand while practising.

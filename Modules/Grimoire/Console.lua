@@ -791,16 +791,16 @@ function Console:OnEnable()
 			self:UpdateFellowship()
 		end
 	end)
-	Stoa:On("UNIT_MAXHEALTH", function(unit)
+	Stoa:OnUnit("UNIT_MAXHEALTH", { "player" }, function(unit)
 		if unit == "player" then self:UpdateResources() end
 	end)
-	Stoa:On("UNIT_POWER_UPDATE", function(unit)
+	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player" }, function(unit)
 		if unit == "player" then
 			setUnitBar(self.mana, "player", "power")
 			self.manaText:SetText(UnitPower("player"))
 		end
 	end)
-	Stoa:On("UNIT_MAXPOWER", function(unit)
+	Stoa:OnUnit("UNIT_MAXPOWER", { "player" }, function(unit)
 		if unit == "player" then self:UpdateResources() end
 	end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function() self:UpdateFellowship() end)

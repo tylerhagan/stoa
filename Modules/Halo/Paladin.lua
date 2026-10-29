@@ -496,12 +496,12 @@ function Paladin:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", refresh)
 	Stoa:On("STOA_STATE_CHANGED", refresh)
 	Stoa:On("SPELLS_CHANGED", refresh)
-	-- Timers tick without events. If an update ever errors the ticker
-	-- stops rather than repeating the error.
-	local ticker
-	ticker = Stoa:NewTicker(0.2, function()
-		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Role() then return end
-		if not xpcall(self.Refresh, Stoa.catch, self) then ticker:Cancel() end
+	-- Timers tick without events, on the combat clock. If an update ever
+	-- errors the listener stops rather than repeating the error.
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not self:Role() then return end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticking = false end
 	end)
 	refresh()
 end

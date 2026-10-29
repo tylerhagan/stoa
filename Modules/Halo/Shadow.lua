@@ -500,12 +500,12 @@ function Shadow:OnEnable()
 		self.plates[unit] = nil
 		if self.pained then self.pained[unit] = nil end
 	end)
-	-- Timers and cooldowns tick without events. If an update ever errors
-	-- the ticker stops rather than repeating the error.
-	local ticker
-	ticker = Stoa:NewTicker(0.2, function()
-		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Active() then return end
-		if not xpcall(self.Refresh, Stoa.catch, self) then ticker:Cancel() end
+	-- Timers and cooldowns tick without events, on the combat clock. If an
+	-- update ever errors the listener stops rather than repeating the error.
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not self:Active() then return end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticking = false end
 	end)
 	refresh()
 end

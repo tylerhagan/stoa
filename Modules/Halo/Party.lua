@@ -822,6 +822,7 @@ function Party:OnEnable()
 	-- Range has no event, so it's checked a few times a second; buff timers
 	-- count down once a second.
 	Stoa:NewTicker(0.3, function()
+		if not self.frame:IsShown() then return end
 		for _, card in ipairs(self.cards) do
 			self:UpdateRange(card)
 		end

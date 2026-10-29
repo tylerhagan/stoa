@@ -757,7 +757,7 @@ function Halo:OnEnable()
 		self.powerToken = nil
 		self:UpdatePower()
 	end)
-	Stoa:On("UNIT_AURA", function(unit)
+	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateReminders() end
 		if unit == "target" then self:UpdateTargetAuras() end
 	end)
@@ -770,17 +770,17 @@ function Halo:OnEnable()
 	Stoa:On("SPELLS_CHANGED", function() self:UpdateSignature() end)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", function() self:UpdateCooldown() end)
 
-	Stoa:On("UNIT_HEALTH", function(unit)
+	Stoa:OnUnit("UNIT_HEALTH", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateHealth() end
 		if unit == "target" then self:UpdateTarget() end
 	end)
-	Stoa:On("UNIT_MAXHEALTH", function(unit)
+	Stoa:OnUnit("UNIT_MAXHEALTH", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateHealth() end
 	end)
-	Stoa:On("UNIT_POWER_UPDATE", function(unit)
+	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
 	end)
-	Stoa:On("UNIT_MAXPOWER", function(unit)
+	Stoa:OnUnit("UNIT_MAXPOWER", { "player" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateTarget() end)

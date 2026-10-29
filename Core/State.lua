@@ -20,9 +20,25 @@ function Stoa:GetState()
 	return state
 end
 
+-- One clock for everything that times in combat: ticks only while the state
+-- is combat (real or practice), and fires STOA_TICK with the time.
+local clock
+
+local function setClock()
+	if state == COMBAT then
+		if not clock then
+			clock = Stoa:NewTicker(0.2, function() Stoa:Fire("STOA_TICK", GetTime()) end)
+		end
+	elseif clock then
+		clock:Cancel()
+		clock = nil
+	end
+end
+
 local function setState(newState)
 	if newState == state then return end
 	state = newState
+	setClock()
 	Stoa:Fire("STOA_STATE_CHANGED", state)
 end
 
