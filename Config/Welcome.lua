@@ -27,10 +27,12 @@ end
 -- one after another never leaves leftovers. Skins and the like only change
 -- after /reload.
 local PRESET_ORDER = { "full", "quiet", "classic" }
+-- Full is how Stoa ships; the other two are described against it, so the
+-- page says exactly what a choice takes away.
 local PRESET_WORDS = {
-	full = { "Full", "Everything on, as Stoa ships." },
-	quiet = { "Quiet", "Fewer words: no unit details, quest line or At a glance." },
-	classic = { "Classic feel", "Blizzard's look for windows, bags and tooltips." },
+	full = { "Full", "Everything on, as Stoa ships: tooltip details, the quest line, At a glance, every bar row out of combat, and Stoa's look on windows, bags, tooltips, the top of the screen and nameplates." },
+	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; extra bar rows only on mouseover; the click grid folded for healers, hidden otherwise. Stoa's look stays." },
+	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of Stoa's. The console, Halo, frames and words stay as in Full." },
 }
 local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "Tooltip", "Top", "Plates" }
 
@@ -181,12 +183,20 @@ function Welcome:Build()
 			self:Refresh()
 		end)
 		button:SetPoint("TOPLEFT", PAD + (i - 1) * (ROLE_WIDTH + 28), -386)
+		-- Hovering a choice shows what it changes before it's picked.
+		button:HookScript("OnEnter", function() self.hovered = name; self:Refresh() end)
+		button:HookScript("OnLeave", function()
+			if self.hovered == name then self.hovered = nil end
+			self:Refresh()
+		end)
 		self.presetButtons[name] = button
 	end
 	local presetNote = UI.caption(page, "")
 	presetNote:SetPoint("TOPLEFT", PAD, -418)
 	presetNote:SetWidth(WIDTH - PAD * 2 - 130)
+	presetNote:SetHeight(44)
 	presetNote:SetJustifyH("LEFT")
+	presetNote:SetJustifyV("TOP")
 	self.presetNote = presetNote
 	local reload = UI.button(page, "Reload now", 110, function() ReloadUI() end)
 	reload:SetPoint("TOPRIGHT", -PAD, -414)
@@ -195,7 +205,7 @@ function Welcome:Build()
 
 	-- Ways to see it all before a real fight.
 	local tryLabel = UI.caption(page, "Try it")
-	tryLabel:SetPoint("TOPLEFT", PAD, -452)
+	tryLabel:SetPoint("TOPLEFT", PAD, -466)
 	local tries = {
 		{ "Sample party", function() Stoa.commands.test("") end },
 		{ "Practice combat", function() page:Hide(); Stoa.commands.combat("") end },
@@ -203,7 +213,7 @@ function Welcome:Build()
 	}
 	for i, entry in ipairs(tries) do
 		local button = UI.button(page, entry[1], ROLE_WIDTH + 20, entry[2])
-		button:SetPoint("TOPLEFT", PAD + (i - 1) * (ROLE_WIDTH + 28), -470)
+		button:SetPoint("TOPLEFT", PAD + (i - 1) * (ROLE_WIDTH + 28), -484)
 	end
 
 	local done = UI.button(page, "Done", 96, function() page:Hide() end)
@@ -226,14 +236,17 @@ function Welcome:Refresh()
 	for name, button in pairs(self.themeButtons) do button:SetSelected(name == theme) end
 	local vision = Stoa.db.vision or "Standard"
 	for name, button in pairs(self.visionButtons) do button:SetSelected(name == vision) end
-	local preset = Stoa.db.preset
+	-- Full is the default, so an account that never picked one shows it chosen.
+	local preset = Stoa.db.preset or "full"
 	for name, button in pairs(self.presetButtons) do button:SetSelected(name == preset) end
-	if self.applied and PRESET_WORDS[self.applied] then
-		self.presetNote:SetText(PRESET_WORDS[self.applied][2] .. " Reload to finish.")
+	local shown = self.hovered or self.applied or preset
+	local words = PRESET_WORDS[shown] and PRESET_WORDS[shown][2] or ""
+	if self.applied and PRESET_WORDS[self.applied] and not self.hovered then
+		self.presetNote:SetText(words .. " Reload to finish.")
 		self.reloadButton:Show()
 	else
-		self.presetNote:SetText("Pick one to set the lot at once. You can change anything later in settings.")
-		self.reloadButton:Hide()
+		self.presetNote:SetText(words .. (shown == preset and "" or " You can change anything later in settings."))
+		self.reloadButton:SetShown(self.applied ~= nil)
 	end
 end
 
