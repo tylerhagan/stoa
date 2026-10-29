@@ -748,8 +748,13 @@ function Console:AddPage(page)
 	page:SetAlpha(self.leftPage and self.leftPage:GetAlpha() or 1)
 end
 
+-- Folded in combat, unless the player keeps it open (Settings: In combat).
 local function shouldBeOpen()
-	return Stoa:GetState() == Stoa.STATE_WORLD
+	return Stoa:GetState() == Stoa.STATE_WORLD or Stoa.db.combatConsole == "open"
+end
+
+function Console:Refold()
+	self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant)
 end
 
 -- Lifecycle -----------------------------------------------------------------
@@ -771,7 +776,7 @@ function Console:OnEnable()
 	Stoa:On("STOA_NOTE", function(kind, message) self:AddNote(kind, message) end)
 	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
-	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen()) end)
+	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant) end)
 
 	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
 		if unit == "player" then self:UpdateSeal() end

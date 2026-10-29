@@ -1,12 +1,19 @@
 -- Stoa: the two states.
 -- WORLD: the Grimoire console is open. COMBAT: the console folds to its spine
--- and the Halo rises. Leaving combat waits a few calm seconds so the UI does
--- not flicker between pulls. Holding Alt in combat "peeks" at the console.
+-- and the Halo rises. Leaving combat waits a few calm seconds (a setting: 1,
+-- 3, 5 or 8) so the UI does not flicker between pulls, and in a group it
+-- also waits while the people near you are still fighting, so a chain of
+-- pulls stays one fight. The console can also stay open in combat
+-- (Stoa.db.combatConsole, see Modules/Grimoire/Console.lua).
 local _, ns = ...
 local Stoa = ns.Stoa
 
 local WORLD, COMBAT = "WORLD", "COMBAT"
 local CALM_SECONDS = 3
+-- How often the calm is checked, and the longest a fighting group can hold
+-- the combat look after you've left combat.
+local CALM_STEP = 0.5
+local GROUP_HOLD = 20
 
 Stoa.STATE_WORLD = WORLD
 Stoa.STATE_COMBAT = COMBAT
@@ -67,12 +74,41 @@ Stoa:On("PLAYER_REGEN_DISABLED", function()
 	setState(COMBAT)
 end)
 
+function Stoa:CalmSeconds()
+	return tonumber(self.db and self.db.calm) or CALM_SECONDS
+end
+
+-- Someone in your group, near you and alive, still in a fight.
+local function groupFighting()
+	if not (Stoa.db and Stoa.db.calmGroup ~= false) or not IsInGroup() then return false end
+	local raid = IsInRaid()
+	local count = raid and GetNumGroupMembers() or GetNumSubgroupMembers()
+	for i = 1, count do
+		local unit = (raid and "raid" or "party") .. i
+		if not UnitIsUnit(unit, "player") then
+			local fighting = UnitAffectingCombat(unit)
+			local near = not UnitInRange or UnitInRange(unit)
+			if not Stoa:IsSecret(fighting) and not Stoa:IsSecret(near) and fighting and near and not UnitIsDeadOrGhost(unit) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 Stoa:On("PLAYER_REGEN_ENABLED", function()
 	setCombatLayout(false)
 	if calmTimer then calmTimer:Cancel() end
-	calmTimer = C_Timer.NewTimer(CALM_SECONDS, function()
-		calmTimer = nil
-		if not InCombatLockdown() then
+	-- The calm seconds count only while the group is calm too.
+	local calm, waited = 0, 0
+	calmTimer = Stoa:NewTicker(CALM_STEP, function()
+		if InCombatLockdown() then return end
+		waited = waited + CALM_STEP
+		local ok, fighting = pcall(groupFighting)
+		if not (ok and fighting) or waited >= GROUP_HOLD then calm = calm + CALM_STEP end
+		if calm >= Stoa:CalmSeconds() then
+			calmTimer:Cancel()
+			calmTimer = nil
 			setState(WORLD)
 		end
 	end)
