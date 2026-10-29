@@ -4,6 +4,7 @@
 -- names this mock (and so maybe the game) doesn't know.
 local unknown, errors = {}, {}
 SIM_UNKNOWN, SIM_ERRORS = unknown, errors
+SIM_PATHS = {}
 
 local function noop() end
 
@@ -42,6 +43,10 @@ local special = {
 	GetID = function(self) return self.__id or 1 end,
 	SetID = function(self, v) self.__id = v end,
 	GetMinMaxValues = function() return 0, 1 end,
+	SetTexture = function(self, path) if type(path) == "string" then SIM_PATHS[path] = true end end,
+	SetFont = function(self, path) if type(path) == "string" then SIM_PATHS[path] = true end return true end,
+	SetStatusBarTexture = function(self, path) if type(path) == "string" then SIM_PATHS[path] = true end end,
+	SetMask = function(self, path) if type(path) == "string" then SIM_PATHS[path] = true end end,
 	GetStatusBarTexture = function(self) return self:CreateTexture() end,
 	GetCenter = function() return 500, 300 end,
 	GetRect = function() return 0, 0, 100, 100 end,
