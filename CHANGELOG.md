@@ -71,6 +71,10 @@ Everything below is on the launch branch and not yet in a numbered release.
 - Gear scores by Stoa's own stat weights for your class and role, shifting with level: tooltips show UPGRADE +n%, bags mark upgrades UP, quest rewards pick by score.
 - Trainer: Journey counts the new spells and ranks waiting at your trainer, with a note on level up and `/stoa trainer` to list them.
 - When the game hides auras, buff reminders and aura lists stand down instead of calling a buff missing.
+- Settings kept per spec (combat rows, click grid, bar tray, At a glance) now stay with the character: a second character no longer starts with the first one's values.
+- Small helpers every module used its own copy of (safe calls, aura lookups, hiding textures) live once in `Core/Util.lua`.
+- The README says what Stoa is not.
+- The offline load test fails on any game function Stoa calls that Forever's UI source doesn't have (`Tools/sim/api.txt`, built by `Tools/sim/apilist.py` from Blizzard's source).
 - `Tools/sim/run.py`: an offline load test that loads every file under a mock of the game, fires the login and combat events (with secret values) and runs every `/stoa` command.
 
 ## 0.9.0
