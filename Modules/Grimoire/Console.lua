@@ -40,7 +40,7 @@ local ART_HEIGHT = 176
 local ART_SCALE = 0.556
 Console.ART_SCALE = ART_SCALE
 local LEATHER_W, LEATHER_H = 1024, 256
-local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 36, 17
+local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 36, 10
 local MEDALLION_WIDTH, MEDALLION_LINE = 1024, 257
 -- The ring's centre row in the medallion texture; the seal sits on it.
 local MEDALLION_CENTRE = 267.6
