@@ -9,6 +9,19 @@ A calm, two-state UI suite for **WoW Forever** (interface 16001).
 
 Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a small **spec signature** on top. Changing spec swaps the layout automatically.
 
+## What Stoa is not
+
+Stoa does a lot, so it helps to say what it leaves alone. These are decisions, not gaps.
+
+- **Not a damage meter.** Blizzard's meters are restyled, never replaced.
+- **Not a boss mod.** No timers for encounters, no warnings read from the combat log. Stoa shows what the game shows you.
+- **Not a top bar.** At a glance holds a few chosen numbers beside the chat; there is no row of modules along the top of the screen.
+- **Not an auction or trade tool.** Prices, scans and crafting queues belong to addons made for them.
+- **Not an icon wall.** Buffs, procs and cooldowns are words, coins and the game's own art, never a grid of timers.
+- **Not a replacement for Edit Mode or the game menu.** The menu and the settings panel keep their own look, and Blizzard's own frames keep their jobs.
+- **Not green against red.** Every state carries a word or a shape as well as a colour.
+- **Not loud.** Nothing flashes, bounces or plays a sound of its own; procs use the game's own art and sound, and that can be turned off. If a feature cannot be quiet, it is left out.
+
 ## Status
 
 What works today:
