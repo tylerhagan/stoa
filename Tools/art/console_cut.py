@@ -25,7 +25,11 @@ FULL_RING = RING < 110  # the first painting's rings stop above its bottom line
 # big ring with a bracket either side, the top line through the ring's
 # centre. Its ring is found further out, the plain stretch of line is short,
 # and the brackets are kept as well as the ring.
-FRAME = len(sys.argv) > 5 and sys.argv[5] == "frame"
+# "clean": the same medallion alone, no leather band and no bottom line
+# (source/console-medallion-clean.png). The brackets keep their own ends,
+# and the edge strip is left as it is (cut from the frame painting).
+CLEAN = len(sys.argv) > 5 and sys.argv[5] == "clean"
+FRAME = len(sys.argv) > 5 and sys.argv[5] in ("frame", "clean")
 BRACKET_RUN = float(sys.argv[6]) if len(sys.argv) > 6 else 1.35  # how far the bottom line runs, in ring radii
 if FRAME:
     FULL_RING = True
@@ -74,6 +78,8 @@ yl = (band * col[band] ** 2).sum() / (col[band] ** 2).sum()
 colb = B[:, PLAIN[0]:PLAIN[1]].mean(1)
 start = int(cy + 60) if FRAME else int(cy + ry)  # the frame's line runs inside the ring
 yb = start + np.argmax(colb[start:] > 0.3)
+if CLEAN:
+    yb = a.shape[0] + 100  # no bottom line
 
 s = RING / rx
 print("bottom line row", yb)
@@ -124,7 +130,8 @@ strip = sample(XX, YY).mean(1)
 strip = unpremultiply(strip[:, None, :].repeat(1, 1))[:, 0]
 strip[:, 3] = haze(strip[:, 3])
 edge = np.repeat(strip[:, None, :], 16, 1)
-save(edge, brass(edge), "ConsoleEdge")
+if not CLEAN:
+    save(edge, brass(edge), "ConsoleEdge")
 
 # Medallion: MED_W x 512 around the ring, at the same scale and line row.
 yy, xx = np.mgrid[0:512, 0:MED_W].astype(float)
@@ -167,6 +174,9 @@ if FULL_RING:
         foot = np.clip((yb + 22 - px_y) * s / 3, 0, 1)
         line = np.where(px_y > yb - 6, np.clip((r_out * BRACKET_RUN - np.abs(dx)) / (r_out * 0.18), 0, 1), 1)
         bracket = np.array(lit).astype(float) / 255 * (d < r_out * 1.6) * foot * line
+        if CLEAN:
+            # Nothing to trim: everything the painting holds round the ring.
+            bracket = (d < r_out * 1.6).astype(float)
         ring_keep = np.maximum(ring_keep, bracket)
     med[..., 3] *= np.maximum(band_keep, ring_keep) * side
 else:
