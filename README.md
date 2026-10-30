@@ -127,7 +127,8 @@ Fonts are the main gap: see below.
 | `/stoa glance` | List what At a glance can show; `/stoa glance add <name>`, `remove <name>`, `reset` (`/stoa tally` still works) |
 | `/stoa welcome` | Open the welcome wizard again |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build |
-| `/stoa report` | Your version, game build, spec, theme and any errors Stoa caught, ready to copy |
+| `/stoa report` | Your version, game build, spec, theme and screen and UI scale, language, game settings Stoa holds, other addons and any errors Stoa caught, ready to copy |
+| `/stoa restore` | Put back every game setting Stoa changed (camera distance, map fade, target plate size, combined bags, proc art), unless you've changed it since |
 | `/stoa addons` | List other addons doing one of Stoa's jobs and ask again which to keep |
 | `/stoa backup` | Copy your settings as text, or paste a backup to restore it |
 | `/stoa xp` | Experience this session, per hour, and time to level |

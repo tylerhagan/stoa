@@ -335,7 +335,7 @@ local function showGuides(result)
 	guides.v:ClearAllPoints()
 	guides.h:ClearAllPoints()
 	if result and result.gx then
-		guides.v:SetWidth(1)
+		Stoa.UI.pixel(guides.v, "width")
 		guides.v:SetPoint("TOP", guides, "TOPLEFT", result.gx, 0)
 		guides.v:SetPoint("BOTTOM", guides, "BOTTOMLEFT", result.gx, 0)
 		guides.v:Show()
@@ -343,7 +343,7 @@ local function showGuides(result)
 		guides.v:Hide()
 	end
 	if result and result.gy then
-		guides.h:SetHeight(1)
+		Stoa.UI.pixel(guides.h, "height")
 		guides.h:SetPoint("LEFT", guides, "BOTTOMLEFT", 0, result.gy)
 		guides.h:SetPoint("RIGHT", guides, "BOTTOMRIGHT", 0, result.gy)
 		guides.h:Show()

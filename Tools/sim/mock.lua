@@ -368,7 +368,9 @@ IsInGuild = function() return false end
 C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end, SendAddonMessage = noop, SendChatMessage = noop }
 C_PartyInfo = { InviteUnit = noop, DoCountdown = noop, LeaveParty = noop, ConvertToRaid = noop }
 C_AssistedCombat = { GetNextCastSpell = function() return nil end, IsAvailable = function() return false end }
-C_CVar = { GetCVar = function() return "0" end, SetCVar = noop, GetCVarBool = function() return false end, RegisterCVar = noop }
+SIM_CVARS = {}
+C_CVar = { GetCVar = function(name) return SIM_CVARS[name] or "0" end, SetCVar = function(name, value) SIM_CVARS[name] = tostring(value) end, GetCVarBool = function() return false end, RegisterCVar = noop }
+GetCVar, SetCVar = C_CVar.GetCVar, C_CVar.SetCVar
 C_DateAndTime = { GetCurrentCalendarTime = function() return { hour = 12, minute = 0 } end }
 C_Timer.Ticker = nil
 C_NamePlate = { GetNamePlateForUnit = function() return nil end, GetNamePlates = function() return {} end }

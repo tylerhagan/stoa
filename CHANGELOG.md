@@ -10,6 +10,10 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Game settings Stoa changes (far camera, map fade, target plate size, combined bags, proc art) are noted with what they held before; switching the part off puts them back, unless you've changed them since. `/stoa restore` puts them all back.
+- Hairlines and borders stay exactly one screen pixel at any UI scale or resolution.
+- `/stoa report` also lists your screen size and UI scale, game language, the game settings Stoa holds and your other addons.
+- Stoa stays off (and leaves its settings alone) when loaded on a game version other than WoW Forever.
 - Icon tray: other addons' minimap buttons gather into one small button below the map; click it for a tray of their icons (`/stoa tray`).
 - Pawn: with Pawn installed, Stoa's upgrade marks give Pawn's answer, and Stoa leaves Pawn's own marks to it.
 - Training page (`/stoa trainer`): spells waiting now and at the next two training levels, with prices learned from your trainer; right-click to skip a spell. The Journey line shows the cost.

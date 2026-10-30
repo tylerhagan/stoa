@@ -97,7 +97,7 @@ function ChatLook:PlaceRail()
 		rail:SetFrameStrata("MEDIUM")
 		local rule = UI.line(rail)
 		rule:SetHeight(0)
-		rule:SetWidth(1)
+		Stoa.UI.pixel(rule, "width")
 		rule:SetPoint("TOPRIGHT", rail, "TOPRIGHT", RAIL_GAP / 2, 0)
 		rule:SetPoint("BOTTOMRIGHT", rail, "BOTTOMRIGHT", RAIL_GAP / 2, 0)
 		self.rail = rail

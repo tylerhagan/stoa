@@ -34,6 +34,8 @@ others = lua.table()
 for folder in filter(None, os.environ.get("STOA_SIM_ADDONS", "").split(",")):
     others[folder.strip()] = True
 G.SIM_OTHER_ADDONS = others
+if os.environ.get("STOA_SIM_INTERFACE"):
+    lua.execute("local i = %d; GetBuildInfo = function() return '1.15.8', '99999', 'Oct 1 2026', i end" % int(os.environ["STOA_SIM_INTERFACE"]))
 lua.execute("""
 C_AddOns.IsAddOnLoaded = function(name) return SIM_OTHER_ADDONS[name] or false end
 C_AddOns.DisableAddOn = function(name) SIM_OTHER_ADDONS[name] = nil end
@@ -100,6 +102,12 @@ fire("VARIABLES_LOADED")
 fire("PLAYER_LOGIN")
 fire("PLAYER_ENTERING_WORLD", true, false)
 drain()
+if Stoa.blocked then
+	-- Another client: nothing may have run, and the saved settings stay untouched.
+	if Stoa.db ~= nil or Stoa.modules.Halo.db ~= nil then SIM_ERRORS[#SIM_ERRORS + 1] = "Client gate: Stoa touched its settings" end
+	SIM_RAN = "(client gate: Stoa stayed off)"
+	do return end
+end
 SIM_ADVANCE(1)
 updates()
 for _, e in ipairs({ "SPELLS_CHANGED", "PLAYER_LEVEL_UP", "GROUP_ROSTER_UPDATE", "PLAYER_TARGET_CHANGED",
@@ -190,6 +198,27 @@ if DoesItDie and Stoa.modules.Lethal then
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	UnitExists = realExists
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "DoesItDie: " .. e end
+end
+-- Game settings: Stoa's change is noted and put back; the player's own change stays.
+do
+	local ok, e = xpcall(function()
+		local gs = Stoa.GameSettings
+		SIM_CVARS.simTest = "7"
+		gs:Set("Comforts", "simTest", "9")
+		assert(SIM_CVARS.simTest == "9", "set")
+		gs:Restore("simTest")
+		assert(SIM_CVARS.simTest == "7", "restore")
+		gs:Set("Comforts", "simTest", "9")
+		SIM_CVARS.simTest = "3"
+		gs:Restore("simTest")
+		assert(SIM_CVARS.simTest == "3", "player's value kept")
+		Stoa.modules.Comforts:Camera()
+		assert(gs:Held("cameraDistanceMaxZoomFactor"), "far camera noted")
+		SlashCmdList.STOA("restore")
+		assert(not gs:Held("cameraDistanceMaxZoomFactor"), "restore all")
+		assert(SIM_CVARS.cameraDistanceMaxZoomFactor == "0", "camera put back")
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Game settings: " .. e end
 end
 -- At a glance: every situation, hover and click each line, pin and reset.
 local glance = Stoa.modules.Tally

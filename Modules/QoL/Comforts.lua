@@ -55,8 +55,11 @@ end
 -- Camera ----------------------------------------------------------------------
 
 function Comforts:Camera()
-	if not self.db.farCamera or InCombatLockdown() or Stoa:SharedBy("camera") then return end
-	pcall(SetCVar, "cameraDistanceMaxZoomFactor", FAR_CAMERA)
+	if self.db.farCamera and not Stoa:SharedBy("camera") then
+		Stoa.GameSettings:Set("Comforts", "cameraDistanceMaxZoomFactor", FAR_CAMERA)
+	else
+		Stoa.GameSettings:Restore("cameraDistanceMaxZoomFactor")
+	end
 end
 
 -- Gossip and quests -------------------------------------------------------------

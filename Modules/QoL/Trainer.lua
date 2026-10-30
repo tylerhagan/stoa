@@ -214,7 +214,7 @@ function Trainer:BuildRow(page, i)
 	local rule = UI.line(row, "hairline", 0.8)
 	rule:SetPoint("BOTTOMLEFT", 0, 2)
 	rule:SetPoint("BOTTOMRIGHT", 0, 2)
-	rule:SetHeight(1)
+	Stoa.UI.pixel(rule, "height")
 	row:SetScript("OnEnter", function()
 		if not row.entry or row.entry.heading then return end
 		hover:Show()

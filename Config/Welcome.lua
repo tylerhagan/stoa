@@ -469,7 +469,7 @@ function Welcome:Build()
 
 	-- The step rail.
 	local rule = page:CreateTexture(nil, "BORDER")
-	rule:SetWidth(1)
+	Stoa.UI.pixel(rule, "width")
 	rule:SetPoint("TOPLEFT", RAIL, -HEADER)
 	rule:SetPoint("BOTTOMLEFT", RAIL, FOOTER)
 	UI.paint(rule, "hairline", 0.12)

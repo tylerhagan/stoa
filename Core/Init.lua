@@ -8,6 +8,25 @@ _G.Stoa = Stoa
 Stoa.name = ADDON
 Stoa.version = C_AddOns and C_AddOns.GetAddOnMetadata(ADDON, "Version") or "dev"
 
+-- Client gate ---------------------------------------------------------------
+-- Stoa is made for WoW Forever (interface 16000-19999). On any other client
+-- it does nothing at all: no events, no modules, and its saved settings are
+-- never read or written, so the game writes them back exactly as they were
+-- and nothing a wrong client did can damage them. It says so once.
+
+do
+	local interface = select(4, GetBuildInfo())
+	interface = tonumber(interface)
+	Stoa.blocked = interface ~= nil and (interface < 16000 or interface >= 20000)
+	if Stoa.blocked then
+		local note = CreateFrame("Frame")
+		note:RegisterEvent("PLAYER_LOGIN")
+		note:SetScript("OnEvent", function()
+			print("|cffd8b66aStoa|r is made for WoW Forever and stays off on this game version. Your Stoa settings are kept as they are.")
+		end)
+	end
+end
+
 -- Event bus -----------------------------------------------------------------
 -- Modules subscribe with Stoa:On(event, fn). Game events and Stoa's own
 -- messages ("STOA_STATE_CHANGED", "STOA_ROLE_CHANGED", ...) share one table.
@@ -61,6 +80,7 @@ function Stoa:Fire(event, ...)
 end
 
 frame:SetScript("OnEvent", function(_, event, ...)
+	if Stoa.blocked then return end
 	Stoa:Fire(event, ...)
 end)
 
@@ -155,6 +175,10 @@ end
 
 SLASH_STOA1 = "/stoa"
 SlashCmdList.STOA = function(input)
+	if Stoa.blocked then
+		Stoa:Print("is made for WoW Forever and stays off on this game version.")
+		return
+	end
 	local command, rest = strtrim(input or ""):match("^(%S*)%s*(.-)$")
 	command = command:lower()
 	if command == "keywords" then

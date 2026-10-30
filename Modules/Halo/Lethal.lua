@@ -54,7 +54,7 @@ function Lethal:Build()
 	marker:SetPoint("RIGHT", hp:GetStatusBarTexture(), "RIGHT")
 	marker:SetWidth(hp:GetWidth())
 	local edge = marker:CreateTexture(nil, "OVERLAY")
-	edge:SetWidth(1)
+	Stoa.UI.pixel(edge, "width")
 	edge:SetPoint("TOPLEFT", marker:GetStatusBarTexture(), "TOPLEFT")
 	edge:SetPoint("BOTTOMLEFT", marker:GetStatusBarTexture(), "BOTTOMLEFT")
 	self.clip, self.marker, self.markerEdge = clip, marker, edge

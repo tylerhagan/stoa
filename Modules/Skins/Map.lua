@@ -75,8 +75,11 @@ end
 function Map:ApplyFade()
 	local db = self.db
 	if self.usesCVar then
-		local wanted = db.fade and "1" or "0"
-		if C_CVar.GetCVar("mapFade") ~= wanted then pcall(C_CVar.SetCVar, "mapFade", wanted) end
+		if db.fade then
+			Stoa.GameSettings:Set("Map", "mapFade", "1")
+		else
+			Stoa.GameSettings:Restore("mapFade")
+		end
 		return
 	end
 	if not db.fade then mapAlpha(1) end

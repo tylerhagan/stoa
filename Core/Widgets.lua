@@ -13,6 +13,41 @@ UI.MEDIA = "Interface\\AddOns\\Stoa\\Media\\"
 
 local themed = {}
 
+-- Hairlines in whole screen pixels. A line one unit tall can land between
+-- two pixels at most UI scales and blur, or vanish; these keep their size in
+-- real pixels, and are measured again when the scale or screen changes.
+local pixelled = setmetatable({}, { __mode = "k" })
+
+local function pixelSize(region, size)
+	if PixelUtil and PixelUtil.GetNearestPixelSize and region.GetEffectiveScale then
+		local ok, value = pcall(PixelUtil.GetNearestPixelSize, size, region:GetEffectiveScale(), size)
+		if ok and value then return value end
+	end
+	return size
+end
+
+local function snap(region)
+	local spec = pixelled[region]
+	if not spec then return end
+	local size = pixelSize(region, spec.count)
+	if spec.axis == "width" then region:SetWidth(size) else region:SetHeight(size) end
+end
+
+-- Sizes region to count screen pixels along axis ("height" or "width").
+function UI.pixel(region, axis, count)
+	pixelled[region] = { axis = axis or "height", count = count or 1 }
+	snap(region)
+	return region
+end
+
+local function snapAll()
+	for region in pairs(pixelled) do snap(region) end
+end
+Stoa:On("UI_SCALE_CHANGED", snapAll)
+Stoa:On("DISPLAY_SIZE_CHANGED", snapAll)
+-- Scales set while frames are built settle by the time the world shows.
+Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(0, snapAll) end)
+
 -- Paints a texture, status bar or font string with a theme token now and on
 -- every theme change.
 function UI.paint(region, token, alpha)
@@ -131,7 +166,7 @@ end
 
 function UI.line(parent, token, alpha)
 	local tex = parent:CreateTexture(nil, "BORDER")
-	tex:SetHeight(1)
+	UI.pixel(tex, "height")
 	UI.paint(tex, token or "hairline", alpha)
 	return tex
 end
@@ -224,12 +259,12 @@ function UI.border(frame, size, outset)
 			local y = side == "TOP" and outset or -outset
 			tex:SetPoint(side .. "LEFT", -outset, y)
 			tex:SetPoint(side .. "RIGHT", outset, y)
-			tex:SetHeight(size)
+			UI.pixel(tex, "height", size)
 		else
 			local x = side == "LEFT" and -outset or outset
 			tex:SetPoint("TOP" .. side, x, outset)
 			tex:SetPoint("BOTTOM" .. side, x, -outset)
-			tex:SetWidth(size)
+			UI.pixel(tex, "width", size)
 		end
 		tex:Hide()
 		edges[#edges + 1] = tex
@@ -402,7 +437,7 @@ end
 -- frame to place like any line (set its two side points).
 function UI.fadeRule(parent, token, alpha)
 	local rule = CreateFrame("Frame", nil, parent)
-	rule:SetHeight(1)
+	UI.pixel(rule, "height")
 	for i, side in ipairs({ "LEFT", "RIGHT" }) do
 		local tex = rule:CreateTexture(nil, "BORDER")
 		tex:SetTexture(UI.WHITE)
@@ -420,7 +455,7 @@ function UI.shadowLine(parent, anchor)
 	local line = parent:CreateTexture(nil, "BORDER", nil, 2)
 	line:SetTexture(UI.WHITE)
 	line:SetVertexColor(0, 0, 0, 0.7)
-	line:SetHeight(1)
+	UI.pixel(line, "height")
 	line:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT")
 	line:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT")
 	local fall = parent:CreateTexture(nil, "BORDER", nil, 1)
@@ -536,7 +571,7 @@ function UI.windowPanel(frame, alpha, opts)
 			local line = frame:CreateTexture(nil, "BORDER", nil, 2)
 			line:SetTexture(UI.WHITE)
 			line:SetVertexColor(0, 0, 0, 0.6)
-			line:SetHeight(1)
+			UI.pixel(line, "height")
 			line:SetPoint("BOTTOMLEFT", footer, "TOPLEFT")
 			line:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT")
 			frame.stoaFooter = footer
@@ -736,12 +771,12 @@ function UI.plaque(frame, coinSide)
 	-- The emboss: light catching the top edge, shadow under the bottom.
 	local light = frame:CreateTexture(nil, "BORDER")
 	light:SetColorTexture(1, 0.94, 0.82, 0.06)
-	light:SetHeight(1)
+	UI.pixel(light, "height")
 	light:SetPoint("TOPLEFT", 10, -1)
 	light:SetPoint("TOPRIGHT", -10, -1)
 	local shade = frame:CreateTexture(nil, "BORDER")
 	shade:SetColorTexture(0, 0, 0, 0.5)
-	shade:SetHeight(1)
+	UI.pixel(shade, "height")
 	shade:SetPoint("BOTTOMLEFT", 10, 1)
 	shade:SetPoint("BOTTOMRIGHT", -10, 1)
 
@@ -815,7 +850,7 @@ function UI.engrave(bar, width)
 	for _, at in ipairs({ 0.25, 0.5, 0.75 }) do
 		local tick = bar:CreateTexture(nil, "OVERLAY", nil, 7)
 		tick:SetColorTexture(0.07, 0.08, 0.09, 0.85)
-		tick:SetWidth(1)
+		UI.pixel(tick, "width")
 		tick:SetPoint("TOP", bar, "TOPLEFT", width * at, 0)
 		tick:SetPoint("BOTTOM", bar, "BOTTOMLEFT", width * at, 0)
 	end

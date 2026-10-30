@@ -389,10 +389,8 @@ function Bags:ApplyMode()
 		Stoa:AfterCombat(function() self:ApplyMode() end)
 		return
 	end
-	if SetCVar then
-		guarded(SetCVar, "combinedBags", want)
-		self.db.appliedMode = self.db.bagMode
-	end
+	Stoa.GameSettings:Set("Bags", "combinedBags", want)
+	self.db.appliedMode = self.db.bagMode
 end
 
 function Bags:OnEnable()
