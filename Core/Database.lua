@@ -12,6 +12,7 @@ local accountDefaults = {
 	vision = "Standard",
 	-- The stone behind windows.
 	windowStone = true,
+	smoothBars = true,
 	-- In combat the console folds ("fold") or stays open ("open"); after a
 	-- fight it opens again once things have been calm this many seconds
 	-- ("1", "3", "5" or "8"), waiting for the group nearby when calmGroup.

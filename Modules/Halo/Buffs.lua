@@ -15,25 +15,50 @@ local Buffs = Stoa:NewModule("Buffs", {
 
 -- cast: your spells (the single-target and the group version); any one you
 -- know makes the reminder apply. auras: any of these on a unit counts.
-local LIST = {
-	{ word = "FORTITUDE", cast = { "Power Word: Fortitude", "Prayer of Fortitude" },
-		auras = { "Power Word: Fortitude", "Prayer of Fortitude" } },
-	{ word = "MARK OF THE WILD", cast = { "Mark of the Wild", "Gift of the Wild" },
-		auras = { "Mark of the Wild", "Gift of the Wild" } },
-	{ word = "ARCANE INTELLECT", cast = { "Arcane Intellect", "Arcane Brilliance" },
-		auras = { "Arcane Intellect", "Arcane Brilliance" } },
-	{ word = "DIVINE SPIRIT", cast = { "Divine Spirit", "Prayer of Spirit" },
-		auras = { "Divine Spirit", "Prayer of Spirit" } },
-	{ word = "SHADOW PROTECTION", cast = { "Shadow Protection", "Prayer of Shadow Protection" },
-		auras = { "Shadow Protection", "Prayer of Shadow Protection" } },
-	-- Any one blessing counts, whoever cast it.
-	{ word = "BLESSING", cast = { "Blessing of Kings", "Blessing of Might", "Blessing of Wisdom",
-			"Greater Blessing of Kings", "Greater Blessing of Might", "Greater Blessing of Wisdom" },
-		auras = { "Blessing of Kings", "Blessing of Might", "Blessing of Wisdom", "Blessing of Light",
-			"Blessing of Salvation", "Blessing of Sanctuary", "Greater Blessing of Kings",
-			"Greater Blessing of Might", "Greater Blessing of Wisdom", "Greater Blessing of Light",
-			"Greater Blessing of Salvation", "Greater Blessing of Sanctuary" } },
+-- Spells are given by ID with their English name; they're matched by the
+-- name in the game's language (see Spells.localName).
+local FORT = { { 1243, "Power Word: Fortitude" }, { 21562, "Prayer of Fortitude" } }
+local MARK = { { 1126, "Mark of the Wild" }, { 21849, "Gift of the Wild" } }
+local INTELLECT = { { 1459, "Arcane Intellect" }, { 23028, "Arcane Brilliance" } }
+local SPIRIT = { { 14752, "Divine Spirit" }, { 27681, "Prayer of Spirit" } }
+local SHADOW = { { 976, "Shadow Protection" }, { 27683, "Prayer of Shadow Protection" } }
+local BLESSINGS_CAST = {
+	{ 20217, "Blessing of Kings" }, { 19740, "Blessing of Might" }, { 19742, "Blessing of Wisdom" },
+	{ 25898, "Greater Blessing of Kings" }, { 25782, "Greater Blessing of Might" }, { 25894, "Greater Blessing of Wisdom" },
 }
+local BLESSINGS_ANY = {
+	{ 20217, "Blessing of Kings" }, { 19740, "Blessing of Might" }, { 19742, "Blessing of Wisdom" },
+	{ 19977, "Blessing of Light" }, { 1038, "Blessing of Salvation" }, { 20911, "Blessing of Sanctuary" },
+	{ 25898, "Greater Blessing of Kings" }, { 25782, "Greater Blessing of Might" }, { 25894, "Greater Blessing of Wisdom" },
+	{ 25890, "Greater Blessing of Light" }, { 25895, "Greater Blessing of Salvation" }, { 25899, "Greater Blessing of Sanctuary" },
+}
+local SOURCE = {
+	{ word = "FORTITUDE", cast = FORT, auras = FORT },
+	{ word = "MARK OF THE WILD", cast = MARK, auras = MARK },
+	{ word = "ARCANE INTELLECT", cast = INTELLECT, auras = INTELLECT },
+	{ word = "DIVINE SPIRIT", cast = SPIRIT, auras = SPIRIT },
+	{ word = "SHADOW PROTECTION", cast = SHADOW, auras = SHADOW },
+	-- Any one blessing counts, whoever cast it.
+	{ word = "BLESSING", cast = BLESSINGS_CAST, auras = BLESSINGS_ANY },
+}
+
+local function names(spells)
+	local list = {}
+	for _, spell in ipairs(spells) do list[#list + 1] = Stoa.Spells.localName(spell[1], spell[2]) end
+	return list
+end
+
+-- The list with names in the game's language, made on first use.
+local LIST
+local function buffList()
+	if not LIST then
+		LIST = {}
+		for _, buff in ipairs(SOURCE) do
+			LIST[#LIST + 1] = { word = buff.word, cast = names(buff.cast), auras = names(buff.auras) }
+		end
+	end
+	return LIST
+end
 
 local call = Stoa.safe.call
 
@@ -96,7 +121,7 @@ function Buffs:Missing()
 	for _, unit in ipairs(Stoa:GroupUnits()) do
 		if reachable(unit) then units[#units + 1] = unit end
 	end
-	for _, buff in ipairs(LIST) do
+	for _, buff in ipairs(buffList()) do
 		if knowsAny(buff.cast) then
 			local lacking = {}
 			for _, unit in ipairs(units) do

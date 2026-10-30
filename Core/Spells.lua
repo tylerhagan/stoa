@@ -25,6 +25,15 @@ function Spells.name(spellID)
 	return (call(GetSpellInfo, spellID))
 end
 
+-- A spell's name in the game's language, for matching auras and the
+-- spellbook by name (every rank shares it). The English name stands in when
+-- the game doesn't know the ID.
+function Spells.localName(spellID, english)
+	local name = spellID and Spells.name(spellID)
+	if type(name) ~= "string" or Stoa:IsSecret(name) or name == "" then return english end
+	return name
+end
+
 function Spells.knows(spellID)
 	if not spellID then return false end
 	if IsPlayerSpell and call(IsPlayerSpell, spellID) then return true end
