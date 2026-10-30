@@ -301,6 +301,53 @@ if Stoa.modules.Logging and Stoa.modules.Logging.enabled then
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Logging: " .. e end
 end
+-- Pets: with a hungry pet out of a fight, the plaque fills and FEED shows;
+-- with none, a Hunter is told to call one.
+if Stoa.Pet and Stoa.Pet.enabled then
+	local ok, e = xpcall(function()
+		local P = Stoa.Pet
+		local real = { UnitExists, C_PetInfo, GetPetActionInfo, UnitName, P.Keeper, UnitHealth, UnitHealthMax, Stoa.GetState }
+		UnitHealth = function() return 700 end
+		UnitHealthMax = function() return 1000 end
+		Stoa.GetState = function() return "world" end
+		UnitExists = function(u) return u == "player" or u == "pet" end
+		UnitName = function(u) return u == "pet" and "Ashmane" or "Taer" end
+		C_PetInfo = { GetPetHappiness = function() return 1, 75, 0 end, CanPetEatItem = function() return false end }
+		GetPetActionInfo = function(i)
+			if i == 9 then return "PET_MODE_DEFENSIVE", "PET_MODE_DEFENSIVE", true, true end
+			return nil
+		end
+		P:UpdateAll()
+		local words = table.concat(P:Words(), ",")
+		assert(words:find("FEED ASHMANE"), "feed word: " .. words)
+		UnitExists = function(u) return u == "player" end
+		P.Keeper = function() return "HUNTER" end
+		words = table.concat(P:Words(), ",")
+		assert(words:find("CALL PET"), "call word: " .. words)
+		UnitExists, C_PetInfo, GetPetActionInfo, UnitName, P.Keeper, UnitHealth, UnitHealthMax, Stoa.GetState = unpack(real)
+		P:UpdateAll()
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Pet: " .. e end
+end
+-- Restock: tops a bundled item up to the count, in whole bundles.
+if Stoa.Restock then
+	local ok, e = xpcall(function()
+		local real = { GetMerchantNumItems, GetMerchantItemLink, BuyMerchantItem, C_MerchantFrame, C_Item.GetItemCount, GetMoney }
+		local bought = 0
+		GetMerchantNumItems = function() return 1 end
+		GetMerchantItemLink = function() return "|Hitem:159::|h[Refreshing Spring Water]|h" end
+		BuyMerchantItem = function(_, n) bought = bought + (n or 1) end
+		C_MerchantFrame = { GetItemInfo = function() return { name = "Refreshing Spring Water", price = 25, stackCount = 5, numAvailable = -1, isPurchasable = true } end }
+		C_Item.GetItemCount = function() return 3 end
+		GetMoney = function() return 100000 end
+		Stoa.char.restock = { [159] = 20 }
+		Stoa.Restock:Run()
+		assert(bought == 20, "bought " .. bought .. " of 20")
+		GetMerchantNumItems, GetMerchantItemLink, BuyMerchantItem, C_MerchantFrame, C_Item.GetItemCount, GetMoney = unpack(real)
+		Stoa.char.restock = {}
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Restock: " .. e end
+end
 -- Shared layout: positions and look round-trip; a bad spot is refused.
 do
 	local ok, e = xpcall(function()
@@ -375,7 +422,7 @@ do
 			elseif entry.kind == "words" then
 				local before, had = #entry.items(), {}
 				for _, item in ipairs(entry.items()) do had[item[1]] = true end
-				entry.add(entry.id == "junkList" and "6948" or "Simword")
+				entry.add((entry.id == "junkList" and "6948") or (entry.id == "restockList" and "6948 5") or "Simword")
 				assert(#entry.items() == before + 1, entry.id .. " added")
 				local last
 				for _, item in ipairs(entry.items()) do if not had[item[1]] then last = item[1] end end

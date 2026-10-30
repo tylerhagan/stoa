@@ -215,7 +215,9 @@ end
 
 -- Where the group frames sit under the Halo while the combat rows show.
 function Bar:GroupOffset()
-	return self.groupOffset or -136
+	-- The pet row (Pet.lua) sits right under the bar; the group goes below it.
+	local pet = Stoa.Pet and Stoa.Pet.RowRoom and Stoa.Pet:RowRoom() or 0
+	return (self.groupOffset or -136) - pet
 end
 
 -- Out of combat only: lays out the buttons the current page fills, centred

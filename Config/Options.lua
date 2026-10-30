@@ -282,6 +282,15 @@ local function build()
 	group = "Will my DoTs kill it"
 	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in bone, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", words = "dot damage execute", change = refresh("Lethal", "Update") })
 	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", change = refresh("Lethal", "Update") })
+	group = "Your pet"
+	local pet = of("Pet")
+	local petRefresh = function() if Stoa.Pet and Stoa.Pet.enabled then Stoa.Pet:UpdateAll() end end
+	toggle(pet, "plaque", "Pet plaque", "In a fight, a plaque like the target's at the Halo's upper left: your pet's mood, health, power, stance and what it's attacking. Under the tank watch when you heal.", true, { id = "petPlaque", reload = true, words = "hunter warlock demon minion" })
+	toggle(pet, "arc", "Pet health on the Halo", "A thin arc inside your own health with the pet's.", true, { id = "petArc", reload = true, words = "hunter warlock" })
+	toggle(pet, "row", "Pet row under the combat bar", "Your pet's buttons, smaller, under the combat bar in a fight. Right-click one to switch its autocast. Out of a fight the game's pet bar stays where it is, in Stoa's dress.", true, { id = "petRow", reload = true, words = "pet bar autocast stance" })
+	toggle(pet, "coin", "Pet coin on the medallion", "Out of a fight, a small coin off the medallion with your pet's health as a ring and its mood under it. Click it to feed it food from your bags when it isn't happy; right-click targets it.", true, { id = "petCoin", reload = true, words = "feed happiness hunter" })
+	toggle(pet, "words", "Pet reminders", "CALL PET when it isn't out, PET DEAD when it needs reviving, FEED when it's unhappy, PET LOW and PET PASSIVE in a fight, GROWL ON in a group when you aren't the tank.", true, { id = "petWords", words = "growl feed revive call", change = petRefresh })
+	toggle(pet, "partyPets", "Pets under party cards", "When you heal in a party, a slim cell under each owner's card with the pet's health. Your click-casting works on it.", true, { id = "petParty", reload = true, words = "healer partypet" })
 
 	-- Group
 	page = "group"
@@ -500,6 +509,37 @@ local function build()
 		end,
 		remove = function(id) Stoa.Items.setJunk(id, false) end,
 	})
+	toggle(of("Restock"), "enabled", "Restock at vendors", "Any vendor that sells something on this character's list below tops it back up to the number you chose. Things bought with tokens or honour are left alone. Hold Shift as you open the vendor to skip it.", true, { id = "restockOn", words = "reagents ammo arrows candles poisons food water buy" })
+	add({
+		kind = "words", id = "restockList", name = "Keep in your bags", cmd = "/stoa restock add", scope = "This character",
+		desc = "An item and how many, such as an item link then 20. Shift-click an item in your bags while the box is open, then type the number.",
+		placeholder = "Item and count, then Enter", links = true, words = "restock reagents ammo arrows candles poisons food water",
+		items = function()
+			local out = {}
+			for id, n in pairs(Stoa.Restock.list()) do out[#out + 1] = { id, ("%s · %d"):format(Stoa.Restock.name(id), n) } end
+			table.sort(out, function(a, b) return a[2]:lower() < b[2]:lower() end)
+			return out
+		end,
+		add = function(text)
+			local item, number = text:match("^(.-)%s+(%d+)%s*$")
+			local id = itemId(item or text)
+			if not id then return false, "Stoa doesn't know that item yet. Shift-click it in your bags instead." end
+			Stoa.Restock.set(id, tonumber(number) or 20)
+			return true
+		end,
+		remove = function(id) Stoa.Restock.set(id, nil) end,
+	})
+	group = "Mail"
+	local mail = of("Mail")
+	toggle(mail, "takeGold", "Take gold button", "Beside the mailbox's Open All: takes the money from every letter and leaves the items. Cash on delivery and letters from game masters are always left for you.", true, { reload = true, words = "postal mailbox money collect" })
+	toggle(mail, "summary", "Say what came out", "After Open All, one line in chat with the money and items it took.", true, { words = "postal mailbox" })
+	toggle(mail, "toList", "Your characters in To", "A Mine button beside the name box lists your own characters on this realm and the people you mailed lately.", true, { reload = true, words = "postal alts send recipient" })
+	group = "Away"
+	local away = of("Away")
+	toggle(away, "enabled", "Away screen", "When you go away out of a fight, the interface steps aside: your name, rest and time away on a band of leather, and any whispers that come meanwhile. Move, or press Back, to return.", true, { id = "awayOn", words = "afk idle screensaver" })
+	toggle(away, "spin", "Turn the camera", "The camera circles your character slowly while you're away.", true, { words = "afk rotate" })
+	toggle(away, "inInstances", "In dungeons and raids too", "Off, the away screen waits for the open world.", false, { words = "afk instance" })
+	button("awayNow", "See it now", "Shows the away screen without going away. Back or /stoa away closes it.", "Show", command("away"), { cmd = "/stoa away", words = "afk preview" })
 	group = "People"
 	local social = of("Social")
 	toggle(social, "acceptFriendInvites", "Accept friend and guild invites", "", true, { words = "party group" })
@@ -545,6 +585,12 @@ local function build()
 	button("setups", "Saved setups", "Load the setup from another of your characters.", "Choose", function(owner) Stoa.Setups:Menu(owner) end, { cmd = "/stoa setups", words = "profile alt" })
 	button("backup", "Backup", "All of Stoa's settings as one line of text to keep safe, and a place to paste one back.", "Open", function() Stoa.Backup:Show() end, { cmd = "/stoa backup", words = "profile export import string" })
 	button("shareLayout", "Share layout", "A shorter line with where your frames sit and the look, to post for others. Paste one on the backup page to use it.", "Copy", function() Stoa.Backup:ShowLayout() end, { cmd = "/stoa layout", words = "export import string profile" })
+	group = "Your characters"
+	button("alts", "Characters", "Every character you've played with Stoa: level, rest earned since you last played them, raid lockouts and gold. /stoa alts forget <name> drops one.", "Open", command("alts"), { cmd = "/stoa alts", words = "alts altoholic gold lockouts saved instances rested" })
+	toggle(of("Alts"), "tooltipCounts", "Count items on every character", "Item tooltips add how many your other characters carry and keep in the bank, from when each last played.", true, { words = "alts bags bank tooltip owned" })
+	toggle(of("GearSets"), "enabled", "Gear for each spec", "Put on an equipment set in a spec and Stoa puts it back on whenever you change to that spec, after any fight. A set assigned to a spec in the equipment manager always wins.", true, { id = "gearSetsOn", scope = "This character", words = "equipment manager dual spec swap outfit" })
+	group = "Keys"
+	button("bind", "Bind keys", "Hover any action, pet or stance button and press a key, mouse button or wheel, with any modifier. Backspace clears; Esc finishes and keeps the keys.", "Start", command("bind"), { cmd = "/stoa bind", words = "keybind hotkey keybinding kb" })
 	group = "The game's own settings"
 	button("restore", "Put the game's settings back", "Puts back the game settings Stoa changed (far camera, map fade, target nameplate size, combined bags, proc art), as they were before Stoa. One you've changed yourself since stays as you set it.", "Put back", command("restore"), { cmd = "/stoa restore", words = "cvar ledger reset camera" })
 	group = "Other addons"
