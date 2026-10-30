@@ -7,7 +7,8 @@
 -- Later ranks count only when you know an earlier one, so a talent you
 -- skipped doesn't nag; spells for another race or faction are left out.
 --
--- /stoa trainer opens a page of what's waiting now and what the next two
+-- /stoa trainer, a click on that line, or the Training button on your class
+-- trainer's window opens a page of what's waiting now and what the next two
 -- training levels bring, with what each costs. Costs are learned the first
 -- time you open any trainer of your class (the trainer lists every spell it
 -- will ever teach, priced), and kept account-wide. Right-click a spell you'll
@@ -143,6 +144,7 @@ function Trainer:UpdateConsole()
 	else
 		console.trainerNote:SetText("")
 	end
+	if self.noteButton then self.noteButton:SetShown(count > 0) end
 end
 
 function Trainer:Refresh()
@@ -341,6 +343,59 @@ function Trainer:Open()
 	self:Fill()
 end
 
+function Trainer:Toggle()
+	if self.page and self.page:IsShown() then self.page:Hide() else self:Open() end
+end
+
+-- Ways in besides /stoa trainer: the TRAINER line under Journey on the
+-- console, and a Training button on your class trainer's own window.
+function Trainer:HookConsole()
+	local console = Stoa.modules.Grimoire
+	local note = console and console.trainerNote
+	if not note or self.noteButton then return end
+	local button = CreateFrame("Button", nil, note:GetParent())
+	button:SetAllPoints(note)
+	button:SetScript("OnClick", function() self:Toggle() end)
+	button:SetScript("OnEnter", function()
+		note:SetTextColor(Stoa:Color("text"))
+		if GameTooltip then
+			GameTooltip:SetOwner(button, "ANCHOR_TOP")
+			GameTooltip:AddLine("Training")
+			GameTooltip:AddLine("Click to see what's waiting and what's coming.", 1, 1, 1)
+			GameTooltip:Show()
+		end
+	end)
+	button:SetScript("OnLeave", function()
+		note:SetTextColor(Stoa:Color("accent"))
+		if GameTooltip then GameTooltip:Hide() end
+	end)
+	self.noteButton = button
+	self:UpdateConsole()
+end
+
+function Trainer:HookTrainerWindow()
+	local frame = _G.ClassTrainerFrame
+	if not frame or self.trainerButton then return end
+	local button = UI.button(frame, "Training", 96, function() self:Toggle() end)
+	button:SetHeight(22)
+	-- Just outside the window's right edge, clear of its filter and close button.
+	button:SetPoint("TOPLEFT", frame, "TOPRIGHT", 6, -40)
+	self.trainerButton = button
+end
+
+function Trainer:ShowTrainerButton()
+	self:HookTrainerWindow()
+	local button = self.trainerButton
+	if not button then return end
+	-- Only at a class trainer: profession and pet trainers teach nothing Training lists.
+	local isClass = true
+	if C_Trainer and C_Trainer.GetTrainerType and Enum and Enum.TrainerType then
+		local ok, kind = pcall(C_Trainer.GetTrainerType)
+		isClass = not ok or kind == Enum.TrainerType.General
+	end
+	button:SetShown(isClass)
+end
+
 function Trainer:OnEnable()
 	Stoa:On("STOA_SPELLS_CHANGED", function() self:Refresh() end)
 	Stoa:On("PLAYER_LEVEL_UP", function(level)
@@ -357,7 +412,14 @@ function Trainer:OnEnable()
 			end, Stoa.catch)
 		end)
 	end)
-	Stoa:On("TRAINER_SHOW", function() C_Timer.After(0.2, function() xpcall(self.Learn, Stoa.catch, self) end) end)
+	Stoa:On("TRAINER_SHOW", function()
+		C_Timer.After(0.2, function()
+			xpcall(self.Learn, Stoa.catch, self)
+			xpcall(self.ShowTrainerButton, Stoa.catch, self)
+		end)
+	end)
+	-- The console builds its pages as it enables; hook its line once it has.
+	C_Timer.After(0, function() xpcall(self.HookConsole, Stoa.catch, self) end)
 	Stoa:On("TRAINER_UPDATE", function() xpcall(self.Learn, Stoa.catch, self) end)
 	Stoa.commands.trainer = function(rest)
 		if (rest or ""):match("^%s*list") == nil then

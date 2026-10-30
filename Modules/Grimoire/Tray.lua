@@ -1,8 +1,9 @@
 -- Stoa: the icon tray. Other addons hang their buttons round the minimap's
 -- edge, where they crowd the frame and the zone name. Stoa gathers them into
--- one small rounded button below the map's left corner; a click opens a
--- tray beside it with the icons in rows, dressed as Stoa's rounded sockets,
--- and it folds away again a moment after the mouse leaves.
+-- one small button below the map's left corner; a click opens a tray
+-- beside it with the icons in rows, in sockets of the map's own shape
+-- (round or rounded square), and it folds away again a moment after the
+-- mouse leaves.
 --
 -- Buttons made with LibDBIcon (most addons) are taken by name. Others are
 -- found among the minimap's children: named buttons of icon size that
@@ -49,6 +50,22 @@ local function roundArt(tex)
 		local lower = file:lower()
 		return lower:find("trackingborder", 1, true) or lower:find("minimap%-background") or lower:find("ui%-minimap%-background")
 	end
+end
+
+-- The icons take the minimap's shape: round sockets round a round map,
+-- rounded squares round a square one.
+local function round()
+	local style = Stoa.modules.Minimap
+	return style and Stoa:IsModuleEnabled("Minimap") and style.Shape and style:Shape() == "round"
+end
+
+-- A dark disc with a hairline ring, behind a round icon or the round button.
+local function disc(frame, size, alpha)
+	local edge = UI.circle(frame, "BACKGROUND", -8, size + 2, "hairline")
+	edge:SetPoint("CENTER")
+	local fill = UI.circle(frame, "BACKGROUND", -7, size, "panel", alpha)
+	fill:SetPoint("CENTER")
+	return fill
 end
 
 local function libDBIcon()
@@ -148,7 +165,12 @@ function Tray:Dress(button, isLib)
 	socket:SetPoint("TOPLEFT", -1, 1)
 	socket:SetPoint("BOTTOMRIGHT", 1, -1)
 	socket:SetFrameLevel(math.max(button:GetFrameLevel() - 1, 0))
-	UI.roundPanel(socket, 0.9)
+	local shape = round()
+	if shape then
+		disc(socket, math.max(button:GetWidth(), button:GetHeight()) + 2, 0.9)
+	else
+		UI.roundPanel(socket, 0.9)
+	end
 	local icon = button.icon
 	if icon and icon.SetPoint then
 		icon:ClearAllPoints()
@@ -156,7 +178,7 @@ function Tray:Dress(button, isLib)
 		icon:SetPoint("BOTTOMRIGHT", -3, 3)
 		if icon.AddMaskTexture and not button.stoaMask then
 			local mask = button:CreateMaskTexture()
-			mask:SetTexture(UI.MEDIA .. "Textures\\ButtonMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			mask:SetTexture(shape and UI.CIRCLE_MASK or (UI.MEDIA .. "Textures\\ButtonMask"), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 			mask:SetAllPoints(icon)
 			icon:AddMaskTexture(mask)
 			button.stoaMask = mask
@@ -179,8 +201,23 @@ function Tray:Build()
 	handle:SetPoint("TOPRIGHT", map, "BOTTOMLEFT", -reach, -reach)
 	handle:SetFrameStrata("MEDIUM")
 	handle:SetFrameLevel(map:GetFrameLevel() + 6)
-	UI.roundPanel(handle, 0.92)
-	local glow = UI.roundBorder(handle, "CardEdge.tga", 1)
+	local glow
+	if round() then
+		disc(handle, 22, 0.92)
+		local ring = UI.circle(handle, "BACKGROUND", -6, 24, "accent")
+		ring:SetPoint("CENTER")
+		ring:Hide()
+		local inner = UI.circle(handle, "BACKGROUND", -5, 22, "panel", 0.92)
+		inner:SetPoint("CENTER")
+		inner:Hide()
+		glow = {
+			Set = function(_, r, g, b) ring:SetVertexColor(r, g, b, 1); ring:Show(); inner:Show() end,
+			Clear = function() ring:Hide(); inner:Hide() end,
+		}
+	else
+		UI.roundPanel(handle, 0.92)
+		glow = UI.roundBorder(handle, "CardEdge.tga", 1)
+	end
 	-- Four small squares: a tray of things.
 	local dots = {}
 	for i = 1, 4 do
