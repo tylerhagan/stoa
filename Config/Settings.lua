@@ -238,6 +238,10 @@ local function build()
 	checkbox(comforts, "declineDuels", "Decline duels", "Turns down duel requests as they come. Hold Shift to see one.", false)
 	checkbox(comforts, "releaseInPvP", "Release in battlegrounds", "Releases your spirit when you die in a battleground, unless you have a soulstone. Hold Shift to stay.", false)
 	checkbox(comforts, "acceptRes", "Accept resurrections", "Takes a resurrection as soon as it's offered, unless whoever cast it is still fighting. Hold Shift to wait.", false)
+	local logging = Stoa.modules.Logging.db
+	dropdown(logging, "remind", "Remind me to log", "Entering a dungeon or raid with combat logging off, a plaque says NOT LOGGING with a button to start it, for Warcraft Logs and similar sites. Starting also turns on the game's advanced logging. /stoa log test shows it.", "both", { { "both", "Dungeons and raids" }, { "raid", "Raids only" }, { "off", "Never" } })
+	checkbox(logging, "auto", "Start logging without asking", "Turns combat logging on as you enter, and says so.", false)
+	checkbox(logging, "stopOnLeave", "Stop logging when you leave", "Logging Stoa started stops when you leave the dungeon or raid.", true)
 
 	-- Merchant
 	local merchant = Stoa.modules.Merchant.db

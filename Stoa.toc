@@ -75,6 +75,7 @@ Modules\Halo\Emergency.lua
 Modules\Halo\Procs.lua
 Modules\Halo\Lethal.lua
 Modules\QoL\Markers.lua
+Modules\QoL\Logging.lua
 
 Modules\Frames\ClickCast.lua
 Modules\Frames\Raid.lua

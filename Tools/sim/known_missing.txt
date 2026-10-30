@@ -5,3 +5,4 @@ StoaCharDB  # per-character saved variable declared in Stoa.toc
 StoaHalo  # Stoa own frame, created by Stoa at load (Modules/Halo)
 UIParent  # engine-created root frame, not in any Blizzard file
 WorldFrame  # engine-created 3D world frame
+LoggingCombat  # global C function; Blizzard's /combatlog calls it (Blizzard_ChatFrameBase/Shared/SlashCommands.lua)
