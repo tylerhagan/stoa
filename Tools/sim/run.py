@@ -277,6 +277,51 @@ do
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Cooldown Manager: " .. e end
 end
+-- Logging reminder: entering a raid unlogged asks; Start logs; leaving stops.
+if Stoa.modules.Logging and Stoa.modules.Logging.enabled then
+	local ok, e = xpcall(function()
+		local L = Stoa.modules.Logging
+		local logging = false
+		LoggingCombat = function(on) if on ~= nil then logging = on end return logging end
+		local realInstance, realInfo = IsInInstance, GetInstanceInfo
+		IsInInstance = function() return true, "raid" end
+		GetInstanceInfo = function() return "Molten Core" end
+		SIM_CVARS.advancedCombatLogging = "0"
+		L:Check()
+		assert(L.frame and L.frame:IsShown() and L.frame.state == "off", "asks in a raid")
+		L:Start()
+		assert(logging and L.frame.state == "on", "starts logging")
+		assert(SIM_CVARS.advancedCombatLogging == "1", "advanced logging on")
+		IsInInstance = function() return false, "none" end
+		L:Check()
+		assert(not logging, "stops on leaving")
+		SlashCmdList.STOA("log test")
+		IsInInstance, GetInstanceInfo = realInstance, realInfo
+		Stoa.GameSettings:Restore("advancedCombatLogging")
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Logging: " .. e end
+end
+-- Shared layout: positions and look round-trip; a bad spot is refused.
+do
+	local ok, e = xpcall(function()
+		local B = Stoa.Backup
+		Stoa.char.positions = { halo = { "CENTER", "CENTER", 10, -20 } }
+		Stoa.char.layouts = { HEALER = { party = { "TOP", "TOP", 0, -300 }, target = false } }
+		Stoa.db.theme = "Tide"
+		local text = B:ExportLayout()
+		assert(text:find("^STOA%-LAYOUT1:"), "prefix")
+		Stoa.char.positions, Stoa.char.layouts, Stoa.db.theme = {}, {}, "Bone"
+		assert(B:Import(text), "imports")
+		assert(Stoa.char.positions.halo[3] == 10, "position back")
+		assert(Stoa.char.layouts.HEALER.party[4] == -300 and Stoa.char.layouts.HEALER.target == false, "role layout back")
+		assert(Stoa.db.theme == "Tide", "look back")
+		local good = B:Import('STOA-LAYOUT1:{["positions"]={["halo"]={"CENTER",1}},}')
+		assert(not good, "bad spot refused")
+		SlashCmdList.STOA("layout")
+		Stoa.db.theme = "Bone"
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Shared layout: " .. e end
+end
 -- At a glance: every situation, hover and click each line, pin and reset.
 local glance = Stoa.modules.Tally
 if glance and glance.rows then

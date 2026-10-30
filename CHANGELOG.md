@@ -10,6 +10,8 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Logging reminder: entering a dungeon or raid with combat logging off, a plaque says NOT LOGGING with a Start logging button (for Warcraft Logs); logging Stoa started stops when you leave. Settings > Comforts, `/stoa log`.
+- Share layout (`/stoa layout`, or on the backup page): a short line with where your frames sit in every role and the look, safe to post for others; importing one keeps the rest of your setup.
 - Health and power bars glide to a new value instead of jumping (Settings > Look, on by default).
 - Buff words on party cards and group buff reminders match spells in the game's own language, not just English.
 - Read the game's Cooldown Manager (Settings > Cooldowns, off for now): Halo coins and the next-press outline ask the game's Cooldown Manager whether a spell is ready or a buff is up, which it knows in combat. `/stoa cdm` shows what it tracks and what Stoa can read.
