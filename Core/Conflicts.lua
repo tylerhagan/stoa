@@ -65,6 +65,13 @@ local RULES = {
 		addons = { { "SexyMap", "SexyMap" }, { "BasicMinimap", "BasicMinimap" } },
 	},
 	{
+		key = "tray", job = "gathering the minimap's addon icons", modules = { "Tray" },
+		addons = {
+			{ "MinimapButtonButton", "MinimapButtonButton" }, { "MBB", "MinimapButtonBag" },
+			{ "HidingBar", "HidingBar" }, { "MinimapButtonFrame", "MinimapButtonFrame" },
+		},
+	},
+	{
 		key = "group", job = "party and raid frames", modules = { "Party", "Raid" },
 		addons = {
 			{ "VuhDo", "VuhDo" }, { "Grid2", "Grid2" }, { "Cell", "Cell" },

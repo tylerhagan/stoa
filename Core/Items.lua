@@ -78,11 +78,47 @@ function Items.compare(link)
 	return level - worst, Items.SLOT_NAMES[worstSlot] or "slot", worst == 0
 end
 
+-- Pawn (a companion addon, Core/Companions.lua) scores gear by its own stat
+-- scales for your spec. While it's loaded its answer is the one Stoa shows,
+-- so the two never disagree: the best gain over any of its scales, in
+-- percent, against the item it would replace. 0 when Pawn says it isn't an
+-- upgrade; nil when Pawn can't tell yet.
+local function pawnUpgrade(link)
+	if not (_G.PawnIsInitialized and _G.PawnGetItemData and _G.PawnIsItemAnUpgrade) then return nil end
+	local ok, item = pcall(_G.PawnGetItemData, link)
+	if not ok or type(item) ~= "table" or not item.Link then return nil end
+	local _, _, equipLoc = Items.info(link)
+	local slots = equipLoc and Items.SLOTS[equipLoc]
+	if not slots then return nil end
+	local fine, list = pcall(_G.PawnIsItemAnUpgrade, item)
+	if not fine then return nil end
+	local best, against
+	for _, entry in ipairs(type(list) == "table" and list or {}) do
+		local gain = tonumber(entry.PercentUpgrade)
+		if gain and (not best or gain > best) then best, against = gain, entry.ExistingItemLink end
+	end
+	local slot = slots[1]
+	for _, each in ipairs(slots) do
+		if against and call(GetInventoryItemLink, "player", each) == against then slot = each end
+	end
+	local name = Items.SLOT_NAMES[slot] or "slot"
+	if not best then return 0, name, false, "Pawn" end
+	-- Pawn gives 100 (10,000%) for an empty slot.
+	if best >= (_G.PawnBigUpgradeThreshold or 100) then return 100, name, true, "Pawn" end
+	return math.floor(best * 100 + 0.5), name, false, "Pawn"
+end
+
 -- The item for your role against the weaker of its slots, by stat weight
--- (Core/Weights.lua): the gain in percent, the slot's name, and true when
--- the slot is empty. Nil when either can't be scored, so callers fall back
+-- (Core/Weights.lua), or by Pawn's scales when Pawn is loaded: the gain in
+-- percent, the slot's name, true when the slot is empty, and "Pawn" when the
+-- answer is Pawn's. Nil when either can't be scored, so callers fall back
 -- to Items.compare.
 function Items.upgrade(link)
+	if not link or Stoa:IsSecret(link) then return nil end
+	if _G.PawnIsItemAnUpgrade then
+		local gain, name, none, source = pawnUpgrade(link)
+		if gain then return gain, name, none, source end
+	end
 	if not Stoa.Weights then return nil end
 	local score = Stoa.Weights.score(link)
 	if not score or score <= 0 then return nil end

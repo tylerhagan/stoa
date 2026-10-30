@@ -10,6 +10,9 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Icon tray: other addons' minimap buttons gather into one small button below the map; click it for a tray of their icons (`/stoa tray`).
+- Pawn: with Pawn installed, Stoa's upgrade marks give Pawn's answer, and Stoa leaves Pawn's own marks to it.
+- Training page (`/stoa trainer`): spells waiting now and at the next two training levels, with prices learned from your trainer; right-click to skip a spell. The Journey line shows the cost.
 - With DoesItDie installed, the target plaque shows how much your DoTs will still deal on its health bar, and a skull over the portrait when they'll kill it.
 - Combat switch: choose how long the console waits after a fight (1, 3, 5 or 8 seconds), wait for your group between pulls, keep the console open in combat, or fold without the slide. The console and the Halo are one choice (fold with the Halo, open with the Halo, open with no Halo), so the console never folds with no Halo to replace it.
 - The welcome page is now a step-by-step wizard: start (by hand, a saved setup from any alt, or as Stoa ships), specs, look (every class theme), in combat, how much, other addons (when found) and a summary; one reload on Finish.

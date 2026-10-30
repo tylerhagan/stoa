@@ -54,6 +54,7 @@ Modules\QoL\Trainer.lua
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
 Modules\Grimoire\Minimap.lua
+Modules\Grimoire\Tray.lua
 Modules\Grimoire\Tally.lua
 
 Modules\Halo\Halo.lua

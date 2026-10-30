@@ -70,6 +70,7 @@ local function build()
 	checkbox(Stoa.modules.Tally.db, "follow", "At a glance follows where you are", "One set of lines out in the world (gold, loot, professions, reputation), one in a dungeon and one in a raid (your role's stats first). Off keeps one set everywhere.", true, function() Stoa.modules.Tally:Refresh() end)
 	checkbox(Stoa.modules.Minimap.db, "enabled", "Style the minimap", "Theme-coloured edge, serif zone name, wheel to zoom. Takes effect after /reload.", true)
 	dropdown(Stoa.modules.Minimap.db, "shape", "Minimap shape", "A square with rounded corners like Stoa's windows, which shows a little more of the world, or the round map in rings. Takes effect after /reload.", "square", { { "square", "Rounded square" }, { "round", "Round" } })
+	checkbox(Stoa.modules.Tray.db, "enabled", "Gather addon icons", "Other addons' minimap buttons move into one small button below the map's corner; click it for a tray of their icons. /stoa tray leave <name> keeps one on the map. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.ActionBars.db, "enabled", "Rounded action buttons", "Rounded-square icons with a hairline edge, dim sockets for empty slots. Takes effect after /reload.", true)
 	checkbox(Stoa.modules.CombatBar.db, "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before. Takes effect after /reload.", true)
 	local rowChoices = { { "1", "Main bar only" }, { "2", "Main + bottom-left" }, { "3", "Main + both bottom bars" } }

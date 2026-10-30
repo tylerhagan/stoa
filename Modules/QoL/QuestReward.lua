@@ -60,7 +60,7 @@ function Reward:Pick()
 	end
 	-- Another addon marks upgrades among rewards already (Core/Companions.lua):
 	-- Stoa keeps to the best sale.
-	if gainIndex and not Stoa:SharedBy("gearUpgrade") then return gainIndex, "UPGRADE" end
+	if gainIndex and not Stoa:SharedBy("rewardUpgrade") then return gainIndex, "UPGRADE" end
 	if valueIndex then return valueIndex, "VALUE" end
 end
 
