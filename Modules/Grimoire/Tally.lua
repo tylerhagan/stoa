@@ -862,8 +862,8 @@ end
 
 -- Choosing ----------------------------------------------------------------------
 
-function Tally:Has(key)
-	for _, chosen in ipairs(self:Own()) do
+function Tally:Has(key, situation)
+	for _, chosen in ipairs(self:Own(situation)) do
 		if chosen == key then return true end
 	end
 	return false
@@ -871,9 +871,9 @@ end
 
 -- Adds or removes a key in the current situation's set, keeping the rest
 -- in order. Picking starts from the default set, so the first change
--- keeps what was showing.
-function Tally:Toggle(key)
-	local situation = self:Situation()
+-- keeps what was showing. `situation` defaults to where you are.
+function Tally:Toggle(key, situation)
+	situation = situation or self:Situation()
 	local list = {}
 	for _, chosen in ipairs(self:Own(situation)) do list[#list + 1] = chosen end
 	for i, chosen in ipairs(list) do
@@ -894,8 +894,8 @@ function Tally:Toggle(key)
 	return true
 end
 
-function Tally:Reset()
-	save(self:Situation(), nil)
+function Tally:Reset(situation)
+	save(situation or self:Situation(), nil)
 	self:Refresh()
 end
 
@@ -906,6 +906,21 @@ local function labelOf(key)
 	if type(label) == "function" then label = call(label) end
 	return label or key
 end
+
+-- Everything At a glance can show, for the settings window:
+-- { key, label, group } in menu order, other addons' feeds last.
+function Tally:Choices()
+	local list = {}
+	for _, group in ipairs(GROUPS) do
+		for _, key in ipairs(group[2]) do
+			if ENTRIES[key] then list[#list + 1] = { key, labelOf(key), group[1] } end
+		end
+	end
+	for _, name in ipairs(self:Feeds()) do list[#list + 1] = { feedKey(name), name, "Other addons" } end
+	return list
+end
+Tally.SITUATION_WORDS = SITUATION_WORDS
+Tally.MAX_ROWS = MAX_ROWS
 
 function Tally:OpenPicker(owner)
 	if not (MenuUtil and MenuUtil.CreateContextMenu) then

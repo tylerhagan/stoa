@@ -322,6 +322,107 @@ do
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Shared layout: " .. e end
 end
+-- Pull countdown: in a raid the combat look comes early and goes again on cancel.
+do
+	local ok, e = xpcall(function()
+		local realRaid = IsInRaid
+		IsInRaid = function() return true end
+		if Stoa:IsPractising() then SlashCmdList.STOA("combat") end
+		assert(Stoa:GetState() == Stoa.STATE_WORLD, "starts out of combat")
+		Stoa.db.countdownCombat = "raid"
+		Stoa:Fire("START_PLAYER_COUNTDOWN", "Player-1", 10, 10, true)
+		assert(Stoa:GetState() == Stoa.STATE_COMBAT, "countdown brings the combat look")
+		Stoa:Fire("CANCEL_PLAYER_COUNTDOWN", "Player-1", true)
+		assert(Stoa:GetState() == Stoa.STATE_WORLD, "cancel puts it back")
+		Stoa.db.countdownCombat = "off"
+		Stoa:Fire("START_PLAYER_COUNTDOWN", "Player-1", 10, 10, true)
+		assert(Stoa:GetState() == Stoa.STATE_WORLD, "off leaves it")
+		Stoa.db.countdownCombat = "raid"
+		IsInRaid = realRaid
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Pull countdown: " .. e end
+end
+-- Settings window: every page and a search drawn, every setting changed
+-- and put back, the lists added to and taken from, a dropdown by keys.
+do
+	local ok, e = xpcall(function()
+		local O, W = Stoa.Options, Stoa.SettingsWindow
+		assert(#O.list > 120, "settings listed: " .. #O.list)
+		-- Tests above changed reload settings since login; count from here.
+		O.snapshot()
+		SlashCmdList.STOA("")
+		assert(W.page and W.page:IsShown(), "window shows")
+		for _, page in ipairs(O.PAGES) do
+			W:Show(page[1])
+			for _, entry in ipairs(O.onPage(page[1])) do W:Describe(entry) end
+		end
+		W.search:SetText("camera")
+		W.search:GetScript("OnTextChanged")(W.search)
+		assert(#O.search("camera") > 0, "search finds camera")
+		assert(#O.search("zzzz nothing") == 0, "search finds nothing")
+		W.search:SetText("")
+		W.search:GetScript("OnTextChanged")(W.search)
+		for _, entry in ipairs(O.list) do
+			W:Show(entry.page)
+			if entry.kind == "toggle" then
+				local was = O.value(entry)
+				O.set(entry, not was); O.set(entry, was)
+				assert(O.value(entry) == was, entry.id .. " put back")
+			elseif entry.kind == "choice" and not entry.set then
+				local was = O.value(entry)
+				for _, option in ipairs(entry.options) do O.set(entry, option[1]) end
+				O.set(entry, was)
+			elseif entry.kind == "words" then
+				local before, had = #entry.items(), {}
+				for _, item in ipairs(entry.items()) do had[item[1]] = true end
+				entry.add(entry.id == "junkList" and "6948" or "Simword")
+				assert(#entry.items() == before + 1, entry.id .. " added")
+				local last
+				for _, item in ipairs(entry.items()) do if not had[item[1]] then last = item[1] end end
+				entry.remove(last)
+				assert(#entry.items() == before, entry.id .. " taken off")
+			end
+		end
+		local waiting = {}
+		for _, entry in ipairs(O.list) do if O.waiting(entry) then waiting[#waiting + 1] = entry.id .. "=" .. tostring(O.start[entry.id]) .. ">" .. tostring(O.value(entry)) end end
+		assert(#waiting == 0, "nothing waits for a reload after putting back: " .. table.concat(waiting, " "))
+		-- A reload setting changed shows in the footer.
+		W:Show("plates")
+		O.set(O.byId.platesOn, false)
+		assert(O.pending() == 1, "one change waits")
+		O.set(O.byId.platesOn, true)
+		-- The theme list: open it, step down by key, choose with Enter.
+		W:Show("look")
+		local was = Stoa.db.theme
+		local select = W.rowFor(O.byId.theme).control
+		select:GetScript("OnClick")(select)
+		local menu = StoaSettingsMenu
+		assert(menu and menu:IsShown(), "theme list open")
+		menu:GetScript("OnKeyDown")(menu, "DOWN")
+		menu:GetScript("OnKeyDown")(menu, "ENTER")
+		assert(Stoa.db.theme ~= was, "theme chosen by keys")
+		O.set(O.byId.theme, was)
+		-- Click a toggle and a segment as a player would.
+		W:Show("comforts")
+		local toggle = W.rowFor(O.byId.fastLoot).control
+		toggle:GetScript("OnClick")(toggle)
+		assert(Stoa.modules.Comforts.db.fastLoot == false, "toggle clicked")
+		toggle:GetScript("OnClick")(toggle)
+		W:Show("console")
+		local glanceRow = W.rowFor(O.byId.glanceLines)
+		local line = glanceRow.lines[1]
+		line:GetScript("OnClick")(line)
+		line.pin:GetScript("OnClick")(line.pin)
+		line.pin:GetScript("OnClick")(line.pin)
+		line:GetScript("OnClick")(line)
+		glanceRow.places.buttons[3]:GetScript("OnClick")(glanceRow.places.buttons[3])
+		W:Show("console")
+		W:Show("mapchat")
+		W:Defaults(); W:Defaults()
+		W:Hide()
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Settings window: " .. e end
+end
 -- At a glance: every situation, hover and click each line, pin and reset.
 local glance = Stoa.modules.Tally
 if glance and glance.rows then

@@ -107,7 +107,7 @@ What works today:
 | Snapping | In unlock mode frames snap to the screen's edges and centre and to other frames within 8px, with a faint guide line; hold Shift to drop freely. A frame snapped to another is kept against it, so moving the Halo carries its plaques |
 | Presets | Full is how Stoa starts. The welcome page offers the others and says what each changes against Full as you hover it: Quiet (fewer words: no tooltip details, quest line or At a glance, extra bar rows on mouseover) or Classic feel (Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates, with Stoa's console, Halo and frames). `/stoa preset` |
 | For other addons | `StoaAPI`: add lines to At a glance, hear Stoa's state, role and theme changes, and borrow its colours and fonts. See `Core/API.lua` |
-| Settings | Options > AddOns > Stoa (the settings panel's own search box finds any Stoa setting) |
+| Settings | `/stoa` opens Stoa's settings window: ten pages, a search box, notes on what each setting does, and every /stoa command as a control. Options > AddOns > Stoa has a button to it |
 
 Fonts are the main gap: see below.
 

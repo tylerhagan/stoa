@@ -94,6 +94,8 @@ Modules\Skins\Top.lua
 Modules\Skins\Plates.lua
 Modules\Skins\Swing.lua
 
+Config\Options.lua
+Config\Window.lua
 Config\Settings.lua
 Config\Welcome.lua
 Config\Backup.lua

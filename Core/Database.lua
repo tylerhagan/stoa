@@ -19,6 +19,7 @@ local accountDefaults = {
 	combatConsole = "fold",
 	calm = "3",
 	calmGroup = true,
+	countdownCombat = "raid",
 	-- Fold and open at once, without the short slide.
 	foldInstant = false,
 	-- The spell's art behind the letter in the Halo's coins.

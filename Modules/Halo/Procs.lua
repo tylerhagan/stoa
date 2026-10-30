@@ -459,7 +459,7 @@ function Procs:OnEnable()
 		if rest == "test" then
 			self:Test()
 		else
-			Stoa:Print("/stoa procs test shows the proc art and glow. Options are in Settings, Procs.")
+			Stoa:Print("/stoa procs test shows the proc art and glow. Its settings are on the Combat page of /stoa.")
 		end
 	end
 end
