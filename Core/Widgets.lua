@@ -211,13 +211,36 @@ function UI.bar(parent, width, height, token)
 	return sb
 end
 
+-- Health and power glide to a new value rather than jump (the game eases
+-- the bar itself, so it works on hidden values too). A bar that has just
+-- changed whose health it shows snaps instead.
+local EASE = Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut
+
+local function ease(sb, unit)
+	if not (EASE and Stoa.db and Stoa.db.smoothBars) then return nil end
+	local guid = UnitGUID(unit)
+	if guid == nil or Stoa:IsSecret(guid) then
+		sb.stoaFor = nil
+		return nil
+	end
+	local same = sb.stoaFor == guid
+	sb.stoaFor = guid
+	return same and EASE or nil
+end
+
+local function setValue(sb, value, interpolation)
+	if interpolation and pcall(sb.SetValue, sb, value, interpolation) then return end
+	sb:SetValue(value)
+end
+
 function UI.setUnitBar(sb, unit, kind)
+	local interpolation = ease(sb, unit)
 	if kind == "health" then
 		sb:SetMinMaxValues(0, UnitHealthMax(unit))
-		sb:SetValue(UnitHealth(unit))
+		setValue(sb, UnitHealth(unit), interpolation)
 	else
 		sb:SetMinMaxValues(0, UnitPowerMax(unit))
-		sb:SetValue(UnitPower(unit))
+		setValue(sb, UnitPower(unit), interpolation)
 	end
 end
 

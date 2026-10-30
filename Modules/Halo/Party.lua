@@ -426,27 +426,38 @@ function Party:UpdateCard(card)
 end
 
 -- Your own buffs worth tracking on a card, as short words. Timers show
--- once there's under half a minute left.
-local OWN_BUFFS = {
-	["Power Word: Shield"] = { "SHIELD", "shield" },
-	["Renew"] = { "RENEW" },
-	["Prayer of Mending"] = { "MENDING" },
-	["Fear Ward"] = { "WARD" },
-	["Power Infusion"] = { "INFUSION" },
-	["Inner Fire"] = { "INNER FIRE" },
-	["Blessing of Protection"] = { "PROTECTION" },
-	["Blessing of Freedom"] = { "FREEDOM" },
-	["Blessing of Sacrifice"] = { "SACRIFICE" },
-	["Rejuvenation"] = { "REJUV" },
-	["Regrowth"] = { "REGROWTH" },
-	["Wild Growth"] = { "GROWTH" },
-	["Innervate"] = { "INNERVATE" },
+-- once there's under half a minute left. Each is listed by a spell ID and
+-- matched by that spell's name in the game's language (every rank shares
+-- it); the English name stands in if the game doesn't know the ID.
+local OWN_BUFF_IDS = {
+	{ 17, "Power Word: Shield", { "SHIELD", "shield" } },
+	{ 139, "Renew", { "RENEW" } },
+	{ 33076, "Prayer of Mending", { "MENDING" } },
+	{ 6346, "Fear Ward", { "WARD" } },
+	{ 10060, "Power Infusion", { "INFUSION" } },
+	{ 588, "Inner Fire", { "INNER FIRE" } },
+	{ 1022, "Blessing of Protection", { "PROTECTION" } },
+	{ 1044, "Blessing of Freedom", { "FREEDOM" } },
+	{ 6940, "Blessing of Sacrifice", { "SACRIFICE" } },
+	{ 774, "Rejuvenation", { "REJUV" } },
+	{ 8936, "Regrowth", { "REGROWTH" } },
+	{ 1238215, "Wild Growth", { "GROWTH" } },
+	{ 29166, "Innervate", { "INNERVATE" } },
 }
 -- Debuffs from anyone that change what you can cast on them.
-local LOCKOUTS = {
-	["Weakened Soul"] = "WS",
-	["Forbearance"] = "FORB",
+local LOCKOUT_IDS = {
+	{ 6788, "Weakened Soul", "WS" },
+	{ 25771, "Forbearance", "FORB" },
 }
+
+local function byName(list)
+	local map = {}
+	for _, entry in ipairs(list) do
+		map[Stoa.Spells.localName(entry[1], entry[2])] = entry[3]
+	end
+	return map
+end
+local OWN_BUFFS, LOCKOUTS
 local MAX_PIPS = 3
 
 local function timeLeft(aura)
@@ -467,6 +478,7 @@ local function scan(unit, filter, fn)
 end
 
 function Party:AuraPips(unit, pips)
+	if not OWN_BUFFS then OWN_BUFFS, LOCKOUTS = byName(OWN_BUFF_IDS), byName(LOCKOUT_IDS) end
 	scan(unit, "HELPFUL|PLAYER", function(name, aura)
 		local cue = OWN_BUFFS[name]
 		if cue then
