@@ -14,6 +14,7 @@
 -- see Modules/Grimoire/Minimap.lua), the chat's column of buttons (a
 -- companion's chat button joins it) and the welcome page, which waits until
 -- the companion's own has closed.
+-- DoesItDie shares no jobs: Stoa draws its DoT estimate on the target plaque.
 -- /stoa addons says which jobs each companion has right now.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -88,6 +89,13 @@ local COMPANIONS = {
 			local db = _G.LeaPlusDB
 			return type(db) == "table" and db[key] == "On"
 		end,
+	},	{
+		folder = "DoesItDie", name = "DoesItDie",
+		-- Shares no jobs: it tracks your DoTs, and Stoa draws its estimate on
+		-- the target plaque through its public API (Modules/Halo/Lethal.lua).
+		keys = {},
+		get = function() return false end,
+		note = "Tracks your DoTs; Stoa shows their damage left and a kill skull on the target plaque.",
 	},
 }
 
@@ -145,7 +153,9 @@ function Companions:Report()
 			local key = companion.keys[job]
 			if key and companion.get(key) then jobs[#jobs + 1] = JOBS[job] end
 		end
-		if #jobs == 0 then
+		if companion.note then
+			Stoa:Print(("%s is here too and works with Stoa. %s"):format(companion.name, companion.note))
+		elseif #jobs == 0 then
 			Stoa:Print(("%s is here too and works beside Stoa; none of its helpers repeat Stoa's right now."):format(companion.name))
 		else
 			Stoa:Print(("%s is here too and works beside Stoa. It looks after %s; Stoa leaves those to it while they're on in %s."):format(

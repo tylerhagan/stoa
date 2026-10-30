@@ -560,7 +560,7 @@ function Welcome:GatherAddons()
 	local rows = {}
 	local covered = {}
 	for _, companion in ipairs(Stoa.Companions and Stoa.Companions:Loaded() or {}) do
-		rows[#rows + 1] = { name = companion.name, note = "Works beside Stoa. Where both do a small job, its switch wins." }
+		rows[#rows + 1] = { name = companion.name, note = companion.note or "Works beside Stoa. Where both do a small job, its switch wins." }
 	end
 	local Conflicts = Stoa.Conflicts
 	for _, entry in ipairs(Conflicts and Conflicts:Found() or {}) do
