@@ -80,6 +80,14 @@ function GameSettings:Held(name)
 	return ledger()[name] ~= nil
 end
 
+-- The settings Stoa holds now, by name, for /stoa report.
+function GameSettings:List()
+	local list = {}
+	for name in pairs(ledger()) do list[#list + 1] = name end
+	table.sort(list)
+	return list
+end
+
 -- At login: settings whose part of Stoa is off go back.
 function GameSettings:Tidy()
 	for name, entry in pairs(ledger()) do

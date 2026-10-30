@@ -143,6 +143,32 @@ local function enabledModules()
 	return on, off
 end
 
+-- Resolution, UI scale and whether the game's own scale setting is on.
+local function screen()
+	local parts = {}
+	if GetPhysicalScreenSize then
+		local w, h = GetPhysicalScreenSize()
+		if w and h then parts[#parts + 1] = ("%dx%d"):format(w, h) end
+	end
+	if UIParent and UIParent.GetScale then parts[#parts + 1] = ("UI scale %.2f"):format(UIParent:GetScale()) end
+	local get = (C_CVar and C_CVar.GetCVar) or GetCVar
+	local useScale = get and get("useUiScale")
+	if useScale == "1" then parts[#parts + 1] = "scale set in the game's options" end
+	return #parts > 0 and table.concat(parts, ", ") or "?"
+end
+
+-- Other addons switched on, by folder name.
+local function otherAddons()
+	local list = {}
+	local count = C_AddOns and C_AddOns.GetNumAddOns and C_AddOns.GetNumAddOns() or 0
+	for i = 1, count do
+		local name = C_AddOns.GetAddOnInfo(i)
+		if name and name ~= "Stoa" and C_AddOns.IsAddOnLoaded(i) then list[#list + 1] = name end
+	end
+	table.sort(list)
+	return list
+end
+
 function Report:Text()
 	local lines = {}
 	local function add(...)
@@ -158,9 +184,15 @@ function Report:Text()
 	local spec = GetActiveTalentGroup and GetActiveTalentGroup() or "?"
 	add("Character: ", tostring(className or classFile), ", level ", tostring(UnitLevel and UnitLevel("player") or "?"), ", spec slot ", tostring(spec), ", role ", tostring(Stoa:GetRole()))
 	add("Theme: ", tostring(Stoa.db and Stoa.db.theme), Stoa.ThemeName and (" (" .. Stoa:ThemeName() .. ")") or "")
+	add("Screen: ", screen())
+	add("Language: ", tostring(GetLocale and GetLocale() or "?"))
+	local held = Stoa.GameSettings and Stoa.GameSettings:List() or {}
+	add("Game settings Stoa holds: ", #held > 0 and table.concat(held, ", ") or "none")
 	local on, off = enabledModules()
 	add("On: ", table.concat(on, ", "))
 	add("Off: ", #off > 0 and table.concat(off, ", ") or "none")
+	local others = otherAddons()
+	add("Other addons (", #others, "): ", #others > 0 and table.concat(others, ", ") or "none")
 	add("")
 	if Stoa.Check then
 		local ok, text = pcall(Stoa.Check.Text, Stoa.Check)
