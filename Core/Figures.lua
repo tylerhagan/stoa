@@ -142,7 +142,7 @@ function Figures.spark(parent, width, height)
 	local floor = fill(frame, "BACKGROUND")
 	floor:SetPoint("BOTTOMLEFT")
 	floor:SetPoint("BOTTOMRIGHT")
-	floor:SetHeight(1)
+	Stoa.UI.pixel(floor, "height")
 	frame.floor = floor
 	-- values: a list of numbers, oldest first; the last is marked.
 	function frame:Set(values)
