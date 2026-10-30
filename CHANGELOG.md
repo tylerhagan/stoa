@@ -10,6 +10,13 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Restock: each character keeps a list of things to carry (candles, ammo, poisons, food, water) and how many; vendors top it up in whole bundles. Settings > Comforts, `/stoa restock`.
+- Mail: Take gold beside Open All, a line saying what Open All took, and a Mine button listing your characters and people you mailed lately.
+- Characters: every character notes its level, money, rest, lockouts, bags and bank. Item tooltips count copies on your other characters; `/stoa alts` lists them.
+- Gear for each spec: the equipment set you wore in a spec goes back on when you change to it.
+- Hover keybinding: `/stoa bind` or `/stoa kb`.
+- Away screen: the camera turns round your character with your name, rest, time away and whispers while you're away. `/stoa away` to see it.
+- Fixed the trainer page's rounded icon mask path.
 - The stone behind windows is stronger, its rings clear from just under the header down.
 - Stoa's own settings window (`/stoa`, or the button under Options > AddOns > Stoa): ten pages in the order you look for things, a search box that also knows other words (camera, aggro, clique...), and a notes column saying what the setting under the mouse does, what it usually is, whether it waits for a reload, if it changes one of the game's settings and the `/stoa` words for it. Choices are drawn in the theme, with theme colours in the theme list and keys to move through it. A footer counts changes waiting for a reload with a Reload button, and "Defaults for this page" puts a page back.
 - Everything that was only a `/stoa` command now has a control: invite words, items to always sell, spells you skip at the trainer, minimap icons kept out of the tray, At a glance lines for each place with pins, sample party and raid frames, the proc and logging samples, putting windows and frames back, loot totals, rank upgrades, the launch check and safe mode.

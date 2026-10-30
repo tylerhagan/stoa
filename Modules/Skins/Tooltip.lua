@@ -280,10 +280,15 @@ function Tooltip:DressItem(tip, data)
 	local bags = known(C_Item.GetItemCount(id, false)) or 0
 	local all = known(C_Item.GetItemCount(id, true)) or bags
 	local bank = math.max(all - bags, 0)
-	if all <= 0 then return end
+	-- Your other characters' copies, from what each wrote down (Core/Alts.lua).
+	local others = {}
+	if Stoa.Alts and Stoa.Alts.db and Stoa.Alts.db.tooltipCounts then others = Stoa.Alts.holders(id) end
+	if all <= 0 and #others == 0 then return end
 	local parts = {}
 	if bags > 0 then parts[#parts + 1] = bags .. " in bags" end
 	if bank > 0 then parts[#parts + 1] = bank .. " in bank" end
+	for i = 1, math.min(#others, 3) do parts[#parts + 1] = others[i][1] .. " " .. others[i][2] end
+	if #others > 3 then parts[#parts + 1] = "+" .. (#others - 3) end
 	addPair(tip, "OWNED", table.concat(parts, " · "), Stoa:Color("text"))
 	tip:Show()
 end

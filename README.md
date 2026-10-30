@@ -74,6 +74,12 @@ What works today:
 | Damage meters | Blizzard's meter windows with no panel, just outlined words and faint bars (your own in the accent, names in class colour), side by side in the top-left corner |
 | Comforts | Each its own setting, and Shift stops any of it: faster auto loot, a further camera, skip one-option gossip (on by default); accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet red errors in combat (off by default); hide other people's duel results and drunken lines (on); decline duels, release in battlegrounds, accept resurrections (off) |
 | Merchants | Sells grey junk and anything you've marked as junk, and repairs, from guild funds when allowed |
+| Restock | Each character keeps a list of things it always carries and how many (candles, ammo, poisons, food and water); any vendor that sells one tops it back up, in whole bundles, then says what it bought. Token and honour items are never bought. Shift as the vendor opens skips it. `/stoa restock add <item> 20` or Settings > Comforts |
+| Mail | Beside the game's own Open All: Take gold (money only, items stay), one line saying what Open All took, and a Mine button by the name box listing your characters on this realm and the people you mailed lately. Cash on delivery and GM letters are always left for you |
+| Characters | Every character writes down its level, money, rest, raid lockouts and what it carries in its bags and bank. Item tooltips count copies on your other characters; `/stoa alts` lists them all with rest earned since they last played and lockouts on hover |
+| Gear for each spec | Put on an equipment set in a spec and Stoa puts it back on whenever you change to that spec, after any fight. A set assigned to a spec in the game's equipment manager wins |
+| Keybinding | `/stoa bind` (or `/stoa kb`): hover any action, pet or stance button and press a key, the middle or side mouse buttons or the wheel, with any modifier. Backspace clears, Esc keeps, Discard puts every key back |
+| Away screen | Going away out of a fight in the open world, the interface steps aside: the camera turns slowly round your character over a band of the console's leather with the wordmark, your name, level, zone, rest, time away and any whispers. Moving, a fight or Back returns. `/stoa away` shows it |
 | Welcome | Once per character, a short wizard in one window, with a step rail to go back: start by hand, from another character's saved setup or as Stoa ships; what each spec plays; theme (house and every class), ornament and colour vision; what a fight does (fold the console with the Halo, keep it open with the Halo, or no Halo, with the calm seconds and group wait under folding); how much (Full, Quiet, Classic feel); the other addons Stoa found (only when there are some: who does each job and Stoa's look for Bagnon, Details, Questie); then a summary with ways to try it. Choices that need a reload wait for Finish, which reloads once. Other addons questions wait for it on a first login |
 | Launch check | On the first login with a new game build, checks every spell ID, game function, Blizzard frame and event Stoa relies on, and says in one line if a feature is off because something moved. `/stoa check` (and `/stoa report`) list the details |
 | Cooldown Manager | Off for now (Settings > Cooldowns). Halo coins ask the game's Cooldown Manager whether a spell is ready or a buff is up, which it knows in combat; its rows keep running out of sight. Spells it doesn't track keep Stoa's own reading. `/stoa cdm` |
@@ -138,6 +144,10 @@ Fonts are the main gap: see below.
 | `/stoa xp` | Experience this session, per hour, and time to level |
 | `/stoa pull [seconds]` | Pull countdown for the group (10 by default); `/stoa pull 0` cancels |
 | `/stoa uprank` | Put the best rank of each spell on your bars now |
+| `/stoa restock` | `add <item> [count]`, `remove <item>`, `list`, `clear`: what this character keeps topped up at vendors |
+| `/stoa alts` | Your characters: level, rest, lockouts and gold; `/stoa alts forget <name>` drops one |
+| `/stoa bind` | Hover a button and press a key to bind it (`/stoa kb` too) |
+| `/stoa away` | Show the away screen now |
 | `/stoa junk add <item>` | Mark an item as junk (link or ID); `remove <item>`, `list`, `clear` |
 | `/stoa loot` | Gold an hour and loot value this session; `/stoa loot reset` starts again |
 | `/stoa trainer` | Open Training: spells waiting now and coming next, with prices (`/stoa trainer list` prints them in chat) |

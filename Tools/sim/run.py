@@ -301,6 +301,25 @@ if Stoa.modules.Logging and Stoa.modules.Logging.enabled then
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Logging: " .. e end
 end
+-- Restock: tops a bundled item up to the count, in whole bundles.
+if Stoa.Restock then
+	local ok, e = xpcall(function()
+		local real = { GetMerchantNumItems, GetMerchantItemLink, BuyMerchantItem, C_MerchantFrame, C_Item.GetItemCount, GetMoney }
+		local bought = 0
+		GetMerchantNumItems = function() return 1 end
+		GetMerchantItemLink = function() return "|Hitem:159::|h[Refreshing Spring Water]|h" end
+		BuyMerchantItem = function(_, n) bought = bought + (n or 1) end
+		C_MerchantFrame = { GetItemInfo = function() return { name = "Refreshing Spring Water", price = 25, stackCount = 5, numAvailable = -1, isPurchasable = true } end }
+		C_Item.GetItemCount = function() return 3 end
+		GetMoney = function() return 100000 end
+		Stoa.char.restock = { [159] = 20 }
+		Stoa.Restock:Run()
+		assert(bought == 20, "bought " .. bought .. " of 20")
+		GetMerchantNumItems, GetMerchantItemLink, BuyMerchantItem, C_MerchantFrame, C_Item.GetItemCount, GetMoney = unpack(real)
+		Stoa.char.restock = {}
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Restock: " .. e end
+end
 -- Shared layout: positions and look round-trip; a bad spot is refused.
 do
 	local ok, e = xpcall(function()
@@ -375,7 +394,7 @@ do
 			elseif entry.kind == "words" then
 				local before, had = #entry.items(), {}
 				for _, item in ipairs(entry.items()) do had[item[1]] = true end
-				entry.add(entry.id == "junkList" and "6948" or "Simword")
+				entry.add((entry.id == "junkList" and "6948") or (entry.id == "restockList" and "6948 5") or "Simword")
 				assert(#entry.items() == before + 1, entry.id .. " added")
 				local last
 				for _, item in ipairs(entry.items()) do if not had[item[1]] then last = item[1] end end
