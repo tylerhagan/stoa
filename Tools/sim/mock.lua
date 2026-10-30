@@ -7,6 +7,9 @@ SIM_UNKNOWN, SIM_ERRORS = unknown, errors
 SIM_PATHS = {}
 
 local function noop() end
+-- Marks objects Stoa asked for (CreateFrame, Create*, timers), as opposed to
+-- the stand-ins the mock hands back for unknown fields and Blizzard frames.
+local function Made(o) o.__made = true return o end
 
 -- The names the Forever client really has (Tools/sim/api.txt, made by
 -- apilist.py) plus Tools/sim/known_missing.txt. Anything else a Stoa file
@@ -105,8 +108,8 @@ local special = {
 	GetFontObject = function() return GameFontNormal end,
 	GetBackdrop = function() return nil end,
 	GetScrollChild = function() return nil end,
-	CreateAnimationGroup = function(self) return NewObject("AnimationGroup", self) end,
-	CreateAnimation = function(self) return NewObject("Animation", self) end,
+	CreateAnimationGroup = function(self) return Made(NewObject("AnimationGroup", self)) end,
+	CreateAnimation = function(self) return Made(NewObject("Animation", self)) end,
 	RegisterEvent = function(self, e) EVENT_FRAMES[self] = true; self.__events[e] = true end,
 	RegisterUnitEvent = function(self, e) EVENT_FRAMES[self] = true; self.__events[e] = true end,
 	UnregisterEvent = function(self, e) self.__events[e] = nil end,
@@ -128,7 +131,7 @@ Object.__index = function(t, k)
 	elseif k:find("^Create") or k:find("^Acquire") then
 		f = function(self, name, ...)
 			local kind = k:match("^Create(.*)") or "Frame"
-			return NewObject(kind, self, type(name) == "string" and name or nil)
+			return Made(NewObject(kind, self, type(name) == "string" and name or nil))
 		end
 	elseif k:find("^Get") and (k:find("Texture$") or k:find("Frame$") or k:find("Region$") or k:find("Container$")
 		or k:find("Button$") or k:find("String$") or k:find("Bar$") or k:find("Text$") or k:find("Icon$")
@@ -165,7 +168,7 @@ EVENT_FRAMES = setmetatable({}, { __mode = "k" })
 SIM_OBJECTS = objects
 
 function CreateFrame(kind, name, parent, template)
-	local o = NewObject(kind, parent or UIParent, name)
+	local o = Made(NewObject(kind, parent or UIParent, name))
 	if template and template:find("Mixin") then end
 	return o
 end
@@ -183,8 +186,8 @@ local timers = {}
 SIM_TIMERS = timers
 C_Timer = {
 	After = function(s, fn) timers[#timers + 1] = fn end,
-	NewTimer = function(s, fn) timers[#timers + 1] = fn; return NewObject("Timer") end,
-	NewTicker = function(s, fn) local t = NewObject("Ticker"); t.Cancel = noop; t.__fn = fn; timers[#timers + 1] = fn; return t end,
+	NewTimer = function(s, fn) timers[#timers + 1] = fn; return Made(NewObject("Timer")) end,
+	NewTicker = function(s, fn) local t = Made(NewObject("Ticker")); t.Cancel = noop; t.__fn = fn; timers[#timers + 1] = fn; return t end,
 }
 
 UnitLevel = function() return 24 end
