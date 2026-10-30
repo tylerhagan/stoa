@@ -263,6 +263,12 @@ local function build()
 		Stoa.modules.Procs:TakeOver(procs.takeOver and procs.art)
 	end)
 
+	-- DoTs (with DoesItDie installed)
+	local lethal = Stoa.modules.Lethal.db
+	header("Will my DoTs kill it")
+	checkbox(lethal, "marker", "DoT damage on the target bar", "Needs the DoesItDie addon. The end of the target plaque's health bar shows, in bone, how much your DoTs will still take off.", true, function() Stoa.modules.Lethal:Update() end)
+	checkbox(lethal, "skull", "Skull when they'll kill it", "Needs the DoesItDie addon. A skull slides over the target's portrait once your DoTs will finish it off.", true, function() Stoa.modules.Lethal:Update() end)
+
 	-- Group
 	header("Group tools")
 	local groupRules = Stoa.Rules.options({ "GROUP", "RAID", "ALWAYS", "NEVER" })
