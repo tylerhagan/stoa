@@ -297,6 +297,32 @@ for path in list(paths.keys()):
         missing.append(rel)
 print("Own files used:", sum(1 for p in paths.keys() if "AddOns" in p.replace("\\", "/")), "missing:", " ".join(sorted(missing)) or "none")
 
+# Forever's client has per-addon object caps (LimitedLuaResources in Logs/General.log;
+# off on build 70634, but the numbers are there). Everything the sim made, every
+# preview and /stoa command included, so a high-water mark, not a typical session.
+CAPS = {"Frame": 10000, "Texture": 40000, "FontString": 5000, "AnimGroup": 2000, "Timer": 500}
+FRAMES = {"Frame", "Button", "CheckButton", "StatusBar", "EditBox", "ScrollFrame", "Slider", "Cooldown", "GameTooltip", "Model", "PlayerModel", "MessageFrame", "ScrollingMessageFrame"}
+made = {k: 0 for k in CAPS}
+objects = G.SIM_OBJECTS
+for i in range(1, len(objects) + 1):
+    if not objects[i]["__made"]:
+        continue
+    kind = objects[i]["__type"]
+    if kind in FRAMES:
+        kind = "Frame"
+    elif kind in ("MaskTexture", "Line"):
+        kind = "Texture"
+    elif kind == "AnimationGroup":
+        kind = "AnimGroup"
+    elif kind in ("Ticker",):
+        kind = "Timer"
+    if kind in made:
+        made[kind] += 1
+print("Objects made vs Forever's per-addon caps:", ", ".join("%s %d/%d" % (k, made[k], CAPS[k]) for k in CAPS))
+over = [k for k in CAPS if made[k] > CAPS[k] * 0.5]
+if over:
+    print("OVER HALF A CAP:", " ".join(over))
+
 if "-v" in sys.argv:
     prints = G.SIM_PRINTS
     for i in range(1, len(prints) + 1):
