@@ -38,6 +38,11 @@ lua.execute("""
 C_AddOns.IsAddOnLoaded = function(name) return SIM_OTHER_ADDONS[name] or false end
 C_AddOns.DisableAddOn = function(name) SIM_OTHER_ADDONS[name] = nil end
 ReloadUI = ReloadUI or function() end
+if SIM_OTHER_ADDONS.DoesItDie then
+	DoesItDie = { API_VERSION = 1, callbacks = {} }
+	function DoesItDie.GetRemainingDamage(unit) return 480, 2 end
+	function DoesItDie.RegisterCallback(owner, fn) DoesItDie.callbacks[owner] = fn end
+end
 """)
 
 errors = G.SIM_ERRORS
@@ -173,6 +178,18 @@ do
 		end
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Other addons: " .. e end
+end
+-- DoesItDie: its callback and the plaque's marker and skull.
+if DoesItDie and Stoa.modules.Lethal then
+	local realExists = UnitExists
+	UnitExists = function(u) return u == "player" or u == "target" end
+	local ok, e = xpcall(function()
+		for _, fn in pairs(DoesItDie.callbacks) do fn("DOTS_CHANGED", "target") end
+		Stoa.modules.Lethal:Update()
+		if not (Stoa.modules.Lethal.clip and Stoa.modules.Lethal.clip:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "DoesItDie: marker not shown" end
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	UnitExists = realExists
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "DoesItDie: " .. e end
 end
 -- At a glance: every situation, hover and click each line, pin and reset.
 local glance = Stoa.modules.Tally

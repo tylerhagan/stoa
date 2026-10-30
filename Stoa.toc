@@ -70,6 +70,7 @@ Modules\Halo\Threat.lua
 Modules\Halo\Buffs.lua
 Modules\Halo\Emergency.lua
 Modules\Halo\Procs.lua
+Modules\Halo\Lethal.lua
 Modules\QoL\Markers.lua
 
 Modules\Frames\ClickCast.lua
