@@ -12,13 +12,7 @@ local UI = Stoa.UI
 
 local Windows = Stoa:NewModule("Windows")
 
--- Hides a frame's own textures, leaving its children (buttons, text, items).
-local function strip(frame)
-	if not (frame and frame.GetRegions) then return end
-	for _, region in ipairs({ frame:GetRegions() }) do
-		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
-	end
-end
+local strip = Stoa.frames.strip
 
 -- Strips the plain frames inside a window too, down a few levels, leaving
 -- buttons, bars and edit boxes (and their icons) alone.
@@ -34,9 +28,7 @@ local function stripInside(frame, depth)
 	end
 end
 
-local function hide(frame)
-	if frame and frame.SetAlpha then frame:SetAlpha(0) end
-end
+local hide = Stoa.frames.hide
 
 local function titleOf(frame)
 	if frame.TitleContainer and frame.TitleContainer.TitleText then return frame.TitleContainer.TitleText end
@@ -486,9 +478,7 @@ local function dressReadyCheck()
 	end)
 end
 
-local function guarded(fn)
-	xpcall(fn, Stoa.catch)
-end
+local guarded = Stoa.safe.guarded
 
 function Windows:OnEnable()
 	guarded(questFonts)

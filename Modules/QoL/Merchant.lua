@@ -50,7 +50,9 @@ end
 
 local function sellJunk()
 	local marked = sellMarked()
-	local value = junkValue()
+	-- Another addon selling greys already (Core/Companions.lua): Stoa sells
+	-- only what you marked yourself.
+	local value = Stoa:SharedBy("sellJunk") and 0 or junkValue()
 	if value == 0 and marked == 0 then return end
 	if value == 0 then
 		Stoa:Note("merchant", ("Sold your marked junk for %s."):format(money(marked)))
@@ -91,7 +93,7 @@ function Merchant:OnEnable()
 	local db = self.db
 	Stoa:On("MERCHANT_SHOW", function()
 		if db.sellJunk then xpcall(sellJunk, Stoa.catch) end
-		if db.autoRepair then xpcall(repair, Stoa.catch, db) end
+		if db.autoRepair and not Stoa:SharedBy("repair") then xpcall(repair, Stoa.catch, db) end
 	end)
 end
 

@@ -10,6 +10,13 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Combat switch: choose how long the console waits after a fight (1, 3, 5 or 8 seconds), wait for your group between pulls, keep the console open in combat, or fold without the slide. The console and the Halo are one choice (fold with the Halo, open with the Halo, open with no Halo), so the console never folds with no Halo to replace it.
+- The welcome page is now a step-by-step wizard: start (by hand, a saved setup from any alt, or as Stoa ships), specs, look (every class theme), in combat, how much, other addons (when found) and a summary; one reload on Finish.
+- Saved setups: each character's setup is kept account-wide at logout; load it on an alt from the backup page, the welcome page or `/stoa setups`.
+- Stoa's look for Questie's tracker, Bagnon's bags and Details' meters, offered once (`/stoa looks`); Stoa's fonts in LibSharedMedia.
+- Details, Skada and Recount join the "two addons, one job" check; Leatrix Plus's switches win where it and Stoa do the same job.
+- Spell art behind the letter in the Halo's coins (a setting).
+- OneForAll: Stoa works beside it. Small jobs both do (fast loot, junk, repairs, loot feed, quest help, camera, window moving, chat copy, upgrade marks, invites, duels) go to OneForAll while its switch is on; Stoa keeps the minimap and chat rail and waits for OneForAll's welcome page. At a glance gets Library Books and Dungeon guide lines.
 - Other addons: when a known bag, nameplate, chat, tooltip, bar, minimap, group frame, click-casting, window mover or map addon is loaded, Stoa asks which one should do the job, and its own part waits until you choose; `/stoa addons` asks again. A whole UI like ElvUI or SpartanUI doesn't work beside Stoa: Stoa says so and offers to turn either off.
 - Tally is now called At a glance; `/stoa glance` (the old `/stoa tally` still works).
 - New console art: a bigger medallion ring held by a slender brass bracket either side; the portrait is a size larger (new textures: restart the game once).
@@ -71,6 +78,12 @@ Everything below is on the launch branch and not yet in a numbered release.
 - Gear scores by Stoa's own stat weights for your class and role, shifting with level: tooltips show UPGRADE +n%, bags mark upgrades UP, quest rewards pick by score.
 - Trainer: Journey counts the new spells and ranks waiting at your trainer, with a note on level up and `/stoa trainer` to list them.
 - When the game hides auras, buff reminders and aura lists stand down instead of calling a buff missing.
+- Settings kept per spec (combat rows, click grid, bar tray, At a glance) now stay with the character: a second character no longer starts with the first one's values.
+- Small helpers every module used its own copy of (safe calls, aura lookups, hiding textures) live once in `Core/Util.lua`.
+- The README says what Stoa is not.
+- The welcome page shows Full as the chosen start and, as you hover Quiet or Classic feel, says exactly what each changes against it.
+- One combat clock: the Halo's coins, combat bar and procs share a single 0.2 s tick that runs only in combat, and the Halo and console listen to player and target events only, so a raid's unit events no longer wake them.
+- The offline load test fails on any game function Stoa calls that Forever's UI source doesn't have (`Tools/sim/api.txt`, built by `Tools/sim/apilist.py` from Blizzard's source).
 - `Tools/sim/run.py`: an offline load test that loads every file under a mock of the game, fires the login and combat events (with secret values) and runs every `/stoa` command.
 
 ## 0.9.0

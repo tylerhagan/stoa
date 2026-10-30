@@ -35,16 +35,9 @@ local LIST = {
 			"Greater Blessing of Salvation", "Greater Blessing of Sanctuary" } },
 }
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b, c = pcall(fn, ...)
-	if ok then return a, b, c end
-end
+local call = Stoa.safe.call
 
-local function plain(value)
-	if value == nil or Stoa:IsSecret(value) then return nil end
-	return value
-end
+local plain = Stoa.safe.plain
 
 local function knowsAny(names)
 	for _, name in ipairs(names) do

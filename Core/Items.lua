@@ -8,11 +8,7 @@ local Stoa = ns.Stoa
 local Items = {}
 Stoa.Items = Items
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b, c, d, e, f, g, h, i, j, k = pcall(fn, ...)
-	if ok then return a, b, c, d, e, f, g, h, i, j, k end
-end
+local call = Stoa.safe.call
 
 local getInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
 

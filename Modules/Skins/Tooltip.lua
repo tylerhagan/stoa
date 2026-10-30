@@ -219,7 +219,7 @@ function Tooltip:DressUnit(tip)
 	end
 
 	local target = unit .. "target"
-	if known(UnitExists(target)) then
+	if known(UnitExists(target)) and not Stoa:SharedBy("tooltipTarget") then
 		if known(UnitIsUnit(target, "player")) then
 			addPair(tip, "TARGET", "YOU", Stoa:Color("danger"))
 		else
@@ -292,6 +292,8 @@ end
 -- by stat weight for your role when the item can be scored, else by level.
 function Tooltip:Upgrade(tip, link)
 	if not link or Stoa:IsSecret(link) then return end
+	-- Another addon's gear planner answers this already (Core/Companions.lua).
+	if Stoa:SharedBy("gearUpgrade") then return end
 	local gain, slot, none = Stoa.Items.upgrade(link)
 	if gain then
 		local role = Stoa.ROLE_LABELS[Stoa:GetRole() or ""] or "you"

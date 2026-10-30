@@ -1,6 +1,6 @@
 -- Stoa: other addons doing the same job.
 -- When a bag, nameplate, chat, tooltip, bar, minimap, group frame or
--- click-casting addon is loaded beside Stoa, the two would dress the same
+-- click-casting addon (or a damage meter) is loaded beside Stoa, the two would dress the same
 -- Blizzard frames (or draw two sets of frames). At login Stoa looks for the
 -- well-known ones and asks once which should do the job:
 --   Keep theirs: Stoa's own part steps aside, remembered account-wide. If the
@@ -80,6 +80,10 @@ local RULES = {
 		addons = { { "BlizzMove", "BlizzMove" }, { "MoveAny", "MoveAny" } },
 	},
 	{
+		key = "meters", job = "damage and healing meters", modules = { "Meters" },
+		addons = { { "Details", "Details" }, { "Skada", "Skada" }, { "Recount", "Recount" } },
+	},
+	{
 		key = "map", job = "the world map", modules = { "Map" },
 		addons = { { "Mapster", "Mapster" } },
 	},
@@ -119,6 +123,31 @@ function Conflicts:SteppedAside(name)
 	return aside[name]
 end
 
+-- For the welcome page (Config/Welcome.lua): each clash found, its saved
+-- answer, and a way to settle one there without the question page.
+Conflicts.names = names
+
+function Conflicts:Found()
+	return found
+end
+
+function Conflicts:Saved(entry)
+	return choices()[entry.rule.key]
+end
+
+-- "theirs" keeps the other addon; "ours" turns it off and returns true, as
+-- it only takes effect after a reload.
+function Conflicts:Settle(entry, choice)
+	entry.asked = true
+	if choice == "ours" then
+		for _, addon in ipairs(entry.loaded) do disable(addon[1]) end
+		choices()[entry.rule.key] = nil
+		return true
+	end
+	choices()[entry.rule.key] = "theirs"
+	return false
+end
+
 -- Called once at login, before modules are enabled.
 function Conflicts:Check()
 	wipe(aside)
@@ -148,8 +177,10 @@ end
 local WIDTH, HEIGHT = 460, 220
 local PAD = 26
 
-function Conflicts:Build()
-	local page = CreateFrame("Frame", "StoaAddonsPage", UIParent)
+-- A small question page with a title, a few lines and two buttons; Stoa's
+-- other questions about addons (Core/Looks.lua) use it too.
+function Conflicts:Page(name, onLeft, onRight)
+	local page = CreateFrame("Frame", name, UIParent)
 	page:SetSize(WIDTH, HEIGHT)
 	page:SetPoint("CENTER", 0, 120)
 	page:SetFrameStrata("DIALOG")
@@ -160,7 +191,6 @@ function Conflicts:Build()
 	page:SetScript("OnDragStop", page.StopMovingOrSizing)
 	page:Hide()
 	UI.windowPanel(page, 0.97, { header = 64, footer = 58 })
-	self.page = page
 
 	local title = UI.text(page, "serif", Stoa.typeSize.title, "text", "LEFT")
 	title:SetPoint("TOPLEFT", PAD, -PAD + 4)
@@ -178,10 +208,17 @@ function Conflicts:Build()
 	note:SetWordWrap(true)
 	page.note = note
 
-	page.theirs = UI.button(page, "", 200, function() self:Answer("theirs") end)
-	page.theirs:SetPoint("BOTTOMLEFT", PAD, PAD - 10)
-	page.ours = UI.button(page, "", 200, function() self:Answer("ours") end)
-	page.ours:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
+	page.left = UI.button(page, "", 200, onLeft)
+	page.left:SetPoint("BOTTOMLEFT", PAD, PAD - 10)
+	page.right = UI.button(page, "", 200, onRight)
+	page.right:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
+	return page
+end
+
+function Conflicts:Build()
+	local page = self:Page("StoaAddonsPage", function() self:Answer("theirs") end, function() self:Answer("ours") end)
+	page.theirs, page.ours = page.left, page.right
+	self.page = page
 end
 
 function Conflicts:Ask(entry)
@@ -229,16 +266,21 @@ function Conflicts:Answer(choice)
 	end
 end
 
--- Asks about each clash not settled before, one at a time.
+-- Asks about each clash not settled before, one at a time. While the
+-- welcome page is still to come or open, it asks those itself; only a
+-- whole UI is asked about here.
 function Conflicts:Next()
 	local saved = choices()
+	local welcoming = Stoa.Welcome and Stoa.Welcome:Pending()
 	for _, entry in ipairs(found) do
-		if not entry.asked and saved[entry.rule.key] ~= "theirs" then
+		if not entry.asked and saved[entry.rule.key] ~= "theirs" and (entry.rule.suite or not welcoming) then
 			entry.asked = true
 			Stoa:AfterCombat(function() self:Ask(entry) end)
 			return
 		end
 	end
+	-- Settled: Stoa's look for the addons kept (Core/Looks.lua).
+	if Stoa.Looks and not welcoming then Stoa.Looks:Next() end
 end
 
 Stoa:On("STOA_READY", function()
@@ -247,6 +289,7 @@ Stoa:On("STOA_READY", function()
 end)
 
 Stoa.commands.addons = function()
+	if Stoa.Companions then Stoa.Companions:Report() end
 	if #found == 0 then
 		Stoa:Print("No other addon is doing one of Stoa's jobs.")
 		return

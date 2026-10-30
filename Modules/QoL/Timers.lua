@@ -18,11 +18,7 @@ local Timers = Stoa:NewModule("Timers", {
 
 local WIDTH, HEIGHT, GAP = 240, 6, 22
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b, c, d, e, f = pcall(fn, ...)
-	if ok then return a, b, c, d, e, f end
-end
+local call = Stoa.safe.call
 
 local function clock(seconds)
 	seconds = math.max(0, math.floor(seconds + 0.5))

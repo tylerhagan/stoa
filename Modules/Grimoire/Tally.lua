@@ -42,11 +42,7 @@ local CENTRE_CLEAR = 340
 local REFRESH_SECONDS = 2
 local LOW_WEAR, LOW_BAGS = 0.25, 2
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b, c, d, e = pcall(fn, ...)
-	if ok then return a, b, c, d, e end
-end
+local call = Stoa.safe.call
 
 local function plain(value)
 	value = Stoa:PlainNumber(value)

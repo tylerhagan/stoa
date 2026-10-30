@@ -10,11 +10,7 @@ local UI = Stoa.UI
 
 local Reward = Stoa:NewModule("QuestReward", {})
 
-local function call(fn, ...)
-	if type(fn) ~= "function" then return nil end
-	local ok, a, b, c, d = pcall(fn, ...)
-	if ok then return a, b, c, d end
-end
+local call = Stoa.safe.call
 
 -- The button for choice number i, by either of the names it has had.
 local function choiceButton(i)
@@ -62,7 +58,9 @@ function Reward:Pick()
 			if value > bestValue then bestValue, valueIndex = value, i end
 		end
 	end
-	if gainIndex then return gainIndex, "UPGRADE" end
+	-- Another addon marks upgrades among rewards already (Core/Companions.lua):
+	-- Stoa keeps to the best sale.
+	if gainIndex and not Stoa:SharedBy("gearUpgrade") then return gainIndex, "UPGRADE" end
 	if valueIndex then return valueIndex, "VALUE" end
 end
 

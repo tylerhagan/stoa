@@ -19,9 +19,7 @@ local UI = Stoa.UI
 
 local Bags = Stoa:NewModule("Bags", { bagMode = "combined" })
 
-local function guarded(fn, ...)
-	xpcall(fn, Stoa.catch, ...)
-end
+local guarded = Stoa.safe.guarded
 
 -- Item slot helpers ---------------------------------------------------------
 
@@ -260,7 +258,8 @@ local function decorateButton(button)
 		button.stoaUpgrade = gain and gain > 0
 	end
 	local parts = Item.markSlot(button, info.quality, button.stoaLevel)
-	Item.markUpgrade(button, parts, button.stoaUpgrade)
+	-- Another addon's gear planner marks upgrades in bags already (Core/Companions.lua).
+	Item.markUpgrade(button, parts, button.stoaUpgrade and not Stoa:SharedBy("gearUpgrade"))
 end
 
 -- Gold, silver and copper as letters, so nothing rests on coin colour.

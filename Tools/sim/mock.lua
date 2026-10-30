@@ -8,6 +8,28 @@ SIM_PATHS = {}
 
 local function noop() end
 
+-- The names the Forever client really has (Tools/sim/api.txt, made by
+-- apilist.py) plus Tools/sim/known_missing.txt. Anything else a Stoa file
+-- reaches for is INVENTED.
+local ALLOWED, METHODS = {}, {}
+do
+	local dir = SIM_DIR or "Tools/sim/"
+	local section
+	for line in io.lines(dir .. "api.txt") do
+		local head = line:match("^# section: (.*)")
+		if head then section = head
+		elseif line ~= "" and line:sub(1, 1) ~= "#" then
+			if section == "widget methods" then METHODS[line] = true else ALLOWED[line] = true end
+		end
+	end
+	for line in io.lines(dir .. "known_missing.txt") do
+		local name = line:gsub("#.*", ""):match("^%s*(.-)%s*$")
+		if name ~= "" then ALLOWED[name] = true end
+	end
+end
+SIM_ALLOWED = function(name) return ALLOWED[name] or false end
+SIM_REMOVED, SIM_UNKNOWN_METHODS, SIM_FIELD_MISSES, SIM_ABSENT = {}, {}, {}, {}
+
 -- The game's xpcall passes extra arguments on, as Lua 5.2 does.
 local rawxpcall = xpcall
 xpcall = function(fn, handler, ...)
@@ -94,6 +116,10 @@ local special = {
 
 Object.__call = function() return nil end
 Object.__index = function(t, k)
+	if type(k) == "string" and not METHODS[k] and k:find("^[A-Z]") and (special[k] or k:find("^Enumerate") or k:find("^Create")
+		or k:find("^Acquire") or k:find("^Get") or k:find("^Set") or k:find("^Is") or k:find("^Has") or k:find("^Can") or k:find("^Num")) then
+		SIM_UNKNOWN_METHODS[k] = (SIM_UNKNOWN_METHODS[k] or 0) + 1
+	end
 	local f = special[k]
 	if f then return f end
 	if type(k) ~= "string" then return nil end
@@ -361,16 +387,21 @@ GameTooltip = nil
 DEFAULT_CHAT_FRAME = nil
 
 -- Blizzard's named frames and other upper-case globals this mock doesn't
--- define become plain objects, and are recorded so the list can be read.
+-- define become plain objects when the client has them (listed under UNKNOWN
+-- GLOBALS). A name the client does not have stays nil, like in the game, so
+-- Stoa's own existence checks behave; using it unguarded errors and run.py
+-- reports it as INVENTED.
 setmetatable(_G, { __index = function(t, k)
 	if type(k) ~= "string" then return nil end
-	unknown[k] = (unknown[k] or 0) + 1
-	if k:find("^[A-Z][%w_]*$") and not k:find("^C_") and not k:find("^[A-Z_]+$") then
+	if k:find("^[A-Z][%w_]*$") and not k:find("^C_") and not k:find("^[A-Z_0-9]+$") then
+		if not ALLOWED[k] then SIM_ABSENT[k] = (SIM_ABSENT[k] or 0) + 1; return nil end
+		unknown[k] = (unknown[k] or 0) + 1
 		local o = NewObject("Frame", nil, nil)
 		o.__name = k
 		rawset(t, k, o)
 		return o
 	end
+	unknown[k] = (unknown[k] or 0) + 1
 	return nil
 end })
 for _, name in ipairs({ "QuestInfo_Display", "UpdateUIPanelPositions", "TakeTaxiNode", "UpdateContainerFrameAnchors",
@@ -401,4 +432,38 @@ function SIM_ENTER_COMBAT()
 	C_Secrets.ShouldAurasBeSecret = function() return true end
 	C_UnitAuras.GetAuraDataByIndex = function(u, i) if i == 1 then return { name = SECRET, auraInstanceID = SECRET, dispelName = SECRET, duration = SECRET, expirationTime = SECRET, applications = SECRET, icon = SECRET } end end
 	C_UnitAuras.GetAuraDataBySpellName = function() return { name = SECRET, auraInstanceID = SECRET, duration = SECRET, expirationTime = SECRET } end
+end
+
+-- Drop what the mock made up itself: upper-case global functions and C_
+-- functions the client does not have go away, so a Stoa guard such as
+-- `if C_Foo and C_Foo.Bar` sees what the game would show. Reads of a missing
+-- C_ field are noted with their line so run.py can name the call that failed.
+local keep = { NewObject = true }
+for k, v in pairs(_G) do
+	if type(k) == "string" and not keep[k] and not k:find("^SIM_") then
+		if type(v) == "function" and k:find("^[A-Z]") and not ALLOWED[k] then
+			SIM_REMOVED[k] = true
+		elseif type(v) == "table" and k:find("^C_") then
+			if not ALLOWED[k] then
+				SIM_REMOVED[k] = true
+			else
+				for fk, fv in pairs(v) do
+					if type(fv) == "function" and not ALLOWED[k .. "." .. fk] then SIM_REMOVED[k .. "." .. fk] = true end
+				end
+			end
+		end
+	end
+end
+for name in pairs(SIM_REMOVED) do
+	local ns, fn = name:match("^(C_%w+)%.(%w+)$")
+	if ns then _G[ns][fn] = nil else rawset(_G, name, nil) end
+end
+for k, v in pairs(_G) do
+	if type(k) == "string" and k:find("^C_") and type(v) == "table" and getmetatable(v) == nil then
+		setmetatable(v, { __index = function(_, field)
+			local info = debug.getinfo(2, "Sl")
+			if info and type(field) == "string" then SIM_FIELD_MISSES[info.short_src .. ":" .. info.currentline .. ":" .. field] = k .. "." .. field end
+			return nil
+		end })
+	end
 end

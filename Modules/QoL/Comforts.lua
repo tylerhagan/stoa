@@ -32,10 +32,19 @@ local function held()
 	return IsShiftKeyDown()
 end
 
+-- Quest help another addon does already (Core/Companions.lua) is left to it.
+local function accepting(db)
+	return db.acceptQuests and not Stoa:SharedBy("acceptQuests")
+end
+
+local function turningIn(db)
+	return db.turnInQuests and not Stoa:SharedBy("turnInQuests")
+end
+
 -- Loot ------------------------------------------------------------------------
 
 function Comforts:Loot()
-	if not self.db.fastLoot or held() then return end
+	if not self.db.fastLoot or held() or Stoa:SharedBy("fastLoot") then return end
 	-- Only when auto loot is on (or its modifier flips it on).
 	local auto = GetCVarBool("autoLootDefault")
 	if IsModifiedClick and IsModifiedClick("AUTOLOOTTOGGLE") then auto = not auto end
@@ -46,7 +55,7 @@ end
 -- Camera ----------------------------------------------------------------------
 
 function Comforts:Camera()
-	if not self.db.farCamera or InCombatLockdown() then return end
+	if not self.db.farCamera or InCombatLockdown() or Stoa:SharedBy("camera") then return end
 	pcall(SetCVar, "cameraDistanceMaxZoomFactor", FAR_CAMERA)
 end
 
@@ -55,7 +64,7 @@ end
 function Comforts:Gossip()
 	if held() or not C_GossipInfo then return end
 	local db = self.db
-	if db.turnInQuests then
+	if turningIn(db) then
 		for _, quest in ipairs(C_GossipInfo.GetActiveQuests() or {}) do
 			if quest.isComplete then
 				C_GossipInfo.SelectActiveQuest(quest.questID)
@@ -63,14 +72,14 @@ function Comforts:Gossip()
 			end
 		end
 	end
-	if db.acceptQuests then
+	if accepting(db) then
 		local available = C_GossipInfo.GetAvailableQuests() or {}
 		if available[1] then
 			C_GossipInfo.SelectAvailableQuest(available[1].questID)
 			return
 		end
 	end
-	if db.skipGossip then
+	if db.skipGossip and not Stoa:SharedBy("skipGossip") then
 		local options = C_GossipInfo.GetOptions() or {}
 		local quests = C_GossipInfo.GetNumAvailableQuests() + C_GossipInfo.GetNumActiveQuests()
 		local only = options[1]
@@ -84,7 +93,7 @@ end
 function Comforts:Greeting()
 	if held() then return end
 	local db = self.db
-	if db.turnInQuests and GetNumActiveQuests then
+	if turningIn(db) and GetNumActiveQuests then
 		for i = 1, GetNumActiveQuests() do
 			local _, complete = GetActiveTitle(i)
 			if complete then
@@ -93,13 +102,13 @@ function Comforts:Greeting()
 			end
 		end
 	end
-	if db.acceptQuests and GetNumAvailableQuests and GetNumAvailableQuests() > 0 then
+	if accepting(db) and GetNumAvailableQuests and GetNumAvailableQuests() > 0 then
 		SelectAvailableQuest(1)
 	end
 end
 
 function Comforts:Detail()
-	if not self.db.acceptQuests or held() then return end
+	if not accepting(self.db) or held() then return end
 	if QuestGetAutoAccept and QuestGetAutoAccept() then
 		if AcknowledgeAutoAcceptQuest then AcknowledgeAutoAcceptQuest() end
 	else
@@ -108,12 +117,12 @@ function Comforts:Detail()
 end
 
 function Comforts:Progress()
-	if not self.db.turnInQuests or held() then return end
+	if not turningIn(self.db) or held() then return end
 	if IsQuestCompletable() then CompleteQuest() end
 end
 
 function Comforts:Complete()
-	if not self.db.turnInQuests or held() then return end
+	if not turningIn(self.db) or held() then return end
 	-- A choice of reward is yours to make.
 	if GetNumQuestChoices() <= 1 then GetQuestReward(1) end
 end
@@ -195,13 +204,13 @@ end
 -- Duels, death and resurrection ----------------------------------------------
 
 function Comforts:Duel()
-	if not self.db.declineDuels or held() then return end
+	if not self.db.declineDuels or held() or Stoa:SharedBy("duels") then return end
 	if CancelDuel then CancelDuel() end
 	if StaticPopup_Hide then StaticPopup_Hide("DUEL_REQUESTED") end
 end
 
 function Comforts:Dead()
-	if not self.db.releaseInPvP or held() then return end
+	if not self.db.releaseInPvP or held() or Stoa:SharedBy("releaseInPvP") then return end
 	local _, kind = IsInInstance()
 	if kind ~= "pvp" then return end
 	-- A soulstone or reincarnation is yours to use.
@@ -212,7 +221,7 @@ function Comforts:Dead()
 end
 
 function Comforts:Resurrect(from)
-	if not self.db.acceptRes or held() then return end
+	if not self.db.acceptRes or held() or Stoa:SharedBy("acceptRes") then return end
 	-- Not mid-fight: a resurrection then is usually better taken later.
 	if from and UnitAffectingCombat and UnitExists(from) and UnitAffectingCombat(from) then return end
 	AcceptResurrect()

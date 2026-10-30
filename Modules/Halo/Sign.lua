@@ -183,6 +183,7 @@ local function paintTimer(coin, state)
 	local r, g, b = Stoa:Color(token)
 	coin.ring:SetVertexColor(r, g, b, state == "on" and 0.7 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "on" and "text" or token))
+	UI.coinLit(coin, state ~= "off")
 end
 
 local function paintCooldown(coin, state)
@@ -190,6 +191,7 @@ local function paintCooldown(coin, state)
 	local r, g, b = Stoa:Color(token)
 	coin.ring:SetVertexColor(r, g, b, state == "cooling" and 0.6 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "cooling" and "muted" or token))
+	UI.coinLit(coin, state ~= "cooling")
 end
 
 local function letter(coin, text)
@@ -229,6 +231,7 @@ end
 -- "ready", "active" or "cooling".
 function Sign.cooldown(coin, text, spellID, castAt, length, active)
 	letter(coin, text)
+	UI.coinArt(coin, spellID)
 	coin.cooldown:SetReverse(false)
 	coin:Show()
 	if active then
@@ -317,6 +320,7 @@ end
 -- A DoT or debuff of yours on the target: the aura's own time when shown,
 -- otherwise your cast at this target.
 function Sign.debuff(coin, text, name, casts, key, length)
+	UI.coinArt(coin, name)
 	local aura = Sign.aura("target", name, "HARMFUL|PLAYER")
 	local left = Sign.left(aura)
 	if left then return Sign.timer(coin, text, GetTime() + left, length, aura, "target"), aura end
@@ -327,6 +331,7 @@ end
 
 -- A buff of yours on yourself, the same way.
 function Sign.buff(coin, text, name, casts, key, length)
+	UI.coinArt(coin, name)
 	local aura = Sign.aura("player", name, "HELPFUL")
 	local left = Sign.left(aura)
 	if left then return Sign.timer(coin, text, GetTime() + left, length, aura, "player"), aura end
@@ -403,10 +408,10 @@ function Sign.wire(module, extra)
 		Stoa:On(event, refresh)
 	end
 	for _, event in ipairs(extra or {}) do Stoa:On(event, refresh) end
-	local ticker
-	ticker = Stoa:NewTicker(0.2, function()
-		if not Sign.inCombat() or not module:Active() then return end
-		if not xpcall(module.Refresh, Stoa.catch, module) then ticker:Cancel() end
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not Sign.inCombat() or not module:Active() then return end
+		if not xpcall(module.Refresh, Stoa.catch, module) then ticking = false end
 	end)
 	refresh()
 end

@@ -748,8 +748,15 @@ function Console:AddPage(page)
 	page:SetAlpha(self.leftPage and self.leftPage:GetAlpha() or 1)
 end
 
+-- Folded in combat, unless the player keeps it open (Settings: In combat).
+-- The console only folds when the Halo is there to take its place.
 local function shouldBeOpen()
-	return Stoa:GetState() == Stoa.STATE_WORLD
+	return Stoa:GetState() == Stoa.STATE_WORLD or Stoa.db.combatConsole ~= "fold"
+		or not Stoa:IsModuleEnabled("Halo")
+end
+
+function Console:Refold()
+	self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant)
 end
 
 -- Lifecycle -----------------------------------------------------------------
@@ -771,7 +778,7 @@ function Console:OnEnable()
 	Stoa:On("STOA_NOTE", function(kind, message) self:AddNote(kind, message) end)
 	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
-	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen()) end)
+	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant) end)
 
 	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
 		if unit == "player" then self:UpdateSeal() end
@@ -791,16 +798,16 @@ function Console:OnEnable()
 			self:UpdateFellowship()
 		end
 	end)
-	Stoa:On("UNIT_MAXHEALTH", function(unit)
+	Stoa:OnUnit("UNIT_MAXHEALTH", { "player" }, function(unit)
 		if unit == "player" then self:UpdateResources() end
 	end)
-	Stoa:On("UNIT_POWER_UPDATE", function(unit)
+	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player" }, function(unit)
 		if unit == "player" then
 			setUnitBar(self.mana, "player", "power")
 			self.manaText:SetText(UnitPower("player"))
 		end
 	end)
-	Stoa:On("UNIT_MAXPOWER", function(unit)
+	Stoa:OnUnit("UNIT_MAXPOWER", { "player" }, function(unit)
 		if unit == "player" then self:UpdateResources() end
 	end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function() self:UpdateFellowship() end)

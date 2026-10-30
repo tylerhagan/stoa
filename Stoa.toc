@@ -23,6 +23,8 @@ Core\State.lua
 Core\Movers.lua
 Core\Widgets.lua
 Core\Conflicts.lua
+Core\Companions.lua
+Core\Looks.lua
 Core\Figures.lua
 Core\Spells.lua
 Core\Items.lua
@@ -90,4 +92,5 @@ Modules\Skins\Swing.lua
 Config\Settings.lua
 Config\Welcome.lua
 Config\Backup.lua
+Config\Setups.lua
 Core\API.lua

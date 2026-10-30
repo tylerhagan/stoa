@@ -445,7 +445,12 @@ function Procs:OnEnable()
 	Stoa:OnUnit("UNIT_AURA", { "player" }, check)
 	Stoa:On("ACTIONBAR_SLOT_CHANGED", function() self:UpdateGlows() end)
 	-- Windows close on their own (a proc running out fires nothing).
-	Stoa:NewTicker(0.25, function() if self.list and #self.list > 0 then self:Check() end end)
+	-- On the combat clock in a fight; a slower ticker covers them out of combat,
+	-- where procs still open and close.
+	Stoa:On("STOA_TICK", function() if self.list and #self.list > 0 then self:Check() end end)
+	Stoa:NewTicker(0.5, function()
+		if Stoa:GetState() ~= Stoa.STATE_COMBAT and self.list and #self.list > 0 then self:Check() end
+	end)
 	refresh()
 	Stoa.commands.procs = function(rest)
 		if rest == "test" then
