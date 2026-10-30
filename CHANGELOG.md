@@ -10,6 +10,10 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Stoa's own settings window (`/stoa`, or the button under Options > AddOns > Stoa): ten pages in the order you look for things, a search box that also knows other words (camera, aggro, clique...), and a notes column saying what the setting under the mouse does, what it usually is, whether it waits for a reload, if it changes one of the game's settings and the `/stoa` words for it. Choices are drawn in the theme, with theme colours in the theme list and keys to move through it. A footer counts changes waiting for a reload with a Reload button, and "Defaults for this page" puts a page back.
+- Everything that was only a `/stoa` command now has a control: invite words, items to always sell, spells you skip at the trainer, minimap icons kept out of the tray, At a glance lines for each place with pins, sample party and raid frames, the proc and logging samples, putting windows and frames back, loot totals, rank upgrades, the launch check and safe mode.
+- On a pull countdown (Combat page): when a leader starts the game's pull countdown in a raid, the console folds and the Halo rises straight away; a cancelled countdown, or no fight soon after, opens it again. In raids by default, or any group, or never.
+- "Fold without the slide" is now "How the console folds: Slide or Instantly", and proc art explains what the game does and what Stoa changes.
 - Logging reminder: entering a dungeon or raid with combat logging off, a plaque says NOT LOGGING with a Start logging button (for Warcraft Logs); logging Stoa started stops when you leave. Settings > Comforts, `/stoa log`.
 - Share layout (`/stoa layout`, or on the backup page): a short line with where your frames sit in every role and the look, safe to post for others; importing one keeps the rest of your setup.
 - Health and power bars glide to a new value instead of jumping (Settings > Look, on by default).

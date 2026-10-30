@@ -64,8 +64,21 @@ local function setCombatLayout(on)
 	Stoa:Fire("STOA_COMBAT_LAYOUT", on)
 end
 
+-- A pull countdown can bring the combat look in early, so the console has
+-- folded and the Halo is up before the pull (Stoa.db.countdownCombat:
+-- "raid", "group" or "off"). It ends with the fight, a cancelled countdown,
+-- or a few seconds after the countdown runs out with no fight.
+local countdown
+local COUNTDOWN_GRACE = 8
+
+local function endCountdown()
+	if countdown then countdown:Cancel() end
+	countdown = nil
+end
+
 Stoa:On("PLAYER_REGEN_DISABLED", function()
 	practising = false
+	endCountdown()
 	if calmTimer then
 		calmTimer:Cancel()
 		calmTimer = nil
@@ -132,6 +145,36 @@ Stoa.commands.combat = function()
 	Stoa:Print(practising and "Practice combat on. /stoa combat again to end it." or "Practice combat off.")
 end
 
+local function countdownWanted()
+	local when = Stoa.db and Stoa.db.countdownCombat or "raid"
+	if when == "raid" then return IsInRaid() end
+	if when == "group" then return IsInGroup() end
+	return false
+end
+
+Stoa:On("START_PLAYER_COUNTDOWN", function(_, timeRemaining)
+	if InCombatLockdown() or state == COMBAT or not countdownWanted() then return end
+	local seconds = Stoa:PlainNumber(timeRemaining) or 10
+	endCountdown()
+	setCombatLayout(true)
+	setState(COMBAT)
+	countdown = C_Timer.NewTimer(math.min(seconds, 60) + COUNTDOWN_GRACE, function()
+		countdown = nil
+		if InCombatLockdown() or practising then return end
+		setCombatLayout(false)
+		setState(WORLD)
+	end)
+end)
+
+Stoa:On("CANCEL_PLAYER_COUNTDOWN", function()
+	if not countdown then return end
+	endCountdown()
+	if InCombatLockdown() or practising then return end
+	setCombatLayout(false)
+	setState(WORLD)
+end)
+
 Stoa:On("PLAYER_ENTERING_WORLD", function()
+	endCountdown()
 	setState(InCombatLockdown() and COMBAT or WORLD)
 end)
