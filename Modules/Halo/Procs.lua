@@ -29,7 +29,10 @@ local Procs = Stoa:NewModule("Procs", {
 	savedGameArt = nil,
 })
 
-local ART = "Interface\\SpellActivationOverlay\\"
+-- Proc art lives under Textures\SpellActivationOverlays in modern clients; the
+-- Interface folder (checked against build 70634's art export) only holds the
+-- icon alert pieces. Both are tried, newest first.
+local ART = { "Textures\\SpellActivationOverlays\\", "Interface\\SpellActivationOverlay\\" }
 -- Tried in order when a proc names art the client doesn't have.
 local FALLBACK_ART = { "Generic_Arc_01", "Generic_Top_01" }
 
@@ -89,9 +92,15 @@ end
 local function setArt(texture, file)
 	for _, name in ipairs({ file, unpack(FALLBACK_ART) }) do
 		if name then
-			local path = type(name) == "number" and name or (name:find("\\") and name or ART .. name)
-			texture:SetTexture(path)
-			if type(texture:GetTextureFileID()) == "number" or type(name) == "number" then return true end
+			if type(name) == "number" or name:find("\\") then
+				texture:SetTexture(name)
+				if type(name) == "number" or type(texture:GetTextureFileID()) == "number" then return true end
+			else
+				for _, folder in ipairs(ART) do
+					texture:SetTexture(folder .. name)
+					if type(texture:GetTextureFileID()) == "number" then return true end
+				end
+			end
 		end
 	end
 	return false
