@@ -34,6 +34,7 @@ Core\Group.lua
 Core\Power.lua
 Core\Rules.lua
 Core\GameAuras.lua
+Core\CooldownManager.lua
 Data\FlightTimes.lua
 Data\TrainerSpells.lua
 

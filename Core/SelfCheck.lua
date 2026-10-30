@@ -126,6 +126,7 @@ local APIS = {
 	{ "IsActionInRange", "the combat bar's range cue" },
 	{ "UnitCastingDuration", "the cast bar in combat" },
 	{ "C_AssistedCombat", "next-press hints" },
+	{ "C_CooldownViewer.GetCooldownViewerCooldownInfo", "reading the Cooldown Manager (when switched on)" },
 	{ "issecretvalue", "secret value checks" },
 	{ "RegisterAttributeDriver", "party and raid frames", true },
 	{ "RegisterStateDriver", "the Halo and target", true },
@@ -197,6 +198,7 @@ local FRAMES = {
 	{ "ReadyCheckFrame", "the ready check skin" },
 	{ "ReadyCheckListenerFrame", "the ready check skin" },
 	{ "QuestInfoRewardsFrame", "the best quest reward" },
+	{ "EssentialCooldownViewer", "reading the Cooldown Manager (when switched on)" },
 }
 
 -- Events the signatures and frames need from this client.

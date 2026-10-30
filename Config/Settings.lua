@@ -267,6 +267,12 @@ local function build()
 		Stoa.modules.Procs:TakeOver(procs.takeOver and procs.art)
 	end)
 
+	-- The game's Cooldown Manager
+	local manager = Stoa.modules.Manager.db
+	header("Cooldowns")
+	checkbox(manager, "enabled", "Read the game's Cooldown Manager", "Halo coins and the next-press outline ask the game's Cooldown Manager whether a spell is ready, which it knows in combat when the game hides it from addons. Spells the Manager doesn't track keep Stoa's own reading. Turns the game's Cooldown Manager setting on. /stoa cdm shows what it tracks. Takes effect after /reload.", false)
+	checkbox(manager, "showBlizzard", "Keep the Cooldown Manager's rows on screen", "Off keeps the game's rows running but see-through, so the Halo is the one place cooldowns show.", false, function() Stoa.modules.Manager:Quiet() end)
+
 	-- DoTs (with DoesItDie installed)
 	local lethal = Stoa.modules.Lethal.db
 	header("Will my DoTs kill it")
