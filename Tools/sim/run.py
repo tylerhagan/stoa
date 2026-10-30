@@ -34,6 +34,8 @@ others = lua.table()
 for folder in filter(None, os.environ.get("STOA_SIM_ADDONS", "").split(",")):
     others[folder.strip()] = True
 G.SIM_OTHER_ADDONS = others
+if os.environ.get("STOA_SIM_INTERFACE"):
+    lua.execute("local i = %d; GetBuildInfo = function() return '1.15.8', '99999', 'Oct 1 2026', i end" % int(os.environ["STOA_SIM_INTERFACE"]))
 lua.execute("""
 C_AddOns.IsAddOnLoaded = function(name) return SIM_OTHER_ADDONS[name] or false end
 C_AddOns.DisableAddOn = function(name) SIM_OTHER_ADDONS[name] = nil end
@@ -100,6 +102,12 @@ fire("VARIABLES_LOADED")
 fire("PLAYER_LOGIN")
 fire("PLAYER_ENTERING_WORLD", true, false)
 drain()
+if Stoa.blocked then
+	-- Another client: nothing may have run, and the saved settings stay untouched.
+	if Stoa.db ~= nil or Stoa.modules.Halo.db ~= nil then SIM_ERRORS[#SIM_ERRORS + 1] = "Client gate: Stoa touched its settings" end
+	SIM_RAN = "(client gate: Stoa stayed off)"
+	do return end
+end
 SIM_ADVANCE(1)
 updates()
 for _, e in ipairs({ "SPELLS_CHANGED", "PLAYER_LEVEL_UP", "GROUP_ROSTER_UPDATE", "PLAYER_TARGET_CHANGED",
