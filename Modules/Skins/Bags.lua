@@ -72,11 +72,17 @@ function Item.skinSlot(button)
 		local mask = button:CreateMaskTexture()
 		mask:SetAllPoints()
 		mask:SetTexture(MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		-- Build 70634 gives item buttons their own icon mask (button.Mask, set on
+		-- the icon, normal and pushed textures); two masks would clip twice.
 		if button.IconMask then pcall(icon.RemoveMaskTexture, icon, button.IconMask) end
+		if button.Mask then pcall(icon.RemoveMaskTexture, icon, button.Mask) end
 		icon:AddMaskTexture(mask)
-		for _, getter in ipairs({ "GetHighlightTexture", "GetPushedTexture" }) do
+		for _, getter in ipairs({ "GetHighlightTexture", "GetPushedTexture", "GetNormalTexture" }) do
 			local tex = button[getter] and button[getter](button)
-			if tex then pcall(tex.AddMaskTexture, tex, mask) end
+			if tex then
+				if button.Mask then pcall(tex.RemoveMaskTexture, tex, button.Mask) end
+				if getter ~= "GetNormalTexture" then pcall(tex.AddMaskTexture, tex, mask) end
+			end
 		end
 	end
 	UI.roundPanel(button, 0.9)
