@@ -423,9 +423,11 @@ function Plates:Restyle()
 end
 
 function Plates:TargetScale()
-	local set = (C_CVar and C_CVar.SetCVar) or SetCVar
-	if set and not InCombatLockdown() then
-		pcall(set, "nameplateSelectedScale", tostring((self.db.targetScale or 100) / 100))
+	local scale = self.db.targetScale or 100
+	if scale ~= 100 then
+		Stoa.GameSettings:Set("Plates", "nameplateSelectedScale", tostring(scale / 100))
+	else
+		Stoa.GameSettings:Restore("nameplateSelectedScale")
 	end
 end
 
@@ -437,7 +439,7 @@ function Plates:OnEnable()
 		end)
 	end
 	Stoa:On("PLAYER_TARGET_CHANGED", function() eachPlate(targetEdge) end)
-	if (self.db.targetScale or 100) ~= 100 then Stoa:AfterCombat(function() self:TargetScale() end) end
+	Stoa:AfterCombat(function() self:TargetScale() end)
 	if CompactUnitFrame_UpdateHealthColor then
 		hooksecurefunc("CompactUnitFrame_UpdateHealthColor", function(frame) guarded(colourHealth, frame) end)
 	end

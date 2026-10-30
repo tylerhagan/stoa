@@ -376,15 +376,18 @@ end
 -- The game's own proc events -------------------------------------------------
 
 function Procs:TakeOver(on)
-	local get = (C_CVar and C_CVar.GetCVar) or GetCVar
-	local set = (C_CVar and C_CVar.SetCVar) or SetCVar
-	if not (get and set) then return end
-	if on then
-		if self.db.savedGameArt == nil then self.db.savedGameArt = get("displaySpellActivationOverlays") or "1" end
-		pcall(set, "displaySpellActivationOverlays", "0")
-	elseif self.db.savedGameArt ~= nil then
-		pcall(set, "displaySpellActivationOverlays", self.db.savedGameArt)
+	-- Older versions kept the game's value here; the ledger keeps it now.
+	if self.db.savedGameArt ~= nil then
+		local ledger = Stoa.db.gameSettings or {}
+		Stoa.db.gameSettings = ledger
+		ledger.displaySpellActivationOverlays = ledger.displaySpellActivationOverlays
+			or { before = self.db.savedGameArt, owner = "Procs", stoa = "0" }
 		self.db.savedGameArt = nil
+	end
+	if on then
+		Stoa.GameSettings:Set("Procs", "displaySpellActivationOverlays", "0")
+	else
+		Stoa.GameSettings:Restore("displaySpellActivationOverlays")
 	end
 end
 

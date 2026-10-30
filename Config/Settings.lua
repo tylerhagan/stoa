@@ -44,6 +44,9 @@ local function build()
 		layout:AddInitializer(CreateSettingsButtonInitializer("Report a problem", "Open", function()
 			Stoa.Report:Show()
 		end, "Your setup and any errors Stoa caught this session, ready to copy and send. /stoa report", true))
+		layout:AddInitializer(CreateSettingsButtonInitializer("Game settings", "Put back", function()
+			Stoa.commands.restore()
+		end, "Puts back the game settings Stoa changed (far camera, map fade, target nameplate size, combined bags, the game's proc art), as they were before Stoa. One you've changed yourself since stays as you set it. /stoa restore", true))
 	end
 
 	-- Look

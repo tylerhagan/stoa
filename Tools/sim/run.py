@@ -191,6 +191,27 @@ if DoesItDie and Stoa.modules.Lethal then
 	UnitExists = realExists
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "DoesItDie: " .. e end
 end
+-- Game settings: Stoa's change is noted and put back; the player's own change stays.
+do
+	local ok, e = xpcall(function()
+		local gs = Stoa.GameSettings
+		SIM_CVARS.simTest = "7"
+		gs:Set("Comforts", "simTest", "9")
+		assert(SIM_CVARS.simTest == "9", "set")
+		gs:Restore("simTest")
+		assert(SIM_CVARS.simTest == "7", "restore")
+		gs:Set("Comforts", "simTest", "9")
+		SIM_CVARS.simTest = "3"
+		gs:Restore("simTest")
+		assert(SIM_CVARS.simTest == "3", "player's value kept")
+		Stoa.modules.Comforts:Camera()
+		assert(gs:Held("cameraDistanceMaxZoomFactor"), "far camera noted")
+		SlashCmdList.STOA("restore")
+		assert(not gs:Held("cameraDistanceMaxZoomFactor"), "restore all")
+		assert(SIM_CVARS.cameraDistanceMaxZoomFactor == "0", "camera put back")
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Game settings: " .. e end
+end
 -- At a glance: every situation, hover and click each line, pin and reset.
 local glance = Stoa.modules.Tally
 if glance and glance.rows then
