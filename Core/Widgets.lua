@@ -501,9 +501,9 @@ end
 local STONE = UI.MEDIA .. "Textures\\WindowStone"
 local STONE_SIZE = 1024
 local STONE_INSET = 2
-UI.STONE_STRENGTH = 0.26
+UI.STONE_STRENGTH = 0.6
 -- The stone's strength at the top of a body, as a share of the bottom's.
-local STONE_TOP = 0.3
+local STONE_TOP = 0.65
 local stones = {}
 
 local function fitStone(tex)
