@@ -282,6 +282,15 @@ local function build()
 	group = "Will my DoTs kill it"
 	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in bone, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", words = "dot damage execute", change = refresh("Lethal", "Update") })
 	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", change = refresh("Lethal", "Update") })
+	group = "Your pet"
+	local pet = of("Pet")
+	local petRefresh = function() if Stoa.Pet and Stoa.Pet.enabled then Stoa.Pet:UpdateAll() end end
+	toggle(pet, "plaque", "Pet plaque", "In a fight, a plaque like the target's at the Halo's upper left: your pet's mood, health, power, stance and what it's attacking. Under the tank watch when you heal.", true, { id = "petPlaque", reload = true, words = "hunter warlock demon minion" })
+	toggle(pet, "arc", "Pet health on the Halo", "A thin arc inside your own health with the pet's.", true, { id = "petArc", reload = true, words = "hunter warlock" })
+	toggle(pet, "row", "Pet row under the combat bar", "Your pet's buttons, smaller, under the combat bar in a fight. Right-click one to switch its autocast. Out of a fight the game's pet bar stays where it is, in Stoa's dress.", true, { id = "petRow", reload = true, words = "pet bar autocast stance" })
+	toggle(pet, "coin", "Pet coin on the medallion", "Out of a fight, a small coin off the medallion with your pet's health as a ring and its mood under it. Click it to feed it food from your bags when it isn't happy; right-click targets it.", true, { id = "petCoin", reload = true, words = "feed happiness hunter" })
+	toggle(pet, "words", "Pet reminders", "CALL PET when it isn't out, PET DEAD when it needs reviving, FEED when it's unhappy, PET LOW and PET PASSIVE in a fight, GROWL ON in a group when you aren't the tank.", true, { id = "petWords", words = "growl feed revive call", change = petRefresh })
+	toggle(pet, "partyPets", "Pets under party cards", "When you heal in a party, a slim cell under each owner's card with the pet's health. Your click-casting works on it.", true, { id = "petParty", reload = true, words = "healer partypet" })
 
 	-- Group
 	page = "group"

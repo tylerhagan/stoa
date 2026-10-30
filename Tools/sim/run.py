@@ -301,6 +301,34 @@ if Stoa.modules.Logging and Stoa.modules.Logging.enabled then
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Logging: " .. e end
 end
+-- Pets: with a hungry pet out of a fight, the plaque fills and FEED shows;
+-- with none, a Hunter is told to call one.
+if Stoa.Pet and Stoa.Pet.enabled then
+	local ok, e = xpcall(function()
+		local P = Stoa.Pet
+		local real = { UnitExists, C_PetInfo, GetPetActionInfo, UnitName, P.Keeper, UnitHealth, UnitHealthMax, Stoa.GetState }
+		UnitHealth = function() return 700 end
+		UnitHealthMax = function() return 1000 end
+		Stoa.GetState = function() return "world" end
+		UnitExists = function(u) return u == "player" or u == "pet" end
+		UnitName = function(u) return u == "pet" and "Ashmane" or "Taer" end
+		C_PetInfo = { GetPetHappiness = function() return 1, 75, 0 end, CanPetEatItem = function() return false end }
+		GetPetActionInfo = function(i)
+			if i == 9 then return "PET_MODE_DEFENSIVE", "PET_MODE_DEFENSIVE", true, true end
+			return nil
+		end
+		P:UpdateAll()
+		local words = table.concat(P:Words(), ",")
+		assert(words:find("FEED ASHMANE"), "feed word: " .. words)
+		UnitExists = function(u) return u == "player" end
+		P.Keeper = function() return "HUNTER" end
+		words = table.concat(P:Words(), ",")
+		assert(words:find("CALL PET"), "call word: " .. words)
+		UnitExists, C_PetInfo, GetPetActionInfo, UnitName, P.Keeper, UnitHealth, UnitHealthMax, Stoa.GetState = unpack(real)
+		P:UpdateAll()
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Pet: " .. e end
+end
 -- Restock: tops a bundled item up to the count, in whole bundles.
 if Stoa.Restock then
 	local ok, e = xpcall(function()

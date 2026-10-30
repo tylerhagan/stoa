@@ -10,6 +10,7 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Pets: a pet plaque in a fight, its health as an inner arc on the Halo, a pet row under the combat bar, a pet coin on the medallion (click to feed), pet reminders, and pet cells under party cards for healers. Settings > Combat > Your pet.
 - Restock: each character keeps a list of things to carry (candles, ammo, poisons, food, water) and how many; vendors top it up in whole bundles. Settings > Comforts, `/stoa restock`.
 - Mail: Take gold beside Open All, a line saying what Open All took, and a Mine button listing your characters and people you mailed lately.
 - Characters: every character notes its level, money, rest, lockouts, bags and bank. Item tooltips count copies on your other characters; `/stoa alts` lists them.

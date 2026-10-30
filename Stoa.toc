@@ -80,6 +80,7 @@ Modules\Halo\Buffs.lua
 Modules\Halo\Emergency.lua
 Modules\Halo\Procs.lua
 Modules\Halo\Lethal.lua
+Modules\Halo\Pet.lua
 Modules\QoL\Markers.lua
 Modules\QoL\Logging.lua
 
