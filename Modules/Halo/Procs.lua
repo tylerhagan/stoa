@@ -13,6 +13,10 @@
 --     hides your buffs in combat, so these watch what a proc changes: a
 --     spell turning usable (Overpower), a cost dropping to nothing
 --     (Clearcasting) or a cast becoming much quicker (Shadow Trance).
+-- A third kind, for procs nothing readable changes (Redoubt, Vengeance...):
+-- the game draws the buff itself (Core/GameAuras.lua) as a small coin
+-- above the Halo, with its own timer and stacks. No art or sound for these:
+-- Stoa never learns they are up.
 -- Settings: art, glow and sound each on their own; "Move the game's"
 -- turns off the game's own mid-screen art while Stoa shows it by the Halo.
 local _, ns = ...
@@ -29,12 +33,23 @@ local Procs = Stoa:NewModule("Procs", {
 	savedGameArt = nil,
 })
 
--- Proc art lives under Textures\SpellActivationOverlays in modern clients; the
--- Interface folder (checked against build 70634's art export) only holds the
--- icon alert pieces. Both are tried, newest first.
+-- The game's proc pictures by file ID (public client listfile), so no folder
+-- has to be guessed: in build 70634 they sit under Textures\SpellActivationOverlays,
+-- not Interface\SpellActivationOverlay. Names are tried as paths only when an
+-- ID is missing.
+local ART_IDS = {
+	Arcane_Missiles = 449486, Art_of_War = 450913, Backlash = 460830, Blood_Surge = 449487,
+	Daybreak = 459313, Eclipse_Moon = 450914, Eclipse_Sun = 450915, Feral_OmenOfClarity = 510823,
+	Frozen_Fingers = 449489, Generic_Arc_01 = 450917, Generic_Top_01 = 450923, Hot_Streak = 449490,
+	Imp_Empowerment = 449491, Lock_and_Load = 450926, Maelstrom_Weapon = 450927, Nightfall = 449492,
+	Shadow_of_Death = 627609, Sudden_Death = 449493, Surge_of_Light = 450933, Sword_and_Board = 449494,
+	Ultimatum = 627610,
+}
 local ART = { "Textures\\SpellActivationOverlays\\", "Interface\\SpellActivationOverlay\\" }
--- Tried in order when a proc names art the client doesn't have.
+-- Tried in order when a proc names art the client doesn't have. Past these,
+-- Stoa draws its own thin arcs (the Halo's) in the theme's accent.
 local FALLBACK_ART = { "Generic_Arc_01", "Generic_Top_01" }
+local OWN_ARC = "Interface\\AddOns\\Stoa\\Media\\Textures\\HaloArc"
 
 -- Each proc: what lights it, the spell whose button glows, and the art.
 --   mode "usable": shown while the game says the spell can be cast;
@@ -57,10 +72,16 @@ local PROCS = {
 	},
 	ROGUE = {
 		{ key = "riposte", mode = "usable", spell = 14251, hold = 6, combat = true, art = "Sudden_Death", side = "both" },
+		-- Cutthroat: Ambush out of stealth (in stealth it always is).
+		{ key = "cutthroat", mode = "usable", spell = 8676, talent = 462708, unstealthed = true, hold = 2, art = "Shadow_of_Death", side = "both" },
+		{ key = "remorseless", mode = "aura", talent = 14144, buffs = { 14143, 14149 } },
+		{ key = "thousandcuts", mode = "aura", talent = 1310721, buffs = { 1310723 } },
 	},
 	HUNTER = {
 		{ key = "mongoose", mode = "usable", spell = 1495, hold = 5, combat = true, art = "Lock_and_Load", side = "both" },
 		{ key = "counter", mode = "usable", spell = 19306, hold = 5, combat = true, art = "Sudden_Death", side = "top" },
+		{ key = "rapidkilling", mode = "aura", talent = 415405, buffs = { 415407, 415817 } },
+		{ key = "quickshots", mode = "aura", talent = 19552, buffs = { 6150 } },
 	},
 	MAGE = {
 		{ key = "clearcasting", mode = "free", buff = 12536, watch = { 133, 116, 2136 }, art = "Generic_Arc_01", side = "both" },
@@ -70,15 +91,35 @@ local PROCS = {
 	WARLOCK = {
 		{ key = "trance", mode = "faster", buff = 17941, watch = { 686 }, ratio = 0.1, art = "Nightfall", side = "both" },
 		{ key = "decimation", mode = "faster", buff = 440873, watch = { 6353 }, ratio = 0.7, art = "Imp_Empowerment", side = "top" },
+		{ key = "conflagrate", mode = "usable", spell = 1293817, hold = 10, art = "Backlash", side = "top" },
 	},
 	DRUID = {
 		{ key = "clearcasting", mode = "free", buff = 16870, watch = { 5176, 5185, 5221, 6807, 8936 }, art = "Feral_OmenOfClarity", side = "both" },
+		-- Eclipse: Wrath casts build towards a much quicker Starfire.
+		{ key = "eclipse", mode = "faster", talent = 409813, buff = 408255, watch = { 2912 }, ratio = 0.55, art = "Eclipse_Moon", side = "both" },
+		{ key = "naturesgrace", mode = "aura", talent = 16880, buffs = { 16886 } },
 	},
 	SHAMAN = {
 		{ key = "clearcasting", mode = "free", buff = 16246, watch = { 403, 421, 331 }, art = "Generic_Arc_01", side = "both" },
+		-- Maelstrom Weapon at full stacks: Lightning Bolt turns instant.
+		{ key = "maelstrom", mode = "faster", talent = 408498, buff = 408505, watch = { 403 }, ratio = 0, art = "Maelstrom_Weapon", side = "top" },
 	},
-	PRIEST = {},
-	PALADIN = {},
+	PRIEST = {
+		-- Searing Light: Holy Fire can make the next Holy Nova free. Inner Focus
+		-- makes every spell free, so a free Smite or Lesser Heal means it isn't this.
+		{ key = "searinglight", mode = "free", watch = { 15237 }, others = { 585, 2050 }, art = "Surge_of_Light", side = "both" },
+		-- Martyrdom: Focused Casting after a critical hit taken.
+		{ key = "martyrdom", mode = "aura", talent = 14531, buffs = { 27828, 14743 } },
+	},
+	PALADIN = {
+		-- Hammer of Wrath: usable once the target is low enough.
+		{ key = "hammer", mode = "usable", spell = 24275, hold = 6, art = "Art_of_War", side = "both" },
+		-- Infusion of Light: a critical Holy Shock or Flash of Light shortens the next Holy Light.
+		{ key = "infusion", mode = "faster", talent = 426065, watch = { 635 }, ratio = 0.85, art = "Daybreak", side = "both" },
+		{ key = "redoubt", mode = "aura", talent = 20127, buffs = { 20128, 20131, 20132, 20133, 20134 } },
+		{ key = "vengeance", mode = "aura", talent = 20049, buffs = { 20050, 20052, 20053, 20054, 20055 } },
+		{ key = "reckoning", mode = "aura", talent = 20177, buffs = { 20178 } },
+	},
 }
 
 local GAME_SOUND = SOUNDKIT and SOUNDKIT.UI_POWER_AURA_GENERIC
@@ -89,20 +130,38 @@ end
 
 -- Art ------------------------------------------------------------------------
 
-local function setArt(texture, file)
+local function found(texture)
+	return type(texture:GetTextureFileID()) == "number"
+end
+
+-- The game's picture for a proc (an ID, a full path or a name), else the
+-- generic ones, else Stoa's own arc for that spot.
+local function setArt(texture, file, spot)
+	texture:SetRotation(0)
+	texture:SetVertexColor(1, 1, 1)
 	for _, name in ipairs({ file, unpack(FALLBACK_ART) }) do
-		if name then
-			if type(name) == "number" or name:find("\\") then
-				texture:SetTexture(name)
-				if type(name) == "number" or type(texture:GetTextureFileID()) == "number" then return true end
-			else
-				for _, folder in ipairs(ART) do
-					texture:SetTexture(folder .. name)
-					if type(texture:GetTextureFileID()) == "number" then return true end
-				end
+		if type(name) == "number" then
+			texture:SetTexture(name)
+			return true
+		elseif type(name) == "string" and name:find("\\") then
+			texture:SetTexture(name)
+			if found(texture) then return true end
+		elseif type(name) == "string" then
+			if ART_IDS[name] then
+				texture:SetTexture(ART_IDS[name])
+				if found(texture) then return true end
+			end
+			for _, folder in ipairs(ART) do
+				texture:SetTexture(folder .. name)
+				if found(texture) then return true end
 			end
 		end
 	end
+	-- Stoa's arc is tall: turned a quarter for the top and bottom spots (the
+	-- right and bottom pieces mirror it already).
+	texture:SetTexture(OWN_ARC .. "Left")
+	if spot == "top" or spot == "bottom" then texture:SetRotation(math.pi / 2) end
+	texture:SetVertexColor(Stoa:Color("accent"))
 	return false
 end
 
@@ -190,8 +249,7 @@ function Procs:ShowArt(owner, art, spots, r, g, b)
 			list[spot] = piece
 		end
 		if not piece:IsShown() then
-			setArt(piece.texture, art)
-			piece.texture:SetVertexColor(r or 1, g or 1, b or 1)
+			if setArt(piece.texture, art, spot) and r then piece.texture:SetVertexColor(r, g, b) end
 			piece:Show()
 			piece.fade:Play()
 			piece.pulse:Play()
@@ -311,6 +369,7 @@ local function hasBuff(id)
 end
 
 local function knows(proc)
+	if proc.talent then return IsPlayerSpell and IsPlayerSpell(proc.talent) or false end
 	local id = proc.spell or (proc.watch and proc.watch[1])
 	if not id then return false end
 	if IsPlayerSpell and IsPlayerSpell(id) then return true end
@@ -319,7 +378,9 @@ local function knows(proc)
 end
 
 local function lit(proc, active)
+	if proc.mode == "aura" then return false end
 	if proc.combat and not InCombatLockdown() then return false end
+	if proc.unstealthed and IsStealthed and IsStealthed() then return false end
 	if proc.unless and active[proc.unless] then return false end
 	-- Out of combat the buff itself can be read; trust it when it can.
 	if proc.buff and not InCombatLockdown() then
@@ -331,6 +392,10 @@ local function lit(proc, active)
 		if last and proc.hold and GetTime() - last < proc.hold then return false end
 		return usable(proc.spell)
 	elseif proc.mode == "free" then
+		-- Something that makes every spell free (Inner Focus) isn't this proc.
+		for _, id in ipairs(proc.others or {}) do
+			if cost(id) == 0 and (usualCast["cost" .. id] or 0) > 0 then return false end
+		end
 		for _, id in ipairs(proc.watch) do
 			if cost(id) == 0 and (usualCast["cost" .. id] or 0) > 0 then return true end
 		end
@@ -347,7 +412,10 @@ end
 -- Learns each watched spell's normal cost and cast time while nothing is lit.
 function Procs:Learn()
 	for _, proc in ipairs(self.list or {}) do
-		for _, id in ipairs(proc.watch or {}) do
+		local learn = {}
+		for _, id in ipairs(proc.watch or {}) do learn[#learn + 1] = id end
+		for _, id in ipairs(proc.others or {}) do learn[#learn + 1] = id end
+		for _, id in ipairs(learn) do
 			local price = cost(id)
 			if price and price > 0 then usualCast["cost" .. id] = math.max(usualCast["cost" .. id] or 0, price) end
 			local time = castTime(id)
@@ -369,8 +437,37 @@ function Procs:Check()
 			else
 				self:HideArt(owner)
 			end
-			self:Glow(owner, proc.glowSpell or proc.spell or proc.watch[1], on)
+			local glow = proc.glowSpell or proc.spell or (proc.watch and proc.watch[1])
+			if glow then self:Glow(owner, glow, on) end
 		end
+	end
+end
+
+-- Procs only the game can see: a small coin each, in a row above the Halo,
+-- drawn and timed by the game whenever the buff is up.
+function Procs:Coins()
+	if not (self.db.art and Stoa.GameAuras) then return end
+	local row = {}
+	for _, proc in ipairs(self.list or {}) do
+		if proc.mode == "aura" then
+			if proc.known then row[#row + 1] = proc end
+			if self.coins and self.coins[proc.key] then
+				Stoa.GameAuras:SetShown("proc_" .. proc.key, "player", proc.known)
+			end
+		end
+	end
+	if #row == 0 then return end
+	self:BuildArt()
+	self.coins = self.coins or {}
+	local size, gap = 28, 6
+	local width = #row * size + (#row - 1) * gap
+	for i, proc in ipairs(row) do
+		local x = -width / 2 + size / 2 + (i - 1) * (size + gap)
+		local frame = Stoa.GameAuras:Slot("proc_" .. proc.key, "player", "HELPFUL", proc.buffs, function(f)
+			f:ClearAllPoints()
+			f:SetPoint("BOTTOM", self.art, "TOP", x, 14)
+		end, size)
+		if frame then self.coins[proc.key] = frame end
 	end
 end
 
@@ -380,6 +477,7 @@ function Procs:Refresh()
 	for _, proc in ipairs(self.list) do proc.known = knows(proc) end
 	self:Learn()
 	self:Check()
+	if not InCombatLockdown() then self:Coins() end
 end
 
 -- The game's own proc events -------------------------------------------------
@@ -407,11 +505,15 @@ end
 
 function Procs:Test()
 	self:ShowArt("test", "Generic_Arc_01", { "left", "right" })
-	local first = self.list and self.list[1]
-	if first then self:Glow("test", first.glowSpell or first.spell or first.watch[1], true) end
+	local first, spell
+	for _, proc in ipairs(self.list or {}) do
+		spell = proc.glowSpell or proc.spell or (proc.watch and proc.watch[1])
+		if spell then first = proc break end
+	end
+	if first then self:Glow("test", spell, true) end
 	C_Timer.After(4, function()
 		self:HideArt("test")
-		if first then self:Glow("test", first.glowSpell or first.spell or first.watch[1], false) end
+		if first then self:Glow("test", spell, false) end
 	end)
 	Stoa:Print("Proc art for four seconds by the Halo" .. (first and ", and the glow on its combat bar button." or "."))
 end
@@ -464,8 +566,15 @@ function Procs:OnEnable()
 	Stoa.commands.procs = function(rest)
 		if rest == "test" then
 			self:Test()
+		elseif rest == "list" then
+			for _, proc in ipairs(self.list or {}) do
+				local id = proc.talent or proc.spell or (proc.watch and proc.watch[1])
+				Stoa:Print(("%s: %s, %s%s"):format(proc.key, spellName(id) or tostring(id),
+					proc.known and "known" or "not known",
+					proc.mode == "aura" and ", game coin" or (self.active[proc.key] and ", lit" or "")))
+			end
 		else
-			Stoa:Print("/stoa procs test shows the proc art and glow. Options are in Settings, Procs.")
+			Stoa:Print("/stoa procs test shows the proc art and glow, /stoa procs list what your class watches. Options are in Settings, Procs.")
 		end
 	end
 end

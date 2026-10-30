@@ -129,6 +129,25 @@ for _, word in ipairs(words) do
 	drain()
 end
 updates()
+-- Procs with every talent known: the game-drawn coins, the list, the art
+-- (the mock finds no file, so the own-arc fallback runs too).
+do
+	local real = IsPlayerSpell
+	IsPlayerSpell = function() return true end
+	local ok, e = xpcall(function()
+		local procs = Stoa.modules.Procs
+		if procs and procs.enabled then
+			procs:Refresh()
+			SlashCmdList.STOA("procs list")
+			SlashCmdList.STOA("procs test")
+			procs:ShowArt("sim", "Hot_Streak", { "left", "right", "top", "bottom" })
+			procs:HideArt("sim")
+		end
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "procs: " .. e end
+	IsPlayerSpell = real
+	drain()
+end
 -- Small figures: bags with room, worn gear, a pace and gold history.
 do
 	local realSlots, realFree, realDurability = C_Container.GetContainerNumSlots, C_Container.GetContainerNumFreeSlots, GetInventoryItemDurability
