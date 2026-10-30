@@ -8,6 +8,25 @@ _G.Stoa = Stoa
 Stoa.name = ADDON
 Stoa.version = C_AddOns and C_AddOns.GetAddOnMetadata(ADDON, "Version") or "dev"
 
+-- Client gate ---------------------------------------------------------------
+-- Stoa is made for WoW Forever (interface 16000-19999). On any other client
+-- it does nothing at all: no events, no modules, and its saved settings are
+-- never read or written, so the game writes them back exactly as they were
+-- and nothing a wrong client did can damage them. It says so once.
+
+do
+	local interface = select(4, GetBuildInfo())
+	interface = tonumber(interface)
+	Stoa.blocked = interface ~= nil and (interface < 16000 or interface >= 20000)
+	if Stoa.blocked then
+		local note = CreateFrame("Frame")
+		note:RegisterEvent("PLAYER_LOGIN")
+		note:SetScript("OnEvent", function()
+			print("|cffd8b66aStoa|r is made for WoW Forever and stays off on this game version. Your Stoa settings are kept as they are.")
+		end)
+	end
+end
+
 -- Event bus -----------------------------------------------------------------
 -- Modules subscribe with Stoa:On(event, fn). Game events and Stoa's own
 -- messages ("STOA_STATE_CHANGED", "STOA_ROLE_CHANGED", ...) share one table.
@@ -15,30 +34,78 @@ Stoa.version = C_AddOns and C_AddOns.GetAddOnMetadata(ADDON, "Version") or "dev"
 local frame = CreateFrame("Frame")
 local handlers = {}
 
+-- Errors from Stoa's own code go through Stoa:Fail, which Core/Report.lua
+-- takes over to keep a record. Until then they just reach the game's handler.
+function Stoa:Fail(err)
+	geterrorhandler()(err)
+end
+
+-- For xpcall: xpcall(fn, Stoa.catch, ...).
+function Stoa.catch(err)
+	return Stoa:Fail(err)
+end
+
+-- The module whose OnInitialize or OnEnable is running, so handlers and
+-- timers made there can be traced back to it.
+Stoa.loading = nil
+
 function Stoa:On(event, fn)
 	if not handlers[event] then
 		handlers[event] = {}
 		if not event:find("^STOA_") then
-			frame:RegisterEvent(event)
+			-- A name this client doesn't know must not stop the module
+			-- that asked for it.
+			pcall(frame.RegisterEvent, frame, event)
 		end
 	end
-	table.insert(handlers[event], fn)
+	local owner = Stoa.loading
+	local entry = { fn = fn, owner = owner }
+	-- If one handler keeps failing, Stoa:Fail says so and it is dropped.
+	entry.handler = function(err)
+		if Stoa:Fail(err, owner) then entry.dead = true end
+	end
+	table.insert(handlers[event], entry)
 end
 
 function Stoa:Fire(event, ...)
 	local list = handlers[event]
 	if not list then return end
 	for i = 1, #list do
-		local ok, err = pcall(list[i], ...)
-		if not ok then
-			geterrorhandler()(err)
+		local entry = list[i]
+		local module = entry.owner and Stoa.modules[entry.owner]
+		if not entry.dead and not (module and module.tripped) then
+			xpcall(entry.fn, entry.handler, ...)
 		end
 	end
 end
 
 frame:SetScript("OnEvent", function(_, event, ...)
+	if Stoa.blocked then return end
 	Stoa:Fire(event, ...)
 end)
+
+-- Unit events for one or two units only. UNIT_AURA and UNIT_POWER_FREQUENT
+-- fire for every unit nearby; asking the game for just the units you want
+-- (RegisterUnitEvent) keeps a 40-man raid from waking every handler.
+-- Stoa:OnUnit("UNIT_AURA", { "player", "target" }, fn) gets fn(unit, ...).
+function Stoa:OnUnit(event, units, fn)
+	local owner = Stoa.loading
+	local listener = CreateFrame("Frame")
+	local ok = pcall(listener.RegisterUnitEvent, listener, event, units[1], units[2])
+	if not ok then return Stoa:On(event, function(unit, ...)
+		if unit == units[1] or unit == units[2] then return fn(unit, ...) end
+	end) end
+	local function handler(err)
+		if Stoa:Fail(err, owner) then listener:UnregisterAllEvents() end
+	end
+	listener:SetScript("OnEvent", function(_, fired, unit, ...)
+		if fired ~= event then return end
+		local module = owner and Stoa.modules[owner]
+		if module and module.tripped then return end
+		xpcall(fn, handler, unit, ...)
+	end)
+	return listener
+end
 
 -- Modules -------------------------------------------------------------------
 -- A module is a table with optional OnInitialize (after saved variables load)
@@ -57,6 +124,7 @@ end
 
 function Stoa:IsModuleEnabled(name)
 	local settings = self.db and self.db.modules[name]
+	if self.Conflicts and self.Conflicts:SteppedAside(name) then return false end
 	return not settings or settings.enabled ~= false
 end
 
@@ -64,9 +132,11 @@ local function initializeModules()
 	for _, name in ipairs(moduleOrder) do
 		local module = Stoa.modules[name]
 		if module.OnInitialize then
-			xpcall(module.OnInitialize, geterrorhandler(), module)
+			Stoa.loading = name
+			xpcall(module.OnInitialize, function(err) Stoa:Fail(err, name) end, module)
 		end
 	end
+	Stoa.loading = nil
 end
 
 local function enableModules()
@@ -74,9 +144,11 @@ local function enableModules()
 		local module = Stoa.modules[name]
 		-- One module failing must not stop the others from loading.
 		if module.OnEnable and Stoa:IsModuleEnabled(name) then
-			module.enabled = xpcall(module.OnEnable, geterrorhandler(), module)
+			Stoa.loading = name
+			module.enabled = xpcall(module.OnEnable, function(err) Stoa:Fail(err, name) end, module)
 		end
 	end
+	Stoa.loading = nil
 end
 
 Stoa:On("ADDON_LOADED", function(name)
@@ -86,6 +158,8 @@ Stoa:On("ADDON_LOADED", function(name)
 end)
 
 Stoa:On("PLAYER_LOGIN", function()
+	-- Parts another addon already does step aside first (Core/Conflicts.lua).
+	if Stoa.Conflicts then xpcall(Stoa.Conflicts.Check, Stoa.catch, Stoa.Conflicts) end
 	enableModules()
 	Stoa:Fire("STOA_READY")
 end)
@@ -101,6 +175,10 @@ end
 
 SLASH_STOA1 = "/stoa"
 SlashCmdList.STOA = function(input)
+	if Stoa.blocked then
+		Stoa:Print("is made for WoW Forever and stays off on this game version.")
+		return
+	end
 	local command, rest = strtrim(input or ""):match("^(%S*)%s*(.-)$")
 	command = command:lower()
 	if command == "keywords" then

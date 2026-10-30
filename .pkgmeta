@@ -1,0 +1,10 @@
+package-as: Stoa
+
+# Keep in step with the exclude list in Tools/package.sh.
+ignore:
+  - .github
+  - Tools
+  - docs
+  - .gitignore
+  - .gitattributes
+  - .pkgmeta

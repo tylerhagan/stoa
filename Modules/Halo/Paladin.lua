@@ -10,7 +10,10 @@
 --       H for Holy Shield, C for Consecration on the ground;
 --   * an outline on the combat bar's next press;
 --   * as a tank in a group, TAUNT over the ring when your target is on
---     someone else: Judgement with Seal of Fury makes it attack you.
+--     someone else: Judgement with Seal of Fury makes it attack you;
+--   * for Retribution with Twist of Light, the moment a swing lands the
+--     other seal of the pair (Command and Righteousness) is outlined and
+--     named under the coins, so the next swing carries both.
 --
 -- Aura details can be secret in combat. Lookups go by name through the
 -- client, and your own casts stand in for timers the game hides.
@@ -42,7 +45,11 @@ local SPELLS = {
 -- Talents found by name, since their Forever spell IDs aren't settled.
 local TALENTS = {
 	arbiter = "Sacred Arbiter",
+	twist = "Twist of Light",
 }
+
+-- The seals Twist of Light swaps between, each to the other.
+local TWIST_PAIRS = { command = "righteousness", righteousness = "command" }
 
 local SEAL_LENGTH = 30
 local MARK_LENGTH = 40
@@ -88,17 +95,9 @@ local function hasTalent(key)
 	return id and not Stoa:IsSecret(id) and knows(id) or false
 end
 
-local function auraByName(unit, name, filter)
-	if not name or not (C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName) then return nil end
-	local ok, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, unit, name, filter)
-	if ok then return aura end
-end
+local auraByName = Stoa.aura.byName
 
-local function auraLeft(aura)
-	local expires = Stoa:PlainNumber(aura and aura.expirationTime)
-	if not expires or expires == 0 then return nil end
-	return expires - GetTime()
-end
+local auraLeft = Stoa.aura.left
 
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.
@@ -197,6 +196,7 @@ function Paladin:NoteCast(spellID)
 
 	if name:sub(1, 8) == "Seal of " then
 		self.sealCast = { name = name, at = now }
+		if self.twist and self.twist.seal == name then self.twist = nil end
 		-- The seal you fight with, for when it drops.
 		if not MARKS[name] then self.mainSeal = name end
 	elseif name == nameOf("judgement") then
@@ -258,6 +258,46 @@ function Paladin:BuildCoins(halo)
 	end
 end
 
+-- Twist of Light ---------------------------------------------------------------
+-- The game tells addons when each swing lands (Blizzard's swing timer runs
+-- on it). Right after a main-hand swing is the time to change seals.
+
+function Paladin:BuildTwist(halo)
+	local word = UI.caption(halo, "")
+	local angle = math.rad(COIN_ANGLES[#COIN_ANGLES])
+	word:SetPoint("TOP", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle) - COIN / 2 - 4)
+	UI.legible(word)
+	self.twistWord = word
+end
+
+function Paladin:NoteSwing(duration, swingType)
+	local mainHand = Enum and Enum.PlayerSwingType and Enum.PlayerSwingType.MainHand
+	if mainHand ~= nil and swingType ~= mainHand then return end
+	if self:Role() ~= "MELEE" or not hasTalent("twist") then return end
+	local seal = self:Seal()
+	for key, partner in pairs(TWIST_PAIRS) do
+		if seal == nameOf(key) and knows(SPELLS[partner]) then
+			local length = Stoa:PlainNumber(duration) or 3
+			self.twist = { seal = nameOf(partner), ends = GetTime() + length }
+			return
+		end
+	end
+end
+
+function Paladin:Twist()
+	local twist = self.twist
+	if twist and GetTime() < twist.ends then return twist.seal end
+	self.twist = nil
+end
+
+function Paladin:UpdateTwist()
+	local word = self.twistWord
+	if not word then return end
+	local seal = Stoa:GetState() == Stoa.STATE_COMBAT and self:Twist()
+	word:SetText(seal and ("TWIST: " .. seal:gsub("^Seal of ", ""):upper()) or "")
+	word:SetTextColor(Stoa:Color("accent"))
+end
+
 function Paladin:BuildTaunt(halo)
 	local word = UI.text(halo, "serif", Stoa.typeSize.title, "danger", "CENTER")
 	word:SetPoint("BOTTOM", halo, "TOP", 0, 6)
@@ -274,6 +314,7 @@ local function paintCoin(coin, state)
 	local r, g, b = Stoa:Color(token)
 	coin.ring:SetVertexColor(r, g, b, state == "on" and 0.7 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "on" and "text" or token))
+	UI.coinLit(coin, state ~= "off")
 end
 
 -- Shows a coin running until `ends` out of `length`, or off.
@@ -323,6 +364,17 @@ function Paladin:CoinState(key, coin)
 	end
 end
 
+-- The spell whose art sits behind a coin's letter: the seal you run (Seal of
+-- Fury for a tank), Judgement for the mark, or the coin's own spell.
+function Paladin:CoinSpell(key)
+	if key == "seal" then
+		if self:Role() == "TANK" and knows(SPELLS.sealFury) then return SPELLS.sealFury end
+		return self:Seal() or SPELLS.righteousness
+	end
+	if key == "mark" then return SPELLS.judgement end
+	return SPELLS[key]
+end
+
 local function coinApplies(self, key)
 	if key == "seal" then return true end
 	if key == "mark" then return knows(SPELLS.judgement) and self.judges end
@@ -339,6 +391,7 @@ function Paladin:UpdateCoins()
 			index = index + 1
 			local coin = self.coins[index]
 			coin.letter:SetText(entry.letter)
+			UI.coinArt(coin, self:CoinSpell(entry.key))
 			self.state[entry.key] = self:CoinState(entry.key, coin)
 			coin:Show()
 		end
@@ -401,6 +454,8 @@ function Paladin:NextPress()
 			if seal and MARKS[seal] then return nameOf("judgement") end
 			return nameOf("crusader")
 		end
+		local twist = self:Twist()
+		if twist then return twist end
 		if undeadOrDemon() and knows(SPELLS.exorcism) and ready("exorcism") then return nameOf("exorcism") end
 	end
 	for _, key in ipairs({ "holyStrike", "judgement" }) do
@@ -423,6 +478,7 @@ end
 function Paladin:Refresh()
 	self:UpdateCoins()
 	self:UpdateTaunt()
+	self:UpdateTwist()
 	self:UpdateNext()
 end
 
@@ -433,30 +489,32 @@ function Paladin:OnEnable()
 	if not (halo and halo.frame) then return end
 	self:BuildCoins(halo.frame)
 	self:BuildTaunt(halo.frame)
+	self:BuildTwist(halo.frame)
 
-	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
+	local function refresh() xpcall(self.Refresh, Stoa.catch, self) end
 	Stoa:On("PLAYER_TARGET_CHANGED", function()
 		self:ForgetHiddenTarget()
 		refresh()
 	end)
-	Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
-		if unit ~= "player" then return end
-		xpcall(self.NoteCast, geterrorhandler(), self, spellID)
+	Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(unit, _, spellID)
+		xpcall(self.NoteCast, Stoa.catch, self, spellID)
 		refresh()
 	end)
-	Stoa:On("UNIT_AURA", function(unit)
-		if unit == "target" or unit == "player" then refresh() end
-	end)
+	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, refresh)
 	Stoa:On("UNIT_THREAT_LIST_UPDATE", refresh)
+	Stoa:On("PLAYER_SWING", function(duration, swingType)
+		xpcall(self.NoteSwing, Stoa.catch, self, duration, swingType)
+		refresh()
+	end)
 	Stoa:On("STOA_ROLE_CHANGED", refresh)
 	Stoa:On("STOA_STATE_CHANGED", refresh)
 	Stoa:On("SPELLS_CHANGED", refresh)
-	-- Timers tick without events. If an update ever errors the ticker
-	-- stops rather than repeating the error.
-	local ticker
-	ticker = C_Timer.NewTicker(0.2, function()
-		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Role() then return end
-		if not xpcall(self.Refresh, geterrorhandler(), self) then ticker:Cancel() end
+	-- Timers tick without events, on the combat clock. If an update ever
+	-- errors the listener stops rather than repeating the error.
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not self:Role() then return end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticking = false end
 	end)
 	refresh()
 end

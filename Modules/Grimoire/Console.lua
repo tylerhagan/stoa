@@ -16,30 +16,37 @@ local Console = Stoa:NewModule("Grimoire", {
 	hideBarArt = true,
 	houseMenu = true,
 	art = true,
+	-- Quiet mana play on the mana bar, as on the Halo.
+	manaRule = true,
+	castCost = true,
+	formMana = true,
 })
 
 local SPINE_HEIGHT = 22
 local ARCH_SIZE = 220
 local SEAL_SIZE = 76
-local ART_SEAL_SIZE = 92
+local ART_SEAL_SIZE = 110
 
 -- The leather panel art: a repeating leather tile for the panel, a gold
 -- top edge along it, and the medallion around the seal, all cut from one
 -- painting and drawn at one scale so the medallion's flares run straight
 -- into the edge's lines. Texel sizes below are in the painting's pixels;
--- the top of the panel is texel 37 of the edge strip and 129 of the
+-- the top of the panel is texel 37 of the edge strip and 257 of the
 -- medallion, and the leather starts 17 texels down, under the gold lines.
+-- Tools/art/console_cut.py cuts the edge and medallion from the painting
+-- (Tools/art/source/console-basis-flourish.png, cut with ring 124, width
+-- 1024 and "frame") and prints these rows.
 local ART_HEIGHT = 176
 local ART_SCALE = 0.556
 Console.ART_SCALE = ART_SCALE
 local LEATHER_W, LEATHER_H = 1024, 256
-local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 37, 17
-local MEDALLION_WIDTH, MEDALLION_LINE = 512, 257
+local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 36, 10
+local MEDALLION_WIDTH, MEDALLION_LINE = 1024, 257
 -- The ring's centre row in the medallion texture; the seal sits on it.
-local MEDALLION_CENTRE = 253.5
+local MEDALLION_CENTRE = 267.6
 local MEDALLION_SCALE = ART_SCALE
--- How far either side of centre the medallion's flares reach.
-local MEDALLION_REACH = 207 * MEDALLION_SCALE
+-- How far either side of centre the medallion's shoulders reach.
+local MEDALLION_REACH = 310 * MEDALLION_SCALE
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30
@@ -243,6 +250,7 @@ function Console:BuildSeal(frame)
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
+	self:BuildManaPlay(mana, manaCap)
 end
 
 -- With the art: health and mana sit down in the leather either side of
@@ -250,7 +258,8 @@ end
 -- nearest the seal, the caption at the outer end, and the bar fills
 -- towards the seal.
 local RESOURCE_WIDTH = 170
-local RING_RADIUS = 122.5 * ART_SCALE
+-- Out to the brackets either side of the ring.
+local RING_RADIUS = 150 * ART_SCALE
 local RESOURCE_Y = -44
 
 function Console:BuildResources(frame)
@@ -273,6 +282,37 @@ function Console:BuildResources(frame)
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
+	self:BuildManaPlay(mana, manaCap)
+end
+
+-- Mana play on the mana bar (shared with the Halo, see Power.dress): a
+-- spark along it for the five-second rule, a shade over what the cast will
+-- spend, and, for a druid in a form, a hairline of mana under the bar with
+-- the amount in the caption.
+function Console:BuildManaPlay(mana, manaCap)
+	local db = self.db
+	local form = bar(mana, 150, 1, "mana")
+	form:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -1)
+	form:SetPoint("TOPRIGHT", mana, "BOTTOMRIGHT", 0, -1)
+	form:Hide()
+	self.manaPlay = Stoa.Power.dress(mana, {
+		enabled = function(key) return db[key] end,
+		place = function(tex, f)
+			tex:ClearAllPoints()
+			tex:SetPoint("CENTER", mana, "LEFT", f * mana:GetWidth(), 0)
+		end,
+		shade = function(tex, from, to)
+			local width = mana:GetWidth()
+			tex:ClearAllPoints()
+			tex:SetPoint("TOPLEFT", mana, "TOPLEFT", from * width, 0)
+			tex:SetPoint("BOTTOMRIGHT", mana, "BOTTOMLEFT", to * width, 0)
+		end,
+		form = {
+			bar = form,
+			show = function(current) manaCap:SetText("Mana " .. current) end,
+			hide = function() manaCap:SetText("Mana") end,
+		},
+	})
 end
 
 function Console:BuildNotes(frame, space)
@@ -300,8 +340,10 @@ function Console:BuildNotes(frame, space)
 end
 
 -- The right page: three short columns about you, out of combat.
---   Ready: your role, any self-buff you're missing, gear wear and bag room.
---   Journey: level and experience, with the rested part marked.
+--   Ready: your role, any self-buff you're missing, gear wear as ten cells
+--     and bag room as one column per bag.
+--   Journey: level and experience, with rest and where an hour at your pace
+--     gets you marked on the bar, and the pace as a small line chart.
 --   Company: your party, or who's online when you travel alone.
 local COLUMN_WIDTH = 170
 local COLUMN_GAP = 36
@@ -331,25 +373,99 @@ function Console:BuildFellowship(frame, space)
 	note:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -3)
 	note:SetWidth(COLUMN_WIDTH)
 	note:SetWordWrap(false)
-	local kit = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
-	kit:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -4)
-	self.roleWord, self.roleNote, self.kit = role, note, kit
+	-- Gear: the most worn piece as ten cells, its share on the right.
+	local Figures = Stoa.Figures
+	local gear = CreateFrame("Button", nil, page)
+	gear:SetSize(COLUMN_WIDTH, 12)
+	gear:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -6)
+	local gearLabel = text(gear, "sans", Stoa.typeSize.caption + 1, "muted")
+	gearLabel:SetPoint("LEFT")
+	gearLabel:SetText("Gear")
+	local gearValue = text(gear, "sans", Stoa.typeSize.caption + 1, "text", "RIGHT")
+	gearValue:SetPoint("RIGHT")
+	local cells = Figures.segments(gear, 10, COLUMN_WIDTH - 40 - 36, 6)
+	cells:SetPoint("LEFT", gear, "LEFT", 40, 0)
+	gear.cells, gear.value = cells, gearValue
+	-- Bags: one column per bag, the free count to the right.
+	local bags = CreateFrame("Button", nil, page)
+	bags:SetSize(COLUMN_WIDTH, 22)
+	bags:SetPoint("TOPLEFT", gear, "BOTTOMLEFT", 0, -6)
+	local columns = Figures.columns(bags, 5, 6, 22, 3)
+	columns:SetPoint("BOTTOMLEFT")
+	local free = text(bags, "serif", Stoa.typeSize.label + 2, "text")
+	free:SetPoint("BOTTOMLEFT", columns, "BOTTOMRIGHT", 8, 9)
+	local of = text(bags, "sans", Stoa.typeSize.caption, "muted")
+	of:SetPoint("BOTTOMLEFT", columns, "BOTTOMRIGHT", 8, -1)
+	bags.columns, bags.free, bags.of = columns, free, of
+	-- Hover explains, click opens (the same as At a glance's lines).
+	for button, key in pairs({ [gear] = "durability", [bags] = "bags" }) do
+		button:SetScript("OnEnter", function(own)
+			local glance = Stoa.modules.Tally
+			if glance and glance.ShowDetail then glance:ShowDetail(own, key) end
+		end)
+		button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		button:SetScript("OnClick", function()
+			local glance = Stoa.modules.Tally
+			if glance and glance.Open and not InCombatLockdown() then glance:Open(key) end
+		end)
+	end
+	-- Group buffs you could cast that someone near you lacks.
+	local groupBuffs = text(page, "sans", Stoa.typeSize.caption + 1, "accent")
+	groupBuffs:SetPoint("TOPLEFT", bags, "BOTTOMLEFT", 0, -5)
+	groupBuffs:SetWidth(COLUMN_WIDTH)
+	groupBuffs:SetWordWrap(false)
+	self.roleWord, self.roleNote, self.gear, self.bags, self.groupBuffs = role, note, gear, bags, groupBuffs
 
 	-- Journey.
 	local journey = column(page, 2, "Journey")
 	local level = text(page, "serif", Stoa.typeSize.title, "text")
 	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, -6)
-	local xp = bar(page, COLUMN_WIDTH, 3, "accent")
+	-- Earned in the text colour, rest in blue behind it, and an accent mark
+	-- where an hour at your pace would take you.
+	local xp = Figures.xp(page, COLUMN_WIDTH, 5)
 	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, -6)
-	-- Rested experience shows as a dimmer stretch beyond what you've earned.
-	local rested = bar(page, COLUMN_WIDTH, 3, "accent")
-	rested:SetAllPoints(xp)
-	rested:SetAlpha(0.35)
-	rested.track:Hide()
-	xp:SetFrameLevel(rested:GetFrameLevel() + 1)
-	local xpNote = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
-	xpNote:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -5)
-	self.levelText, self.xpBar, self.restedBar, self.xpNote = level, xp, rested, xpNote
+	-- The bar's key: earned, rested to, in an hour.
+	local keyEarned = Figures.key(page, "text")
+	keyEarned:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -4)
+	local keyRested = Figures.key(page, "mana", 0.55)
+	keyRested:SetPoint("LEFT", keyEarned, "RIGHT", 6, 0)
+	local keyHour = Figures.key(page, "accent")
+	keyHour:SetPoint("LEFT", keyRested, "RIGHT", 6, 0)
+	self.levelText, self.xpBar, self.xpKeys = level, xp, { keyEarned, keyRested, keyHour }
+	-- The dungeon kit (Kit.lua): your pace as a line chart over the last
+	-- half hour, experience an hour and time to level beside it, and the
+	-- nearest watched quest's progress when alone.
+	local pace = CreateFrame("Frame", nil, page)
+	pace:SetSize(COLUMN_WIDTH, 24)
+	pace:SetPoint("TOPLEFT", keyEarned, "BOTTOMLEFT", 0, -4)
+	local spark = Figures.spark(pace, 54, 18)
+	spark:SetPoint("BOTTOMLEFT", 0, 2)
+	local perHour = text(pace, "serif", Stoa.typeSize.label + 2, "text")
+	perHour:SetPoint("TOPLEFT", pace, "TOPLEFT", 62, 0)
+	local perHourCap = text(pace, "sans", Stoa.typeSize.caption, "muted")
+	perHourCap:SetPoint("TOPLEFT", perHour, "BOTTOMLEFT", 0, -2)
+	local toLevel = text(pace, "serif", Stoa.typeSize.label + 2, "text")
+	toLevel:SetPoint("TOPLEFT", pace, "TOPLEFT", 116, 0)
+	local toLevelCap = text(pace, "sans", Stoa.typeSize.caption, "muted")
+	toLevelCap:SetPoint("TOPLEFT", toLevel, "BOTTOMLEFT", 0, -2)
+	pace.spark, pace.perHour, pace.perHourCap, pace.toLevel, pace.toLevelCap = spark, perHour, perHourCap, toLevel, toLevelCap
+	pace:Hide()
+	-- While the pace is still being worked out, a line of words instead.
+	local rate = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
+	rate:SetPoint("TOPLEFT", keyEarned, "BOTTOMLEFT", 0, -4)
+	rate:SetWidth(COLUMN_WIDTH)
+	rate:SetWordWrap(false)
+	self.pace = pace
+	local quest = text(page, "italic", Stoa.typeSize.caption + 1, "muted")
+	quest:SetPoint("TOPLEFT", pace, "BOTTOMLEFT", 0, -3)
+	quest:SetWidth(COLUMN_WIDTH)
+	quest:SetWordWrap(false)
+	-- New spells waiting at your trainer (Trainer.lua).
+	local trainer = text(page, "sans", Stoa.typeSize.caption + 1, "accent")
+	trainer:SetPoint("TOPLEFT", quest, "BOTTOMLEFT", 0, -3)
+	trainer:SetWidth(COLUMN_WIDTH)
+	trainer:SetWordWrap(false)
+	self.rateNote, self.questNote, self.trainerNote = rate, quest, trainer
 
 	-- Company.
 	local company = column(page, 3, "Company")
@@ -373,6 +489,27 @@ function Console:BuildFellowship(frame, space)
 	local online = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
 	online:SetPoint("TOPLEFT", self.alone, "BOTTOMLEFT", 0, -4)
 	self.onlineCount = online
+	-- A few of them by name, so the column says who as well as how many.
+	local names = text(page, "serif", Stoa.typeSize.label, "text")
+	names:SetPoint("TOPLEFT", online, "BOTTOMLEFT", 0, -4)
+	names:SetWidth(COLUMN_WIDTH)
+	names:SetWordWrap(false)
+	self.onlineNames = names
+
+	-- The whole column opens the roster.
+	local open = CreateFrame("Button", nil, page)
+	open:SetPoint("TOPLEFT", company, "TOPLEFT", 0, 22)
+	open:SetSize(COLUMN_WIDTH, 104)
+	open:SetScript("OnClick", function()
+		if Stoa.modules.Roster then Stoa.modules.Roster:Toggle() end
+	end)
+	open:SetScript("OnEnter", function(button)
+		GameTooltip:SetOwner(button, "ANCHOR_TOP")
+		GameTooltip:AddLine("Company")
+		GameTooltip:AddLine("Click for friends and guild online.", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	open:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
 -- Updates -------------------------------------------------------------------
@@ -399,6 +536,7 @@ function Console:UpdateSeal()
 		self.roleNote:SetText(note)
 		self.roleNote:SetShown(note ~= "")
 	end
+	if self.groupBuffs then self.groupBuffs:SetText(Stoa.groupBuffLine or "") end
 end
 
 function Console:UpdateResources()
@@ -423,11 +561,13 @@ function Console:UpdateFellowship()
 	end
 	self.alone:SetShown(not any)
 	self.onlineCount:SetShown(not any)
+	if self.onlineNames then self.onlineNames:SetShown(not any) end
 end
 
 function Console:UpdateOnline()
 	local friends = C_FriendList.GetNumOnlineFriends() or 0
-	local _, bnetOnline = BNGetNumFriends()
+	local _, bnetOnline = 0, 0
+	if BNGetNumFriends then _, bnetOnline = BNGetNumFriends() end
 	local guild = 0
 	if IsInGuild() then
 		local _, online = GetNumGuildMembers()
@@ -436,35 +576,56 @@ function Console:UpdateOnline()
 	end
 	local total = friends + (bnetOnline or 0) + guild
 	self.onlineCount:SetText(total == 1 and "1 friend online" or (total .. " friends online"))
+	if self.onlineNames then
+		local names = {}
+		if C_FriendList and C_FriendList.GetNumFriends then
+			for i = 1, C_FriendList.GetNumFriends() or 0 do
+				local info = C_FriendList.GetFriendInfoByIndex(i)
+				if info and info.connected and #names < 3 then names[#names + 1] = Ambiguate(info.name, "short") end
+			end
+		end
+		self.onlineNames:SetText(table.concat(names, ", "))
+	end
 end
 
 -- Gear wear (the most worn piece) and free bag slots.
 local GEAR_SLOTS = { 1, 3, 5, 6, 7, 8, 9, 10, 16, 17, 18 }
 
 function Console:UpdateKit()
-	if not self.kit then return end
+	if not self.gear then return end
 	local lowest
 	if GetInventoryItemDurability then
 		for _, slot in ipairs(GEAR_SLOTS) do
 			local current, max = GetInventoryItemDurability(slot)
+			current, max = Stoa:PlainNumber(current), Stoa:PlainNumber(max)
 			if current and max and max > 0 then
 				local fraction = current / max
 				if not lowest or fraction < lowest then lowest = fraction end
 			end
 		end
 	end
-	local free = 0
+	local share = lowest or 1
+	self.gear.cells:Set(share)
+	self.gear.value:SetText(math.floor(share * 100 + 0.5) .. "%")
+	self.gear.value:SetTextColor(Stoa:Color(share < 0.25 and "danger" or "text"))
+	-- Bags: how full each one is, and the free slots in all of them.
 	local getFree = C_Container and C_Container.GetContainerNumFreeSlots or GetContainerNumFreeSlots
-	if getFree then
-		for bag = 0, 4 do free = free + (getFree(bag) or 0) end
+	local getSize = C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
+	local list, free, total = {}, 0, 0
+	if getFree and getSize then
+		for bag = 0, 4 do
+			local size = Stoa:PlainNumber(getSize(bag)) or 0
+			if size > 0 then
+				local open = Stoa:PlainNumber(getFree(bag)) or 0
+				free, total = free + open, total + size
+				list[#list + 1] = { (size - open) / size, open == 0 }
+			end
+		end
 	end
-	local parts = {}
-	if lowest then parts[#parts + 1] = "Gear " .. math.floor(lowest * 100 + 0.5) .. "%" end
-	parts[#parts + 1] = free .. " bag " .. (free == 1 and "slot" or "slots") .. " free"
-	self.kit:SetText(table.concat(parts, "  ·  "))
-	-- Worn gear or full bags read in the warning colour.
-	local warn = (lowest and lowest < 0.25) or free <= 2
-	self.kit:SetTextColor(Stoa:Color(warn and "danger" or "muted"))
+	self.bags.columns:Set(list)
+	self.bags.free:SetText(free .. " free")
+	self.bags.free:SetTextColor(Stoa:Color(free <= 2 and "danger" or "text"))
+	self.bags.of:SetText("of " .. total)
 end
 
 function Console:UpdateJourney()
@@ -474,20 +635,31 @@ function Console:UpdateJourney()
 	self.levelText:SetText("Level " .. level)
 	local atMax = maxLevel and level >= maxLevel
 	self.xpBar:SetShown(not atMax)
+	for _, key in ipairs(self.xpKeys) do key:SetShown(not atMax) end
 	if atMax then
-		self.xpNote:SetText("")
+		self:UpdateKitLines()
 		return
 	end
-	local xp, xpMax = UnitXP("player"), UnitXPMax("player")
-	if not xpMax or xpMax <= 0 then return end
-	local rested = GetXPExhaustion and GetXPExhaustion() or 0
-	self.xpBar:SetMinMaxValues(0, xpMax)
-	self.xpBar:SetValue(xp)
-	self.restedBar:SetMinMaxValues(0, xpMax)
-	self.restedBar:SetValue(math.min(xp + rested, xpMax))
-	local note = math.floor(xp / xpMax * 100) .. "% to " .. (level + 1)
-	if rested > 0 then note = note .. "  ·  rested " .. math.floor(rested / xpMax * 100) .. "%" end
-	self.xpNote:SetText(note)
+	local xp, xpMax = Stoa:PlainNumber(UnitXP("player")), Stoa:PlainNumber(UnitXPMax("player"))
+	if not xp or not xpMax or xpMax <= 0 then return end
+	local rested = Stoa:PlainNumber(GetXPExhaustion and GetXPExhaustion()) or 0
+	-- Where an hour at your pace would take you, from the kit.
+	local kit = Stoa.modules.Kit
+	local rate = kit and kit.enabled and kit.Rate and kit:Rate()
+	local hour = rate and (xp + rate) / xpMax or nil
+	self.xpBar:Set(xp / xpMax, math.min(xp + rested, xpMax) / xpMax, hour)
+	self.xpKeys[1]:SetText(math.floor(xp / xpMax * 100) .. "%")
+	self.xpKeys[2]:SetText(rested > 0 and ("Rested to " .. math.floor(math.min(xp + rested, xpMax) / xpMax * 100) .. "%") or nil)
+	self.xpKeys[3]:SetText(hour and "In an hour" or nil)
+	self:UpdateKitLines()
+end
+
+-- The kit's lines under the experience bar, if the kit is on.
+function Console:UpdateKitLines()
+	local kit = Stoa.modules.Kit
+	if kit and kit.UpdateConsole and kit.enabled then kit:UpdateConsole() end
+	local trainer = Stoa.modules.Trainer
+	if trainer and trainer.UpdateConsole and trainer.enabled then trainer:UpdateConsole() end
 end
 
 function Console:AddNote(_, message)
@@ -528,6 +700,9 @@ function Console:SetOpen(open, instant)
 		frame:SetHeight(from + (target - from) * progress)
 		self.leftPage:SetAlpha(open and progress or 1 - progress)
 		self.rightPage:SetAlpha(open and progress or 1 - progress)
+		for _, page in ipairs(self.extraPages or {}) do
+			page:SetAlpha(open and progress or 1 - progress)
+		end
 		for _, part in ipairs(self.resourceParts) do
 			part:SetAlpha(open and progress or 1 - progress)
 		end
@@ -551,7 +726,7 @@ function Console:SetOpen(open, instant)
 		return
 	end
 
-	frame:SetScript("OnUpdate", function()
+	frame:SetScript("OnUpdate", Stoa:GuardUpdate(function()
 		local progress = math.min((GetTime() - start) / FOLD_SECONDS, 1)
 		-- Ease out so the fold settles rather than stops.
 		progress = 1 - (1 - progress) ^ 3
@@ -560,12 +735,28 @@ function Console:SetOpen(open, instant)
 			frame:SetScript("OnUpdate", nil)
 			self.leftPage:SetAlpha(pagesAlpha)
 			self.rightPage:SetAlpha(pagesAlpha)
+			for _, page in ipairs(self.extraPages or {}) do page:SetAlpha(pagesAlpha) end
 		end
-	end)
+	end))
 end
 
+-- Another module's page on the console (the tally): it fades with the
+-- console's own pages as it folds and opens.
+function Console:AddPage(page)
+	self.extraPages = self.extraPages or {}
+	table.insert(self.extraPages, page)
+	page:SetAlpha(self.leftPage and self.leftPage:GetAlpha() or 1)
+end
+
+-- Folded in combat, unless the player keeps it open (Settings: In combat).
+-- The console only folds when the Halo is there to take its place.
 local function shouldBeOpen()
-	return Stoa:GetState() == Stoa.STATE_WORLD
+	return Stoa:GetState() == Stoa.STATE_WORLD or Stoa.db.combatConsole ~= "fold"
+		or not Stoa:IsModuleEnabled("Halo")
+end
+
+function Console:Refold()
+	self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant)
 end
 
 -- Lifecycle -----------------------------------------------------------------
@@ -587,7 +778,7 @@ function Console:OnEnable()
 	Stoa:On("STOA_NOTE", function(kind, message) self:AddNote(kind, message) end)
 	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
-	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen()) end)
+	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant) end)
 
 	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
 		if unit == "player" then self:UpdateSeal() end
@@ -596,7 +787,7 @@ function Console:OnEnable()
 		self:UpdateSeal()
 		self:UpdateResources()
 		self:UpdateFellowship()
-		if IsInGuild() then C_GuildInfo.GuildRoster() end
+		if IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
 	end)
 
 	Stoa:On("UNIT_HEALTH", function(unit)
@@ -607,16 +798,16 @@ function Console:OnEnable()
 			self:UpdateFellowship()
 		end
 	end)
-	Stoa:On("UNIT_MAXHEALTH", function(unit)
+	Stoa:OnUnit("UNIT_MAXHEALTH", { "player" }, function(unit)
 		if unit == "player" then self:UpdateResources() end
 	end)
-	Stoa:On("UNIT_POWER_UPDATE", function(unit)
+	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player" }, function(unit)
 		if unit == "player" then
 			setUnitBar(self.mana, "player", "power")
 			self.manaText:SetText(UnitPower("player"))
 		end
 	end)
-	Stoa:On("UNIT_MAXPOWER", function(unit)
+	Stoa:OnUnit("UNIT_MAXPOWER", { "player" }, function(unit)
 		if unit == "player" then self:UpdateResources() end
 	end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function() self:UpdateFellowship() end)
@@ -632,5 +823,5 @@ function Console:OnEnable()
 	Stoa:On("GUILD_ROSTER_UPDATE", function() self:UpdateOnline() end)
 
 	-- Notes fade after NOTE_SECONDS.
-	C_Timer.NewTicker(5, function() self:RenderNotes() end)
+	Stoa:NewTicker(5, function() self:RenderNotes() end)
 end

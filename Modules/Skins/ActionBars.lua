@@ -8,9 +8,11 @@
 -- all happens out of combat at load.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Bars = Stoa:NewModule("ActionBars", { hoverTray = false, combatHide = true })
+Stoa:SpecSettings(Bars, { "hoverTray" })
 
 local PREFIXES = {
 	"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
@@ -88,7 +90,7 @@ function Bars:SkinAll()
 	for _, prefix in ipairs(PREFIXES) do
 		for i = 1, 12 do
 			local button = _G[prefix .. i]
-			if button then xpcall(self.Skin, geterrorhandler(), self, button) end
+			if button then xpcall(self.Skin, Stoa.catch, self, button) end
 		end
 	end
 end
@@ -158,13 +160,13 @@ local trayFader = CreateFrame("Frame")
 local function fadeTray(bars, targets, seconds)
 	local from, start = {}, GetTime()
 	for i, bar in ipairs(bars) do from[i] = bar:GetAlpha() end
-	trayFader:SetScript("OnUpdate", function(fader)
+	trayFader:SetScript("OnUpdate", Stoa:GuardUpdate(function(fader)
 		local progress = math.min((GetTime() - start) / seconds, 1)
 		for i, bar in ipairs(bars) do
 			bar:SetAlpha(from[i] + (targets[i] - from[i]) * progress)
 		end
 		if progress >= 1 then fader:SetScript("OnUpdate", nil) end
-	end)
+	end))
 end
 
 local function inCombat()
@@ -220,7 +222,7 @@ end
 
 function Bars:StartTray()
 	local function find()
-		Stoa:AfterCombat(function() xpcall(self.FindTray, geterrorhandler(), self) end)
+		Stoa:AfterCombat(function() xpcall(self.FindTray, Stoa.catch, self) end)
 	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(0.5, find) end)
 	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", find)
@@ -233,8 +235,8 @@ function Bars:StartTray()
 	-- If the tray ever errors it stops, rather than repeating ten times a
 	-- second; the rows are left showing.
 	local ticker
-	ticker = C_Timer.NewTicker(0.1, function()
-		if not xpcall(self.UpdateTray, geterrorhandler(), self) then
+	ticker = Stoa:NewTicker(0.1, function()
+		if not xpcall(self.UpdateTray, Stoa.catch, self) then
 			ticker:Cancel()
 			for _, bar in ipairs(self.tray or {}) do bar:SetAlpha(1) end
 			if self.main then self.main:SetAlpha(1) end
@@ -265,3 +267,7 @@ function Bars:OnEnable()
 		end
 	end)
 end
+
+Stoa:On("STOA_SPEC_SETTINGS", function()
+	if Bars.enabled then Bars:SetOption("hoverTray", Bars.db.hoverTray) end
+end)

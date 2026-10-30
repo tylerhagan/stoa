@@ -18,6 +18,8 @@ local Stoa = ns.Stoa
 local UI = Stoa.UI
 
 local Bar = Stoa:NewModule("CombatBar", { count = 12, rows = "2", healerRows = "1" })
+-- Each spec keeps its own number of rows.
+Stoa:SpecSettings(Bar, { "rows", "healerRows" })
 
 local SIZE = 38
 local GAP = 8
@@ -46,10 +48,7 @@ local IsActionInRange = api("IsActionInRange")
 local GetActionCount = api("GetActionCount")
 local GetActionInfo = api("GetActionInfo")
 
-local function plain(value)
-	if Stoa:IsSecret(value) then return nil end
-	return value
-end
+local plain = Stoa.safe.plain
 
 -- "SHIFT-Q" reads as "s-Q", like Blizzard's short labels.
 local function shortKey(key)
@@ -149,6 +148,18 @@ function Bar:MakeButton(name, parent, size)
 	return button
 end
 
+-- The default spot: under the Halo, or mid-screen until the Halo exists.
+function Bar:PlaceAnchor()
+	local anchor, halo = self.anchor, _G.StoaHalo
+	anchor:ClearAllPoints()
+	if halo then
+		anchor:SetPoint("TOP", halo, "BOTTOM", 0, TOP)
+	else
+		anchor:SetPoint("TOP", UIParent, "CENTER", 0, -60 + TOP)
+	end
+	self.anchored = halo ~= nil
+end
+
 function Bar:Build()
 	local pager = CreateFrame("Frame", "StoaCombatBarPager", UIParent)
 	RegisterAttributeDriver(pager, "actionpage", pageConditions())
@@ -156,6 +167,15 @@ function Bar:Build()
 		if name == "actionpage" then self:UpdateAll() end
 	end)
 	self.pager = pager
+
+	-- The rows hang from this frame, so one mover shifts the whole bar. By
+	-- default it sits under the Halo, where the rows always went.
+	local anchor = CreateFrame("Frame", "StoaCombatBarAnchor", UIParent)
+	anchor:SetSize(12 * SIZE + 11 * GAP, SIZE)
+	anchor:SetFrameStrata("LOW")
+	self.anchor = anchor
+	self:PlaceAnchor()
+	Stoa:RegisterMover("combatbar", anchor, "Combat bar", { default = function() self:PlaceAnchor() end })
 
 	self.buttons, self.all = {}, {}
 	for i = 1, 12 do
@@ -206,6 +226,7 @@ end
 function Bar:Layout()
 	local halo = _G.StoaHalo
 	if not halo or InCombatLockdown() then return end
+	if not self.anchored and not Stoa:HasSavedPosition("combatbar") then self:PlaceAnchor() end
 	local GetPage = api("GetActionBarPage")
 	local base = tonumber(plain(GetPage and GetPage())) or 1
 	local page = self:Page()
@@ -234,7 +255,7 @@ function Bar:Layout()
 		for _, entry in ipairs(list) do
 			local button, driver = entry[1], entry[2]
 			button:ClearAllPoints()
-			button:SetPoint("TOPLEFT", halo, "BOTTOM", x, TOP)
+			button:SetPoint("TOPLEFT", self.anchor, "TOP", x, 0)
 			x = x + SIZE + GAP
 			RegisterStateDriver(button, "visibility", driver)
 			if list == filled then self.shown[#self.shown + 1] = button end
@@ -257,7 +278,7 @@ function Bar:Layout()
 			local rowX = -(#used * row.size + (#used - 1) * row.gap) / 2
 			for _, button in ipairs(used) do
 				button:ClearAllPoints()
-				button:SetPoint("TOPLEFT", halo, "BOTTOM", rowX, y)
+				button:SetPoint("TOPLEFT", self.anchor, "TOP", rowX, y - TOP)
 				rowX = rowX + row.size + row.gap
 				RegisterStateDriver(button, "visibility", RESTING)
 				self.shown[#self.shown + 1] = button
@@ -318,10 +339,15 @@ end
 function Bar:UpdateCooldowns()
 	for _, button in ipairs(self.all or {}) do
 		local cooldown, slot = button.cooldown, button.slot
+		-- A button not yet laid out (combat at login) has no slot to read.
+		if not slot then
+			-- nothing to show yet
 		-- Cooldowns may be secret in combat; newer clients hand out a
 		-- duration object the cooldown frame can draw without reading it.
-		if C_ActionBar and C_ActionBar.GetActionCooldownDuration and cooldown.SetCooldownFromDurationObject then
-			pcall(cooldown.SetCooldownFromDurationObject, cooldown, C_ActionBar.GetActionCooldownDuration(slot))
+		elseif C_ActionBar and C_ActionBar.GetActionCooldownDuration and cooldown.SetCooldownFromDurationObject then
+			pcall(function()
+				cooldown:SetCooldownFromDurationObject(C_ActionBar.GetActionCooldownDuration(slot))
+			end)
 		else
 			local start, duration
 			if C_ActionBar and C_ActionBar.GetActionCooldown then
@@ -348,12 +374,15 @@ end
 function Bar:UpdateState()
 	for _, button in ipairs(self.all or {}) do
 		local slot = button.slot
+		if not slot then break end
 		local usable, noMana = IsUsableAction(slot)
 		usable, noMana = plain(usable), plain(noMana)
 		local inRange = IsActionInRange and plain(IsActionInRange(slot))
 		local icon = button.icon
 		if noMana then
-			icon:SetVertexColor(0.45, 0.55, 1)
+			-- Short of mana: tinted toward the theme's mana colour.
+			local r, g, b = Stoa:Color("mana")
+			icon:SetVertexColor(0.3 + r * 0.4, 0.3 + g * 0.4, 0.3 + b * 0.4)
 		elseif usable == false then
 			icon:SetVertexColor(0.4, 0.4, 0.4)
 		else
@@ -385,7 +414,7 @@ end
 function Bar:OnEnable()
 	self:Build()
 	local function layout()
-		Stoa:AfterCombat(function() xpcall(self.Layout, geterrorhandler(), self) end)
+		Stoa:AfterCombat(function() xpcall(self.Layout, Stoa.catch, self) end)
 	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(0.5, layout) end)
 	Stoa:On("ACTIONBAR_SLOT_CHANGED", function()
@@ -411,16 +440,14 @@ function Bar:OnEnable()
 	Stoa:On("ACTIONBAR_UPDATE_USABLE", function() self:UpdateState() end)
 	Stoa:On("SPELL_UPDATE_USABLE", function() self:UpdateState() end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateState() end)
-	Stoa:On("UNIT_POWER_FREQUENT", function(unit)
-		if unit == "player" then self:UpdateState() end
-	end)
+	Stoa:OnUnit("UNIT_POWER_FREQUENT", { "player" }, function() self:UpdateState() end)
 	Stoa:On("BAG_UPDATE_DELAYED", function() self:UpdateAll() end)
-	-- Range has no event. If an update ever errors the ticker stops rather
-	-- than repeating.
-	local ticker
-	ticker = C_Timer.NewTicker(0.25, function()
-		if not InCombatLockdown() then return end
-		if not xpcall(self.UpdateState, geterrorhandler(), self) then ticker:Cancel() end
+	-- Range has no event, so it rides the combat clock. If an update ever
+	-- errors the listener stops rather than repeating.
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not InCombatLockdown() then return end
+		if not xpcall(self.UpdateState, Stoa.catch, self) then ticking = false end
 	end)
 	-- /stoa combat practice: the game only shows the row in real combat,
 	-- so the filled buttons are shown by hand while practising.
@@ -437,3 +464,8 @@ function Bar:OnEnable()
 	end)
 	layout()
 end
+
+-- A spec change can bring its own number of rows.
+Stoa:On("STOA_SPEC_SETTINGS", function()
+	if Bar.enabled then Stoa:AfterCombat(function() Bar:Layout() end) end
+end)

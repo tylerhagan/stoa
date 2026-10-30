@@ -52,6 +52,27 @@ local DEFAULTS = {
 			["ctrl-4"] = "Blessing of Wisdom", ["ctrl-5"] = "Divine Intervention",
 		},
 	},
+	DRUID = {
+		HEALER = {
+			["3"] = "Rejuvenation", ["4"] = "Remove Curse", ["5"] = "Abolish Poison",
+			["shift-1"] = "Regrowth", ["shift-2"] = "Swiftmend", ["shift-3"] = "Healing Touch",
+			["shift-4"] = "Wild Growth", ["shift-5"] = "Innervate",
+			["ctrl-1"] = "Thorns", ["ctrl-2"] = "Rebirth", ["ctrl-3"] = "Mark of the Wild",
+			["ctrl-4"] = "Revive",
+		},
+		OTHER = {
+			["3"] = "Rejuvenation", ["4"] = "Remove Curse", ["5"] = "Abolish Poison",
+			["shift-1"] = "Regrowth", ["shift-2"] = "Healing Touch",
+			["ctrl-1"] = "Thorns", ["ctrl-2"] = "Rebirth", ["ctrl-5"] = "Mark of the Wild",
+		},
+	},
+	MAGE = {
+		OTHER = {
+			["4"] = "Remove Lesser Curse",
+			["shift-4"] = "Dampen Magic", ["shift-5"] = "Amplify Magic",
+			["ctrl-5"] = "Arcane Intellect",
+		},
+	},
 }
 
 local frames = {}
@@ -158,12 +179,7 @@ function ClickCast:BuildPage()
 	table.insert(UISpecialFrames, "StoaClickCastPage")
 	self.page = page
 
-	local bg = page:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	UI.paint(bg, "panel", 0.97)
-	local top = UI.line(page, "accent")
-	top:SetPoint("TOPLEFT")
-	top:SetPoint("TOPRIGHT")
+	UI.windowPanel(page, 0.97, { header = 84, footer = 64 })
 
 	local title = UI.text(page, "serif", Stoa.typeSize.display, "text")
 	title:SetPoint("TOPLEFT", 28, -22)

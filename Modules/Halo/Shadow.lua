@@ -43,7 +43,7 @@ local SPELLS = {
 
 -- How long each lasts, for the times the game won't show the aura itself:
 -- then the coin runs from your own cast on this target.
-local DURATIONS = { pain = 18, plague = 24, embrace = 60 }
+local DURATIONS = { pain = 18, plague = 24, embrace = 30 }
 
 local DOTS = {
 	{ key = "pain", letter = "P" },
@@ -84,12 +84,7 @@ local function findAura(unit, key, filter)
 	end
 end
 
--- Seconds left on an aura, or nil when the times are hidden.
-local function auraLeft(aura)
-	local expires = Stoa:PlainNumber(aura and aura.expirationTime)
-	if not expires or expires == 0 then return nil end
-	return expires - GetTime()
-end
+local auraLeft = Stoa.aura.left
 
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.
@@ -198,6 +193,8 @@ local function paintCoin(coin, state)
 	local r, g, b = Stoa:Color(token)
 	coin.ring:SetVertexColor(r, g, b, state == "on" and 0.7 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "on" and "text" or token))
+	UI.coinArt(coin, SPELLS[coin.key])
+	UI.coinLit(coin, state ~= "off")
 end
 
 function Shadow:UpdateCoins()
@@ -476,15 +473,14 @@ function Shadow:OnEnable()
 	if halo.target and halo.target.hp then self:BuildWeaving(halo.target) end
 	self.plates = {}
 
-	Stoa.commands.probe = function() xpcall(self.Probe, geterrorhandler(), self) end
+	Stoa.commands.probe = function() xpcall(self.Probe, Stoa.catch, self) end
 
-	local function refresh() xpcall(self.Refresh, geterrorhandler(), self) end
+	local function refresh() xpcall(self.Refresh, Stoa.catch, self) end
 	Stoa:On("PLAYER_TARGET_CHANGED", function()
 		self:ForgetHiddenTarget()
 		refresh()
 	end)
-	Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
-		if unit ~= "player" then return end
+	Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(unit, _, spellID)
 		self:NoteCast(spellID)
 		refresh()
 	end)
@@ -495,23 +491,23 @@ function Shadow:OnEnable()
 	Stoa:On("UNIT_AURA", function(unit)
 		if unit == "target" or unit == "player" then refresh() end
 		if unit and self.plates[unit] then
-			xpcall(self.UpdatePlate, geterrorhandler(), self, unit)
+			xpcall(self.UpdatePlate, Stoa.catch, self, unit)
 		end
 	end)
 	Stoa:On("NAME_PLATE_UNIT_ADDED", function(unit)
 		self.plates[unit] = true
-		xpcall(self.UpdatePlate, geterrorhandler(), self, unit)
+		xpcall(self.UpdatePlate, Stoa.catch, self, unit)
 	end)
 	Stoa:On("NAME_PLATE_UNIT_REMOVED", function(unit)
 		self.plates[unit] = nil
 		if self.pained then self.pained[unit] = nil end
 	end)
-	-- Timers and cooldowns tick without events. If an update ever errors
-	-- the ticker stops rather than repeating the error.
-	local ticker
-	ticker = C_Timer.NewTicker(0.2, function()
-		if Stoa:GetState() ~= Stoa.STATE_COMBAT or not self:Active() then return end
-		if not xpcall(self.Refresh, geterrorhandler(), self) then ticker:Cancel() end
+	-- Timers and cooldowns tick without events, on the combat clock. If an
+	-- update ever errors the listener stops rather than repeating the error.
+	local ticking = true
+	Stoa:On("STOA_TICK", function()
+		if not ticking or not self:Active() then return end
+		if not xpcall(self.Refresh, Stoa.catch, self) then ticking = false end
 	end)
 	refresh()
 end

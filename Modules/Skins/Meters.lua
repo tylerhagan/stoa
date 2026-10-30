@@ -9,6 +9,7 @@
 -- looked up by name and guarded.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Meters = Stoa:NewModule("Meters", { place = true })
@@ -18,7 +19,7 @@ local WIDTH, HEIGHT = 300, 168
 local INSET = 10
 
 local function guarded(fn, ...)
-	xpcall(fn, geterrorhandler(), ...)
+	xpcall(fn, Stoa.catch, ...)
 end
 
 local function hide(region)
@@ -166,12 +167,24 @@ local function shownWindows()
 	return list
 end
 
+-- The strip hangs from one frame of ours, so it can be moved as a whole.
+function Meters:Anchor()
+	if self.anchor then return self.anchor end
+	local anchor = CreateFrame("Frame", "StoaMetersAnchor", UIParent)
+	anchor:SetSize(WIDTH, HEIGHT)
+	anchor:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
+	self.anchor = anchor
+	Stoa:RegisterMover("meters", anchor, "Damage meters")
+	return anchor
+end
+
 function Meters:Place()
 	if not self.db.place then return end
+	local anchor = self:Anchor()
 	local x = 0
 	for _, window in ipairs(shownWindows()) do
 		window:ClearAllPoints()
-		window:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, 0)
+		window:SetPoint("TOPLEFT", anchor, "TOPLEFT", x, 0)
 		window:SetSize(WIDTH, HEIGHT)
 		-- Keep Blizzard's position cache from saving over the strip.
 		if window.SetUserPlaced and window:IsMovable() then pcall(window.SetUserPlaced, window, false) end

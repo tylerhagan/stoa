@@ -3,8 +3,10 @@
 -- themselves, even in combat, with the party cards' click-cast bindings.
 --
 -- Healers keep one rule at every size: your group reads as a row under
--- your spells. Ten players are two rows of full party cards; more are
--- compact rows of small cells, health filling the cell behind the name.
+-- your spells. Ten players are two rows of full party cards; twenty are
+-- compact rows of small cells, health filling the cell behind the name;
+-- forty are two blocks of smaller cells side by side, groups 1-4 on the
+-- left and 5-8 on the right, so the raid stays above the console.
 -- Everyone else gets a column per group on the left, a size smaller.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -19,7 +21,11 @@ local RAID_STYLES = {
 	wide = { width = 168, height = 58, gap = 6, style = "raid", template = "StoaRaidButtonTemplate" },
 	card = { width = 176, height = 70, gap = 8, style = "party", template = "StoaRaidCardTemplate" },
 	cell = { width = 90, height = 26, gap = 3, style = "cell", template = "StoaRaidCellTemplate" },
+	tinyLeft = { width = 78, height = 22, gap = 2, style = "tiny", template = "StoaRaidTinyTemplate", groups = "1,2,3,4" },
+	tinyRight = { width = 78, height = 22, gap = 2, style = "tiny", template = "StoaRaidTinyTemplate", groups = "5,6,7,8" },
 }
+-- The space between the two forty-player blocks.
+local BLOCK_GAP = 16
 Stoa.RAID_STYLES = RAID_STYLES
 Stoa.RAID_CELL = RAID_STYLES.wide
 
@@ -28,12 +34,16 @@ local VISIBILITY = {
 	HEALER = {
 		wide = "hide",
 		card = "[@raid11,exists] hide; [group:raid] show; hide",
-		cell = "[@raid11,exists] show; hide",
+		cell = "[@raid21,exists] hide; [@raid11,exists] show; hide",
+		tinyLeft = "[@raid21,exists] show; hide",
+		tinyRight = "[@raid21,exists] show; hide",
 	},
 	OTHER = {
 		wide = "[group:raid] show; hide",
 		card = "hide",
 		cell = "hide",
+		tinyLeft = "hide",
+		tinyRight = "hide",
 	},
 }
 
@@ -56,15 +66,19 @@ local function onLoad(cell, styleName)
 	cell:SetScript("OnAttributeChanged", function(self, key, value)
 		if key == "unit" then
 			self.unit = value
-			if value then Stoa.modules.Party:UpdateCard(self) end
+			if value then xpcall(Stoa.modules.Party.UpdateCard, Stoa.catch, Stoa.modules.Party, self) end
 		end
 	end)
 	cell:SetScript("OnEnter", function(self)
 		if not self.unit then return end
 		GameTooltip_SetDefaultAnchor(GameTooltip, self)
 		GameTooltip:SetUnit(self.unit)
+		Stoa.modules.Party:Peek("card", true)
 	end)
-	cell:SetScript("OnLeave", GameTooltip_Hide)
+	cell:SetScript("OnLeave", function()
+		GameTooltip_Hide()
+		Stoa.modules.Party:Peek("card", false)
+	end)
 
 	cells[cell] = true
 	Stoa:RegisterClickFrame(cell)
@@ -72,6 +86,7 @@ end
 function StoaRaidButton_OnLoad(cell) onLoad(cell, "raid") end
 function StoaRaidCard_OnLoad(cell) onLoad(cell, "party") end
 function StoaRaidCell_OnLoad(cell) onLoad(cell, "cell") end
+function StoaRaidTiny_OnLoad(cell) onLoad(cell, "tiny") end
 
 function Raid:Build()
 	local holder = CreateFrame("Frame", "StoaRaid", UIParent)
@@ -90,6 +105,7 @@ function Raid:Build()
 		header:SetAttribute("showPlayer", true)
 		header:SetAttribute("groupBy", "GROUP")
 		header:SetAttribute("groupingOrder", "1,2,3,4,5,6,7,8")
+		if size.groups then header:SetAttribute("groupFilter", size.groups) end
 		header:SetAttribute("columnSpacing", size.gap)
 		header:SetAttribute("unitsPerColumn", 5)
 		header:SetAttribute("maxColumns", 8)
@@ -99,7 +115,7 @@ function Raid:Build()
 	self.header = self.headers.wide
 
 	self:Place()
-	Stoa:RegisterMover("raid", holder, "Raid")
+	Stoa:RegisterMover("raid", holder, "Raid", { default = function() self:Place() end })
 end
 
 -- Healers: rows centred under the combat bar, like the party row. Everyone
@@ -115,7 +131,13 @@ function Raid:Place()
 			header:SetAttribute("xOffset", gap)
 			header:SetAttribute("yOffset", 0)
 			header:SetAttribute("columnAnchorPoint", "TOP")
-			header:SetPoint("TOP", self.holder, "TOP")
+			if key == "tinyLeft" then
+				header:SetPoint("TOPRIGHT", self.holder, "TOP", -BLOCK_GAP / 2, 0)
+			elseif key == "tinyRight" then
+				header:SetPoint("TOPLEFT", self.holder, "TOP", BLOCK_GAP / 2, 0)
+			else
+				header:SetPoint("TOP", self.holder, "TOP")
+			end
 		else
 			header:SetAttribute("point", "TOP")
 			header:SetAttribute("xOffset", 0)
@@ -135,7 +157,7 @@ function Raid:Place()
 		self.holder:SetSize(8 * wide.width + 7 * wide.gap, 5 * wide.height + 4 * wide.gap)
 	end
 
-	if Stoa.char.positions.raid then return end
+	if Stoa:HasSavedPosition("raid") then return end
 	self.holder:ClearAllPoints()
 	local halo = _G.StoaHalo
 	if healer and halo then
@@ -163,16 +185,26 @@ end
 function Raid:OnEnable()
 	self:Build()
 	if self.db.hideBlizzardRaid then
-		Stoa:AfterCombat(function() xpcall(hideBlizzardRaid, geterrorhandler()) end)
+		Stoa:AfterCombat(function() xpcall(hideBlizzardRaid, Stoa.catch) end)
 	end
 
 	local party = Stoa.modules.Party
+	-- In a raid one unit can fire a dozen events in a moment (every aura,
+	-- every hit), so they're gathered and each cell is drawn once a tenth
+	-- of a second at most.
+	local dirty = {}
 	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_CONNECTION", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED" }) do
 		Stoa:On(event, function(unit)
-			if not unit or not IsInRaid() then return end
-			eachCellFor(unit, function(cell) party:UpdateCard(cell) end)
+			if unit and IsInRaid() then dirty[unit] = true end
 		end)
 	end
+	Stoa:NewTicker(0.1, function()
+		if not next(dirty) then return end
+		for unit in pairs(dirty) do
+			eachCellFor(unit, function(cell) party:UpdateCard(cell) end)
+		end
+		wipe(dirty)
+	end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function()
 		for cell in pairs(cells) do
 			if cell.unit then party:UpdateCard(cell) end
@@ -186,7 +218,7 @@ function Raid:OnEnable()
 	Stoa:On("PLAYER_TARGET_CHANGED", updateAll)
 	Stoa:On("STOA_THEME_CHANGED", updateAll)
 	-- Buff timers count down.
-	C_Timer.NewTicker(1, function()
+	Stoa:NewTicker(1, function()
 		if IsInRaid() then updateAll() end
 	end)
 	Stoa:On("STOA_ROLE_CHANGED", function()
@@ -196,7 +228,7 @@ function Raid:OnEnable()
 		if not InCombatLockdown() then self:Place() end
 	end)
 
-	C_Timer.NewTicker(0.3, function()
+	Stoa:NewTicker(0.3, function()
 		if not IsInRaid() then return end
 		for cell in pairs(cells) do
 			if cell.unit then party:UpdateRange(cell) end

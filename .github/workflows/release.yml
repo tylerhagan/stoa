@@ -1,0 +1,51 @@
+name: Release
+
+# Runs when a version tag such as v0.9.1 is pushed.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the TOC version matches the tag
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          toc_version="$(sed -n 's/^## Version:[[:space:]]*//p' Stoa.toc | tr -d '\r' | head -n 1)"
+          if [ "$tag_version" != "$toc_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match Stoa.toc version '$toc_version'"
+            exit 1
+          fi
+          echo "VERSION=$tag_version" >> "$GITHUB_ENV"
+
+      - name: Take release notes from CHANGELOG.md
+        run: |
+          # Lines under "## <version>" up to the next "## " heading.
+          awk -v v="$VERSION" '
+            /^## / { if (found) exit; if ($2 == v || $2 == "[" v "]") { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no section (or an empty one) for $VERSION"
+            exit 1
+          fi
+          cat notes.md
+
+      - name: Build the zip
+        run: Tools/package.sh "$GITHUB_SHA"
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "dist/Stoa-$VERSION.zip" \
+            --title "Stoa $VERSION" \
+            --notes-file notes.md \
+            --verify-tag

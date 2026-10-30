@@ -13,6 +13,11 @@ local Halo = Stoa:NewModule("Halo", {
 	hidePlayerFrame = true,
 	hideTargetFrame = true,
 	scale = 1,
+	-- Quiet mana play: the five-second rule and regen ticks, the cost of
+	-- the spell you are casting, and a druid's mana while shapeshifted.
+	manaRule = true,
+	castCost = true,
+	formMana = true,
 })
 
 local SIZE = 300
@@ -28,12 +33,43 @@ local AURA_COUNT = 8
 local SIGNATURES = {
 	PRIEST = {
 		RANGED = { 8092 },              -- Mind Blast
-		HEALER = { 17 },                -- Power Word: Shield
+		HEALER = { 1240721, 17 },       -- Penance, Power Word: Shield
 	},
 	PALADIN = {
 		MELEE = { 679, 20271 },         -- Holy Strike, Judgement
 		TANK = { 1311015, 679, 20271 }, -- Templar's Bulwark, Holy Strike, Judgement
 		HEALER = { 20473, 20216, 633 }, -- Holy Shock, Divine Favor, Lay on Hands
+	},
+	DRUID = {
+		TANK = { 417141, 5229 },        -- Berserk, Enrage
+		MELEE = { 417141, 5217 },       -- Berserk, Tiger's Fury
+		RANGED = { 29166 },             -- Innervate
+		HEALER = { 18562, 17116 },      -- Swiftmend, Nature's Swiftness
+	},
+	-- Mage picks by talent tree (Mage.lua); these are for before it can.
+	MAGE = {
+		RANGED = { 12042, 11129, 11426, 2136 }, -- Arcane Power, Combustion, Ice Barrier, Fire Blast
+	},
+	-- Classes without a signature of their own: one cooldown each.
+	WARRIOR = {
+		MELEE = { 12294, 23881, 1680 }, -- Mortal Strike, Bloodthirst, Whirlwind
+		TANK = { 23922, 6572, 2565 },   -- Shield Slam, Revenge, Shield Block
+	},
+	ROGUE = {
+		MELEE = { 13750, 13877, 14177, 5277 }, -- Adrenaline Rush, Blade Flurry, Cold Blood, Evasion
+	},
+	HUNTER = {
+		RANGED = { 19434, 3044 },       -- Aimed Shot, Arcane Shot
+		MELEE = { 2973, 3044 },         -- Raptor Strike, Arcane Shot
+	},
+	WARLOCK = {
+		RANGED = { 17962, 17877, 6789 }, -- Conflagrate, Shadowburn, Death Coil
+	},
+	SHAMAN = {
+		RANGED = { 16166, 8042 },       -- Elemental Mastery, Earth Shock
+		MELEE = { 17364, 8042 },        -- Stormstrike, Earth Shock
+		HEALER = { 16188, 16190 },      -- Nature's Swiftness, Mana Tide Totem
+		TANK = { 8042 },                -- Earth Shock
 	},
 }
 
@@ -50,6 +86,13 @@ local REMINDERS = {
 	PRIEST = {
 		{ word = "NO INNER FIRE", name = "Inner Fire", spell = 588 },
 		{ word = "NO SHADOWFORM", name = "Shadowform", spell = 15473, roles = { RANGED = true } },
+	},
+	DRUID = {
+		{ word = "NO MARK", name = "Mark of the Wild", spell = 1126 },
+	},
+	MAGE = {
+		{ word = "NO ARMOR", suffix = " Armor", spell = 168 },           -- Frost, Ice, Mage or Molten Armor
+		{ word = "NO INTELLECT", name = "Arcane Intellect", spell = 1459 },
 	},
 }
 
@@ -110,6 +153,7 @@ function Halo:Build()
 	Stoa:SetFont(healthText, "serif", Stoa.typeSize.title, "OUTLINE")
 	Stoa:SetFont(manaText, "serif", Stoa.typeSize.title, "OUTLINE")
 	self.healthText, self.manaText = healthText, manaText
+	self:BuildManaPlay(frame, mana, manaText)
 
 	self:BuildSignature(frame)
 	self:BuildTarget(frame)
@@ -126,6 +170,43 @@ function Halo:Build()
 		end
 	end
 	for _, region in ipairs({ frame, self.target, self.cast }) do shade(region) end
+end
+
+-- Mana play on the right arc (shared with the console, see Power.dress).
+-- The arc is a half circle that fills upwards, so a fraction along it maps
+-- to a height, and the dot sits on the circle at that height. A druid's
+-- hidden mana gets a slim bar and number under the power number.
+local ARC_RADIUS = SIZE / 2 - 8
+
+function Halo:BuildManaPlay(frame, arcBar, manaText)
+	local form = UI.bar(frame, 70, 2, "mana")
+	form:SetPoint("TOPLEFT", manaText, "BOTTOMLEFT", 0, -4)
+	local number = UI.caption(frame, "")
+	number:SetPoint("TOPLEFT", form, "BOTTOMLEFT", 0, -3)
+	form:Hide()
+	local db = self.db
+	self.manaPlay = Stoa.Power.dress(arcBar, {
+		texture = UI.MEDIA .. "Textures\\HaloArcRight",
+		enabled = function(key) return db[key] end,
+		place = function(tex, f)
+			local y = f * SIZE - SIZE / 2
+			local x = math.sqrt(math.max(ARC_RADIUS * ARC_RADIUS - y * y, 0))
+			tex:ClearAllPoints()
+			tex:SetPoint("CENTER", arcBar, "LEFT", x, y)
+		end,
+		shade = function(tex, from, to)
+			tex:ClearAllPoints()
+			tex:SetPoint("BOTTOMLEFT", arcBar, "BOTTOMLEFT", 0, from * SIZE)
+			tex:SetPoint("TOPRIGHT", arcBar, "BOTTOMRIGHT", 0, to * SIZE)
+			-- Crop the arc's art to the same band so the shade keeps its curve.
+			tex:SetTexCoord(0, 1, 1 - to, 1 - from)
+		end,
+		form = {
+			bar = form,
+			show = function(current) number:SetText(current) number:Show() end,
+			hide = function() number:Hide() end,
+		},
+	})
 end
 
 function Halo:BuildSignature(frame)
@@ -145,6 +226,13 @@ function Halo:BuildSignature(frame)
 	icon:SetPoint("CENTER")
 	icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
 	slot.icon = icon
+	-- Painted: a leather and brass ring instead of the accent line.
+	if UI.ornate() then
+		ring:Hide()
+		gap:Hide()
+		local _, brass = UI.coinFrame(slot, SIGNATURE_SIZE)
+		UI.tint(brass, "accent")
+	end
 
 	local cooldown = CreateFrame("Cooldown", nil, slot, "CooldownFrameTemplate")
 	cooldown:SetAllPoints(icon)
@@ -188,6 +276,7 @@ function Halo:BuildTarget(frame)
 	-- DEAD, so the plaque always matches what you have targeted.
 	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
 	self.target = target
+	Stoa:RegisterMover("target", target, "Target plaque")
 
 	-- A plaque like the tank watch opposite: the coin faces the Halo.
 	local plaque = UI.plaque(target, "LEFT")
@@ -212,6 +301,11 @@ function Halo:BuildTarget(frame)
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
 	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -6)
+	-- KICK, when the target is casting something you can interrupt (Kit.lua).
+	local kick = UI.text(target, "sans", Stoa.typeSize.label, "danger", "LEFT")
+	kick:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -6)
+	kick:Hide()
+	target.kick = kick
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target.threat, target.caption = threat, caption
 
@@ -275,6 +369,7 @@ function Halo:BuildCast(frame)
 	cast.notch = notch
 	cast:Hide()
 	self.cast = cast
+	Stoa:RegisterMover("cast", cast, "Cast bar")
 
 	-- Missing self-buffs, and your seal, under the cast bar.
 	local reminders = UI.caption(frame, "")
@@ -289,9 +384,20 @@ function Halo:UpdateHealth()
 	self.healthText:SetText(UnitHealth("player"))
 end
 
+-- The right arc is whatever your power is: mana in its own colour, energy
+-- pale gold, rage bone, so a druid's form change reads at a glance.
+local POWER_TOKENS = { [1] = "text", [3] = "accent" }
+
 function Halo:UpdatePower()
 	UI.setUnitBar(self.mana, "player", "power")
 	self.manaText:SetText(UnitPower("player"))
+	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType("player")))
+	local token = kind and POWER_TOKENS[kind] or "mana"
+	if token ~= self.powerToken then
+		self.powerToken = token
+		self.mana:SetStatusBarColor(Stoa:Color(token))
+		self.manaText:SetTextColor(Stoa:Color(token))
+	end
 end
 
 function Halo:UpdateSignature()
@@ -300,8 +406,8 @@ function Halo:UpdateSignature()
 	local _, classFile = UnitClass("player")
 	local list = SIGNATURES[classFile] and SIGNATURES[classFile][role] or {}
 
-	slot.spellID = nil
-	for _, spellID in ipairs(list) do
+	slot.spellID = Stoa.signatureFor and Stoa.signatureFor() or nil
+	for _, spellID in ipairs(slot.spellID and {} or list) do
 		if knows(spellID) then
 			slot.spellID = spellID
 			break
@@ -352,10 +458,7 @@ function Halo:UpdateTarget()
 
 	-- Level and kind on the caption; elite and rare say so and change the
 	-- plaque's line.
-	local function plain(value)
-		if Stoa:IsSecret(value) then return nil end
-		return value
-	end
+	local plain = Stoa.safe.plain
 	local rank = plain(UnitClassification("target"))
 	local level = plain(UnitLevel("target"))
 	local kind = plain(UnitCreatureType("target"))
@@ -400,7 +503,7 @@ function Halo:UpdateTargetAuras()
 	if Stoa:IsSecret(hostile) then hostile = false end
 	local found, seen = {}, {}
 	local function collect(filter)
-		if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
+		if Stoa:AurasHidden() or not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
 		for i = 1, 40 do
 			if #found >= AURA_COUNT then return end
 			local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, filter)
@@ -423,9 +526,13 @@ function Halo:UpdateTargetAuras()
 			collect("HELPFUL")
 		end
 	end
-	-- The row hangs under the card, from its inner edge.
-	icons[1]:ClearAllPoints()
-	icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
+	-- The row hangs under the card, from its inner edge. The card is a
+	-- secure button, so the anchor is set once, out of combat.
+	if not icons.placed and not InCombatLockdown() then
+		icons[1]:ClearAllPoints()
+		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
+		icons.placed = true
+	end
 	for i, icon in ipairs(icons) do
 		local aura = found[i]
 		if aura then
@@ -461,7 +568,17 @@ function Halo:UpdateThreat()
 	end
 	local isTank = Stoa:GetRole() == "TANK"
 	local words = isTank and THREAT_WORDS.TANK or THREAT_WORDS.OTHER
-	threat:SetText(words[status] or "")
+	local text = words[status] or ""
+	-- Close to pulling the enemy off the tank: say so, with the number when
+	-- the game lets us read it.
+	if not isTank then
+		local ok, tanking, _, scaled = pcall(UnitDetailedThreatSituation, "player", "target")
+		scaled = ok and Stoa:PlainNumber(scaled)
+		if type(scaled) == "number" and scaled >= 90 and not Stoa:IsSecret(tanking) and tanking ~= true then
+			text = "PULLING AGGRO " .. math.floor(scaled + 0.5) .. "%"
+		end
+	end
+	threat:SetText(text)
 	-- Holding aggro as a tank is the calm case; everything else is a warning.
 	local calm = isTank and status == 3
 	threat:SetTextColor(Stoa:Color(calm and "muted" or "danger"))
@@ -472,6 +589,7 @@ end
 -- Your own buff names, or nil when any of them is hidden (secret) and a
 -- missing buff can't be told from an unreadable one.
 local function ownBuffNames()
+	if Stoa:AurasHidden() then return nil end
 	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return nil end
 	local names = {}
 	for i = 1, 40 do
@@ -552,14 +670,14 @@ function Halo:StartCast(channel)
 
 	if not Stoa:IsSecret(startMS) and not Stoa:IsSecret(endMS) then
 		cast:SetMinMaxValues(startMS / 1000, endMS / 1000)
-		cast:SetScript("OnUpdate", function(bar)
+		cast:SetScript("OnUpdate", Stoa:GuardUpdate(function(bar)
 			local now = GetTime()
 			if channel then
 				bar:SetValue(endMS / 1000 - (now - startMS / 1000))
 			else
 				bar:SetValue(now)
 			end
-		end)
+		end))
 	elseif cast.SetTimerDuration then
 		local getDuration = channel and UnitChannelDuration or UnitCastingDuration
 		if getDuration then pcall(cast.SetTimerDuration, cast, getDuration("player")) end
@@ -615,12 +733,12 @@ function Halo:OnEnable()
 
 	if self.db.hidePlayerFrame then
 		Stoa:AfterCombat(function()
-			xpcall(hideBlizzard({ PlayerFrame, PlayerCastingBarFrame }), geterrorhandler())
+			xpcall(hideBlizzard({ PlayerFrame, PlayerCastingBarFrame }), Stoa.catch)
 		end)
 	end
 	if self.db.hideTargetFrame then
 		Stoa:AfterCombat(function()
-			xpcall(hideBlizzard({ TargetFrame, FocusFrame }), geterrorhandler())
+			xpcall(hideBlizzard({ TargetFrame, FocusFrame }), Stoa.catch)
 		end)
 	end
 
@@ -632,7 +750,14 @@ function Halo:OnEnable()
 		self:UpdateSignature()
 		self:UpdateReminders()
 	end)
-	Stoa:On("UNIT_AURA", function(unit)
+	Stoa:On("UNIT_DISPLAYPOWER", function(unit)
+		if unit == "player" then self:UpdatePower() end
+	end)
+	Stoa:On("STOA_THEME_CHANGED", function()
+		self.powerToken = nil
+		self:UpdatePower()
+	end)
+	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateReminders() end
 		if unit == "target" then self:UpdateTargetAuras() end
 	end)
@@ -645,17 +770,17 @@ function Halo:OnEnable()
 	Stoa:On("SPELLS_CHANGED", function() self:UpdateSignature() end)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", function() self:UpdateCooldown() end)
 
-	Stoa:On("UNIT_HEALTH", function(unit)
+	Stoa:OnUnit("UNIT_HEALTH", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateHealth() end
 		if unit == "target" then self:UpdateTarget() end
 	end)
-	Stoa:On("UNIT_MAXHEALTH", function(unit)
+	Stoa:OnUnit("UNIT_MAXHEALTH", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateHealth() end
 	end)
-	Stoa:On("UNIT_POWER_UPDATE", function(unit)
+	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
 	end)
-	Stoa:On("UNIT_MAXPOWER", function(unit)
+	Stoa:OnUnit("UNIT_MAXPOWER", { "player" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateTarget() end)

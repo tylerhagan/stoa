@@ -1,12 +1,19 @@
 -- Stoa: the two states.
 -- WORLD: the Grimoire console is open. COMBAT: the console folds to its spine
--- and the Halo rises. Leaving combat waits a few calm seconds so the UI does
--- not flicker between pulls. Holding Alt in combat "peeks" at the console.
+-- and the Halo rises. Leaving combat waits a few calm seconds (a setting: 1,
+-- 3, 5 or 8) so the UI does not flicker between pulls, and in a group it
+-- also waits while the people near you are still fighting, so a chain of
+-- pulls stays one fight. The console can also stay open in combat
+-- (Stoa.db.combatConsole, see Modules/Grimoire/Console.lua).
 local _, ns = ...
 local Stoa = ns.Stoa
 
 local WORLD, COMBAT = "WORLD", "COMBAT"
 local CALM_SECONDS = 3
+-- How often the calm is checked, and the longest a fighting group can hold
+-- the combat look after you've left combat.
+local CALM_STEP = 0.5
+local GROUP_HOLD = 20
 
 Stoa.STATE_WORLD = WORLD
 Stoa.STATE_COMBAT = COMBAT
@@ -20,9 +27,25 @@ function Stoa:GetState()
 	return state
 end
 
+-- One clock for everything that times in combat: ticks only while the state
+-- is combat (real or practice), and fires STOA_TICK with the time.
+local clock
+
+local function setClock()
+	if state == COMBAT then
+		if not clock then
+			clock = Stoa:NewTicker(0.2, function() Stoa:Fire("STOA_TICK", GetTime()) end)
+		end
+	elseif clock then
+		clock:Cancel()
+		clock = nil
+	end
+end
+
 local function setState(newState)
 	if newState == state then return end
 	state = newState
+	setClock()
 	Stoa:Fire("STOA_STATE_CHANGED", state)
 end
 
@@ -41,8 +64,21 @@ local function setCombatLayout(on)
 	Stoa:Fire("STOA_COMBAT_LAYOUT", on)
 end
 
+-- A pull countdown can bring the combat look in early, so the console has
+-- folded and the Halo is up before the pull (Stoa.db.countdownCombat:
+-- "raid", "group" or "off"). It ends with the fight, a cancelled countdown,
+-- or a few seconds after the countdown runs out with no fight.
+local countdown
+local COUNTDOWN_GRACE = 8
+
+local function endCountdown()
+	if countdown then countdown:Cancel() end
+	countdown = nil
+end
+
 Stoa:On("PLAYER_REGEN_DISABLED", function()
 	practising = false
+	endCountdown()
 	if calmTimer then
 		calmTimer:Cancel()
 		calmTimer = nil
@@ -51,12 +87,41 @@ Stoa:On("PLAYER_REGEN_DISABLED", function()
 	setState(COMBAT)
 end)
 
+function Stoa:CalmSeconds()
+	return tonumber(self.db and self.db.calm) or CALM_SECONDS
+end
+
+-- Someone in your group, near you and alive, still in a fight.
+local function groupFighting()
+	if not (Stoa.db and Stoa.db.calmGroup ~= false) or not IsInGroup() then return false end
+	local raid = IsInRaid()
+	local count = raid and GetNumGroupMembers() or GetNumSubgroupMembers()
+	for i = 1, count do
+		local unit = (raid and "raid" or "party") .. i
+		if not UnitIsUnit(unit, "player") then
+			local fighting = UnitAffectingCombat(unit)
+			local near = not UnitInRange or UnitInRange(unit)
+			if not Stoa:IsSecret(fighting) and not Stoa:IsSecret(near) and fighting and near and not UnitIsDeadOrGhost(unit) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 Stoa:On("PLAYER_REGEN_ENABLED", function()
 	setCombatLayout(false)
 	if calmTimer then calmTimer:Cancel() end
-	calmTimer = C_Timer.NewTimer(CALM_SECONDS, function()
-		calmTimer = nil
-		if not InCombatLockdown() then
+	-- The calm seconds count only while the group is calm too.
+	local calm, waited = 0, 0
+	calmTimer = Stoa:NewTicker(CALM_STEP, function()
+		if InCombatLockdown() then return end
+		waited = waited + CALM_STEP
+		local ok, fighting = pcall(groupFighting)
+		if not (ok and fighting) or waited >= GROUP_HOLD then calm = calm + CALM_STEP end
+		if calm >= Stoa:CalmSeconds() then
+			calmTimer:Cancel()
+			calmTimer = nil
 			setState(WORLD)
 		end
 	end)
@@ -80,6 +145,36 @@ Stoa.commands.combat = function()
 	Stoa:Print(practising and "Practice combat on. /stoa combat again to end it." or "Practice combat off.")
 end
 
+local function countdownWanted()
+	local when = Stoa.db and Stoa.db.countdownCombat or "raid"
+	if when == "raid" then return IsInRaid() end
+	if when == "group" then return IsInGroup() end
+	return false
+end
+
+Stoa:On("START_PLAYER_COUNTDOWN", function(_, timeRemaining)
+	if InCombatLockdown() or state == COMBAT or not countdownWanted() then return end
+	local seconds = Stoa:PlainNumber(timeRemaining) or 10
+	endCountdown()
+	setCombatLayout(true)
+	setState(COMBAT)
+	countdown = C_Timer.NewTimer(math.min(seconds, 60) + COUNTDOWN_GRACE, function()
+		countdown = nil
+		if InCombatLockdown() or practising then return end
+		setCombatLayout(false)
+		setState(WORLD)
+	end)
+end)
+
+Stoa:On("CANCEL_PLAYER_COUNTDOWN", function()
+	if not countdown then return end
+	endCountdown()
+	if InCombatLockdown() or practising then return end
+	setCombatLayout(false)
+	setState(WORLD)
+end)
+
 Stoa:On("PLAYER_ENTERING_WORLD", function()
+	endCountdown()
 	setState(InCombatLockdown() and COMBAT or WORLD)
 end)

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 350" fill="none" role="img" aria-labelledby="title desc">
+<title id="title">STOA — Essence</title><desc id="desc">Slender gold STOA wordmark with an open A and an oval O, with a luminous horizontal horizon within the O.</desc>
+<defs>
+ <linearGradient id="gold" x1="0" y1="0" x2="0.15" y2="1"><stop stop-color="#F6D798"/><stop offset=".32" stop-color="#E9C17A"/><stop offset=".68" stop-color="#D8A65D"/><stop offset="1" stop-color="#AD7738"/></linearGradient>
+ <linearGradient id="horizon" gradientUnits="userSpaceOnUse" x1="619.4" y1="219" x2="770.6" y2="219"><stop stop-color="#BF8D49"/><stop offset=".35" stop-color="#EBC680"/><stop offset=".5" stop-color="#FFF0BF"/><stop offset=".65" stop-color="#EBC680"/><stop offset="1" stop-color="#BF8D49"/></linearGradient>
+ <radialGradient id="light"><stop stop-color="#FFE5A2" stop-opacity=".65"/><stop offset=".3" stop-color="#EDBA68" stop-opacity=".24"/><stop offset="1" stop-color="#D69A45" stop-opacity="0"/></radialGradient>
+</defs>
+
+<g stroke="url(#gold)" stroke-width="9" stroke-linecap="butt" stroke-linejoin="miter"><path d="M 210,115 C 185,96 144,95 119,108 C 97,120 100,144 122,154 C 144,164 185,166 205,180 C 228,196 219,225 197,237 C 169,252 126,244 102,227"/><path d="M 356,105 H 478 M 417,105 V 245"/><ellipse cx="695" cy="175" rx="88" ry="86"/><path d="M 914,245 L 986,107 L 1058,245"/></g>
+<ellipse cx="695" cy="219" rx="71" ry="12" fill="url(#light)"/>
+<path d="M 619.4,219 H 770.6" stroke="url(#horizon)" stroke-width="4.8"/>
+</svg>

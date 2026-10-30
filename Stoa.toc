@@ -1,39 +1,81 @@
 ## Interface: 16001
 ## Title: Stoa
-## Notes: A calm, two-state UI suite for WoW Forever: the Grimoire console out of combat, the Halo in combat.
+## Notes: A calm, two-state UI suite for WoW Forever: the Console out of combat, the Halo in combat.
 ## Author: Tyler
 ## Version: 0.9.0
 ## SavedVariables: StoaDB
 ## SavedVariablesPerCharacter: StoaCharDB
-## IconTexture: Interface\Icons\Spell_Holy_PowerWordShield
+## IconTexture: Interface\AddOns\Stoa\Media\Textures\Icon
 ## AddonCompartmentFunc: Stoa_OnCompartmentClick
 ## AddonCompartmentFuncOnEnter: Stoa_OnCompartmentEnter
 ## AddonCompartmentFuncOnLeave: Stoa_OnCompartmentLeave
 ## X-Game: Forever
 
 Core\Init.lua
+Core\Report.lua
+Core\SelfCheck.lua
 Core\Util.lua
 Core\Database.lua
+Core\GameSettings.lua
 Core\Tokens.lua
+Core\Specs.lua
 Core\Roles.lua
 Core\State.lua
 Core\Movers.lua
 Core\Widgets.lua
+Core\Conflicts.lua
+Core\Companions.lua
+Core\Looks.lua
+Core\Figures.lua
+Core\Spells.lua
+Core\Items.lua
+Core\Weights.lua
+Core\Group.lua
+Core\Power.lua
+Core\Rules.lua
+Core\GameAuras.lua
+Core\CooldownManager.lua
+Data\FlightTimes.lua
+Data\TrainerSpells.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
+Modules\QoL\Roster.lua
 Modules\QoL\Merchant.lua
 Modules\QoL\Comforts.lua
+Modules\QoL\Chat.lua
+Modules\QoL\ChatLook.lua
+Modules\QoL\Uprank.lua
+Modules\QoL\QuestReward.lua
+Modules\QoL\Loot.lua
+Modules\QoL\WindowMover.lua
+Modules\QoL\QuestItems.lua
+Modules\QoL\Timers.lua
+Modules\QoL\Trainer.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
 Modules\Grimoire\Minimap.lua
+Modules\Grimoire\Tray.lua
+Modules\Grimoire\Tally.lua
 
 Modules\Halo\Halo.lua
 Modules\Halo\Party.lua
 Modules\Halo\CombatBar.lua
+Modules\Halo\Sign.lua
 Modules\Halo\Shadow.lua
 Modules\Halo\Paladin.lua
+Modules\Halo\Disc.lua
+Modules\Halo\Druid.lua
+Modules\Halo\Mage.lua
+Modules\Halo\Kit.lua
+Modules\Halo\Threat.lua
+Modules\Halo\Buffs.lua
+Modules\Halo\Emergency.lua
+Modules\Halo\Procs.lua
+Modules\Halo\Lethal.lua
+Modules\QoL\Markers.lua
+Modules\QoL\Logging.lua
 
 Modules\Frames\ClickCast.lua
 Modules\Frames\Raid.lua
@@ -42,11 +84,20 @@ Modules\Frames\Preview.lua
 
 Modules\Skins\ActionBars.lua
 Modules\Skins\Windows.lua
+Modules\Skins\MoreWindows.lua
+Modules\Skins\Bags.lua
+Modules\Skins\Tooltip.lua
+Modules\Skins\Map.lua
+Modules\Skins\Character.lua
 Modules\Skins\Meters.lua
 Modules\Skins\Top.lua
 Modules\Skins\Plates.lua
 Modules\Skins\Swing.lua
 
+Config\Options.lua
+Config\Window.lua
 Config\Settings.lua
 Config\Welcome.lua
 Config\Backup.lua
+Config\Setups.lua
+Core\API.lua

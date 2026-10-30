@@ -8,6 +8,7 @@
 -- combat.
 local _, ns = ...
 local Stoa = ns.Stoa
+local hooksecurefunc = Stoa.SafeHook
 local Console = Stoa.modules.Grimoire
 local UI = Stoa.UI
 
@@ -37,6 +38,9 @@ local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
 	local bottom = CHAT_BOTTOM
+	-- Stoa's typing strip sits under the messages, inside the console.
+	local look = Stoa.modules.ChatLook
+	if look and look.db and look.db.enabled ~= false and look.db.input then bottom = bottom + 8 end
 	local top = artOn() and ART_CHAT_GAP or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
 	chat:ClearAllPoints()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), bottom)
@@ -183,7 +187,7 @@ local function buildTabs()
 end
 
 local function safeRefresh()
-	xpcall(refreshTabs, geterrorhandler())
+	xpcall(refreshTabs, Stoa.catch)
 end
 
 local function actionBar()
@@ -238,7 +242,7 @@ local function placeMenu()
 		for _, name in ipairs(BAG_SLOTS) do
 			local slot = _G[name]
 			if slot then
-				xpcall(bars.Skin, geterrorhandler(), bars, slot)
+				xpcall(bars.Skin, Stoa.catch, bars, slot)
 				if slot.IconBorder then slot.IconBorder:SetAlpha(0) end
 			end
 		end
@@ -280,14 +284,14 @@ local function watchMenu()
 		if bags then bags:SetAlpha(alpha) end
 	end
 	update()
-	C_Timer.NewTicker(0.15, update)
+	Stoa:NewTicker(0.15, update)
 end
 
 -- Runs fn now, or after combat if it can't run yet. Each step is guarded so a
 -- renamed Blizzard frame costs one feature, not the console.
 local function safely(fn)
 	Stoa:AfterCombat(function()
-		xpcall(fn, geterrorhandler())
+		xpcall(fn, Stoa.catch)
 	end)
 end
 
@@ -314,7 +318,7 @@ function Console:House()
 		watchMenu()
 		if UpdateContainerFrameAnchors then
 			hooksecurefunc("UpdateContainerFrameAnchors", function()
-				if not InCombatLockdown() then xpcall(liftBags, geterrorhandler()) end
+				if not InCombatLockdown() then xpcall(liftBags, Stoa.catch) end
 			end)
 		end
 	end
