@@ -294,15 +294,18 @@ function Tooltip:Upgrade(tip, link)
 	if not link or Stoa:IsSecret(link) then return end
 	-- Another addon's gear planner answers this already (Core/Companions.lua).
 	if Stoa:SharedBy("gearUpgrade") then return end
-	local gain, slot, none = Stoa.Items.upgrade(link)
+	local gain, slot, none, source = Stoa.Items.upgrade(link)
 	if gain then
 		local role = Stoa.ROLE_LABELS[Stoa:GetRole() or ""] or "you"
+		if source then role = "you, by " .. source end
 		if none then
 			tip:AddLine("Fills your empty " .. slot, Stoa:Color("accent"))
 		elseif gain > 0 then
 			tip:AddLine(("UPGRADE  +%d%% over your %s, for %s"):format(gain, slot, role), Stoa:Color("accent"))
 		elseif gain < 0 then
 			tip:AddLine(("%d%% below your %s, for %s"):format(-gain, slot, role), Stoa:Color("muted"))
+		elseif source then
+			tip:AddLine(("Not an upgrade for %s"):format(role), Stoa:Color("muted"))
 		else
 			tip:AddLine("As good as your " .. slot, Stoa:Color("muted"))
 		end

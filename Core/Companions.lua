@@ -34,7 +34,9 @@ local JOBS = {
 	windows = "moving Blizzard's windows",
 	chatCopy = "the chat's copy button",
 	tooltipTarget = "who a unit targets, in tooltips",
-	gearUpgrade = "upgrade marks on gear",
+	gearUpgrade = "upgrade lines in tooltips",
+	bagUpgrade = "upgrade marks in bags",
+	rewardUpgrade = "marking the best quest reward",
 	invites = "accepting invites from friends and guild",
 	keywordInvites = "invites by keyword",
 	duels = "declining duels",
@@ -45,7 +47,7 @@ local JOBS = {
 }
 local JOB_ORDER = {
 	"fastLoot", "sellJunk", "repair", "lootFeed", "acceptQuests", "turnInQuests", "camera",
-	"windows", "chatCopy", "tooltipTarget", "gearUpgrade", "invites", "keywordInvites", "duels",
+	"windows", "chatCopy", "tooltipTarget", "gearUpgrade", "bagUpgrade", "rewardUpgrade", "invites", "keywordInvites", "duels",
 	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes",
 }
 
@@ -60,7 +62,7 @@ local COMPANIONS = {
 			fastLoot = "quickLoot", sellJunk = "sellJunk", repair = "autoRepair", lootFeed = "lootFeed",
 			acceptQuests = "autoAccept", turnInQuests = "autoTurnIn", camera = "cameraZoom",
 			windows = "moveWindows", chatCopy = "copyChat", tooltipTarget = "unitTarget",
-			gearUpgrade = "gearValue", invites = "inviteOn", keywordInvites = "keywordOn",
+			gearUpgrade = "gearValue", bagUpgrade = "gearValue", rewardUpgrade = "gearValue", invites = "inviteOn", keywordInvites = "keywordOn",
 			duels = "duelOn", squareMinimap = "mmSquare",
 		},
 		get = function(key)
@@ -89,7 +91,26 @@ local COMPANIONS = {
 			local db = _G.LeaPlusDB
 			return type(db) == "table" and db[key] == "On"
 		end,
-	},	{
+	},
+	{
+		folder = "Pawn", name = "Pawn",
+		-- Pawn scores gear by its own scales; while it's loaded Stoa's upgrade
+		-- marks take its answer (Core/Items.lua). Where Pawn's own switches
+		-- (PawnCommon) draw its marks, Stoa leaves that place to it.
+		keys = {
+			gearUpgrade = "ShowUpgradesOnTooltips", bagUpgrade = "ShowBagUpgradeAdvisor",
+			rewardUpgrade = "ShowQuestUpgradeAdvisor",
+		},
+		get = function(key)
+			local db = _G.PawnCommon
+			if type(db) ~= "table" then return false end
+			-- Before Pawn fills its defaults, tooltips and rewards are on and bags off.
+			if db[key] == nil then return key ~= "ShowBagUpgradeAdvisor" end
+			return db[key] and true or false
+		end,
+		note = "Scores your gear; Stoa's upgrade marks show Pawn's answer.",
+	},
+	{
 		folder = "DoesItDie", name = "DoesItDie",
 		-- Shares no jobs: it tracks your DoTs, and Stoa draws its estimate on
 		-- the target plaque through its public API (Modules/Halo/Lethal.lua).
@@ -154,7 +175,8 @@ function Companions:Report()
 			if key and companion.get(key) then jobs[#jobs + 1] = JOBS[job] end
 		end
 		if companion.note then
-			Stoa:Print(("%s is here too and works with Stoa. %s"):format(companion.name, companion.note))
+			local also = #jobs > 0 and (" It also looks after %s itself, so Stoa leaves those to it."):format(table.concat(jobs, ", ")) or ""
+			Stoa:Print(("%s is here too and works with Stoa. %s%s"):format(companion.name, companion.note, also))
 		elseif #jobs == 0 then
 			Stoa:Print(("%s is here too and works beside Stoa; none of its helpers repeat Stoa's right now."):format(companion.name))
 		else

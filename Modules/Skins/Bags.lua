@@ -127,7 +127,7 @@ function Item.markSlot(button, quality, level)
 end
 
 -- A small UP in the slot's foot for gear that beats what you wear, scored
--- for your role (Stoa.Items.upgrade).
+-- for your role (Stoa.Items.upgrade, or Pawn's scales when Pawn is loaded).
 function Item.markUpgrade(button, parts, on)
 	if not parts then return end
 	if on and not parts.up then
@@ -259,7 +259,7 @@ local function decorateButton(button)
 	end
 	local parts = Item.markSlot(button, info.quality, button.stoaLevel)
 	-- Another addon's gear planner marks upgrades in bags already (Core/Companions.lua).
-	Item.markUpgrade(button, parts, button.stoaUpgrade and not Stoa:SharedBy("gearUpgrade"))
+	Item.markUpgrade(button, parts, button.stoaUpgrade and not Stoa:SharedBy("bagUpgrade"))
 end
 
 -- Gold, silver and copper as letters, so nothing rests on coin colour.
