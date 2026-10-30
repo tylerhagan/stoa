@@ -147,6 +147,17 @@ function Disc:CoinState(coin)
 		coin.cooldown:Clear()
 		return "active"
 	end
+	local manager = Stoa.Manager
+	if manager and manager:Active(SPELLS[key]) then
+		coin.cooldown:Clear()
+		return "active"
+	end
+	local managed = manager and manager:Ready(SPELLS[key])
+	if managed ~= nil then
+		if managed then coin.cooldown:Clear() return "ready" end
+		manager:Draw(coin.cooldown, SPELLS[key])
+		return "cooling"
+	end
 	local ends, length, readable = readyAt(key)
 	if not readable then
 		local cast = self.casts and self.casts[key]
@@ -248,6 +259,7 @@ function Disc:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", refresh)
 	Stoa:On("STOA_STATE_CHANGED", refresh)
 	Stoa:On("SPELLS_CHANGED", refresh)
+	Stoa:On("STOA_COOLDOWNS", refresh)
 	-- Timers tick without events, on the combat clock; the group's auras are
 	-- counted here too.
 	local ticking = true

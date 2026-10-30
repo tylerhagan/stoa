@@ -220,6 +220,63 @@ do
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Game settings: " .. e end
 end
+-- Cooldown Manager: rows found, ready and active read, hidden values left to Stoa.
+do
+	local ok, e = xpcall(function()
+		local function item(id, kind, fields)
+			local f = CreateFrame("Frame")
+			f.cooldownID = id
+			function f:GetCooldownID() return self.cooldownID end
+			function f:RefreshSpellCooldownInfo() end
+			function f:SetIsActive(v) self.isActive = v end
+			function f:GetCooldownFrame() return self.cd end
+			f.cd = CreateFrame("Cooldown")
+			for k, v in pairs(fields) do f[k] = v end
+			return f
+		end
+		local rows = {
+			essential = { item(1, "cooldown", { isOnActualCooldown = true, cooldownStartTime = 100, cooldownDuration = 30 }),
+				item(2, "cooldown", { isOnActualCooldown = false }) },
+			buffs = { item(3, "buff", { isActive = true }) },
+		}
+		local spells = { [1] = 10060, [2] = 14751, [3] = 15473 }
+		C_CooldownViewer = {
+			IsCooldownViewerAvailable = function() return true end,
+			GetCooldownViewerCooldownInfo = function(id) return { cooldownID = id, spellID = spells[id], linkedSpellIDs = {} } end,
+		}
+		EssentialCooldownViewer = CreateFrame("Frame")
+		function EssentialCooldownViewer:GetItemFrames() return rows.essential end
+		BuffIconCooldownViewer = CreateFrame("Frame")
+		function BuffIconCooldownViewer:GetItemFrames() return rows.buffs end
+		local m = Stoa.modules.Manager
+		SIM_CVARS.cooldownViewerEnabled = "0"
+		m.db.enabled = true
+		m:OnEnable()
+		m.enabled = true
+		m:Index()
+		assert(m.count == 3, "three rows, got " .. tostring(m.count))
+		assert(m:Ready(10060) == false, "cooling read")
+		assert(m:Ready(14751) == true, "ready read")
+		assert(m:Active(15473) == true, "buff active")
+		assert(m:Ready(99999) == nil, "untracked spell")
+		assert(Stoa.Sign.ready(14751) == true, "Sign asks the Manager")
+		local cd = CreateFrame("Cooldown")
+		assert(m:Draw(cd, 10060), "draws the swipe")
+		assert(SIM_CVARS.cooldownViewerEnabled == "1", "game setting on")
+		local realSecret = Stoa.IsSecret
+		Stoa.IsSecret = function(_, v) return v == SECRET end
+		rows.essential[1].isOnActualCooldown = SECRET
+		assert(m:Ready(10060) == nil, "hidden value left to Stoa")
+		Stoa.IsSecret = realSecret
+		rows.essential[1].isOnActualCooldown = true
+		SlashCmdList.STOA("cdm")
+		m.enabled = false
+		assert(SIM_CVARS.cooldownViewerEnabled == "1", "still on before restore")
+		Stoa.GameSettings:Restore("cooldownViewerEnabled")
+		assert(SIM_CVARS.cooldownViewerEnabled == "0", "game setting put back")
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Cooldown Manager: " .. e end
+end
 -- At a glance: every situation, hover and click each line, pin and reset.
 local glance = Stoa.modules.Tally
 if glance and glance.rows then

@@ -10,6 +10,7 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Read the game's Cooldown Manager (Settings > Cooldowns, off for now): Halo coins and the next-press outline ask the game's Cooldown Manager whether a spell is ready or a buff is up, which it knows in combat. `/stoa cdm` shows what it tracks and what Stoa can read.
 - Game settings Stoa changes (far camera, map fade, target plate size, combined bags, proc art) are noted with what they held before; switching the part off puts them back, unless you've changed them since. `/stoa restore` puts them all back.
 - Hairlines and borders stay exactly one screen pixel at any UI scale or resolution.
 - `/stoa report` also lists your screen size and UI scale, game language, the game settings Stoa holds and your other addons.

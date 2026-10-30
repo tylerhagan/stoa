@@ -73,6 +73,8 @@ end
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.
 function Sign.ready(spellID)
+	local managed = Stoa.Manager and Stoa.Manager:Ready(spellID)
+	if managed ~= nil then return managed end
 	local ends, _, readable = Sign.readyAt(spellID)
 	if not readable then return nil end
 	return not ends or ends - GetTime() <= 0.3
@@ -234,10 +236,24 @@ function Sign.cooldown(coin, text, spellID, castAt, length, active)
 	UI.coinArt(coin, spellID)
 	coin.cooldown:SetReverse(false)
 	coin:Show()
+	local manager = Stoa.Manager
+	if not active and manager then active = manager:Active(spellID) or active end
 	if active then
 		coin.cooldown:Clear()
 		paintCooldown(coin, "active")
 		return "active"
+	end
+	-- The game's Cooldown Manager, when Stoa reads it, knows in combat.
+	local managed = manager and manager:Ready(spellID)
+	if managed ~= nil then
+		if managed then
+			coin.cooldown:Clear()
+			paintCooldown(coin, "ready")
+			return "ready"
+		end
+		manager:Draw(coin.cooldown, spellID)
+		paintCooldown(coin, "cooling")
+		return "cooling"
 	end
 	local ends, duration, readable = Sign.readyAt(spellID)
 	if not readable then
@@ -404,7 +420,7 @@ function Sign.wire(module, extra)
 	end)
 	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, refresh)
 	for _, event in ipairs({ "SPELL_UPDATE_COOLDOWN", "UPDATE_SHAPESHIFT_FORM", "UNIT_THREAT_LIST_UPDATE",
-		"GROUP_ROSTER_UPDATE", "STOA_ROLE_CHANGED", "STOA_STATE_CHANGED", "SPELLS_CHANGED" }) do
+		"GROUP_ROSTER_UPDATE", "STOA_ROLE_CHANGED", "STOA_STATE_CHANGED", "SPELLS_CHANGED", "STOA_COOLDOWNS" }) do
 		Stoa:On(event, refresh)
 	end
 	for _, event in ipairs(extra or {}) do Stoa:On(event, refresh) end

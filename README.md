@@ -76,6 +76,7 @@ What works today:
 | Merchants | Sells grey junk and anything you've marked as junk, and repairs, from guild funds when allowed |
 | Welcome | Once per character, a short wizard in one window, with a step rail to go back: start by hand, from another character's saved setup or as Stoa ships; what each spec plays; theme (house and every class), ornament and colour vision; what a fight does (fold the console with the Halo, keep it open with the Halo, or no Halo, with the calm seconds and group wait under folding); how much (Full, Quiet, Classic feel); the other addons Stoa found (only when there are some: who does each job and Stoa's look for Bagnon, Details, Questie); then a summary with ways to try it. Choices that need a reload wait for Finish, which reloads once. Other addons questions wait for it on a first login |
 | Launch check | On the first login with a new game build, checks every spell ID, game function, Blizzard frame and event Stoa relies on, and says in one line if a feature is off because something moved. `/stoa check` (and `/stoa report`) list the details |
+| Cooldown Manager | Off for now (Settings > Cooldowns). Halo coins ask the game's Cooldown Manager whether a spell is ready or a buff is up, which it knows in combat; its rows keep running out of sight. Spells it doesn't track keep Stoa's own reading. `/stoa cdm` |
 | Error guard | Stoa records its own errors once each with a count. If one part keeps erroring (a loop), it is switched off until the next reload and Stoa says so in chat, so an error can't lock up the screen. `/stoa report` shows your setup and the errors, ready to copy |
 | Other addons | Spots a known bag, nameplate, chat, tooltip, bar, minimap, group frame, click-casting or damage meter addon (Details, Skada, Recount) and asks once which should do that job; Stoa's part waits meanwhile. A whole UI such as ElvUI or SpartanUI doesn't work beside Stoa, and Stoa asks you to turn one off |
 | Leatrix Plus | Works beside Leatrix Plus the same way: where both do a job (faster looting, junk, repairs, quests, gossip, camera, invites, duels, releasing in battlegrounds, accepting resurrections, a square minimap), Leatrix Plus's switch wins while it is on |
@@ -128,6 +129,7 @@ Fonts are the main gap: see below.
 | `/stoa welcome` | Open the welcome wizard again |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build |
 | `/stoa report` | Your version, game build, spec, theme and screen and UI scale, language, game settings Stoa holds, other addons and any errors Stoa caught, ready to copy |
+| `/stoa cdm` | What the game's Cooldown Manager tracks and which of its values Stoa can read (try it in a fight) |
 | `/stoa restore` | Put back every game setting Stoa changed (camera distance, map fade, target plate size, combined bags, proc art), unless you've changed it since |
 | `/stoa addons` | List other addons doing one of Stoa's jobs and ask again which to keep |
 | `/stoa backup` | Copy your settings as text, or paste a backup to restore it |
