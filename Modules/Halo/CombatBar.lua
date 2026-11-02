@@ -311,6 +311,10 @@ function Bar:SetNext(spellName)
 			local kind, id = GetActionInfo(button.slot)
 			if kind == "spell" and not Stoa:IsSecret(id) and id then
 				match = C_Spell.GetSpellName(id) == spellName
+			elseif kind == "macro" then
+				-- A cast sequence lights when its current step is the press.
+				local sequence = Stoa.Spells.sequenceAt(button.slot)
+				match = sequence ~= nil and Stoa.Spells.sequenceStep(sequence) == spellName
 			end
 		end
 		button.nextRing:SetShown(match)

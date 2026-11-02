@@ -18,7 +18,9 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Shadow = Stoa:NewModule("Shadow", {})
+local Shadow = Stoa:NewModule("Shadow", {
+	followSequence = true,
+})
 
 local COIN = 26
 local RADIUS = 168
@@ -302,11 +304,18 @@ function Shadow:ForgetHiddenTarget()
 	if self.casts then self.casts.target = nil end
 end
 
--- The guide's single-target order: DoTs when they're off, Mind Blast and
+-- A cast sequence macro's next step when one is on your bars, else the
+-- guide's single-target order: DoTs when they're off, Mind Blast and
 -- Shadow Word: Death when ready, Embrace when it's off, Mind Flay to fill.
 function Shadow:NextPress()
 	if not self:Active() or not hostileTarget() then return nil end
 	local state = self.state or {}
+	-- A cast sequence macro on your bars is timed to keep the DoTs up, so
+	-- its next step is the press and the outline lands on the macro.
+	if self.db.followSequence then
+		local step = Stoa.Spells.sequenceStep(Stoa.Spells.anySequence())
+		if step then return step end
+	end
 	local function wants(key)
 		return knows(SPELLS[key]) and state[key] == "off"
 	end

@@ -282,6 +282,8 @@ local function build()
 	group = "Will my DoTs kill it"
 	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in bone, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", words = "dot damage execute", change = refresh("Lethal", "Update") })
 	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", change = refresh("Lethal", "Update") })
+	group = "Shadow priest"
+	toggle(of("Shadow"), "followSequence", "Follow a cast sequence macro", "With a /castsequence macro on your bars, the next-press outline follows it: the macro lights up, and so does the spell button its next step will cast. Off goes back to Stoa's own order (DoTs, Mind Blast, Death, Mind Flay).", true, { id = "shadowSequence", words = "castsequence macro rotation priority", change = refresh("Shadow", "UpdateNext") })
 	group = "Your pet"
 	local pet = of("Pet")
 	local petRefresh = function() if Stoa.Pet and Stoa.Pet.enabled then Stoa.Pet:UpdateAll() end end

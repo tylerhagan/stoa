@@ -329,6 +329,28 @@ if Stoa.Pet and Stoa.Pet.enabled then
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Pet: " .. e end
 end
+-- Cast sequences: a /castsequence macro on a bar is found, and its
+-- current step is read back by the spell's proper name.
+do
+	local ok, e = xpcall(function()
+		local real = { GetActionInfo, GetMacroInfo, SecureCmdOptionParse, QueryCastSequence, C_Spell.GetSpellIDForSpellIdentifier, C_Spell.GetSpellName }
+		local asked
+		GetActionInfo = function(slot) if slot == 5 then return "macro", 1 end end
+		GetMacroInfo = function() return "Shadow", 136207, "#showtooltip\r\n/castsequence reset=target Mind Blast, Shadow Word: Pain, Mind Flay" end
+		SecureCmdOptionParse = function(msg) return msg end
+		QueryCastSequence = function(seq) asked = seq return 2, nil, "shadow word: pain" end
+		C_Spell.GetSpellIDForSpellIdentifier = function(name) return name == "shadow word: pain" and 589 or nil end
+		C_Spell.GetSpellName = function(id) return id == 589 and "Shadow Word: Pain" or (real[6] and real[6](id)) end
+		Stoa.Spells.ScanSequences()
+		local seq = Stoa.Spells.anySequence()
+		assert(seq == "reset=target Mind Blast, Shadow Word: Pain, Mind Flay", "sequence: " .. tostring(seq))
+		local step = Stoa.Spells.sequenceStep(seq)
+		assert(asked == seq and step == "Shadow Word: Pain", "step: " .. tostring(step))
+		GetActionInfo, GetMacroInfo, SecureCmdOptionParse, QueryCastSequence, C_Spell.GetSpellIDForSpellIdentifier, C_Spell.GetSpellName = unpack(real)
+		Stoa.Spells.ScanSequences()
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Sequence: " .. e end
+end
 -- Restock: tops a bundled item up to the count, in whole bundles.
 if Stoa.Restock then
 	local ok, e = xpcall(function()
