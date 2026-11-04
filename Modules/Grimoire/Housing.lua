@@ -34,9 +34,12 @@ local function tabRise()
 	return (TAB_ART.foot - TAB_ART.top) * Console.ART_SCALE
 end
 
+local placing = false
+
 local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
+	placing = true
 	local bottom = CHAT_BOTTOM
 	-- Stoa's typing strip sits under the messages, inside the console.
 	local look = Stoa.modules.ChatLook
@@ -47,6 +50,52 @@ local function placeChat()
 	chat:SetSize(CHAT_WIDTH, Console:OpenHeight() - bottom - top)
 	-- The ink panel is the background, so the chat window's own goes.
 	if FCF_SetWindowAlpha then FCF_SetWindowAlpha(chat, 0) end
+	placing = false
+end
+
+-- Edit Mode and Blizzard's chat code put the chat back at its saved spot and
+-- size from time to time (a layout applied after combat, the dock updating),
+-- which left it hanging above the console. Any move Stoa didn't make is
+-- undone on the next frame. The chat window isn't protected, so this also
+-- works in combat; if a client ever protects it, the move waits.
+local queued = false
+
+local function replaceChat()
+	queued = false
+	local chat = ChatFrame1
+	if not chat then return end
+	if InCombatLockdown() and chat.IsProtected and chat:IsProtected() then
+		Stoa:AfterCombat(function() xpcall(placeChat, Stoa.catch) end)
+		return
+	end
+	xpcall(placeChat, Stoa.catch)
+end
+
+-- At most a few re-placings a second, in case Blizzard answers each one with
+-- another move.
+local windowStart, windowCount = 0, 0
+
+local function chatMoved()
+	if placing or queued then return end
+	local now = GetTime()
+	if now - windowStart > 1 then windowStart, windowCount = now, 0 end
+	windowCount = windowCount + 1
+	if windowCount > 5 then return end
+	queued = true
+	C_Timer.After(0, replaceChat)
+end
+
+local function guardChat()
+	local chat = ChatFrame1
+	if not chat or chat.stoaGuarded then return end
+	chat.stoaGuarded = true
+	for _, method in ipairs({ "SetPoint", "SetSize", "SetHeight", "SetWidth", "ApplySystemAnchor" }) do
+		if type(chat[method]) == "function" then hooksecurefunc(chat, method, chatMoved) end
+	end
+	for _, name in ipairs({ "FCF_RestorePositionAndDimensions", "FCF_DockUpdate" }) do
+		if _G[name] then hooksecurefunc(name, chatMoved) end
+	end
+	Stoa:On("PLAYER_REGEN_ENABLED", chatMoved)
 end
 
 -- With the art the tab row stands on the console's top edge.
@@ -312,6 +361,7 @@ function Console:House()
 	local function apply()
 		if db.houseChat then
 			safely(placeChat)
+			safely(guardChat)
 			if artOn() then safely(buildTabs) end
 		end
 		if db.hideBarArt then safely(hideBarArt) end
