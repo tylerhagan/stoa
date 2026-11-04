@@ -29,6 +29,7 @@ Core\Looks.lua
 Core\Figures.lua
 Core\Spells.lua
 Core\Items.lua
+Core\Alts.lua
 Core\Weights.lua
 Core\Group.lua
 Core\Power.lua
@@ -42,6 +43,11 @@ Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
 Modules\QoL\Roster.lua
 Modules\QoL\Merchant.lua
+Modules\QoL\Restock.lua
+Modules\QoL\Mail.lua
+Modules\QoL\Bind.lua
+Modules\QoL\Away.lua
+Modules\QoL\GearSets.lua
 Modules\QoL\Comforts.lua
 Modules\QoL\Chat.lua
 Modules\QoL\ChatLook.lua
@@ -74,6 +80,7 @@ Modules\Halo\Buffs.lua
 Modules\Halo\Emergency.lua
 Modules\Halo\Procs.lua
 Modules\Halo\Lethal.lua
+Modules\Halo\Pet.lua
 Modules\QoL\Markers.lua
 Modules\QoL\Logging.lua
 

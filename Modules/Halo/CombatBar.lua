@@ -215,7 +215,9 @@ end
 
 -- Where the group frames sit under the Halo while the combat rows show.
 function Bar:GroupOffset()
-	return self.groupOffset or -136
+	-- The pet row (Pet.lua) sits right under the bar; the group goes below it.
+	local pet = Stoa.Pet and Stoa.Pet.RowRoom and Stoa.Pet:RowRoom() or 0
+	return (self.groupOffset or -136) - pet
 end
 
 -- Out of combat only: lays out the buttons the current page fills, centred
@@ -309,6 +311,10 @@ function Bar:SetNext(spellName)
 			local kind, id = GetActionInfo(button.slot)
 			if kind == "spell" and not Stoa:IsSecret(id) and id then
 				match = C_Spell.GetSpellName(id) == spellName
+			elseif kind == "macro" then
+				-- A cast sequence lights when its current step is the press.
+				local sequence = Stoa.Spells.sequenceAt(button.slot)
+				match = sequence ~= nil and Stoa.Spells.sequenceStep(sequence) == spellName
 			end
 		end
 		button.nextRing:SetShown(match)

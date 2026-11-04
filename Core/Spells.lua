@@ -117,6 +117,56 @@ function Spells.cost(spellID, powerType)
 	end
 end
 
+-- Cast sequence macros on your bars. A /castsequence line can't skip ahead
+-- or go back, but the game keeps its place in the list, so the next-press
+-- outline can light the macro when its current step is the one to press.
+-- seqs[actionSlot] = the sequence text, exactly as the macro hands it over.
+local seqs = {}
+
+local function sequenceOf(body)
+	if type(body) ~= "string" then return nil end
+	for line in body:gmatch("[^\r\n]+") do
+		local rest = line:match("^%s*/castsequence%s+(.+)$")
+		if rest and SecureCmdOptionParse then
+			local ok, sequence = pcall(SecureCmdOptionParse, rest)
+			if ok and type(sequence) == "string" and sequence ~= "" then return sequence end
+		end
+	end
+end
+
+function Spells.ScanSequences()
+	wipe(seqs)
+	if not (GetActionInfo and GetMacroInfo) then return end
+	for slot = 1, 180 do
+		local kind, id = call(GetActionInfo, slot)
+		if kind == "macro" and id and not Stoa:IsSecret(id) then
+			local _, _, body = call(GetMacroInfo, id)
+			seqs[slot] = sequenceOf(body)
+		end
+	end
+end
+
+-- The spell a sequence will cast next, by its name in the game's
+-- language, or nil when it can't tell (an item step, say).
+function Spells.sequenceStep(sequence)
+	if not (sequence and QueryCastSequence) then return nil end
+	local ok, _, item, spell = pcall(QueryCastSequence, sequence)
+	if not ok or item or type(spell) ~= "string" or spell == "" then return nil end
+	spell = spell:gsub("^!+", "")
+	local id = C_Spell and C_Spell.GetSpellIDForSpellIdentifier and call(C_Spell.GetSpellIDForSpellIdentifier, spell)
+	return id and Spells.name(id) or nil
+end
+
+-- The sequence on an action slot, or the first one on your bars.
+function Spells.sequenceAt(slot) return seqs[slot] end
+function Spells.anySequence()
+	local first
+	for slot, sequence in pairs(seqs) do
+		if not first or slot < first then first = slot end
+	end
+	return first and seqs[first]
+end
+
 -- The spellbook changes on learning, a new rank and spec change. A short
 -- wait folds a trainer's burst of LEARNED_SPELL events into one read.
 local pending
@@ -133,3 +183,8 @@ Stoa:On("PLAYER_LOGIN", function() xpcall(Spells.Scan, Stoa.catch) end)
 Stoa:On("SPELLS_CHANGED", later)
 Stoa:On("LEARNED_SPELL_IN_TAB", later)
 Stoa:On("LEARNED_SPELL_IN_SKILL_LINE", later)
+
+local function sequencesLater() C_Timer.After(0, function() xpcall(Spells.ScanSequences, Stoa.catch) end) end
+Stoa:On("PLAYER_LOGIN", sequencesLater)
+Stoa:On("ACTIONBAR_SLOT_CHANGED", sequencesLater)
+Stoa:On("UPDATE_MACROS", sequencesLater)

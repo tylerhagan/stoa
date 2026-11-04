@@ -638,6 +638,14 @@ end
 
 function Halo:UpdateReminders()
 	local missing, active = self:Reminders()
+	-- Pet words (Pet.lua) join the missing buffs: CALL PET, FEED, PET LOW.
+	if Stoa.Pet and Stoa.Pet.Words then
+		local words = {}
+		for _, word in ipairs(missing) do words[#words + 1] = word end
+		local ok, pet = pcall(Stoa.Pet.Words, Stoa.Pet)
+		for _, word in ipairs(ok and pet or {}) do words[#words + 1] = word end
+		missing = words
+	end
 	local line = self.reminders
 	local parts = {}
 	local r, g, b = Stoa:Color("danger")
