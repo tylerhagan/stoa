@@ -52,7 +52,7 @@ local function forbidden(frame)
 end
 
 -- The edge only: stone border, portrait and title strip out, a Stoa panel in.
-local function dressBorder(frame)
+local function dressBorder(frame, bare)
 	if frame.stoaBorderDressed then return end
 	frame.stoaBorderDressed = true
 	hideOwnArt(frame)
@@ -68,6 +68,7 @@ local function dressBorder(frame)
 		header = frame.Inset or (windows and windows.HEADER_FALLBACK) or 30,
 		footer = frame.Inset,
 		family = windows and windows.FAMILY and windows.FAMILY[name or ""],
+		bare = bare,
 	})
 	local title = frame.TitleContainer and frame.TitleContainer.TitleText or frame.TitleText
 	if title and title.SetTextColor then
@@ -85,9 +86,10 @@ local function dressTarget(target, frame)
 	if target.mode == "border" then
 		dressBorder(frame)
 	elseif target.mode == "map" then
-		-- The border frame holds the stone edge and title; the canvas is its
-		-- sibling and stays as it is.
-		if frame.BorderFrame then dressFull(frame.BorderFrame) end
+		-- The border frame holds the stone edge and title, and it is drawn
+		-- above the canvas, so it gets the edge and header only: a fill or
+		-- the stone there would cover the map.
+		if frame.BorderFrame then dressBorder(frame.BorderFrame, true) end
 	else
 		dressFull(frame)
 	end

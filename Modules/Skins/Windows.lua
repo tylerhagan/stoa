@@ -369,6 +369,11 @@ local function dressGossip()
 		end)
 	end
 	if frame.Update then hooksecurefunc(frame, "Update", recolour) end
+	-- The gossip frame is a theme container: it colours each line for the
+	-- parchment as it registers it, after the rows are laid out.
+	if frame.RegisterFontString then
+		hooksecurefunc(frame, "RegisterFontString", function(_, fs) light(fs) end)
+	end
 	if box and box.RegisterCallback and ScrollBoxListMixin and ScrollBoxListMixin.Event then
 		box:RegisterCallback(ScrollBoxListMixin.Event.OnDataRangeChanged, recolour, Windows)
 	end

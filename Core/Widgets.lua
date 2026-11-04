@@ -501,9 +501,9 @@ end
 local STONE = UI.MEDIA .. "Textures\\WindowStone"
 local STONE_SIZE = 1024
 local STONE_INSET = 2
-UI.STONE_STRENGTH = 0.6
+UI.STONE_STRENGTH = 0.16
 -- The stone's strength at the top of a body, as a share of the bottom's.
-local STONE_TOP = 0.65
+local STONE_TOP = 0.3
 local stones = {}
 
 local function fitStone(tex)
@@ -558,7 +558,9 @@ local FOOTER_SHADE = 0.32
 -- UI.WINDOW_FAMILIES key). Either band can be left out.
 function UI.windowPanel(frame, alpha, opts)
 	opts = opts or {}
-	local bg = UI.roundPanel(frame, alpha, "window")
+	-- `bare`: a frame drawn over live content (the world map's border sits
+	-- above the map) gets the edge and header band only, no fill or stone.
+	local bg = UI.roundPanel(frame, opts.bare and 0 or alpha, "window")
 	local header, footer
 	if opts.header then
 		header = sliced(frame, "BACKGROUND", "WindowTop.tga")
@@ -578,7 +580,7 @@ function UI.windowPanel(frame, alpha, opts)
 			UI.shadowLine(frame, header)
 		end
 	end
-	if opts.footer then
+	if opts.footer and not opts.bare then
 		footer = sliced(frame, "BACKGROUND", "WindowBottom.tga")
 		if footer then
 			footer:ClearAllPoints()
@@ -600,7 +602,7 @@ function UI.windowPanel(frame, alpha, opts)
 			frame.stoaFooter = footer
 		end
 	end
-	UI.stone(frame, header, footer)
+	if not opts.bare then UI.stone(frame, header, footer) end
 	UI.applyTheme()
 	return bg
 end

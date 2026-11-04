@@ -4,7 +4,7 @@
 --     Devouring Plague and Vampiric Embrace on your target, each draining
 --     as its timer runs and calling out in the warning colour when it's off;
 --   * an outline on the combat bar's next press (DoTs first, then Mind
---     Blast and Shadow Word: Death when ready, then Mind Flay);
+--     Blast when ready, then Mind Flay);
 --   * SHADOWFORM over the ring when you've dropped out of form;
 --   * a PAIN count when more than one enemy is in the fight (the plates
 --     show Blizzard's own Pain icon);
@@ -37,7 +37,6 @@ local SPELLS = {
 	plague = 2944,      -- Devouring Plague
 	embrace = 15286,    -- Vampiric Embrace
 	blast = 8092,       -- Mind Blast
-	death = 32379,      -- Shadow Word: Death
 	flay = 15407,       -- Mind Flay
 	form = 15473,       -- Shadowform
 	weaving = 15258,    -- Shadow Weaving (the debuff)
@@ -306,7 +305,7 @@ end
 
 -- A cast sequence macro's next step when one is on your bars, else the
 -- guide's single-target order: DoTs when they're off, Mind Blast and
--- Shadow Word: Death when ready, Embrace when it's off, Mind Flay to fill.
+-- Mind Blast when ready, Embrace when it's off, Mind Flay to fill.
 function Shadow:NextPress()
 	if not self:Active() or not hostileTarget() then return nil end
 	local state = self.state or {}
@@ -321,7 +320,7 @@ function Shadow:NextPress()
 	end
 	if wants("pain") then return nameOf("pain") end
 	if wants("plague") and ready("plague") ~= false then return nameOf("plague") end
-	for _, key in ipairs({ "blast", "death" }) do
+	for _, key in ipairs({ "blast" }) do
 		if knows(SPELLS[key]) and ready(key) then return nameOf(key) end
 	end
 	-- Cooldowns are hidden in combat, so for the rest the game's own
