@@ -727,6 +727,28 @@ local function hideBlizzard(frames)
 	end
 end
 
+-- The game's totem bar is a child of the player frame, so hiding that
+-- would take a Shaman's totems with it. It moves under the Halo instead,
+-- where the game can still lay it out.
+function Halo:KeepTotems()
+	local totems = TotemFrame
+	if not totems or self.totemsKept then return end
+	local _, classFile = UnitClass("player")
+	if classFile ~= "SHAMAN" then return end
+	self.totemsKept = true
+	totems:SetParent(UIParent)
+	local function place()
+		if InCombatLockdown and InCombatLockdown() then return end
+		local _, relativeTo = totems:GetPoint(1)
+		if relativeTo == self.frame then return end
+		totems:ClearAllPoints()
+		totems:SetPoint("TOP", self.frame, "BOTTOM", 0, -8)
+	end
+	place()
+	Stoa:On("PLAYER_TOTEM_UPDATE", place)
+	Stoa:On("STOA_STATE_CHANGED", place)
+end
+
 -- Lifecycle -----------------------------------------------------------------
 
 function Halo:OnEnable()
@@ -742,6 +764,7 @@ function Halo:OnEnable()
 	if self.db.hidePlayerFrame then
 		Stoa:AfterCombat(function()
 			xpcall(hideBlizzard({ PlayerFrame, PlayerCastingBarFrame }), Stoa.catch)
+			xpcall(function() self:KeepTotems() end, Stoa.catch)
 		end)
 	end
 	if self.db.hideTargetFrame then

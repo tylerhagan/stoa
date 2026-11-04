@@ -74,6 +74,11 @@ Modules\Halo\Paladin.lua
 Modules\Halo\Disc.lua
 Modules\Halo\Druid.lua
 Modules\Halo\Mage.lua
+Modules\Halo\Warrior.lua
+Modules\Halo\Rogue.lua
+Modules\Halo\Hunter.lua
+Modules\Halo\Warlock.lua
+Modules\Halo\Shaman.lua
 Modules\Halo\Kit.lua
 Modules\Halo\Threat.lua
 Modules\Halo\Buffs.lua

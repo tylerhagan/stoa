@@ -10,6 +10,8 @@ To also publish to CurseForge, Wago and WoWInterface once the repository is publ
 
 Everything below is on the launch branch and not yet in a numbered release.
 
+- Every class has a signature now. Warriors: Rend, Sunder Armor and Battle Shout coins (Sunder, Thunder Clap and Demoralizing Shout for tanks), SUNDER n/5 and your stance under them, TAUNT for tanks. Rogues: Slice and Dice, Rupture and your big cooldown, COMBO n under them (the game drew combo points on frames Stoa hides). Hunters: Hunter's Mark, Serpent Sting and Rapid Fire, NO ASPECT when none is up. Warlocks: Corruption, Curse of Agony and Immolate coins, SHARDS n and TAP. Shamans: Flame Shock, your shield with its charges and Earth Shock (Nature's Swiftness and Mana Tide for healers), TOTEMS n/4, and the game's totem bar now moves under the Halo instead of vanishing with the player frame. Each has a next-press outline of its own before falling back to the game's suggestion.
+- The Training page's icons get their round mask again.
 - Shadow: the next-press outline follows a `/castsequence` macro on your bars. The macro lights when its next step is the press, and so does that spell's own button (Combat > Shadow priest).
 
 - Pets: a pet plaque in a fight, its health as an inner arc on the Halo, a pet row under the combat bar, a pet coin on the medallion (click to feed), pet reminders, and pet cells under party cards for healers. Settings > Combat > Your pet.
