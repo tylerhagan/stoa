@@ -203,12 +203,13 @@ local function hideBarArt()
 	end
 end
 
--- Bags and the game menu leave the action bar row for the console's
--- bottom-right corner: bags, a gap, then the menu, a size down and quiet
--- until the mouse is over them. Bag slots take the action buttons' rounded
--- sockets.
+-- Bags and the game menu leave the action bar row for the console's top
+-- edge on the right, mirroring the chat tabs on the left: bags, a gap,
+-- then the menu, a size down and quiet until the mouse is over them. They
+-- ride the console's top, so they come down with it when it folds. Bag
+-- slots take the action buttons' rounded sockets.
 local MENU_SCALE = 0.8
-local MENU_BOTTOM = 12
+local MENU_LIFT = 4
 local MENU_GAP = 14
 local MENU_REST_ALPHA = 0.55
 local BAG_SLOTS = {
@@ -223,10 +224,13 @@ end
 local function placeMenu()
 	local menu, bags = menuFrames()
 	local inset = Console:PageInset()
+	local edge = Console.frame or UIParent
+	local point = Console.frame and "TOPRIGHT" or "BOTTOMRIGHT"
+	local lift = Console.frame and MENU_LIFT or Console:OpenHeight()
 	if menu then
 		menu:ClearAllPoints()
 		menu:SetScale(MENU_SCALE)
-		menu:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -inset / MENU_SCALE, MENU_BOTTOM / MENU_SCALE)
+		menu:SetPoint("BOTTOMRIGHT", edge, point, -inset / MENU_SCALE, lift / MENU_SCALE)
 	end
 	if bags then
 		bags:ClearAllPoints()
@@ -234,7 +238,7 @@ local function placeMenu()
 		if menu then
 			bags:SetPoint("BOTTOMRIGHT", menu, "BOTTOMLEFT", -MENU_GAP, 0)
 		else
-			bags:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -inset / MENU_SCALE, MENU_BOTTOM / MENU_SCALE)
+			bags:SetPoint("BOTTOMRIGHT", edge, point, -inset / MENU_SCALE, lift / MENU_SCALE)
 		end
 	end
 	local bars = Stoa.modules.ActionBars
@@ -256,6 +260,13 @@ local BAG_LIFT_GAP = 16
 
 local function liftBags()
 	local floor = Console:OpenHeight() + BAG_LIFT_GAP
+	-- Clear of the bags and menu row on the console's top edge, too.
+	local menu, bagsBar = menuFrames()
+	local row = bagsBar or menu
+	if Console.db.houseMenu and row and row:IsShown() then
+		local height = Stoa:PlainNumber(row:GetHeight())
+		if height then floor = floor + MENU_LIFT + height * MENU_SCALE end
+	end
 	local frames = { ContainerFrameCombinedBags }
 	for i = 1, 13 do frames[#frames + 1] = _G["ContainerFrame" .. i] end
 	for _, bag in ipairs(frames) do
