@@ -469,3 +469,9 @@ for k, v in pairs(_G) do
 		end })
 	end
 end
+
+-- Stances, totems and the game's totem bar, so the Warrior and Shaman
+-- signatures run their captions and the Halo's totem keeping.
+GetShapeshiftFormID = function() return nil end
+GetTotemInfo = function() return false, "", 0, 0 end
+TotemFrame = CreateFrame("Frame", "TotemFrame", UIParent)

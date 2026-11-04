@@ -440,13 +440,14 @@ function Sign.setNext(module, spellName)
 end
 
 -- Every other class ------------------------------------------------------------------
--- Classes without a signature of their own still get the combat bar's
--- outline: the game's own suggestion for the next press, where it gives
--- one. The Halo's slot shows their main cooldown (Halo.lua).
+-- Every class has a signature file now; this stays for any class the
+-- game adds, so it still gets the combat bar's outline: the game's own
+-- suggestion for the next press, where it gives one. The Halo's slot
+-- shows its main cooldown (Halo.lua).
 
 local Assist = Stoa:NewModule("Assist", {})
 
-local SIGNED = { PRIEST = true, PALADIN = true, DRUID = true, MAGE = true }
+local SIGNED = { PRIEST = true, PALADIN = true, DRUID = true, MAGE = true, WARRIOR = true, ROGUE = true, HUNTER = true, WARLOCK = true, SHAMAN = true }
 
 function Assist:Active()
 	local _, classFile = UnitClass("player")
