@@ -82,19 +82,39 @@ end
 local GAP = 4
 local holder
 
+-- The timers are Edit Mode systems kept by the game's bottom layout, which
+-- reparents and lays them out itself. Each is taken out of that layout the
+-- game's own way (BreakFromFrameManager, as Edit Mode does when you drag
+-- one) and anchored with its base SetPoint, which skips Edit Mode's
+-- snapping.
+local function free(frame)
+	if frame.BreakFromFrameManager then
+		pcall(frame.BreakFromFrameManager, frame)
+	else
+		frame.ignoreFramePositionManager = true
+		if frame:GetParent() ~= UIParent then frame:SetParent(UIParent) end
+	end
+end
+
+local function anchor(frame, ...)
+	local clear = frame.ClearAllPointsBase or frame.ClearAllPoints
+	local set = frame.SetPointBase or frame.SetPoint
+	clear(frame)
+	set(frame, ...)
+end
+
 local function place()
 	if not holder or InCombatLockdown() then return end
 	local above = holder
 	for i, entry in ipairs(FRAMES) do
 		local frame = _G[entry.name]
 		if frame then
-			frame.ignoreFramePositionManager = true
 			frame.stoaPlacing = true
-			frame:ClearAllPoints()
+			free(frame)
 			if i == 1 then
-				frame:SetPoint("BOTTOM", holder, "BOTTOM", 0, 0)
+				anchor(frame, "BOTTOM", holder, "BOTTOM", 0, 0)
 			else
-				frame:SetPoint("BOTTOM", above, "TOP", 0, GAP)
+				anchor(frame, "BOTTOM", above, "TOP", 0, GAP)
 			end
 			frame.stoaPlacing = nil
 			above = frame
@@ -102,15 +122,22 @@ local function place()
 	end
 end
 
+local function later()
+	Stoa:AfterCombat(function() guarded(place) end)
+end
+
 local function hold(frame)
 	if not frame or frame.stoaHeld then return end
 	frame.stoaHeld = true
-	-- Edit Mode and the bottom layout put it back on their own; follow
-	-- them with Stoa's spot, once the frame is free to move.
-	hooksecurefunc(frame, "SetPoint", function(self)
-		if self.stoaPlacing then return end
-		Stoa:AfterCombat(function() guarded(place) end)
-	end)
+	-- Edit Mode layouts and the bottom layout put it back on their own;
+	-- follow them with Stoa's spot.
+	for _, method in ipairs({ "ApplySystemAnchor", "SetPoint", "SetPointBase" }) do
+		if type(frame[method]) == "function" then
+			hooksecurefunc(frame, method, function(self)
+				if not self.stoaPlacing then later() end
+			end)
+		end
+	end
 end
 
 function Swing:Hold()
@@ -129,10 +156,10 @@ function Swing:Hold()
 		end
 		default()
 		Stoa:RegisterMover("swing", holder, "Swing timer", { default = default })
-		hooksecurefunc(holder, "SetPoint", function() Stoa:AfterCombat(function() guarded(place) end) end)
+		hooksecurefunc(holder, "SetPoint", later)
 	end
 	for _, entry in ipairs(FRAMES) do guarded(hold, _G[entry.name]) end
-	Stoa:AfterCombat(function() guarded(place) end)
+	later()
 end
 
 function Swing:Dress()
