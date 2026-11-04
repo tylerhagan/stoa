@@ -46,6 +46,8 @@ local RARE_SILVER = { 0.79, 0.8, 0.82 }
 local HEADER_TOP = 14
 local HEADER_BELOW = 8
 local LINE_GAP = 18
+-- What the two add over the game's own spacing (10 above, 2 between).
+local HEADER_ROOM = (HEADER_TOP - 10) + (LINE_GAP - 2)
 local FADE_ALPHA = 0.22
 
 local INSPECT_WAIT = 1.5
@@ -496,6 +498,17 @@ local function edge(tip)
 		UI.roundBorder(tip, "CardEdge.tga", 1, -4),
 	}
 	xpcall(header, Stoa.catch, tip)
+	-- The game sizes the card for its own spacing (the name 10 from the
+	-- top, lines 2 apart); the header's extra room is added at the foot so
+	-- the last line doesn't run over the edge.
+	if tip.SetPadding and tip.GetPadding then
+		Stoa.SafeHook(tip, "Show", function(self)
+			local second = self:GetName() and _G[self:GetName() .. "TextLeft2"]
+			if not (second and second:IsShown()) then return end
+			local right, bottom, left, top = self:GetPadding()
+			if (bottom or 0) < HEADER_ROOM then self:SetPadding(right or 0, HEADER_ROOM, left or 0, top or 0) end
+		end)
+	end
 	tip:HookScript("OnTooltipCleared", clear)
 	tip:HookScript("OnHide", clear)
 end
