@@ -476,7 +476,3 @@ GetShapeshiftFormID = function() return nil end
 GetTotemInfo = function() return false, "", 0, 0 end
 TotemFrame = CreateFrame("Frame", "TotemFrame", UIParent)
 
--- The game's swing timer frames (Edit Mode systems), so Stoa's swing holder
--- places them.
-SwingTimerMainHandFrame = CreateFrame("Frame", "SwingTimerMainHandFrame", UIParent)
-SwingTimerOffHandFrame = CreateFrame("Frame", "SwingTimerOffHandFrame", UIParent)
