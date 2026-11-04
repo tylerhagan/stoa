@@ -23,7 +23,6 @@ local SPELLS = {
 		{ 2944, "Devouring Plague", "Shadow" },
 		{ 15286, "Vampiric Embrace", "Shadow" },
 		{ 8092, "Mind Blast", "Shadow and the Halo signature" },
-		{ 32379, "Shadow Word: Death", "Shadow" },
 		{ 15407, "Mind Flay", "Shadow and the cast bar ticks" },
 		{ 15473, "Shadowform", "Shadow and reminders" },
 		{ 15258, "Shadow Weaving", "Shadow" },

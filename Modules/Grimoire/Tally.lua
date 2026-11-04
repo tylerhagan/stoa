@@ -770,9 +770,9 @@ function Tally:Build(console)
 	local rule = UI.line(page)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
 	rule:SetPoint("RIGHT", page, "RIGHT")
-	-- Where you are, in the accent, at the right end of the heading.
-	local where = UI.text(page, "sans", Stoa.typeSize.caption, "accent", "RIGHT")
-	where:SetPoint("BOTTOMRIGHT", rule, "TOPRIGHT", 0, 6)
+	-- Where you are, quietly, after the heading.
+	local where = UI.text(page, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	where:SetPoint("LEFT", heading, "RIGHT", 8, 0)
 	self.heading, self.rule, self.where = heading, rule, where
 
 	self.rows = {}
@@ -804,7 +804,7 @@ function Tally:Refresh()
 	local shown = (self.columns or 2) * ROWS_PER_COLUMN
 	local keys = self:Chosen()
 	if self.where then
-		self.where:SetText(self.db.follow and (SITUATION_WORDS[self:Situation()] or ""):upper() or "")
+		self.where:SetText(self.db.follow and (SITUATION_WORDS[self:Situation()] or ""):lower() or "")
 	end
 	for i, row in ipairs(self.rows) do
 		local key = i <= shown and keys[i]
