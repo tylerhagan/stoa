@@ -576,8 +576,9 @@ local FOOTER_SHADE = 0.32
 -- The header band along a frame's top. `size` is its height in pixels, or a
 -- region the band ends at (it stops at that region's top). `family` is a
 -- UI.WINDOW_FAMILIES key.
--- `plain`: the band keeps its place (titles and the stone still measure from
--- it) but isn't drawn, so the title sits on the window's own panel.
+-- `plain`: the band is drawn dark like Blizzard's content under it (Tyler's
+-- pick for Blizzard windows), with no shadow line.
+UI.PLAIN_HEADER_DARK = 0.62
 function UI.band(frame, size, family, plain)
 	local header = sliced(frame, "BACKGROUND", "WindowTop.tga")
 	if not header then return nil end
@@ -590,12 +591,15 @@ function UI.band(frame, size, family, plain)
 		header:SetPoint("BOTTOM", size, "TOP")
 	end
 	header:SetDrawLayer("BACKGROUND", -6)
-	local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
-	UI.tint(header, tint.token, tint.alpha)
 	frame.stoaHeader = header
 	if plain then
-		header:SetAlpha(0)
+		-- The same dark as Blizzard's content below, so the window reads as
+		-- one dark sheet with its title on it.
+		header:SetVertexColor(0, 0, 0, UI.PLAIN_HEADER_DARK)
+		frame.stoaPlainHeader = true
 	else
+		local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
+		UI.tint(header, tint.token, tint.alpha)
 		UI.shadowLine(frame, header)
 	end
 	UI.applyTheme()
