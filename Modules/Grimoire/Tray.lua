@@ -9,7 +9,8 @@
 -- found among the minimap's children: named buttons of icon size that
 -- aren't Blizzard's own (mail, tracking, clock, zoom) or map pins.
 -- /stoa tray lists what was gathered; /stoa tray leave <name> hands one
--- back to the minimap.
+-- back to the minimap. Stoa's own button lives in the tray too: click for
+-- settings, right click to move frames.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -187,6 +188,40 @@ function Tray:Dress(button, isLib)
 	button.stoaSize = math.max(button:GetWidth(), button:GetHeight(), 1)
 end
 
+-- Stoa's own button ---------------------------------------------------------------
+-- The Stoa mark in a socket, first in the tray. Click opens settings, right
+-- click unlocks frames to move them.
+function Tray:BuildOwn()
+	local button = CreateFrame("Button", "StoaMinimapButton", self.tray)
+	button:SetSize(SIZE, SIZE)
+	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	local icon = button:CreateTexture(nil, "ARTWORK")
+	icon:SetTexture(UI.MEDIA .. "Textures\\Icon")
+	button.icon = icon
+	button:SetScript("OnClick", function(_, mouse)
+		self.tray:Hide()
+		if mouse == "RightButton" then
+			if Stoa.ToggleMovers then Stoa:ToggleMovers() end
+		else
+			Stoa:OpenSettings()
+		end
+	end)
+	button:SetScript("OnEnter", function()
+		if not GameTooltip then return end
+		GameTooltip:SetOwner(button, "ANCHOR_LEFT")
+		GameTooltip:AddLine("Stoa")
+		GameTooltip:AddLine("Click for settings.", 1, 1, 1)
+		GameTooltip:AddLine("Right click to move frames.", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	button:SetScript("OnLeave", function()
+		if GameTooltip then GameTooltip:Hide() end
+	end)
+	-- First in the tray's name order.
+	self:Take(button, " Stoa", false)
+	self.own = button
+end
+
 -- The tray ------------------------------------------------------------------------
 
 function Tray:Build()
@@ -338,6 +373,7 @@ function Tray:OnEnable()
 	if not Minimap then return end
 	self.taken, self.buttons, self.index = {}, {}, {}
 	self:Build()
+	self:BuildOwn()
 	self:Layout()
 	local lib = libDBIcon()
 	if lib and lib.RegisterCallback then
