@@ -542,6 +542,28 @@ function UI.stone(frame, top, bottom)
 	return tex
 end
 
+-- The rulebook ----------------------------------------------------------------
+-- Every Stoa surface is one of five (see the cohesion stock-take):
+--   panel  windows and pages: fill, one hairline edge, the stone
+--   card   unit plaques, tooltips, party cells: fill and edge, no stone
+--   well   the dark ground behind bars, lists and inputs
+--   band   the lighter header strip, a dark shadow line under it
+--   tray   the darker, recessed footer strip
+-- They share one corner (Tools/art/window_corners.py RADIUS) and one
+-- hairline edge. Spacing comes from Stoa.space, type from Stoa.typeSize,
+-- and state words and their colours from Stoa.states (UI.badge). A surface
+-- drawn any other way needs a reason written beside it. /stoa gallery
+-- shows them all side by side.
+
+UI.SURFACES = {
+	panel = { fill = "panel", alpha = 0.97, edge = true, stone = true },
+	card = { fill = "panel", alpha = 0.97, edge = true },
+	-- Behind bars: dark enough that any fill colour reads against it.
+	well = { black = 0.72, layer = -5 },
+	-- Behind a group inside a window (quest rewards, bag slots).
+	inset = { black = 0.22, layer = -5 },
+}
+
 -- Header tints by what a window is for: warm for trade, cool for people,
 -- the plain light band for the rest.
 UI.WINDOW_FAMILIES = {
@@ -550,6 +572,92 @@ UI.WINDOW_FAMILIES = {
 	plain = { token = "text", alpha = 0.06 },
 }
 local FOOTER_SHADE = 0.32
+
+-- The header band along a frame's top. `size` is its height in pixels, or a
+-- region the band ends at (it stops at that region's top). `family` is a
+-- UI.WINDOW_FAMILIES key.
+function UI.band(frame, size, family)
+	local header = sliced(frame, "BACKGROUND", "WindowTop.tga")
+	if not header then return nil end
+	header:ClearAllPoints()
+	header:SetPoint("TOPLEFT")
+	header:SetPoint("TOPRIGHT")
+	if type(size) == "number" then
+		header:SetHeight(size)
+	else
+		header:SetPoint("BOTTOM", size, "TOP")
+	end
+	header:SetDrawLayer("BACKGROUND", -6)
+	local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
+	UI.tint(header, tint.token, tint.alpha)
+	frame.stoaHeader = header
+	UI.shadowLine(frame, header)
+	UI.applyTheme()
+	return header
+end
+
+-- The footer tray along a frame's bottom, recessed under a dark line.
+-- `size` as for UI.band (a region: the tray starts at its bottom).
+function UI.tray(frame, size)
+	local footer = sliced(frame, "BACKGROUND", "WindowBottom.tga")
+	if not footer then return nil end
+	footer:ClearAllPoints()
+	footer:SetPoint("BOTTOMLEFT")
+	footer:SetPoint("BOTTOMRIGHT")
+	if type(size) == "number" then
+		footer:SetHeight(size)
+	else
+		footer:SetPoint("TOP", size, "BOTTOM")
+	end
+	footer:SetDrawLayer("BACKGROUND", -6)
+	footer:SetVertexColor(0, 0, 0, FOOTER_SHADE)
+	local line = frame:CreateTexture(nil, "BORDER", nil, 2)
+	line:SetTexture(UI.WHITE)
+	line:SetVertexColor(0, 0, 0, 0.6)
+	UI.pixel(line, "height")
+	line:SetPoint("BOTTOMLEFT", footer, "TOPLEFT")
+	line:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT")
+	frame.stoaFooter = footer
+	return footer
+end
+
+-- Dresses a frame as one of UI.SURFACES. `opts.outset` pushes the surface
+-- past the frame's edges (a well round a bar), `opts.alpha` overrides the
+-- fill. Returns the fill texture; the edge (if any) is frame.stoaPanelEdge.
+-- Draws once per frame: calling it again returns the first fill.
+function UI.surface(frame, kind, opts)
+	if not frame or not frame.CreateTexture then return nil end
+	if frame.stoaSurface then return frame.stoaSurface end
+	opts = opts or {}
+	local spec = UI.SURFACES[kind] or UI.SURFACES.card
+	local outset = opts.outset or 0
+	local fill = sliced(frame, "BACKGROUND", "WindowFill.tga", outset)
+	if not fill then
+		fill = frame:CreateTexture(nil, "BACKGROUND")
+		fill:SetTexture(UI.WHITE)
+		fill:SetPoint("TOPLEFT", -outset, outset)
+		fill:SetPoint("BOTTOMRIGHT", outset, -outset)
+	end
+	fill:SetDrawLayer("BACKGROUND", spec.layer or -8)
+	if spec.black then
+		fill:SetVertexColor(0, 0, 0, opts.alpha or spec.black)
+	else
+		UI.tint(fill, spec.fill, opts.alpha or spec.alpha)
+	end
+	if spec.edge then
+		local edge = UI.roundBorder(frame, "WindowEdge.tga", 1, outset)
+		for _, tex in ipairs(edge.edges) do
+			UI.tint(tex, "hairline")
+			tex:Show()
+		end
+		frame.stoaPanelEdge = edge
+	end
+	if spec.stone and not opts.noStone then UI.stone(frame, frame.stoaHeader, frame.stoaFooter) end
+	frame.stoaSurface = fill
+	frame.stoaSurfaceKind = kind
+	UI.applyTheme()
+	return fill
+end
 
 -- A window's panel: the rounded panel, a lighter header band with a soft
 -- shadow under it, a dark footer tray, and the stone in the body between.
@@ -562,61 +670,64 @@ function UI.windowPanel(frame, alpha, opts)
 	-- above the map) gets the edge and header band only, no fill or stone.
 	local bg = UI.roundPanel(frame, opts.bare and 0 or alpha, "window")
 	local header, footer
-	if opts.header then
-		header = sliced(frame, "BACKGROUND", "WindowTop.tga")
-		if header then
-			header:ClearAllPoints()
-			header:SetPoint("TOPLEFT")
-			header:SetPoint("TOPRIGHT")
-			if type(opts.header) == "number" then
-				header:SetHeight(opts.header)
-			else
-				header:SetPoint("BOTTOM", opts.header, "TOP")
-			end
-			header:SetDrawLayer("BACKGROUND", -6)
-			local family = UI.WINDOW_FAMILIES[opts.family or "plain"] or UI.WINDOW_FAMILIES.plain
-			UI.tint(header, family.token, family.alpha)
-			frame.stoaHeader = header
-			UI.shadowLine(frame, header)
-		end
-	end
-	if opts.footer and not opts.bare then
-		footer = sliced(frame, "BACKGROUND", "WindowBottom.tga")
-		if footer then
-			footer:ClearAllPoints()
-			footer:SetPoint("BOTTOMLEFT")
-			footer:SetPoint("BOTTOMRIGHT")
-			if type(opts.footer) == "number" then
-				footer:SetHeight(opts.footer)
-			else
-				footer:SetPoint("TOP", opts.footer, "BOTTOM")
-			end
-			footer:SetDrawLayer("BACKGROUND", -6)
-			footer:SetVertexColor(0, 0, 0, FOOTER_SHADE)
-			local line = frame:CreateTexture(nil, "BORDER", nil, 2)
-			line:SetTexture(UI.WHITE)
-			line:SetVertexColor(0, 0, 0, 0.6)
-			UI.pixel(line, "height")
-			line:SetPoint("BOTTOMLEFT", footer, "TOPLEFT")
-			line:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT")
-			frame.stoaFooter = footer
-		end
-	end
+	if opts.header then header = UI.band(frame, opts.header, opts.family) end
+	if opts.footer and not opts.bare then footer = UI.tray(frame, opts.footer) end
 	if not opts.bare then UI.stone(frame, header, footer) end
 	UI.applyTheme()
 	return bg
 end
 
 -- Darker rounded ground behind a group of things inside a window (quest
--- rewards, bag slots).
+-- rewards, bag slots): the "inset" surface.
 function UI.well(frame, outset)
 	if not frame or not frame.CreateTexture or frame.stoaWell then return end
-	local tex = sliced(frame, "BACKGROUND", "CardFill.tga", outset or 6)
+	local tex = sliced(frame, "BACKGROUND", "WindowFill.tga", outset or 6)
 	if not tex then return end
 	tex:SetDrawLayer("BACKGROUND", -5)
-	tex:SetVertexColor(0, 0, 0, 0.22)
+	tex:SetVertexColor(0, 0, 0, UI.SURFACES.inset.black)
 	frame.stoaWell = tex
 	return tex
+end
+
+-- Badges -------------------------------------------------------------------
+-- One small word on a dark pill, for every short state Stoa writes on top of
+-- something else: RESTING, DEAD, a quest reward's VALUE, an upgrade mark.
+-- The word picks its colour from Stoa.states unless a token is given.
+UI.BADGE = { height = 15, pad = 6, alpha = 0.72 }
+
+function UI.badge(parent, word, token)
+	local badge = CreateFrame("Frame", nil, parent)
+	badge:SetHeight(UI.BADGE.height)
+	local fill = sliced(badge, "BACKGROUND", "PlateFill.tga", 0, 5)
+	if not fill then
+		fill = badge:CreateTexture(nil, "BACKGROUND")
+		fill:SetTexture(UI.WHITE)
+		fill:SetAllPoints()
+	end
+	fill:SetVertexColor(0, 0, 0, UI.BADGE.alpha)
+	badge.fill = fill
+	local text = badge:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(text, "sans", Stoa.typeSize.caption)
+	text:SetPoint("CENTER", 0, 0)
+	badge.text = text
+	function badge:Set(newWord, newToken)
+		self.word, self.token = newWord, newToken
+		if not newWord or newWord == "" then
+			self:Hide()
+			return
+		end
+		text:SetText(newWord:upper())
+		text:SetTextColor(Stoa:Color(newToken or Stoa:StateToken(newWord)))
+		local width = text:GetStringWidth()
+		if Stoa:IsSecret(width) or not width or width <= 0 then width = #newWord * 7 end
+		self:SetWidth(math.floor(width + UI.BADGE.pad * 2 + 0.5))
+		self:Show()
+	end
+	Stoa:On("STOA_THEME_CHANGED", function()
+		if badge.word then badge:Set(badge.word, badge.token) end
+	end)
+	badge:Set(word, token)
+	return badge
 end
 
 function UI.showStone(on)

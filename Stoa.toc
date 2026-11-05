@@ -113,5 +113,6 @@ Config\Window.lua
 Config\Settings.lua
 Config\Welcome.lua
 Config\Backup.lua
+Config\Gallery.lua
 Config\Setups.lua
 Core\API.lua

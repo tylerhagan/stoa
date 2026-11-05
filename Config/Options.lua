@@ -600,6 +600,7 @@ local function build()
 	button("looks", "Stoa's look for other addons", "Questie's tracker, Bagnon's bags, Details' meters and others in Stoa's dress.", "Choose", command("looks"), { cmd = "/stoa looks", words = "questie bagnon details skin" })
 	group = "Help"
 	button("report", "Report a problem", "Your setup and any errors Stoa caught this session, ready to copy and send.", "Open", function() Stoa.Report:Show() end, { cmd = "/stoa report", words = "bug error lua" })
+	button("gallery", "Gallery", "Every surface, size and state word Stoa uses, side by side, to check that the look holds together.", "Open", function() Stoa.Gallery:Show() end, { cmd = "/stoa gallery", words = "design look style rulebook" })
 	button("check", "Launch check", "Checks every spell, game function and frame Stoa relies on, after a game update. Results in chat.", "Run", command("check"), { cmd = "/stoa check", words = "update broken" })
 	button("safe", "Safe mode", "Turns off every skin that reaches into Blizzard's frames and reloads. Turn them back on here afterwards.", "Turn on", function() Stoa.commands.safe() end, { confirm = true, cmd = "/stoa safe", words = "broken errors disable" })
 

@@ -205,6 +205,25 @@ local CLASS_THEMES = {
 Stoa.space = { xs = 4, s = 8, m = 12, l = 16, xl = 24, xxl = 36 }
 Stoa.typeSize = { caption = 11, body = 12, label = 14, title = 20, display = 28, hero = 38 }
 
+-- State words and the one colour each takes, everywhere Stoa writes them
+-- (badges, tooltips, plaques, cells). Colour never carries a state alone:
+-- the word is always there. muted = idle or out of play, text = normal,
+-- accent = matched or ready, danger = threat or urgent, mana = rest and
+-- resource. A word not listed reads in the text colour.
+Stoa.states = {
+	TRIVIAL = "muted", EASY = "text", EVEN = "accent", HARD = "danger", DEADLY = "danger",
+	READY = "accent", VALUE = "text", UPGRADE = "accent", BEST = "accent",
+	RESTING = "mana", OOM = "mana", DRINKING = "mana",
+	DEAD = "muted", GHOST = "muted", OFFLINE = "muted", AFK = "muted",
+	LOW = "danger", HOSTILE = "danger", TAUNT = "danger", KICK = "danger", AGGRO = "danger",
+	ELITE = "accent", RARE = "text", BOSS = "danger",
+}
+
+function Stoa:StateToken(word)
+	if type(word) ~= "string" then return "text" end
+	return self.states[word:upper()] or "text"
+end
+
 -- Fonts. Bundled files go in Media\Fonts. Each kind tries its candidates in
 -- order, so a display face dropped in wins over the older one, and the game's
 -- own fonts always catch the rest. Scale evens out faces that run small.
