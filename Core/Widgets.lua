@@ -191,9 +191,23 @@ function UI.legible(fs)
 	return fs
 end
 
+-- Sets words that won't change again. If the face wasn't loaded when they
+-- were first drawn they come out empty, and the game skips a later SetText
+-- with the same words, so they're cleared and set again until they measure.
+function UI.settleText(fs, words, tries)
+	fs:SetText("")
+	fs:SetText(words)
+	if words == "" or (fs:GetStringWidth() or 0) > 0 then return end
+	tries = (tries or 0) + 1
+	if tries > 10 then return end
+	C_Timer.After(0.5, function()
+		if fs:GetText() == words or fs:GetText() == "" then UI.settleText(fs, words, tries) end
+	end)
+end
+
 function UI.caption(parent, label)
 	local fs = UI.text(parent, "sans", Stoa.typeSize.caption, "muted")
-	fs:SetText(label:upper())
+	UI.settleText(fs, label:upper())
 	return fs
 end
 
