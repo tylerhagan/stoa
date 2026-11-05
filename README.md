@@ -141,6 +141,7 @@ Fonts are the main gap: see below.
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames Stoa relies on against this game build |
 | `/stoa report` | Your version, game build, spec, theme and screen and UI scale, language, game settings Stoa holds, other addons and any errors Stoa caught, ready to copy |
 | `/stoa layout` | A short line with your frame positions (every role) and look, to share; paste one on the backup page to use it |
+| `/stoa editmode` | Switch to Stoa's Edit Mode layout for Blizzard's own frames (added for you on a new character; refreshed when Stoa ships a newer one) |
 | `/stoa log` | Start combat logging now (`/stoa log stop` ends it, `/stoa log test` shows the reminder) |
 | `/stoa cdm` | What the game's Cooldown Manager tracks and which of its values Stoa can read (try it in a fight) |
 | `/stoa restore` | Put back every game setting Stoa changed (camera distance, map fade, target plate size, combined bags, proc art), unless you've changed it since |
