@@ -444,6 +444,13 @@ local function dressTrainer()
 		dropdown:ClearAllPoints()
 		dropdown:SetPoint("RIGHT", close, "LEFT", -8, 0)
 	end
+	-- Your money sits at the left of the footer, level with Train.
+	local money, train = frame.money, frame.TrainButton
+	if money and money.ClearAllPoints then
+		local lift = train and train.GetHeight and (train:GetHeight() / 2) or 11
+		money:ClearAllPoints()
+		money:SetPoint("LEFT", frame, "BOTTOMLEFT", 14, lift)
+	end
 end
 
 local function dressBags()
