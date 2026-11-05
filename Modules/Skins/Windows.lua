@@ -241,31 +241,19 @@ end
 -- The band's height gives the title room above and below: the title sits
 -- in the middle of it on the left, the close cross on the right. Out of
 -- combat only, so moving them never touches a locked frame.
-local TITLE_ROW = 30
+local PLAIN_HEADER = 40
 
 local function seatTitle(frame, title, close)
 	local header = frame.stoaHeader
 	if not header or InCombatLockdown() then return end
-	-- On a dark strip that runs down to the content, the title keeps to the
-	-- top row where Blizzard's own title bar was, clear of the tabs, search
-	-- and buttons Blizzard lays out under it.
-	local plain = frame.stoaPlainHeader
 	if title then
 		title:ClearAllPoints()
-		if plain then
-			title:SetPoint("LEFT", frame, "TOPLEFT", TITLE_INSET, -TITLE_ROW / 2)
-		else
-			title:SetPoint("LEFT", header, "LEFT", TITLE_INSET, 0)
-		end
+		title:SetPoint("LEFT", header, "LEFT", TITLE_INSET, 0)
 		title:SetJustifyH("LEFT")
 	end
 	if close then
 		close:ClearAllPoints()
-		if plain then
-			close:SetPoint("RIGHT", frame, "TOPRIGHT", -8, -TITLE_ROW / 2)
-		else
-			close:SetPoint("RIGHT", header, "RIGHT", -8, 0)
-		end
+		close:SetPoint("RIGHT", header, "RIGHT", -8, 0)
 	end
 end
 
@@ -275,35 +263,6 @@ end
 -- height from where content now starts, Blizzard's border art is hidden
 -- again, the title and close are seated, then any extra steps a skin
 -- registered with Windows:OnSettle. It runs on show and on the next frame.
-
--- How far down the top row of Blizzard's small controls reaches (tabs,
--- search boxes, buttons under the title), measured from the window's top.
--- Only controls whose top is within REACH of the window's top count, and
--- only ones shorter than a control can be, so content panels don't.
-local REACH, CONTROL_MAX, CONTROL_PAD = 90, 48, 8
-
-local function controlsDepth(frame)
-	local top = frame:GetTop()
-	if not top or Stoa:IsSecret(top) then return nil end
-	local deepest
-	local function scan(parent, depth)
-		for _, child in ipairs({ parent:GetChildren() }) do
-			if child:IsShown() and child ~= frame.stoaHeader and not (child.IsForbidden and child:IsForbidden()) then
-				local ctop, cbottom, height = child:GetTop(), child:GetBottom(), child:GetHeight()
-				if ctop and cbottom and height and not Stoa:IsSecret(ctop) and not Stoa:IsSecret(cbottom) and not Stoa:IsSecret(height) then
-					local below = top - ctop
-					if below >= 4 and below <= REACH and height > 0 and height <= CONTROL_MAX then
-						local reach = top - cbottom
-						if not deepest or reach > deepest then deepest = reach end
-					end
-				end
-				if depth < 2 then scan(child, depth + 1) end
-			end
-		end
-	end
-	scan(frame, 1)
-	return deepest and math.floor(deepest + CONTROL_PAD + 0.5)
-end
 
 local function insetGap(frame)
 	local inset = frame.Inset
@@ -317,14 +276,14 @@ local function bandHeight(frame)
 	local gap = insetGap(frame)
 	-- A dark strip holds the title row and every control Blizzard puts
 	-- under it, down to where the content starts.
-	-- Where Blizzard marks the content with an Inset, that is the line;
-	-- otherwise the controls are measured. Bags hold item buttons at the
-	-- top, so they keep the compact row.
+	-- Blizzard's windows: a dark header of one set height that holds the
+	-- title (Tyler, 2026-11-05); their tabs and buttons sit below it.
+	-- Bags keep the compact row (their slots start near the top), and a
+	-- window can ask for more room (the character sheet's two lines).
 	if frame.stoaPlainHeader then
 		local name = frame.GetName and frame:GetName() or ""
-		local depth = (not gap and not name:find("^ContainerFrame")) and controlsDepth(frame) or nil
-		local want = math.max(gap or 0, depth or 0, HEADER_FALLBACK)
-		return math.floor(math.min(want, 140) + 0.5)
+		if name:find("^ContainerFrame") then return HEADER_FALLBACK end
+		return tonumber(frame.stoaBandHeight) or PLAIN_HEADER
 	end
 	if not gap then return nil end
 	-- A window with a two-line header asks for more (frame.stoaBandHeight).

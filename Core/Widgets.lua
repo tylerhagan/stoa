@@ -595,9 +595,7 @@ function UI.band(frame, size, family, plain)
 	if plain then
 		-- The same dark as Blizzard's content below, so the window reads as
 		-- one dark sheet with its title on it.
-		-- The whole sheet is darkened in UI.windowPanel, so the band itself
-		-- isn't drawn; it only keeps its place for the title.
-		header:SetAlpha(0)
+		header:SetVertexColor(0, 0, 0, UI.PLAIN_HEADER_DARK)
 		frame.stoaPlainHeader = true
 	else
 		local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
@@ -685,18 +683,7 @@ function UI.windowPanel(frame, alpha, opts)
 	local header, footer
 	if opts.header then header = UI.band(frame, opts.header, opts.family, opts.plainHeader) end
 	if opts.footer and not opts.bare then footer = UI.tray(frame, opts.footer) end
-	if opts.plainHeader and not opts.bare then
-		-- Blizzard's windows: the whole sheet takes the dark of their content,
-		-- so no lighter strip shows anywhere between their controls (Tyler,
-		-- 2026-11-05). No stone either; Blizzard's art fills these windows.
-		local shade = sliced(frame, "BACKGROUND", "WindowFill.tga")
-		if shade then
-			shade:SetDrawLayer("BACKGROUND", -7)
-			shade:SetVertexColor(0, 0, 0, UI.PLAIN_HEADER_DARK)
-		end
-	elseif not opts.bare then
-		UI.stone(frame, header, footer)
-	end
+	if not opts.bare then UI.stone(frame, header, footer) end
 	UI.applyTheme()
 	return bg
 end

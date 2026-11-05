@@ -180,7 +180,7 @@ local function dressCharacter()
 	end
 	-- Title and level make a two-line header, so this window's band reaches
 	-- down to where the sheet starts; the level is seated as its settle step.
-	frame.stoaBandHeight = "inset"
+	frame.stoaBandHeight = 58
 	local windows = Stoa.modules.Windows
 	if windows and windows.OnSettle then windows:OnSettle(frame, function() guarded(seatLevel) end) end
 	frame:HookScript("OnShow", function()
