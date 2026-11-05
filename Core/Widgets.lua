@@ -756,95 +756,106 @@ function UI.unitCard(card, styleName)
 	UI.applyTheme()
 end
 
--- A plaque: the tank watch and the target, dressed as small pieces of the
--- console so they read as yours rather than as party cards. Warm leather,
--- a gold hairline with a fainter one inside, a soft emboss, and a portrait
--- coin on the side that faces the Halo.
-local PLAQUE_FILL = { 0.11, 0.096, 0.083, 0.95 }
+-- A plaque: the target, tank watch and pet cards. A solid card in the
+-- panel colour, like the windows and tooltips: one fine edge, a soft
+-- shadow under it, the portrait inside on the side that faces the Halo,
+-- and a thin strip along the top in the unit's reaction colour (hostile
+-- targets). Elite edges turn gold and rare silver. Tyler chose this over
+-- the see-through leather plaque with a double edge (2026-11-05).
 local SILVER = { 0.79, 0.8, 0.82 }
-local COIN = 52
-local PLAQUE_INLAY = 4
+local PORTRAIT = 46
+local PORTRAIT_INSET = 10
+-- Room the portrait takes from the side it sits on: callers keep their
+-- words clear of it.
+UI.PLAQUE_COIN_SPACE = PORTRAIT_INSET + PORTRAIT + 10
+local FILL_ALPHA = 0.97
 
 function UI.plaque(frame, coinSide)
 	local plaque = {}
+	-- A soft shadow, so the card sits above the world rather than in it.
+	local shadow = sliced(frame, "BACKGROUND", "CardGlow.tga", 6)
+	if shadow then shadow:SetVertexColor(0, 0, 0, 0.55) end
 	local fill = sliced(frame, "BACKGROUND", "CardFill.tga")
-	if fill then
-		fill:SetVertexColor(unpack(PLAQUE_FILL))
-	else
+	if not fill then
 		fill = frame:CreateTexture(nil, "BACKGROUND")
 		fill:SetAllPoints()
-		fill:SetColorTexture(unpack(PLAQUE_FILL))
+		fill:SetColorTexture(1, 1, 1)
 	end
-	-- Painted: the console's leather inlaid in the card, a few points in
-	-- from the rounded edge, at the console's grain size.
-	if UI.ornate() then
-		local leather = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-		leather:SetTexture(UI.MEDIA .. "Textures\\ConsoleLeather", "REPEAT", "REPEAT")
-		leather:SetPoint("TOPLEFT", PLAQUE_INLAY, -PLAQUE_INLAY)
-		leather:SetPoint("BOTTOMRIGHT", -PLAQUE_INLAY, PLAQUE_INLAY)
-		leather:SetAlpha(0.8)
-		local function tile()
-			local width, height = leather:GetWidth(), leather:GetHeight()
-			if not width or width <= 0 then return end
-			local scale = Stoa.modules.Grimoire and Stoa.modules.Grimoire.ART_SCALE or 0.556
-			leather:SetTexCoord(0, width / scale / 1024, 0, height / scale / 256)
-		end
-		tile()
-		frame:HookScript("OnSizeChanged", tile)
+	UI.tint(fill, "panel", FILL_ALPHA)
+	local function paintFill()
+		local r, g, b = Stoa:Color("panel")
+		fill:SetVertexColor(r, g, b, FILL_ALPHA)
 	end
+	paintFill()
 
-	-- The emboss: light catching the top edge, shadow under the bottom.
-	local light = frame:CreateTexture(nil, "BORDER")
-	light:SetColorTexture(1, 0.94, 0.82, 0.06)
-	UI.pixel(light, "height")
-	light:SetPoint("TOPLEFT", 10, -1)
-	light:SetPoint("TOPRIGHT", -10, -1)
-	local shade = frame:CreateTexture(nil, "BORDER")
-	shade:SetColorTexture(0, 0, 0, 0.5)
-	UI.pixel(shade, "height")
-	shade:SetPoint("BOTTOMLEFT", 10, 1)
-	shade:SetPoint("BOTTOMRIGHT", -10, 1)
+	-- One fine edge.
+	local edge = sliced(frame, "BORDER", "CardEdge.tga")
+	plaque.lines = { edge }
 
-	local outer = sliced(frame, "BORDER", "CardEdge.tga")
-	local inner = sliced(frame, "BORDER", "CardEdge.tga", -5)
-	plaque.lines = { outer, inner }
+	-- The reaction strip along the top, inside the rounded corners.
+	local strip = frame:CreateTexture(nil, "ARTWORK")
+	strip:SetColorTexture(1, 1, 1)
+	strip:SetHeight(2)
+	strip:SetPoint("TOPLEFT", 8, -1)
+	strip:SetPoint("TOPRIGHT", -8, -1)
+	strip:Hide()
+	plaque.strip = strip
 
-	-- The coin straddles the edge that faces the Halo.
+	-- The portrait, inside the card, in a rounded square like the buttons.
 	local coin = CreateFrame("Frame", nil, frame)
-	coin:SetSize(COIN, COIN)
-	coin:SetPoint("CENTER", frame, coinSide, coinSide == "LEFT" and 1 or -1, 0)
-	coin:SetFrameLevel(frame:GetFrameLevel() + 3)
-	local gap = UI.circle(coin, "BACKGROUND", 0, COIN)
-	gap:SetPoint("CENTER")
-	gap:SetColorTexture(unpack(PLAQUE_FILL))
-	local ring = UI.circle(coin, "BORDER", 0, COIN - 6)
-	ring:SetPoint("CENTER")
-	ring:SetColorTexture(1, 1, 1)
-	local portrait = UI.circle(coin, "ARTWORK", 0, COIN - 10)
-	portrait:SetPoint("CENTER")
-	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
-	-- Painted: the brass ring stands in for the plain one and carries the rank.
-	local brass
-	if UI.ornate() then
-		ring:Hide()
-		local _
-		_, brass = UI.coinFrame(coin, COIN - 10)
+	coin:SetSize(PORTRAIT, PORTRAIT)
+	if coinSide == "LEFT" then
+		coin:SetPoint("LEFT", frame, "LEFT", PORTRAIT_INSET, 0)
+	else
+		coin:SetPoint("RIGHT", frame, "RIGHT", -PORTRAIT_INSET, 0)
 	end
+	coin:SetFrameLevel(frame:GetFrameLevel() + 3)
+	local function rounded(layer, size)
+		local tex = coin:CreateTexture(nil, layer)
+		tex:SetSize(size, size)
+		tex:SetPoint("CENTER")
+		local mask = coin:CreateMaskTexture()
+		mask:SetTexture(UI.MEDIA .. "Textures\\ButtonMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		mask:SetAllPoints(tex)
+		tex:AddMaskTexture(mask)
+		return tex
+	end
+	local ring = rounded("BORDER", PORTRAIT)
+	ring:SetColorTexture(1, 1, 1)
+	local well = rounded("BORDER", PORTRAIT - 2)
+	well:SetColorTexture(0, 0, 0, 1)
+	local portrait = rounded("ARTWORK", PORTRAIT - 2)
+	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
 
-	-- Gold for everyone; elite doubles the gold, rare turns it silver.
+	-- A quiet edge for everyone; elite gold, rare silver.
 	function plaque:SetRank(rank)
 		plaque.rank = rank
-		local r, g, b = Stoa:Color("accent")
-		if rank == "rare" then r, g, b = unpack(SILVER) end
-		local strong = rank == "elite" or rank == "rare"
-		if outer then outer:SetVertexColor(r, g, b, strong and 1 or 0.55) end
-		if inner then inner:SetVertexColor(r, g, b, strong and 0.7 or 0.16) end
-		ring:SetVertexColor(r, g, b, 1)
-		if brass then brass:SetVertexColor(r, g, b, 1) end
+		local r, g, b, a = Stoa:Color("text")
+		a = 0.16
+		if rank == "elite" then r, g, b = Stoa:Color("accent"); a = 0.9 end
+		if rank == "rare" then r, g, b = unpack(SILVER); a = 0.9 end
+		if edge then edge:SetVertexColor(r, g, b, a) end
+		ring:SetVertexColor(r, g, b, rank and 0.9 or 0.3)
+	end
+
+	-- The strip: a colour token, or nil to hide it.
+	function plaque:SetReaction(token)
+		plaque.reaction = token
+		if token then
+			local r, g, b = Stoa:Color(token)
+			strip:SetVertexColor(r, g, b, 0.9)
+			strip:Show()
+		else
+			strip:Hide()
+		end
 	end
 	plaque:SetRank(nil)
-	-- The rank colours follow the theme's accent, so repaint on a change.
-	Stoa:On("STOA_THEME_CHANGED", function() plaque:SetRank(plaque.rank) end)
+	-- The colours follow the theme, so repaint on a change.
+	Stoa:On("STOA_THEME_CHANGED", function()
+		paintFill()
+		plaque:SetRank(plaque.rank)
+		plaque:SetReaction(plaque.reaction)
+	end)
 	return plaque
 end
 

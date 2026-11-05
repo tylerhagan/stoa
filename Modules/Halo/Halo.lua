@@ -252,10 +252,10 @@ end
 -- it stays with you out of combat as well. It's a secure unit button, so
 -- right click opens the unit menu (focus, invite, inspect, trade) like
 -- Blizzard's target frame.
-local TARGET_WIDTH = 268
+local TARGET_WIDTH = 294
 local TARGET_PAD = 12
 -- Room on the left for the half of the coin inside the plaque.
-local TARGET_COIN_SPACE = 40
+local TARGET_COIN_SPACE = UI.PLAQUE_COIN_SPACE
 
 function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
@@ -295,7 +295,7 @@ function Halo:BuildTarget(frame)
 	local health = UI.text(target, "serif", Stoa.typeSize.label + 2, "text", "RIGHT")
 	health:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
 	local barWidth = TARGET_WIDTH - left - TARGET_PAD
-	local hp = UI.bar(target, barWidth, 4, "health")
+	local hp = UI.bar(target, barWidth, 7, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
 	UI.engrave(hp, barWidth)
 	-- Threat, in words: tanks hear when they are losing it, everyone else
@@ -483,6 +483,7 @@ function Halo:UpdateTarget()
 	if Stoa:IsSecret(hostile) then hostile = false end
 	target.hp:SetStatusBarColor(Stoa:Color(hostile and "danger" or "health"))
 	target.cue:SetText(dead and "DEAD" or hostile and "HOSTILE" or "")
+	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "danger" or nil) end
 	target.hp:SetShown(not dead)
 	target.health:SetShown(not dead)
 	target:SetAlpha(dead and 0.6 or 1)

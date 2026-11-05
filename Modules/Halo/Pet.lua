@@ -25,9 +25,9 @@ Stoa.Pet = Pet
 
 local plain = function(v) return Stoa.safe.plain(v) end
 
-local PLAQUE_WIDTH, PLAQUE_HEIGHT = 268, 112
+local PLAQUE_WIDTH, PLAQUE_HEIGHT = 294, 112
 local PAD = 12
-local COIN_SPACE = 40
+local COIN_SPACE = UI.PLAQUE_COIN_SPACE
 local ROW_SIZE, ROW_GAP, ROW_BREAK = 26, 5, 8
 local ROW_ROOM = ROW_SIZE + 12
 local COIN = 46
@@ -182,10 +182,10 @@ function Pet:BuildPlaque()
 	name:SetWordWrap(false)
 	local percent = UI.text(column, "serif", Stoa.typeSize.title, "text", "RIGHT")
 	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -8)
-	local hp = UI.bar(column, width, 4, "health")
+	local hp = UI.bar(column, width, 7, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -8)
 	UI.engrave(hp, width)
-	local power = UI.bar(column, width, 2, "accent")
+	local power = UI.bar(column, width, 3, "accent")
 	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -8)
 	local foot = UI.caption(column, "")
 	foot:SetPoint("TOPLEFT", power, "BOTTOMLEFT", 0, -10)
