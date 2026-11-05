@@ -758,7 +758,7 @@ function Welcome:RefreshCombat(step)
 			end
 		end
 	end
-	choose(self.calmButtons, Stoa.db.calm or "3")
+	choose(self.calmButtons, Stoa.db.calm or "5")
 	self.groupButton:SetSelected(Stoa.db.calmGroup ~= false)
 	step.note:ClearAllPoints()
 	step.note:SetPoint("TOPLEFT", 0, -(y + 4))

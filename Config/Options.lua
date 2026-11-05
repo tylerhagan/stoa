@@ -230,7 +230,7 @@ local function build()
 		words = "halo hide console fold unit frames",
 		change = function(_, v) if halo() then halo().enabled = v ~= "none" end refold() end,
 	})
-	choice(db, "calm", "After a fight", "When the console folds: how long things must be calm before it opens again. Longer keeps quick pulls together.", "3", {
+	choice(db, "calm", "After a fight", "When the console folds: how long things must be calm before it opens again. Longer keeps quick pulls together.", "5", {
 		{ "1", "1 s" }, { "3", "3 s" }, { "5", "5 s" }, { "8", "8 s" },
 	}, { words = "delay timer out of combat" })
 	choice(db, "countdownCombat", "On a pull countdown", "When a leader starts the game's pull countdown, the console folds and the Halo rises straight away, so you're settled before the pull. A cancelled countdown, or no fight a few seconds after it ends, opens the console again.", "raid", {

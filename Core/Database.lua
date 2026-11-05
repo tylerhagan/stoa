@@ -17,7 +17,7 @@ local accountDefaults = {
 	-- fight it opens again once things have been calm this many seconds
 	-- ("1", "3", "5" or "8"), waiting for the group nearby when calmGroup.
 	combatConsole = "fold",
-	calm = "3",
+	calm = "5",
 	calmGroup = true,
 	countdownCombat = "raid",
 	-- Fold and open at once, without the short slide.

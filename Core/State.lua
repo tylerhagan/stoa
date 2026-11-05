@@ -9,7 +9,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 
 local WORLD, COMBAT = "WORLD", "COMBAT"
-local CALM_SECONDS = 3
+local CALM_SECONDS = 5
 -- How often the calm is checked, and the longest a fighting group can hold
 -- the combat look after you've left combat.
 local CALM_STEP = 0.5
