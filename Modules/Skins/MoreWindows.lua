@@ -90,6 +90,21 @@ local function dressTarget(target, frame)
 		-- above the canvas, so it gets the edge and header only: a fill or
 		-- the stone there would cover the map.
 		if frame.BorderFrame then dressBorder(frame.BorderFrame, true) end
+		-- A panel behind everything, on the map frame itself: its textures
+		-- draw under the canvas and the quest log, so only the margins
+		-- around them (and the gap between) show it.
+		if not frame.stoaMapFill then
+			local fill = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", 2)
+			if fill then
+				fill:SetDrawLayer("BACKGROUND", -8)
+				UI.tint(fill, "panel")
+				frame.stoaMapFill = fill
+			end
+		end
+		-- The quest log's red buttons, as on every other window.
+		local windows = Stoa.modules.Windows
+		local details = QuestMapFrame and QuestMapFrame.DetailsFrame
+		if windows and windows.DressButtonsIn and details then windows.DressButtonsIn(details, 3) end
 	else
 		dressFull(frame)
 	end
