@@ -437,6 +437,13 @@ local function dressTrainer()
 	if not frame then return end
 	Windows:Dress(frame)
 	stripInside(frame, 4)
+	-- Blizzard hangs its Settings/Filters dropdown at the top right, where
+	-- Stoa's header seats the close button: it moves in beside the close.
+	local dropdown, close = frame.FilterDropdown, frame.CloseButton or _G.ClassTrainerFrameCloseButton
+	if dropdown and close and dropdown.ClearAllPoints then
+		dropdown:ClearAllPoints()
+		dropdown:SetPoint("RIGHT", close, "LEFT", -8, 0)
+	end
 end
 
 local function dressBags()
