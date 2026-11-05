@@ -225,7 +225,7 @@ function Tooltip:DressUnit(tip)
 	local name = line(tip, 1)
 	if name then
 		name:SetTextColor(r, g, b)
-		Stoa:SetFont(name, "serif", Stoa.typeSize.label + 2)
+		Stoa:SetFont(name, "serif", Stoa.typeSize.name)
 	end
 	self:Rank(tip, known(UnitClassification(unit)))
 
@@ -313,7 +313,7 @@ function Tooltip:DressItem(tip, data)
 	tip.stoaEdge:Clear()
 	self:Fade(tip, r, g, b)
 	local name = line(tip, 1)
-	if name then Stoa:SetFont(name, "serif", Stoa.typeSize.label + 2) end
+	if name then Stoa:SetFont(name, "serif", Stoa.typeSize.name) end
 
 	if tip ~= GameTooltip or InCombatLockdown() then return end
 	self:Upgrade(tip, link)
@@ -524,12 +524,21 @@ end
 -- The game sizes the card for its own spacing (the name 10 from the top,
 -- lines 2 apart); the header's extra room is added at the foot so the last
 -- line doesn't run over the edge.
+local MIN_WIDTH = 210
+
 local function settle(tip)
 	placeLines(tip)
 	if not (tip.SetPadding and tip.GetPadding) then return end
 	-- A one-line card (a minimap blip, a name) only needs the name's drop.
 	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
 	local room = (second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)
+	-- Cards with more than a name keep a minimum width, so a short card
+	-- (a level and a word or two) doesn't look squeezed.
+	local wide = second and second:IsShown()
+	if tip.SetMinimumWidth then tip:SetMinimumWidth(wide and MIN_WIDTH or 0) end
+	if wide and tip.GetWidth and not Stoa:IsSecret(tip:GetWidth()) and tip:GetWidth() < MIN_WIDTH then
+		tip:SetWidth(MIN_WIDTH)
+	end
 	local right, bottom, left, top = tip:GetPadding()
 	bottom = bottom or 0
 	-- Ours to change when it is the game's default or what we set last;

@@ -132,7 +132,7 @@ function Item.markUpgrade(button, parts, on)
 	if not parts then return end
 	if on and not parts.up then
 		parts.up = button:CreateFontString(nil, "OVERLAY", nil, 7)
-		Stoa:SetFont(parts.up, "sans", Stoa.typeSize.caption - 1, "OUTLINE")
+		Stoa:SetFont(parts.up, "sans", Stoa.typeSize.micro, "OUTLINE")
 		parts.up:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 3, 3)
 		parts.up:SetText("UP")
 	end
@@ -171,7 +171,7 @@ local function junkWord(button)
 	local word = button.stoaJunkWord
 	if not word and button.CreateFontString then
 		word = button:CreateFontString(nil, "OVERLAY", nil, 7)
-		Stoa:SetFont(word, "sans", Stoa.typeSize.caption - 1, "OUTLINE")
+		Stoa:SetFont(word, "sans", Stoa.typeSize.micro, "OUTLINE")
 		word:SetPoint("BOTTOM", button, "BOTTOM", 0, 3)
 		word:SetTextColor(Stoa:Color("muted"))
 		word:SetText("JUNK")
@@ -352,7 +352,7 @@ function Bags:Dress(frame)
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	if title and title.SetTextColor then Stoa:SetFont(title, "serif", Stoa.typeSize.label) end
 
-	parts.free = UI.text(frame, "sans", Stoa.typeSize.caption + 1, "muted")
+	parts.free = UI.text(frame, "sans", Stoa.typeSize.body, "muted")
 	parts.free:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 10)
 	parts.money = UI.text(frame, "sans", Stoa.typeSize.body, "text", "RIGHT")
 	parts.money:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 10)

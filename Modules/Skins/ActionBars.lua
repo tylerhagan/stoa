@@ -68,7 +68,7 @@ function Bars:Skin(button)
 
 	local hotkey = button.HotKey
 	if hotkey then
-		Stoa:SetFont(hotkey, "sans", Stoa.typeSize.caption - 1, "OUTLINE")
+		Stoa:SetFont(hotkey, "sans", Stoa.typeSize.micro, "OUTLINE")
 		hotkey:SetTextColor(Stoa:Color("muted"))
 	end
 	local count = button.Count

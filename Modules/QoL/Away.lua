@@ -70,7 +70,7 @@ function Away:Build()
 	mark:SetPoint("LEFT", 48, -4)
 	UI.tint(mark, "accent")
 
-	local name = UI.text(band, "serif", Stoa.typeSize.display + 8, "text", "LEFT")
+	local name = UI.text(band, "serif", Stoa.typeSize.hero, "text", "LEFT")
 	name:SetPoint("TOPLEFT", mark, "TOPRIGHT", 48, 10)
 	local about = UI.text(band, "sans", Stoa.typeSize.label, "muted", "LEFT")
 	about:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -8)
@@ -79,7 +79,7 @@ function Away:Build()
 
 	local caption = UI.caption(band, "Away")
 	caption:SetPoint("TOP", band, "TOP", 0, -34)
-	local timer = UI.text(band, "serif", Stoa.typeSize.display + 8, "text", "CENTER")
+	local timer = UI.text(band, "serif", Stoa.typeSize.hero, "text", "CENTER")
 	timer:SetPoint("TOP", caption, "BOTTOM", 0, -6)
 
 	local heard = UI.caption(band, "")

@@ -1,7 +1,7 @@
 -- Stoa: the gallery.
 -- /stoa gallery opens one page showing every piece of the rulebook side by
 -- side (Core/Widgets.lua "The rulebook"): the five surfaces, the edges, the
--- type scale, the spacing scale, every state word as a badge, buttons and
+-- type scale (eight sizes), the spacing scale, every state word as a badge, buttons and
 -- bars. Anything that drifts from the rest shows up here at a glance, so
 -- check new work against it before it ships.
 local _, ns = ...
@@ -83,7 +83,8 @@ local function buildType(page, x, y)
 	heading(page, "Type", x, y)
 	local rows = {
 		{ "hero", "serif" }, { "display", "serif" }, { "title", "serif" },
-		{ "label", "sans" }, { "body", "sans" }, { "caption", "sans" },
+		{ "name", "serif" }, { "label", "sans" }, { "body", "sans" },
+		{ "caption", "sans" }, { "micro", "sans" },
 	}
 	local last
 	for _, row in ipairs(rows) do
