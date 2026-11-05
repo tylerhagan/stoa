@@ -464,13 +464,18 @@ function Console:BuildFellowship(frame, space)
 		GameTooltip:Show()
 	end)
 	xpHover:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	self.levelText, self.levelShare, self.xpBar = level, share, xp
+	-- The one key kept on the page: what the gold mark is, under the bar's
+	-- right end.
+	local hourKey = Figures.key(page, "accent")
+	hourKey:SetPoint("TOPRIGHT", xp, "BOTTOMRIGHT", 0, -4)
+	hourKey:SetText(nil)
+	self.levelText, self.levelShare, self.xpBar, self.hourKey = level, share, xp, hourKey
 	-- The dungeon kit (Kit.lua): your pace as a line chart over the last
 	-- half hour, experience an hour and time to level beside it, and the
 	-- nearest watched quest's progress when alone.
 	local pace = CreateFrame("Frame", nil, page)
 	pace:SetSize(COLUMN_WIDTH, 26)
-	pace:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -12)
+	pace:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -17)
 	local spark = Figures.spark(pace, 54, 18)
 	spark:SetPoint("BOTTOMLEFT", 0, 2)
 	local perHour = text(pace, "serif", Stoa.typeSize.name, "text")
@@ -487,7 +492,7 @@ function Console:BuildFellowship(frame, space)
 	pace:Hide()
 	-- While the pace is still being worked out, a line of words instead.
 	local rate = text(page, "sans", Stoa.typeSize.body, "muted")
-	rate:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -12)
+	rate:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -17)
 	rate:SetWidth(COLUMN_WIDTH)
 	rate:SetWordWrap(false)
 	self.pace = pace
@@ -817,6 +822,7 @@ function Console:UpdateJourney()
 	self.xpBar:SetShown(not atMax)
 	self.levelShare:SetShown(not atMax)
 	if atMax then
+		self.hourKey:SetText(nil)
 		self.xpKeyWords = nil
 		self:UpdateKitLines()
 		return
@@ -837,6 +843,7 @@ function Console:UpdateJourney()
 	end
 	if hour then keys[#keys + 1] = { "accent", "The gold mark: where an hour at your pace gets you" } end
 	self.xpKeyWords = keys
+	self.hourKey:SetText(hour and "In an hour" or nil)
 	self:UpdateKitLines()
 end
 
