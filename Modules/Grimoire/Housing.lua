@@ -291,7 +291,9 @@ local function menuFrames()
 	return MicroMenuContainer or MicroMenu, BagsBar
 end
 
-local function placeMenu()
+local menuPlacing
+
+local function placeMenuNow()
 	local menu, bags = menuFrames()
 	local inset = Console:PageInset()
 	local edge = Console.frame or UIParent
@@ -320,6 +322,48 @@ local function placeMenu()
 				if slot.IconBorder then slot.IconBorder:SetAlpha(0) end
 			end
 		end
+	end
+end
+
+-- Stoa's own moves are marked so the watch below lets them through.
+local function placeMenu()
+	menuPlacing = true
+	local ok, err = pcall(placeMenuNow)
+	menuPlacing = false
+	if not ok then error(err, 0) end
+end
+
+-- Blizzard puts the menu and bags back now and then: Edit Mode re-applies
+-- their anchors (layout updates, the action bar showing again after a
+-- vehicle or a cinematic), and the bottom frame manager re-stacks them.
+-- Any move or rescale Stoa didn't make sends them back next frame, at most
+-- a few times a second in case Blizzard answers each move with its own.
+local pendingPlace
+local placeWindow, placeCount = 0, 0
+
+local function keepMenu()
+	local function again()
+		if menuPlacing or pendingPlace then return end
+		local now = GetTime()
+		if now - placeWindow > 1 then placeWindow, placeCount = now, 0 end
+		if placeCount >= 3 then return end
+		placeCount = placeCount + 1
+		pendingPlace = true
+		C_Timer.After(0, function()
+			pendingPlace = false
+			Stoa:AfterCombat(function() xpcall(placeMenu, Stoa.catch) end)
+		end)
+	end
+	local menu, bags = menuFrames()
+	for _, frame in ipairs({ menu, bags }) do
+		if frame and not frame.stoaKeptPlace then
+			frame.stoaKeptPlace = true
+			hooksecurefunc(frame, "SetPoint", again)
+			hooksecurefunc(frame, "SetScale", again)
+		end
+	end
+	if MicroMenu and MicroMenu.ResetMicroMenuPosition then
+		hooksecurefunc(MicroMenu, "ResetMicroMenuPosition", again)
 	end
 end
 
@@ -398,6 +442,7 @@ function Console:House()
 	apply()
 	if db.houseMenu then
 		watchMenu()
+		safely(keepMenu)
 		if UpdateContainerFrameAnchors then
 			hooksecurefunc("UpdateContainerFrameAnchors", function()
 				if not InCombatLockdown() then xpcall(liftBags, Stoa.catch) end
