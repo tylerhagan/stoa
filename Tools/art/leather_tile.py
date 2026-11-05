@@ -12,9 +12,13 @@ restart to load.
 import sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 W, H = 2048, 512
+# How much of the grain's contrast is kept (1 = as painted), and a slight
+# blur in tile pixels: in game the full-contrast grain read too crisp.
+GRAIN = 0.55
+SOFTEN = 0.8
 OVERLAP_X, OVERLAP_Y = 256, 96
 
 src = sys.argv[1] if len(sys.argv) > 1 else "Tools/art/source/console-leather.png"
@@ -55,7 +59,16 @@ bottom = a[H:H + OVERLAP_Y]
 a = a[:H].copy()
 a[:OVERLAP_Y] = bottom * (1 - h) + top * h
 
+# Softer grain: pull every pixel part way to the overall tone, then a touch
+# of blur.
+tone = a.reshape(-1, 3).mean(axis=0)
+a = tone + (a - tone) * GRAIN
 rgb = np.clip(a, 0, 255).astype(np.uint8)
+if SOFTEN > 0:
+    # Blur a 3x3 tiled copy so the edges still meet.
+    tiled = Image.fromarray(np.tile(rgb, (3, 3, 1)))
+    blurred = np.asarray(tiled.filter(ImageFilter.GaussianBlur(SOFTEN)))
+    rgb = blurred[H:2 * H, W:2 * W].copy()
 alpha = np.full((H, W, 1), 255, np.uint8)
 Image.fromarray(np.concatenate([rgb, alpha], axis=2), "RGBA").save(out)
 print(out, W, H, "mean", rgb.reshape(-1, 3).mean(axis=0).round(1))
