@@ -216,11 +216,27 @@ local FAMILY = {
 	FriendsFrame = "social", CommunitiesFrame = "social", GuildFrame = "social",
 	PVEFrame = "social", LFDParentFrame = "social", RaidParentFrame = "social",
 }
--- Without Blizzard's inset to show where content starts, the header is a
--- band this tall behind the title.
+-- The rulebook's band is BAND tall on every window with room for it.
+-- Where Blizzard's content starts higher (its inset, or bag slots on a
+-- window with no inset) the band stops there instead, so it never runs
+-- under content; without an inset it is HEADER_FALLBACK, the compact band.
+local BAND = 44
 local HEADER_FALLBACK = 30
 local TITLE_INSET = 18
-Windows.FAMILY, Windows.HEADER_FALLBACK = FAMILY, HEADER_FALLBACK
+Windows.FAMILY, Windows.HEADER_FALLBACK, Windows.BAND = FAMILY, HEADER_FALLBACK, BAND
+
+-- Windows Stoa never dresses. The game menu and the settings panel are a
+-- known cause of blocked-action errors when addons touch them; the rest
+-- are drawn over live content or are Blizzard's own small prompts.
+Windows.LEAVE = {
+	GameMenuFrame = true, SettingsPanel = true, InterfaceOptionsFrame = true,
+	VideoOptionsFrame = true, StaticPopup1 = true, StaticPopup2 = true, StaticPopup3 = true,
+}
+
+function Windows:Leaves(frame)
+	local name = frame and frame.GetName and frame:GetName()
+	return name ~= nil and self.LEAVE[name] == true
+end
 
 -- The band's height gives the title room above and below: the title sits
 -- in the middle of it on the left, the close cross on the right. Out of
@@ -239,11 +255,69 @@ local function seatTitle(frame, title, close)
 	end
 end
 
+-- Settling --------------------------------------------------------------------
+-- Blizzard lays a window out again when it shows (and some parts a frame
+-- later), so each dressed window has one settle step: the band takes its
+-- height from where content now starts, Blizzard's border art is hidden
+-- again, the title and close are seated, then any extra steps a skin
+-- registered with Windows:OnSettle. It runs on show and on the next frame.
+
+local function bandHeight(frame)
+	local inset = frame.Inset
+	if not (inset and inset.GetTop and frame.GetTop) then return nil end
+	local top, start = frame:GetTop(), inset:GetTop()
+	if Stoa:IsSecret(top) or Stoa:IsSecret(start) or not top or not start then return nil end
+	local gap = top - start
+	-- A window with a two-line header asks for more (frame.stoaBandHeight).
+	local want = frame.stoaBandHeight or BAND
+	if gap >= want then return want end
+	return nil
+end
+
+function Windows:Settle(frame)
+	if not frame or InCombatLockdown() then return end
+	hide(frame.NineSlice)
+	hide(frame.PortraitContainer)
+	local header = frame.stoaHeader
+	local height = header and bandHeight(frame)
+	if height and header.stoaHeight ~= height then
+		header:ClearAllPoints()
+		header:SetPoint("TOPLEFT")
+		header:SetPoint("TOPRIGHT")
+		header:SetHeight(height)
+		header.stoaHeight = height
+	end
+	if not frame.stoaBorderOnly then
+		local name = frame.GetName and frame:GetName()
+		pcall(seatTitle, frame, titleOf(frame), frame.CloseButton or (name and _G[name .. "CloseButton"]))
+	end
+	for _, step in ipairs(frame.stoaSettlers or {}) do
+		xpcall(step, Stoa.catch, frame)
+	end
+end
+
+-- Adds a step to a window's settle (it runs now if the window is shown).
+function Windows:OnSettle(frame, step)
+	if not frame then return end
+	frame.stoaSettlers = frame.stoaSettlers or {}
+	table.insert(frame.stoaSettlers, step)
+	if frame:IsShown() then xpcall(step, Stoa.catch, frame) end
+end
+
+function Windows:KeepSettled(frame)
+	if not frame or frame.stoaSettling or not frame.HookScript then return end
+	frame.stoaSettling = true
+	frame:HookScript("OnShow", function(self)
+		Windows:Settle(self)
+		C_Timer.After(0, function() Windows:Settle(self) end)
+	end)
+end
+
 -- The common window: no portrait, no stone border, a Stoa panel with a
--- header band (down to where Blizzard's inset starts) and a dark footer
--- tray (below it), and the title in the header.
+-- header band, a dark footer tray below Blizzard's inset, and the title in
+-- the header.
 function Windows:Dress(frame)
-	if not frame or frame.stoaDressed then return end
+	if not frame or frame.stoaDressed or self:Leaves(frame) then return end
 	frame.stoaDressed = true
 	strip(frame)
 	for _, key in ipairs({ "NineSlice", "Bg", "TopTileStreaks", "PortraitContainer", "portrait", "PortraitFrame" }) do
@@ -265,7 +339,7 @@ function Windows:Dress(frame)
 	})
 
 	if title then
-		Stoa:SetFont(title, "serif", Stoa.typeSize.label + 2)
+		Stoa:SetFont(title, "serif", Stoa.typeSize.title)
 		title:SetTextColor(Stoa:Color("text"))
 	end
 
@@ -275,6 +349,8 @@ function Windows:Dress(frame)
 	dressButtonsIn(frame, 5)
 	dressTabs(frame)
 	hookTabs()
+	self:KeepSettled(frame)
+	self:Settle(frame)
 end
 
 -- Quest text ----------------------------------------------------------------
@@ -448,18 +524,20 @@ local function dressTrainer()
 	stripInside(frame, 4)
 	-- Blizzard hangs its Settings/Filters dropdown at the top right, where
 	-- Stoa's header seats the close button: it moves in beside the close.
-	local dropdown, close = frame.FilterDropdown, frame.CloseButton or _G.ClassTrainerFrameCloseButton
-	if dropdown and close and dropdown.ClearAllPoints then
-		dropdown:ClearAllPoints()
-		dropdown:SetPoint("RIGHT", close, "LEFT", -8, 0)
-	end
-	-- Your money sits at the left of the footer, level with Train.
-	local money, train = frame.money, frame.TrainButton
-	if money and money.ClearAllPoints then
-		local lift = train and train.GetHeight and (train:GetHeight() / 2) or 11
-		money:ClearAllPoints()
-		money:SetPoint("LEFT", frame, "BOTTOMLEFT", 14, lift)
-	end
+	Windows:OnSettle(frame, function()
+		local dropdown, close = frame.FilterDropdown, frame.CloseButton or _G.ClassTrainerFrameCloseButton
+		if dropdown and close and dropdown.ClearAllPoints then
+			dropdown:ClearAllPoints()
+			dropdown:SetPoint("RIGHT", close, "LEFT", -8, 0)
+		end
+		-- Your money sits at the left of the footer, level with Train.
+		local money, train = frame.money, frame.TrainButton
+		if money and money.ClearAllPoints then
+			local lift = train and train.GetHeight and (train:GetHeight() / 2) or 11
+			money:ClearAllPoints()
+			money:SetPoint("LEFT", frame, "BOTTOMLEFT", 14, lift)
+		end
+	end)
 end
 
 local function dressBags()
