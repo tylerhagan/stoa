@@ -83,7 +83,10 @@ function Tooltip:UnitColour(unit)
 	if known(UnitIsTapDenied(unit)) and not known(UnitPlayerControlled(unit)) then return Stoa:Color("muted") end
 	local reaction = known(UnitReaction(unit, "player"))
 	if reaction and reaction >= 5 then return Stoa:Color("mana") end
-	if reaction == 4 then return Stoa:Color("accent") end
+	if reaction == 4 then
+		if Stoa.NeutralColour then return Stoa:NeutralColour() end
+		return Stoa:Color("accent")
+	end
 	if reaction then return Stoa:Color("danger") end
 	return Stoa:Color("text")
 end
