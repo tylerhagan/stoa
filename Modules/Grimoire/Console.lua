@@ -227,6 +227,21 @@ function Console:BuildSeal(frame)
 	portrait:SetPoint("CENTER")
 	self.portrait = portrait
 
+	-- In an inn or a city: a small word across the foot of the portrait, in
+	-- the rested blue the experience bar uses.
+	local rest = CreateFrame("Frame", nil, seal)
+	rest:SetFrameLevel(seal:GetFrameLevel() + 4)
+	rest:SetSize(62, 15)
+	rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1))
+	local restFill = rest:CreateTexture(nil, "BACKGROUND")
+	restFill:SetAllPoints()
+	restFill:SetColorTexture(0, 0, 0, 0.72)
+	local restWord = text(rest, "sans", Stoa.typeSize.caption - 1, "mana", "CENTER")
+	restWord:SetPoint("CENTER", 0, 0)
+	restWord:SetText("RESTING")
+	rest:Hide()
+	self.restMark = rest
+
 	-- Without the art the role sits under the seal. With it, the role and
 	-- any missing self-buffs go on the right page (see BuildFellowship), so
 	-- nothing floats over the world.
@@ -527,6 +542,7 @@ end
 
 function Console:UpdateSeal()
 	SetPortraitTexture(self.portrait, "player")
+	if self.restMark then self.restMark:SetShown(IsResting and IsResting() and true or false) end
 	local role = Stoa:GetRole()
 	local label = role and Stoa.ROLE_LABELS[role] or ""
 	-- A missing self-buff (Inner Fire, an aura, Righteous Fury) shows beside
@@ -788,6 +804,7 @@ function Console:OnEnable()
 
 	Stoa:On("STOA_NOTE", function(kind, message) self:AddNote(kind, message) end)
 	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSeal() end)
+	Stoa:On("PLAYER_UPDATE_RESTING", function() self:UpdateSeal() end)
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant) end)
 
