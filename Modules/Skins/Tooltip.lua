@@ -524,10 +524,17 @@ end
 local function settle(tip)
 	placeLines(tip)
 	if not (tip.SetPadding and tip.GetPadding) then return end
+	-- A one-line card (a minimap blip, a name) only needs the name's drop.
 	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
-	if not (second and second:IsShown()) then return end
+	local room = (second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)
 	local right, bottom, left, top = tip:GetPadding()
-	if (bottom or 0) < HEADER_ROOM then tip:SetPadding(right or 0, HEADER_ROOM, left or 0, top or 0) end
+	bottom = bottom or 0
+	-- Ours to change when it is the game's default or what we set last;
+	-- larger padding the game asked for (a bar under the lines) stays.
+	if bottom < room or bottom == tip.stoaPad then
+		tip.stoaPad = room
+		if bottom ~= room then tip:SetPadding(right or 0, room, left or 0, top or 0) end
+	end
 end
 
 local function keepHeader(tip)
@@ -536,6 +543,7 @@ local function keepHeader(tip)
 	if not (first and second and second:IsShown()) then return end
 	local _, relative, _, _, y = second:GetPoint(1)
 	if relative ~= first or math.abs((y or 0) + LINE_GAP) > 0.5 then settle(tip) end
+	if tip.stoaPad ~= HEADER_ROOM and tip.GetPadding and select(2, tip:GetPadding()) == tip.stoaPad then settle(tip) end
 end
 
 local function header(tip)
