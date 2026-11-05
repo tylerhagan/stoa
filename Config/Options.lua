@@ -474,7 +474,7 @@ local function build()
 	toggle(of("Emergency"), "enabled", "Emergency item", "A button for your healthstone, best healing potion or bandage. It stays in view in combat and lights with LOW under 40% health.", true, { id = "emergency", reload = true, words = "potion healthstone bandage" })
 	group = "Loot"
 	toggle(of("Loot"), "enabled", "Loot feed and gold an hour", "A short fading list of what you loot above the chat, plus gold an hour and loot value for At a glance.", true, { id = "lootFeed", reload = true, cmd = "/stoa loot", words = "gold per hour" })
-	choice(of("Loot"), "show", "Show the loot feed", "When the list above the chat shows.", "WORLD", Stoa.Rules.options({ "WORLD", "ALWAYS", "SOLO", "GROUP", "NEVER" }), { id = "lootShow", list = true, change = rulesChanged })
+	choice(of("Loot"), "show", "Show the loot feed", "When the list above the chat shows. Off by default: the chat already lists your loot.", "NEVER", Stoa.Rules.options({ "WORLD", "ALWAYS", "SOLO", "GROUP", "NEVER" }), { id = "lootShow", list = true, change = rulesChanged })
 	actions("lootReset", "Totals", "Gold an hour and loot value count from the last time you started them.", { { "Start the totals again", command("loot", "reset") } }, { cmd = "/stoa loot reset" })
 
 	-- Comforts
