@@ -816,23 +816,10 @@ function UI.itemButton(parent, name, size)
 end
 
 function UI.unitCard(card, styleName)
-	local bg = sliced(card, "BACKGROUND", "CardFill.tga")
-	if bg then
-		UI.tint(bg, "panel", 0.96)
-	else
-		bg = card:CreateTexture(nil, "BACKGROUND")
-		bg:SetAllPoints()
-		UI.paint(bg, "panel", 0.96)
-	end
-
-	-- A hairline frame always, and a stronger border for states: a dispel,
-	-- low health or your target. Dispels also get a soft halo outside.
-	local frameEdge = UI.roundBorder(card, "CardEdge.tga", 1)
-	for _, tex in ipairs(frameEdge.edges) do
-		tex:SetDrawLayer("BORDER")
-		UI.tint(tex, "hairline")
-		tex:Show()
-	end
+	-- The rulebook's card surface: panel fill and one hairline edge, as on
+	-- tooltips and plaques. A stronger border shows states (a dispel, low
+	-- health or your target); dispels also get a soft halo outside.
+	UI.surface(card, "card", { alpha = 0.96 })
 	card.state = UI.roundBorder(card, "CardState.tga", 2)
 	card.glow = UI.roundBorder(card, "CardGlow.tga", 3, 3)
 	-- Kept for older callers: a dispel border is the state border.
