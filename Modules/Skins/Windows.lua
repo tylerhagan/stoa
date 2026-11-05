@@ -286,6 +286,28 @@ local function light(fs, title)
 	end
 end
 
+-- Quest titles in the gossip and quest greeting lists carry their colour in
+-- the text itself (NORMAL_QUEST_DISPLAY is "|cff000000%s|r", black for the
+-- parchment), so a text colour alone can't lift them. The black code is
+-- taken out; other colours (trivial, ignored) stay.
+local function unblack(button)
+	if not (button and button.GetText and button.SetText) then return end
+	local text = button:GetText()
+	if type(text) ~= "string" or Stoa:IsSecret(text) then return end
+	local clean, found = text:gsub("|[cC][fF][fF]000000", "")
+	if found > 0 then button:SetText(clean) end
+	local fs = button.GetFontString and button:GetFontString()
+	if fs then light(fs) end
+end
+
+local function unblackAll(parent, depth)
+	if not (parent and parent.GetChildren) or (depth or 0) > 4 then return end
+	for _, child in ipairs({ parent:GetChildren() }) do
+		if child.IsObjectType and child:IsObjectType("Button") then unblack(child) end
+		unblackAll(child, (depth or 0) + 1)
+	end
+end
+
 -- Blizzard picks text colours to suit the parchment; on a dark panel they
 -- need to be light, so every colour it sets is set again.
 local function lightQuestText()
@@ -319,7 +341,13 @@ local function lightQuestText()
 	end
 	if QuestInfo_Display then hooksecurefunc("QuestInfo_Display", recolour) end
 	if QuestFrameProgressItems_Update then hooksecurefunc("QuestFrameProgressItems_Update", recolour) end
-	if QuestFrameGreetingPanel then QuestFrameGreetingPanel:HookScript("OnShow", recolour) end
+	if QuestFrameGreetingPanel then
+		QuestFrameGreetingPanel:HookScript("OnShow", recolour)
+		-- Its title buttons are filled in as it shows.
+		QuestFrameGreetingPanel:HookScript("OnShow", function(panel)
+			C_Timer.After(0, function() xpcall(unblackAll, Stoa.catch, panel) end)
+		end)
+	end
 end
 
 -- Quest fonts in Stoa's type: titles in the display face, body in Inter.
@@ -366,6 +394,12 @@ local function dressGossip()
 		box:ForEachFrame(function(row)
 			light(row.GreetingText)
 			if row.GetFontString and row:GetFontString() then light(row:GetFontString()) end
+			-- Quest rows set their title again whenever the quest updates.
+			if row.UpdateTitleForQuest and not row.stoaUnblack then
+				row.stoaUnblack = true
+				hooksecurefunc(row, "UpdateTitleForQuest", unblack)
+			end
+			unblack(row)
 		end)
 	end
 	if frame.Update then hooksecurefunc(frame, "Update", recolour) end
