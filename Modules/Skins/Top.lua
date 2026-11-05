@@ -259,6 +259,42 @@ function Top:Clock()
 	end
 end
 
+-- The header row (zone, clock, tracking) sits just above the minimap's
+-- frame rather than at the top of the cluster, which left a wide gap over
+-- the round or painted frame. The row's strip is moved, and what Blizzard
+-- hangs on it follows. Edit Mode or a layout can put it back, so any move
+-- Stoa didn't make is undone a frame later.
+local seating
+function Top:SeatHeader()
+	local cluster, map = _G.MinimapCluster, _G.Minimap
+	local strip = cluster and (cluster.BorderTop or cluster.ZoneTextButton)
+	if not (strip and map and strip.SetPoint) or InCombatLockdown() then return end
+	local width = Stoa:PlainNumber(strip:GetWidth())
+	local style = Stoa.modules.Minimap
+	local above = 4
+	if style and style.painted then above = math.floor(map:GetWidth() * 0.065) + 6 end
+	seating = true
+	strip:ClearAllPoints()
+	strip:SetPoint("BOTTOM", map, "TOP", 0, above)
+	if width and width > 0 then strip:SetWidth(width) end
+	seating = false
+	if not strip.stoaSeatHooked then
+		strip.stoaSeatHooked = true
+		local pending
+		hooksecurefunc(strip, "SetPoint", function()
+			if seating or pending then return end
+			pending = true
+			C_Timer.After(0, function()
+				pending = false
+				Stoa:AfterCombat(function() xpcall(Top.SeatHeader, Stoa.catch, Top) end)
+			end)
+		end)
+		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "EDIT_MODE_LAYOUTS_UPDATED" }) do
+			Stoa:On(event, function() Stoa:AfterCombat(function() xpcall(Top.SeatHeader, Stoa.catch, Top) end) end)
+		end
+	end
+end
+
 function Top:MinimapHeader()
 	local cluster = _G.MinimapCluster
 	local zone = cluster and cluster.ZoneTextButton
@@ -277,6 +313,7 @@ function Top:MinimapHeader()
 		MinimapZoneText:SetShadowOffset(0, 0)
 	end
 	if _G.Minimap_Update then hooksecurefunc("Minimap_Update", zoneColour) end
+	self:SeatHeader()
 	zoneColour()
 
 	-- The header's buttons wait for the mouse.
