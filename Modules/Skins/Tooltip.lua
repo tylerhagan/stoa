@@ -536,10 +536,8 @@ local function settle(tip)
 	-- (a level and a word or two) doesn't look squeezed.
 	local wide = second and second:IsShown()
 	if tip.SetMinimumWidth then tip:SetMinimumWidth(wide and MIN_WIDTH or 0) end
-	if wide and tip.GetWidth and not Stoa:IsSecret(tip:GetWidth()) and tip:GetWidth() < MIN_WIDTH then
-		tip:SetWidth(MIN_WIDTH)
-	end
 	local right, bottom, left, top = tip:GetPadding()
+	if Stoa:IsSecret(right) or Stoa:IsSecret(bottom) or Stoa:IsSecret(left) or Stoa:IsSecret(top) then return end
 	bottom = bottom or 0
 	-- Ours to change when it is the game's default or what we set last;
 	-- larger padding the game asked for (a bar under the lines) stays.
@@ -554,8 +552,12 @@ local function keepHeader(tip)
 	local first, second = name and _G[name .. "TextLeft1"], name and _G[name .. "TextLeft2"]
 	if not (first and second and second:IsShown()) then return end
 	local _, relative, _, _, y = second:GetPoint(1)
+	-- In combat the game can hand back secret positions; leave the card be.
+	if Stoa:IsSecret(y) or Stoa:IsSecret(relative) then return end
 	if relative ~= first or math.abs((y or 0) + LINE_GAP) > 0.5 then settle(tip) end
-	if tip.stoaPad ~= HEADER_ROOM and tip.GetPadding and select(2, tip:GetPadding()) == tip.stoaPad then settle(tip) end
+	local padded = tip.GetPadding and select(2, tip:GetPadding())
+	if Stoa:IsSecret(padded) then return end
+	if tip.stoaPad ~= HEADER_ROOM and padded == tip.stoaPad then settle(tip) end
 end
 
 local function header(tip)
