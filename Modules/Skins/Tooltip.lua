@@ -498,6 +498,26 @@ local function placeLines(tip)
 	end
 end
 
+-- The game sizes the card for its own spacing (the name 10 from the top,
+-- lines 2 apart); the header's extra room is added at the foot so the last
+-- line doesn't run over the edge.
+local function settle(tip)
+	placeLines(tip)
+	if not (tip.SetPadding and tip.GetPadding) then return end
+	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
+	if not (second and second:IsShown()) then return end
+	local right, bottom, left, top = tip:GetPadding()
+	if (bottom or 0) < HEADER_ROOM then tip:SetPadding(right or 0, HEADER_ROOM, left or 0, top or 0) end
+end
+
+local function keepHeader(tip)
+	local name = tip:GetName()
+	local first, second = name and _G[name .. "TextLeft1"], name and _G[name .. "TextLeft2"]
+	if not (first and second and second:IsShown()) then return end
+	local _, relative, _, _, y = second:GetPoint(1)
+	if relative ~= first or math.abs((y or 0) + LINE_GAP) > 0.5 then settle(tip) end
+end
+
 local function header(tip)
 	local name = tip:GetName()
 	local first = name and _G[name .. "TextLeft1"]
@@ -530,20 +550,12 @@ local function edge(tip)
 		UI.roundBorder(tip, "CardEdge.tga", 1, -4),
 	}
 	xpcall(header, Stoa.catch, tip)
-	-- The game sizes the card for its own spacing (the name 10 from the
-	-- top, lines 2 apart); the header's extra room is added at the foot so
-	-- the last line doesn't run over the edge.
-	if tip.SetPadding and tip.GetPadding then
-		Stoa.SafeHook(tip, "Show", function(self)
-			placeLines(self)
-			local second = self:GetName() and _G[self:GetName() .. "TextLeft2"]
-			if not (second and second:IsShown()) then return end
-			local right, bottom, left, top = self:GetPadding()
-			if (bottom or 0) < HEADER_ROOM then self:SetPadding(right or 0, HEADER_ROOM, left or 0, top or 0) end
-		end)
-	end
-	-- The game can show the card without calling Show from Lua.
-	tip:HookScript("OnShow", function(self) xpcall(placeLines, Stoa.catch, self) end)
+	Stoa.SafeHook(tip, "Show", function(self) xpcall(settle, Stoa.catch, self) end)
+	-- The game can show the card without calling Show from Lua, and it lays
+	-- the lines out again when it adds one (quest objectives arrive after
+	-- the card is up), so a moved line is checked each frame it is shown.
+	tip:HookScript("OnShow", function(self) xpcall(settle, Stoa.catch, self) end)
+	tip:HookScript("OnUpdate", function(self) xpcall(keepHeader, Stoa.catch, self) end)
 	tip:HookScript("OnTooltipCleared", clear)
 	tip:HookScript("OnHide", clear)
 end
