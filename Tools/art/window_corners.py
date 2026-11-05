@@ -1,11 +1,13 @@
 """Cut the rounded pieces Stoa windows and tooltips are dressed with, 32x32
 white with alpha so the theme tints them, nine-sliced in game at 12px:
 
-- WindowFill.tga / WindowEdge.tga: a window's panel and its 1px outline,
-  10px corners (a touch rounder than cards, which are ~7px).
+- WindowFill.tga / WindowEdge.tga: a panel and its 1px outline.
 - WindowTop.tga: the header band, only the top corners rounded.
 - WindowBottom.tga: the footer tray, only the bottom corners rounded.
-- CardTop.tga: a tooltip's header band, 7px top corners to match its card.
+- CardTop.tga: a card's header band (tooltips).
+
+Panels and cards share one corner, RADIUS (the rulebook's single edge), so
+windows, cards and tooltips read as one family.
 - TabFill.tga / TabEdge.tga: a window tab hanging under the window, square
   on top (it tucks under the window's edge), 6px corners below, and its
   outline without the top line.
@@ -18,6 +20,7 @@ import numpy as np
 from PIL import Image
 
 SIZE, SCALE = 32, 8
+RADIUS = 7
 
 
 def coverage(radius, inset=0.0, top=True, bottom=True):
@@ -45,12 +48,12 @@ def save(alpha, path):
 
 
 def main(out):
-    fill = coverage(10)
+    fill = coverage(RADIUS)
     save(fill, f"{out}/WindowFill.tga")
-    save(np.clip(fill - coverage(10, 1), 0, 1), f"{out}/WindowEdge.tga")
-    save(coverage(10, bottom=False), f"{out}/WindowTop.tga")
-    save(coverage(10, top=False), f"{out}/WindowBottom.tga")
-    save(coverage(7, bottom=False), f"{out}/CardTop.tga")
+    save(np.clip(fill - coverage(RADIUS, 1), 0, 1), f"{out}/WindowEdge.tga")
+    save(coverage(RADIUS, bottom=False), f"{out}/WindowTop.tga")
+    save(coverage(RADIUS, top=False), f"{out}/WindowBottom.tga")
+    save(coverage(RADIUS, bottom=False), f"{out}/CardTop.tga")
     tab = coverage(6, top=False)
     save(tab, f"{out}/TabFill.tga")
     edge = np.clip(tab - coverage(6, 1, top=False), 0, 1)
