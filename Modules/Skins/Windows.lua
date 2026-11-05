@@ -241,17 +241,31 @@ end
 -- The band's height gives the title room above and below: the title sits
 -- in the middle of it on the left, the close cross on the right. Out of
 -- combat only, so moving them never touches a locked frame.
+local TITLE_ROW = 30
+
 local function seatTitle(frame, title, close)
 	local header = frame.stoaHeader
 	if not header or InCombatLockdown() then return end
+	-- On a dark strip that runs down to the content, the title keeps to the
+	-- top row where Blizzard's own title bar was, clear of the tabs, search
+	-- and buttons Blizzard lays out under it.
+	local plain = frame.stoaPlainHeader
 	if title then
 		title:ClearAllPoints()
-		title:SetPoint("LEFT", header, "LEFT", TITLE_INSET, 0)
+		if plain then
+			title:SetPoint("LEFT", frame, "TOPLEFT", TITLE_INSET, -TITLE_ROW / 2)
+		else
+			title:SetPoint("LEFT", header, "LEFT", TITLE_INSET, 0)
+		end
 		title:SetJustifyH("LEFT")
 	end
 	if close then
 		close:ClearAllPoints()
-		close:SetPoint("RIGHT", header, "RIGHT", -8, 0)
+		if plain then
+			close:SetPoint("RIGHT", frame, "TOPRIGHT", -8, -TITLE_ROW / 2)
+		else
+			close:SetPoint("RIGHT", header, "RIGHT", -8, 0)
+		end
 	end
 end
 
