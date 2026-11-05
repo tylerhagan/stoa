@@ -155,6 +155,11 @@ local function dressCharacter()
 			if button and button.stoaItem then guarded(updateSlot, button, "player", true) end
 		end)
 	end
+	-- Title and level make a two-line header, so this window's band is
+	-- taller than the shared one; the level is seated as its settle step.
+	frame.stoaBandHeight = 60
+	local windows = Stoa.modules.Windows
+	if windows and windows.OnSettle then windows:OnSettle(frame, function() guarded(seatLevel) end) end
 	frame:HookScript("OnShow", function()
 		guarded(seatLevel)
 		guarded(Character.Refresh, Character)

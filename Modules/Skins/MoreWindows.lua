@@ -53,14 +53,14 @@ end
 
 -- The edge only: stone border, portrait and title strip out, a Stoa panel in.
 local function dressBorder(frame, bare)
-	if frame.stoaBorderDressed then return end
+	local windows = Stoa.modules.Windows
+	if frame.stoaBorderDressed or (windows and windows.Leaves and windows:Leaves(frame)) then return end
 	frame.stoaBorderDressed = true
 	hideOwnArt(frame)
 	for _, key in ipairs({ "TopTileStreaks", "PortraitContainer", "portrait", "PortraitFrame" }) do
 		hide(frame[key])
 	end
 	if frame.TitleContainer then hideOwnArt(frame.TitleContainer) end
-	local windows = Stoa.modules.Windows
 	local name = frame.GetName and frame:GetName()
 	-- Header and footer as on the common windows, but nothing of the
 	-- window's own is moved.
@@ -72,8 +72,15 @@ local function dressBorder(frame, bare)
 	})
 	local title = frame.TitleContainer and frame.TitleContainer.TitleText or frame.TitleText
 	if title and title.SetTextColor then
-		Stoa:SetFont(title, "serif", Stoa.typeSize.label + 2)
+		Stoa:SetFont(title, "serif", Stoa.typeSize.title)
 		title:SetTextColor(Stoa:Color("text"))
+	end
+	-- The band settles to the shared height on show, as on the common
+	-- windows (Windows:Settle only resizes it; nothing of the window's own
+	-- moves, since no title or close is seated without a full dress).
+	if windows and windows.KeepSettled and not bare then
+		frame.stoaBorderOnly = true
+		windows:KeepSettled(frame)
 	end
 end
 
