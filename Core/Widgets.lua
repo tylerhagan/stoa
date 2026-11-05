@@ -576,7 +576,9 @@ local FOOTER_SHADE = 0.32
 -- The header band along a frame's top. `size` is its height in pixels, or a
 -- region the band ends at (it stops at that region's top). `family` is a
 -- UI.WINDOW_FAMILIES key.
-function UI.band(frame, size, family)
+-- `plain`: the band keeps its place (titles and the stone still measure from
+-- it) but isn't drawn, so the title sits on the window's own panel.
+function UI.band(frame, size, family, plain)
 	local header = sliced(frame, "BACKGROUND", "WindowTop.tga")
 	if not header then return nil end
 	header:ClearAllPoints()
@@ -591,7 +593,11 @@ function UI.band(frame, size, family)
 	local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
 	UI.tint(header, tint.token, tint.alpha)
 	frame.stoaHeader = header
-	UI.shadowLine(frame, header)
+	if plain then
+		header:SetAlpha(0)
+	else
+		UI.shadowLine(frame, header)
+	end
 	UI.applyTheme()
 	return header
 end
@@ -663,14 +669,15 @@ end
 -- shadow under it, a dark footer tray, and the stone in the body between.
 -- `opts`: header and footer (pixels, or a region the band meets: the
 -- header ends at its top, the footer starts at its bottom), family (a
--- UI.WINDOW_FAMILIES key). Either band can be left out.
+-- UI.WINDOW_FAMILIES key), plainHeader (the band's room without the band).
+-- Either band can be left out.
 function UI.windowPanel(frame, alpha, opts)
 	opts = opts or {}
 	-- `bare`: a frame drawn over live content (the world map's border sits
 	-- above the map) gets the edge and header band only, no fill or stone.
 	local bg = UI.roundPanel(frame, opts.bare and 0 or alpha, "window")
 	local header, footer
-	if opts.header then header = UI.band(frame, opts.header, opts.family) end
+	if opts.header then header = UI.band(frame, opts.header, opts.family, opts.plainHeader) end
 	if opts.footer and not opts.bare then footer = UI.tray(frame, opts.footer) end
 	if not opts.bare then UI.stone(frame, header, footer) end
 	UI.applyTheme()

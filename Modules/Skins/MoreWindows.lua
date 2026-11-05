@@ -69,6 +69,7 @@ local function dressBorder(frame, bare)
 		footer = frame.Inset,
 		family = windows and windows.FAMILY and windows.FAMILY[name or ""],
 		bare = bare,
+		plainHeader = true,
 	})
 	local title = frame.TitleContainer and frame.TitleContainer.TitleText or frame.TitleText
 	if title and title.SetTextColor then

@@ -338,6 +338,9 @@ function Windows:Dress(frame)
 		header = inset or (title and HEADER_FALLBACK) or nil,
 		footer = inset,
 		family = FAMILY[name or ""],
+		-- Blizzard's windows carry a lot in their top strip already (tabs,
+		-- buttons, search), so the title sits on the panel without a band.
+		plainHeader = true,
 	})
 
 	if title then
