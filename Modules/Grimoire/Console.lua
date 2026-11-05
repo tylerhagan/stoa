@@ -442,22 +442,35 @@ function Console:BuildFellowship(frame, space)
 	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, -6)
 	-- Earned in the text colour, rest in blue behind it, and an accent mark
 	-- where an hour at your pace would take you.
+	-- Your share of the level on the same row, at the column's right edge.
+	local share = text(page, "sans", Stoa.typeSize.body, "muted", "RIGHT")
+	share:SetPoint("BOTTOMRIGHT", level, "BOTTOMLEFT", COLUMN_WIDTH, 2)
 	local xp = Figures.xp(page, COLUMN_WIDTH, 5)
-	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, -6)
-	-- The bar's key: earned, rested to, in an hour.
-	local keyEarned = Figures.key(page, "text")
-	keyEarned:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -4)
-	local keyRested = Figures.key(page, "mana", 0.55)
-	keyRested:SetPoint("LEFT", keyEarned, "RIGHT", 6, 0)
-	local keyHour = Figures.key(page, "accent")
-	keyHour:SetPoint("LEFT", keyRested, "RIGHT", 6, 0)
-	self.levelText, self.xpBar, self.xpKeys = level, xp, { keyEarned, keyRested, keyHour }
+	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, -8)
+	-- The bar's key (earned, rested to, in an hour) on hover, not as a row.
+	local xpHover = CreateFrame("Frame", nil, page)
+	xpHover:SetPoint("TOPLEFT", xp, "TOPLEFT", 0, 6)
+	xpHover:SetPoint("BOTTOMRIGHT", xp, "BOTTOMRIGHT", 0, -6)
+	xpHover:EnableMouse(true)
+	xpHover:SetScript("OnEnter", function(own)
+		local keys = self.xpKeyWords
+		if not keys then return end
+		GameTooltip:SetOwner(own, "ANCHOR_TOP")
+		GameTooltip:AddLine("Experience")
+		for _, key in ipairs(keys) do
+			local r, g, b = Stoa:Color(key[1])
+			GameTooltip:AddLine(key[2], r, g, b)
+		end
+		GameTooltip:Show()
+	end)
+	xpHover:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	self.levelText, self.levelShare, self.xpBar = level, share, xp
 	-- The dungeon kit (Kit.lua): your pace as a line chart over the last
 	-- half hour, experience an hour and time to level beside it, and the
 	-- nearest watched quest's progress when alone.
 	local pace = CreateFrame("Frame", nil, page)
 	pace:SetSize(COLUMN_WIDTH, 26)
-	pace:SetPoint("TOPLEFT", keyEarned, "BOTTOMLEFT", 0, -7)
+	pace:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -12)
 	local spark = Figures.spark(pace, 54, 18)
 	spark:SetPoint("BOTTOMLEFT", 0, 2)
 	local perHour = text(pace, "serif", Stoa.typeSize.name, "text")
@@ -474,17 +487,18 @@ function Console:BuildFellowship(frame, space)
 	pace:Hide()
 	-- While the pace is still being worked out, a line of words instead.
 	local rate = text(page, "sans", Stoa.typeSize.body, "muted")
-	rate:SetPoint("TOPLEFT", keyEarned, "BOTTOMLEFT", 0, -7)
+	rate:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -12)
 	rate:SetWidth(COLUMN_WIDTH)
 	rate:SetWordWrap(false)
 	self.pace = pace
 	local quest = text(page, "italic", Stoa.typeSize.body, "muted")
-	quest:SetPoint("TOPLEFT", pace, "BOTTOMLEFT", 0, -5)
+	quest:SetPoint("TOPLEFT", pace, "BOTTOMLEFT", 0, -9)
 	quest:SetWidth(COLUMN_WIDTH)
 	quest:SetWordWrap(false)
-	-- New spells waiting at your trainer (Trainer.lua).
+	-- New spells waiting at your trainer (Trainer.lua). One "next" line:
+	-- the trainer when there's training, otherwise the nearest quest.
 	local trainer = text(page, "sans", Stoa.typeSize.body, "accent")
-	trainer:SetPoint("TOPLEFT", quest, "BOTTOMLEFT", 0, -3)
+	trainer:SetPoint("TOPLEFT", quest, "TOPLEFT")
 	trainer:SetWidth(COLUMN_WIDTH)
 	trainer:SetWordWrap(false)
 	self.rateNote, self.questNote, self.trainerNote = rate, quest, trainer
@@ -801,8 +815,9 @@ function Console:UpdateJourney()
 	self.levelText:SetText("Level " .. level)
 	local atMax = maxLevel and level >= maxLevel
 	self.xpBar:SetShown(not atMax)
-	for _, key in ipairs(self.xpKeys) do key:SetShown(not atMax) end
+	self.levelShare:SetShown(not atMax)
 	if atMax then
+		self.xpKeyWords = nil
 		self:UpdateKitLines()
 		return
 	end
@@ -814,9 +829,14 @@ function Console:UpdateJourney()
 	local rate = kit and kit.enabled and kit.Rate and kit:Rate()
 	local hour = rate and (xp + rate) / xpMax or nil
 	self.xpBar:Set(xp / xpMax, math.min(xp + rested, xpMax) / xpMax, hour)
-	self.xpKeys[1]:SetText(math.floor(xp / xpMax * 100) .. "%")
-	self.xpKeys[2]:SetText(rested > 0 and ("Rested to " .. math.floor(math.min(xp + rested, xpMax) / xpMax * 100) .. "%") or nil)
-	self.xpKeys[3]:SetText(hour and "In an hour" or nil)
+	local earned = math.floor(xp / xpMax * 100)
+	self.levelShare:SetText(earned .. "%")
+	local keys = { { "text", "Earned " .. earned .. "%" } }
+	if rested > 0 then
+		keys[#keys + 1] = { "mana", "Rested to " .. math.floor(math.min(xp + rested, xpMax) / xpMax * 100) .. "%" }
+	end
+	if hour then keys[#keys + 1] = { "accent", "The gold mark: where an hour at your pace gets you" } end
+	self.xpKeyWords = keys
 	self:UpdateKitLines()
 end
 
@@ -826,6 +846,15 @@ function Console:UpdateKitLines()
 	if kit and kit.UpdateConsole and kit.enabled then kit:UpdateConsole() end
 	local trainer = Stoa.modules.Trainer
 	if trainer and trainer.UpdateConsole and trainer.enabled then trainer:UpdateConsole() end
+	self:SettleNext()
+end
+
+-- The trainer line and the quest line share one row: training first.
+function Console:SettleNext()
+	if not (self.trainerNote and self.questNote) then return end
+	local training = (self.trainerNote:GetText() or "") ~= ""
+	self.trainerNote:SetShown(training)
+	self.questNote:SetShown(not training)
 end
 
 function Console:AddNote(_, message)

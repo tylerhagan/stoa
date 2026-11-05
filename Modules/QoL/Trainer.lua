@@ -1,7 +1,7 @@
 -- Stoa QoL: new spells at your trainer.
 -- Counts the spells and ranks your class trainer would teach you now that
 -- you don't know yet (Data/TrainerSpells.lua), and shows the count on the
--- console under Journey: "TRAINER  3 new". Reaching a level that brings new
+-- console under Journey: "3 spells to train". Reaching a level that brings new
 -- ones leaves a note too, and /stoa trainer lists them by name.
 --
 -- Later ranks count only when you know an earlier one, so a talent you
@@ -165,11 +165,12 @@ function Trainer:UpdateConsole()
 	if count > 0 then
 		local total, known = self:Total(self:Missing())
 		local cost = total > 0 and ("  ·  %s%s"):format(known and "" or "~", money(total)) or ""
-		console.trainerNote:SetText(("TRAINER  %d new %s%s"):format(count, count == 1 and "spell" or "spells", cost))
+		console.trainerNote:SetText(("%d %s to train%s"):format(count, count == 1 and "spell" or "spells", cost))
 	else
 		console.trainerNote:SetText("")
 	end
 	if self.noteButton then self.noteButton:SetShown(count > 0) end
+	if console.SettleNext then console:SettleNext() end
 end
 
 function Trainer:Refresh()
