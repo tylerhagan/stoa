@@ -362,7 +362,7 @@ function Windows:Dress(frame)
 	})
 
 	if title then
-		Stoa:SetFont(title, "serif", Stoa.typeSize.title)
+		Stoa:SetFont(title, "serif", Stoa.typeSize.label)
 		title:SetTextColor(Stoa:Color("text"))
 	end
 
