@@ -29,11 +29,11 @@ local function parts(button)
 	local p = {}
 	button.stoaPick = p
 	p.edge = UI.roundBorder and UI.roundBorder(button, "CardEdge.tga", 1)
-	p.word = button:CreateFontString(nil, "OVERLAY", nil, 7)
-	Stoa:SetFont(p.word, "sans", Stoa.typeSize.caption, "OUTLINE")
-	-- Inside the button's top right corner, over its own dark panel: above
-	-- it the word ran into the window's "Choose your reward" line.
-	p.word:SetPoint("TOPRIGHT", button, "TOPRIGHT", -6, -3)
+	-- The shared badge, inside the button's top right corner: above it the
+	-- word ran into the window's "Choose your reward" line.
+	p.word = UI.badge(button)
+	p.word:SetFrameLevel(button:GetFrameLevel() + 5)
+	p.word:SetPoint("TOPRIGHT", button, "TOPRIGHT", -4, -3)
 	return p
 end
 
@@ -41,7 +41,7 @@ local function clear(button)
 	local p = button.stoaPick
 	if not p then return end
 	if p.edge then p.edge:Clear() end
-	p.word:SetText("")
+	p.word:Set(nil)
 end
 
 -- Picks the choice to mark: returns index, "UPGRADE" or "VALUE", or nil.
@@ -79,8 +79,7 @@ function Reward:Refresh()
 	if not button then return end
 	local p = parts(button)
 	if p.edge then p.edge:Set(Stoa:Color("accent")) end
-	p.word:SetText(kind)
-	p.word:SetTextColor(Stoa:Color(kind == "UPGRADE" and "accent" or "text"))
+	p.word:Set(kind)
 	self.marked = { index = index, kind = kind }
 end
 

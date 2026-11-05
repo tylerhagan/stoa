@@ -5,6 +5,9 @@ white with alpha so the theme tints them, nine-sliced in game at 12px:
 - WindowTop.tga: the header band, only the top corners rounded.
 - WindowBottom.tga: the footer tray, only the bottom corners rounded.
 - CardTop.tga: a card's header band (tooltips).
+- CardFill.tga / CardEdge.tga: a card's fill and its slightly heavier
+  (1.5px) edge, for state edges (rank, hover, chosen).
+- CardState.tga: the 2px state border on party and raid cards.
 
 Panels and cards share one corner, RADIUS (the rulebook's single edge), so
 windows, cards and tooltips read as one family.
@@ -54,6 +57,9 @@ def main(out):
     save(coverage(RADIUS, bottom=False), f"{out}/WindowTop.tga")
     save(coverage(RADIUS, top=False), f"{out}/WindowBottom.tga")
     save(coverage(RADIUS, bottom=False), f"{out}/CardTop.tga")
+    save(fill, f"{out}/CardFill.tga")
+    save(np.clip(fill - coverage(RADIUS, 1.5), 0, 1), f"{out}/CardEdge.tga")
+    save(np.clip(fill - coverage(RADIUS, 2), 0, 1), f"{out}/CardState.tga")
     tab = coverage(6, top=False)
     save(tab, f"{out}/TabFill.tga")
     edge = np.clip(tab - coverage(6, 1, top=False), 0, 1)

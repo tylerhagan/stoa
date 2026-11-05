@@ -264,7 +264,7 @@ function Pet:UpdatePlaque()
 	local mood = self:Mood()
 	local word, token = "", "muted"
 	if dead then
-		word, token = "DEAD", "danger"
+		word, token = "DEAD", Stoa:StateToken("DEAD")
 	elseif fraction and fraction < LOW then
 		word, token = "LOW", "danger"
 	elseif mood then
