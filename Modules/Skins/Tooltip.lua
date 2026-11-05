@@ -88,6 +88,13 @@ function Tooltip:UnitColour(unit)
 	return Stoa:Color("text")
 end
 
+-- The unit a tooltip shows, or nil; not every tooltip has GetUnit.
+local function tipUnit(tip)
+	if not (tip and type(tip.GetUnit) == "function") then return nil end
+	local ok, _, unit = pcall(tip.GetUnit, tip)
+	if ok then return unit end
+end
+
 -- Lines -----------------------------------------------------------------------------
 
 local function line(tip, i)
@@ -255,13 +262,6 @@ function Tooltip:DressUnit(tip)
 end
 
 -- Items -------------------------------------------------------------------------------
-
--- The unit a tooltip shows, or nil; not every tooltip has GetUnit.
-local function tipUnit(tip)
-	if not (tip and type(tip.GetUnit) == "function") then return nil end
-	local ok, _, unit = pcall(tip.GetUnit, tip)
-	if ok then return unit end
-end
 
 -- The item's link: from the tooltip data first, as not every tooltip that
 -- shows an item has GetItem (it was missing on some in Forever at launch).
