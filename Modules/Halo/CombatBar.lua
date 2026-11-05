@@ -455,6 +455,21 @@ function Bar:OnEnable()
 		if not ticking or not InCombatLockdown() then return end
 		if not xpcall(self.UpdateState, Stoa.catch, self) then ticking = false end
 	end)
+	-- The game hides the row the moment combat ends, but the rest of the
+	-- combat look waits out the calm seconds (Core/State.lua). The filled
+	-- buttons are held up by hand until then, and the state change back to
+	-- the world lays the row out again with its drivers.
+	Stoa:On("PLAYER_REGEN_ENABLED", function()
+		if InCombatLockdown() or Stoa:GetState() ~= Stoa.STATE_COMBAT then return end
+		local taken = (HasOverrideActionBar and HasOverrideActionBar())
+			or (HasVehicleActionBar and HasVehicleActionBar())
+			or (IsPossessBarVisible and IsPossessBarVisible())
+		if taken then return end
+		for _, button in ipairs(self.shown or {}) do
+			UnregisterStateDriver(button, "visibility")
+			button:Show()
+		end
+	end)
 	-- /stoa combat practice: the game only shows the row in real combat,
 	-- so the filled buttons are shown by hand while practising.
 	Stoa:On("STOA_STATE_CHANGED", function()
