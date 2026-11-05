@@ -483,7 +483,10 @@ end
 -- The header band behind the first line, its shadow, the fade over it,
 -- and the rank outlines: the outer line, a second one just inside it for
 -- a heavier boss line, and the inner line of the pair.
-local function header(tip)
+-- The name drops a little and the second line steps clear of the band.
+-- The game lays its lines out again each time it shows the card, so this
+-- runs after every Show rather than once.
+local function placeLines(tip)
 	local name = tip:GetName()
 	local first, second = name and _G[name .. "TextLeft1"], name and _G[name .. "TextLeft2"]
 	if not first then return end
@@ -493,6 +496,13 @@ local function header(tip)
 		second:ClearAllPoints()
 		second:SetPoint("TOPLEFT", first, "BOTTOMLEFT", 0, -LINE_GAP)
 	end
+end
+
+local function header(tip)
+	local name = tip:GetName()
+	local first = name and _G[name .. "TextLeft1"]
+	if not first then return end
+	placeLines(tip)
 	local band = UI.sliced(tip, "BACKGROUND", "CardTop.tga")
 	if not band then return end
 	band:ClearAllPoints()
@@ -525,12 +535,15 @@ local function edge(tip)
 	-- the last line doesn't run over the edge.
 	if tip.SetPadding and tip.GetPadding then
 		Stoa.SafeHook(tip, "Show", function(self)
+			placeLines(self)
 			local second = self:GetName() and _G[self:GetName() .. "TextLeft2"]
 			if not (second and second:IsShown()) then return end
 			local right, bottom, left, top = self:GetPadding()
 			if (bottom or 0) < HEADER_ROOM then self:SetPadding(right or 0, HEADER_ROOM, left or 0, top or 0) end
 		end)
 	end
+	-- The game can show the card without calling Show from Lua.
+	tip:HookScript("OnShow", function(self) xpcall(placeLines, Stoa.catch, self) end)
 	tip:HookScript("OnTooltipCleared", clear)
 	tip:HookScript("OnHide", clear)
 end
