@@ -191,14 +191,16 @@ end
 
 function Tray:Build()
 	local map = Minimap
-	-- The painted frame reaches past the map; the button sits clear of it.
-	local reach = 4
+	-- Under the map's left edge, on the row below its frame. The painted
+	-- frames show about 6.5% of the map's width below it (the texture's
+	-- own margin is clear, so its full size overstates it).
+	local below = 7
 	local style = Stoa.modules.Minimap
-	if style and style.painted then reach = math.floor(map:GetWidth() * 0.19) end
+	if style and style.painted then below = math.floor(map:GetWidth() * 0.065) + 4 end
 
 	local handle = CreateFrame("Button", "StoaTrayButton", map:GetParent() or UIParent)
 	handle:SetSize(22, 22)
-	handle:SetPoint("TOPRIGHT", map, "BOTTOMLEFT", -reach, -reach)
+	handle:SetPoint("TOPLEFT", map, "BOTTOMLEFT", 0, -below)
 	handle:SetFrameStrata("MEDIUM")
 	handle:SetFrameLevel(map:GetFrameLevel() + 6)
 	local glow

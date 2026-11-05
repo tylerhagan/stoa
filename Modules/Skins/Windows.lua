@@ -110,6 +110,8 @@ local function dressButtonsIn(frame, depth)
 	end
 end
 
+Windows.DressButtonsIn = dressButtonsIn
+
 -- Window tabs stay where Blizzard hangs them, under the window, dressed as
 -- tabs of the window: a dark rounded tab tucked under its edge, the chosen
 -- one in the footer's shade with its word in the text colour over a short
@@ -310,14 +312,21 @@ end
 
 -- Blizzard picks text colours to suit the parchment; on a dark panel they
 -- need to be light, so every colour it sets is set again.
+-- The map's quest log shows the same quest text on Blizzard's parchment,
+-- which Stoa leaves alone, so its dark colours stay there.
+local function onParchment()
+	return QuestInfoFrame and QuestInfoFrame.questLog
+end
+
 local function lightQuestText()
 	if QuestFrame_SetTitleTextColor then
-		hooksecurefunc("QuestFrame_SetTitleTextColor", function(fs) light(fs, true) end)
+		hooksecurefunc("QuestFrame_SetTitleTextColor", function(fs) if not onParchment() then light(fs, true) end end)
 	end
 	if QuestFrame_SetTextColor then
-		hooksecurefunc("QuestFrame_SetTextColor", function(fs) light(fs) end)
+		hooksecurefunc("QuestFrame_SetTextColor", function(fs) if not onParchment() then light(fs) end end)
 	end
 	local function recolour()
+		if onParchment() then return end
 		for _, name in ipairs({ "QuestInfoTitleHeader", "QuestInfoDescriptionHeader", "QuestInfoObjectivesHeader", "QuestProgressTitleText" }) do
 			light(_G[name], true)
 		end
