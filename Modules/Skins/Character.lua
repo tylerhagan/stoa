@@ -83,8 +83,9 @@ local function averageText(frame)
 	return frame.stoaAverage
 end
 
--- The character sheet's header holds two lines, both on the left: the name,
--- then "Level 4 Priest · Item level 12" in quiet type. Blizzard centres the
+-- The character sheet's header holds one line on the left: the name, then
+-- "Level 4 Priest · Item level 12" beside it in quiet type, so it fits the
+-- shared band. Blizzard centres the
 -- level line in the middle of the band on every update, so it is seated
 -- again after each one.
 local function seatLevel()
@@ -93,14 +94,14 @@ local function seatLevel()
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	if title then
 		title:ClearAllPoints()
-		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -12)
+		title:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
 		title:SetJustifyH("LEFT")
 	end
 	level:ClearAllPoints()
 	if title then
-		level:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
+		level:SetPoint("BOTTOMLEFT", title, "BOTTOMRIGHT", 14, 2)
 	else
-		level:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, -8)
+		level:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
 	end
 	level:SetWidth(0)
 	level:SetJustifyH("LEFT")
@@ -157,7 +158,6 @@ local function dressCharacter()
 	end
 	-- Title and level make a two-line header, so this window's band is
 	-- taller than the shared one; the level is seated as its settle step.
-	frame.stoaBandHeight = 60
 	local windows = Stoa.modules.Windows
 	if windows and windows.OnSettle then windows:OnSettle(frame, function() guarded(seatLevel) end) end
 	frame:HookScript("OnShow", function()

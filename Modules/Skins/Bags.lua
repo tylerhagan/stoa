@@ -348,6 +348,9 @@ function Bags:Dress(frame)
 	-- The common Stoa window: panel, title, close cross, no stone border.
 	local windows = Stoa.modules.Windows
 	if windows and windows.Dress then guarded(windows.Dress, windows, frame) end
+	-- Bags are small windows: their name is a label, not a window title.
+	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
+	if title and title.SetTextColor then Stoa:SetFont(title, "serif", Stoa.typeSize.label) end
 
 	parts.free = UI.text(frame, "sans", Stoa.typeSize.caption + 1, "muted")
 	parts.free:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 10)
