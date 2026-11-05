@@ -83,9 +83,8 @@ local function averageText(frame)
 	return frame.stoaAverage
 end
 
--- The character sheet's header holds one line on the left: the name, then
--- "Level 4 Priest · Item level 12" beside it in quiet type, so it fits the
--- shared band. Blizzard centres the
+-- The character sheet's header holds the name; "Level 4 Priest · Item
+-- level 12" sits just under the band on the left, in quiet type. Blizzard centres the
 -- level line in the middle of the band on every update, so it is seated
 -- again after each one.
 local function seatLevel()
@@ -98,11 +97,7 @@ local function seatLevel()
 		title:SetJustifyH("LEFT")
 	end
 	level:ClearAllPoints()
-	if title then
-		level:SetPoint("BOTTOMLEFT", title, "BOTTOMRIGHT", 14, 2)
-	else
-		level:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
-	end
+	level:SetPoint("TOPLEFT", frame.stoaHeader, "BOTTOMLEFT", 18, -8)
 	level:SetWidth(0)
 	level:SetJustifyH("LEFT")
 	Stoa:SetFont(level, "sans", Stoa.typeSize.body)
@@ -120,12 +115,14 @@ function Character:Refresh()
 	if GetAverageItemLevel then
 		local overall, equipped = GetAverageItemLevel()
 		overall, equipped = Stoa:PlainNumber(overall), Stoa:PlainNumber(equipped)
-		if overall then
+		if overall and overall > 0 then
 			local text = "Item level " .. math.floor(overall + 0.5)
 			if equipped and math.floor(equipped + 0.5) ~= math.floor(overall + 0.5) then
 				text = text .. "  ·  worn " .. math.floor(equipped + 0.5)
 			end
 			averageText(CharacterFrame):SetText("·  " .. text)
+		else
+			averageText(CharacterFrame):SetText("")
 		end
 	end
 end
