@@ -183,9 +183,9 @@ function Tooltip:Difficulty(unit)
 		if trivial == nil and GetQuestGreenRange then trivial = gap < -GetQuestGreenRange() end
 		if gap >= 5 then word, token = "DEADLY", "danger"
 		elseif gap >= 3 then word, token = "HARD", "danger"
-		elseif gap >= -2 then word, token = "EVEN", "text"
+		elseif gap >= -2 then word, token = "EVEN", "accent"
 		elseif trivial then word, token = "TRIVIAL", "muted"
-		else word, token = "EASY", "muted" end
+		else word, token = "EASY", "text" end
 	end
 	local class = CLASSIFICATIONS[known(UnitClassification(unit)) or ""]
 	if class then
@@ -193,6 +193,26 @@ function Tooltip:Difficulty(unit)
 		if class == "BOSS" then token = "danger" end
 	end
 	return word, token or "text"
+end
+
+-- The difficulty word sits beside the level ("Level 4 · Even"), in its
+-- colour: trivial grey, easy plain, even gold, hard and deadly amber, with
+-- the word itself carrying the meaning. Without a level line it gets its own.
+local function titleCase(word)
+	return (word:lower():gsub("^%l", string.upper):gsub(" · (%l)", function(c) return " · " .. c:upper() end))
+end
+
+function Tooltip:SayDifficulty(tip, word, token)
+	local prefix = LEVEL and LEVEL ~= "" and LEVEL or "Level"
+	for i = 2, tip:NumLines() do
+		local fs = line(tip, i)
+		local text = fs and fs:GetText()
+		if type(text) == "string" and not Stoa:IsSecret(text) and text:find(prefix, 1, true) == 1 then
+			fs:SetText(text .. "  ·  " .. tokenHex(token) .. titleCase(word) .. "|r")
+			return
+		end
+	end
+	tip:AddLine(word, Stoa:Color(token))
 end
 
 function Tooltip:DressUnit(tip)
@@ -224,7 +244,7 @@ function Tooltip:DressUnit(tip)
 		tip:AddLine("DEAD", Stoa:Color("muted"))
 	elseif known(UnitCanAttack("player", unit)) then
 		local word, token = self:Difficulty(unit)
-		if word then tip:AddLine(word, Stoa:Color(token)) end
+		if word then self:SayDifficulty(tip, word, token) end
 	end
 
 	local target = unit .. "target"
