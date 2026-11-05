@@ -43,6 +43,35 @@ function Items.level(link)
 	if level and level > 1 then return math.floor(level + 0.5) end
 end
 
+-- Armour your class can wear now: cloth for all; leather for all but the
+-- cloth wearers; mail for warriors and paladins, and hunters and shamans
+-- from 40; plate for warriors and paladins from 40; shields, librams, idols
+-- and totems for their classes. An item outside this is never an upgrade.
+-- Weapons aren't checked (proficiencies are learnt, so the game is the judge).
+local ARMOR = 4
+local ARMOR_RULES = {
+	[2] = function(class) return class ~= "PRIEST" and class ~= "MAGE" and class ~= "WARLOCK" end,
+	[3] = function(class, level)
+		return class == "WARRIOR" or class == "PALADIN" or ((class == "HUNTER" or class == "SHAMAN") and level >= 40)
+	end,
+	[4] = function(class, level) return (class == "WARRIOR" or class == "PALADIN") and level >= 40 end,
+	[6] = function(class) return class == "WARRIOR" or class == "PALADIN" or class == "SHAMAN" end,
+	[7] = function(class) return class == "PALADIN" end,
+	[8] = function(class) return class == "DRUID" end,
+	[9] = function(class) return class == "SHAMAN" end,
+}
+
+function Items.wearable(link)
+	local _, _, _, classID, subclassID = Items.info(link)
+	if classID ~= ARMOR or not subclassID then return true end
+	local rule = ARMOR_RULES[subclassID]
+	if not rule then return true end
+	local _, class = UnitClass("player")
+	if not class or Stoa:IsSecret(class) then return true end
+	local level = Stoa:PlainNumber(UnitLevel("player")) or 1
+	return rule(class, level) and true or false
+end
+
 -- The slots each kind of item goes in, and the names lines use for them.
 Items.SLOTS = {
 	INVTYPE_HEAD = { 1 }, INVTYPE_NECK = { 2 }, INVTYPE_SHOULDER = { 3 }, INVTYPE_BODY = { 4 },
@@ -63,6 +92,7 @@ Items.SLOT_NAMES = {
 -- difference, that slot's name, and true when the slot is empty. Nil for
 -- things you can't wear, or when it is what you wear.
 function Items.compare(link)
+	if not Items.wearable(link) then return nil end
 	local level = Items.level(link)
 	if not level then return nil end
 	local _, _, equipLoc = Items.info(link)
@@ -115,6 +145,7 @@ end
 -- to Items.compare.
 function Items.upgrade(link)
 	if not link or Stoa:IsSecret(link) then return nil end
+	if not Items.wearable(link) then return nil end
 	if _G.PawnIsItemAnUpgrade then
 		local gain, name, none, source = pawnUpgrade(link)
 		if gain then return gain, name, none, source end
