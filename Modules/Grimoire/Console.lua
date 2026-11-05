@@ -562,7 +562,13 @@ function Console:BuildRing(seal, portrait, size)
 	end
 	self.ringTicks = ticks
 
-	local plate = UI.badge(seal, "1", "accent")
+	-- The level in the display serif, a size up from the badge's caption, on
+	-- an opaque plate so the bezel ticks under it don't read as digits.
+	local plate = UI.badge(seal, nil, "accent")
+	Stoa:SetFont(plate.text, "serif", Stoa.typeSize.label)
+	plate:SetHeight(18)
+	plate.fill:SetVertexColor(0, 0, 0, 0.95)
+	plate:Set("1", "accent")
 	plate:SetFrameLevel(seal:GetFrameLevel() + 5)
 	plate:SetPoint("CENTER", portrait, "BOTTOM", 0, -TICK_GAP + 1)
 	self.levelPlate = plate
