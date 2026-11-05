@@ -822,6 +822,9 @@ function UI.plaque(frame, coinSide)
 	local well = rounded("BORDER", PORTRAIT - 2)
 	well:SetColorTexture(0, 0, 0, 1)
 	local portrait = rounded("ARTWORK", PORTRAIT - 2)
+	-- The game draws portraits as a disc; crop to the square inside it so
+	-- the face fills the rounded square instead of sitting in a circle.
+	portrait:SetTexCoord(0.15, 0.85, 0.15, 0.85)
 	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
 
 	-- A quiet edge for everyone; elite gold, rare silver.
