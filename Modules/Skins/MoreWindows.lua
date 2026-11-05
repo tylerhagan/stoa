@@ -72,7 +72,9 @@ local function dressBorder(frame, bare)
 	})
 	local title = frame.TitleContainer and frame.TitleContainer.TitleText or frame.TitleText
 	if title and title.SetTextColor then
-		Stoa:SetFont(title, "serif", Stoa.typeSize.title)
+		-- The map's title shares its strip with the zone's level line, so
+		-- it stays a label there.
+		Stoa:SetFont(title, "serif", bare and Stoa.typeSize.label or Stoa.typeSize.title)
 		title:SetTextColor(Stoa:Color("text"))
 	end
 	-- The band settles to the shared height on show, as on the common
