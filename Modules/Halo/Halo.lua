@@ -815,6 +815,11 @@ function Halo:OnEnable()
 		if unit == "player" then self:UpdatePower() end
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateTarget() end)
+	-- A creature not yet seen this session has no name until the game has
+	-- looked it up, a moment after targeting; fill it in when it arrives.
+	Stoa:OnUnit("UNIT_NAME_UPDATE", { "target" }, function(unit)
+		if unit == "target" then self:UpdateTarget() end
+	end)
 	Stoa:On("UNIT_THREAT_SITUATION_UPDATE", function() self:UpdateThreat() end)
 	Stoa:On("UNIT_THREAT_LIST_UPDATE", function(unit)
 		if unit == "target" then self:UpdateThreat() end
