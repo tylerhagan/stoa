@@ -31,8 +31,9 @@ local function parts(button)
 	p.edge = UI.roundBorder and UI.roundBorder(button, "CardEdge.tga", 1)
 	p.word = button:CreateFontString(nil, "OVERLAY", nil, 7)
 	Stoa:SetFont(p.word, "sans", Stoa.typeSize.caption, "OUTLINE")
-	-- Just above the button's right edge, clear of the item's name.
-	p.word:SetPoint("BOTTOMRIGHT", button, "TOPRIGHT", -2, 1)
+	-- Inside the button's top right corner, over its own dark panel: above
+	-- it the word ran into the window's "Choose your reward" line.
+	p.word:SetPoint("TOPRIGHT", button, "TOPRIGHT", -6, -3)
 	return p
 end
 
@@ -79,7 +80,7 @@ function Reward:Refresh()
 	local p = parts(button)
 	if p.edge then p.edge:Set(Stoa:Color("accent")) end
 	p.word:SetText(kind)
-	p.word:SetTextColor(Stoa:Color(kind == "UPGRADE" and "accent" or "muted"))
+	p.word:SetTextColor(Stoa:Color(kind == "UPGRADE" and "accent" or "text"))
 	self.marked = { index = index, kind = kind }
 end
 
