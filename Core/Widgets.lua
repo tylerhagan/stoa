@@ -772,9 +772,6 @@ local FILL_ALPHA = 0.97
 
 function UI.plaque(frame, coinSide)
 	local plaque = {}
-	-- A soft shadow, so the card sits above the world rather than in it.
-	local shadow = sliced(frame, "BACKGROUND", "CardGlow.tga", 6)
-	if shadow then shadow:SetVertexColor(0, 0, 0, 0.55) end
 	local fill = sliced(frame, "BACKGROUND", "CardFill.tga")
 	if not fill then
 		fill = frame:CreateTexture(nil, "BACKGROUND")
