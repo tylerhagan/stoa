@@ -287,11 +287,12 @@ function Halo:BuildTarget(frame)
 	-- Hostile targets get a word as well as a colour.
 	local cue = UI.caption(target, "")
 	cue:SetPoint("TOPRIGHT", -TARGET_PAD, -TARGET_PAD)
-	local name = UI.text(target, "serif", Stoa.typeSize.title, "text", "LEFT")
+	-- One step below title size, so most creature names fit whole.
+	local name = UI.text(target, "serif", Stoa.typeSize.label + 2, "text", "LEFT")
 	name:SetPoint("TOPLEFT", caption, "BOTTOMLEFT", 0, -4)
-	name:SetWidth(TARGET_WIDTH - left - TARGET_PAD - 40)
+	name:SetWidth(TARGET_WIDTH - left - TARGET_PAD - 44)
 	name:SetWordWrap(false)
-	local health = UI.text(target, "serif", Stoa.typeSize.title, "text", "RIGHT")
+	local health = UI.text(target, "serif", Stoa.typeSize.label + 2, "text", "RIGHT")
 	health:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
 	local barWidth = TARGET_WIDTH - left - TARGET_PAD
 	local hp = UI.bar(target, barWidth, 4, "health")

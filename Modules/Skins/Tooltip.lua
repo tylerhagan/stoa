@@ -151,7 +151,7 @@ function Tooltip:InspectReady(guid)
 	if level and level > 0 then
 		remember(guid, math.floor(level + 0.5))
 		-- Show it straight away if the card is still up.
-		local _, shown = GameTooltip:GetUnit()
+		local shown = tipUnit(GameTooltip)
 		if GameTooltip:IsShown() and shown and known(UnitGUID(shown)) == guid then
 			GameTooltip:SetUnit(shown)
 		end
@@ -189,7 +189,7 @@ function Tooltip:Difficulty(unit)
 end
 
 function Tooltip:DressUnit(tip)
-	local _, unit = tip:GetUnit()
+	local unit = tipUnit(tip)
 	if not unit or Stoa:IsSecret(unit) then return end
 	local r, g, b = self:UnitColour(unit)
 	local name = line(tip, 1)
@@ -256,8 +256,30 @@ end
 
 -- Items -------------------------------------------------------------------------------
 
+-- The unit a tooltip shows, or nil; not every tooltip has GetUnit.
+local function tipUnit(tip)
+	if not (tip and type(tip.GetUnit) == "function") then return nil end
+	local ok, _, unit = pcall(tip.GetUnit, tip)
+	if ok then return unit end
+end
+
+-- The item's link: from the tooltip data first, as not every tooltip that
+-- shows an item has GetItem (it was missing on some in Forever at launch).
+local function itemLink(tip, data)
+	local link = data and known(data.hyperlink)
+	if not link and data and known(data.guid) and C_Item and C_Item.GetItemLinkByGUID then
+		local ok, found = pcall(C_Item.GetItemLinkByGUID, data.guid)
+		if ok then link = known(found) end
+	end
+	if not link and type(tip.GetItem) == "function" then
+		local ok, _, found = pcall(tip.GetItem, tip)
+		if ok then link = known(found) end
+	end
+	return link
+end
+
 function Tooltip:DressItem(tip, data)
-	local _, link = tip:GetItem()
+	local link = itemLink(tip, data)
 	local quality
 	if link and not Stoa:IsSecret(link) and C_Item and C_Item.GetItemInfo then
 		quality = select(3, C_Item.GetItemInfo(link))
@@ -526,7 +548,7 @@ end
 -- Unit cards hidden in combat unless you hold Shift.
 function Tooltip:HideInCombat(tip)
 	if not self.db.combatHide or not InCombatLockdown() or IsShiftKeyDown() then return end
-	if tip:GetUnit() then tip:Hide() end
+	if tipUnit(tip) then tip:Hide() end
 end
 
 -- At the cursor, when chosen.
