@@ -269,8 +269,11 @@ function Halo:PlaceTarget()
 	local edge = console and console.enabled and console.frame
 	target:ClearAllPoints()
 	if edge and Stoa:GetState() == Stoa.STATE_WORLD then
+		-- Pinned to the screen where the open console's top edge sits, never
+		-- to the console itself: it folds in a fight, and a secure frame
+		-- anchored to it would make that fold a blocked action.
 		local gap = 150 * (console.ART_SCALE or 0.556) + 22
-		target:SetPoint("BOTTOMLEFT", edge, "TOP", gap, TARGET_REST_Y)
+		target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
 	else
 		target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 	end
