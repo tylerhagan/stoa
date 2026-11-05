@@ -83,6 +83,34 @@ local function averageText(frame)
 	return frame.stoaAverage
 end
 
+-- The character sheet's header holds two lines, both on the left: the name,
+-- then "Level 4 Priest · Item level 12" in quiet type. Blizzard centres the
+-- level line in the middle of the band on every update, so it is seated
+-- again after each one.
+local function seatLevel()
+	local frame, level = CharacterFrame, CharacterLevelText
+	if not (frame and level and frame.stoaHeader) or InCombatLockdown() then return end
+	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
+	if title then
+		title:ClearAllPoints()
+		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -12)
+		title:SetJustifyH("LEFT")
+	end
+	level:ClearAllPoints()
+	if title then
+		level:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
+	else
+		level:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, -8)
+	end
+	level:SetWidth(0)
+	level:SetJustifyH("LEFT")
+	Stoa:SetFont(level, "sans", Stoa.typeSize.body)
+	level:SetTextColor(Stoa:Color("muted"))
+	local average = averageText(frame)
+	average:ClearAllPoints()
+	average:SetPoint("LEFT", level, "RIGHT", 12, 0)
+end
+
 function Character:Refresh()
 	if not (CharacterFrame and CharacterFrame.IsShown and CharacterFrame:IsShown()) then return end
 	for _, button in ipairs(slotButtons("Character")) do
@@ -96,7 +124,7 @@ function Character:Refresh()
 			if equipped and math.floor(equipped + 0.5) ~= math.floor(overall + 0.5) then
 				text = text .. "  ·  worn " .. math.floor(equipped + 0.5)
 			end
-			averageText(CharacterFrame):SetText(text)
+			averageText(CharacterFrame):SetText("·  " .. text)
 		end
 	end
 end
@@ -127,7 +155,14 @@ local function dressCharacter()
 			if button and button.stoaItem then guarded(updateSlot, button, "player", true) end
 		end)
 	end
-	frame:HookScript("OnShow", function() guarded(Character.Refresh, Character) end)
+	frame:HookScript("OnShow", function()
+		guarded(seatLevel)
+		guarded(Character.Refresh, Character)
+	end)
+	for _, name in ipairs({ "PaperDollFrame_SetLevel", "PaperDollFrame_SetPetLevel" }) do
+		if _G[name] then hooksecurefunc(name, function() guarded(seatLevel) end) end
+	end
+	guarded(seatLevel)
 end
 
 -- Inspect --------------------------------------------------------------------
