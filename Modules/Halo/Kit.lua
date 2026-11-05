@@ -234,6 +234,7 @@ function Kit:UpdateConsole()
 		quest = self:QuestLine() or ""
 	end
 	console.questNote:SetText(quest)
+	if console.SettleNext then console:SettleNext() end
 end
 
 -- Pull timer ----------------------------------------------------------------
