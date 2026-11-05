@@ -354,8 +354,8 @@ end
 --   Journey: level and experience, with rest and where an hour at your pace
 --     gets you marked on the bar, and the pace as a small line chart.
 --   Company: your party, or who's online when you travel alone.
-local COLUMN_WIDTH = 170
-local COLUMN_GAP = 36
+local COLUMN_WIDTH = 196
+local COLUMN_GAP = 40
 
 local function column(page, index, label)
 	local x = (index - 1) * (COLUMN_WIDTH + COLUMN_GAP)
@@ -386,7 +386,7 @@ function Console:BuildFellowship(frame, space)
 	local Figures = Stoa.Figures
 	local gear = CreateFrame("Button", nil, page)
 	gear:SetSize(COLUMN_WIDTH, 12)
-	gear:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -6)
+	gear:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -8)
 	local gearLabel = text(gear, "sans", Stoa.typeSize.caption + 1, "muted")
 	gearLabel:SetPoint("LEFT")
 	gearLabel:SetText("Gear")
@@ -398,7 +398,7 @@ function Console:BuildFellowship(frame, space)
 	-- Bags: one column per bag, the free count to the right.
 	local bags = CreateFrame("Button", nil, page)
 	bags:SetSize(COLUMN_WIDTH, 22)
-	bags:SetPoint("TOPLEFT", gear, "BOTTOMLEFT", 0, -6)
+	bags:SetPoint("TOPLEFT", gear, "BOTTOMLEFT", 0, -9)
 	local columns = Figures.columns(bags, 5, 6, 22, 3)
 	columns:SetPoint("BOTTOMLEFT")
 	local free = text(bags, "serif", Stoa.typeSize.label + 2, "text")
@@ -445,28 +445,30 @@ function Console:BuildFellowship(frame, space)
 	-- half hour, experience an hour and time to level beside it, and the
 	-- nearest watched quest's progress when alone.
 	local pace = CreateFrame("Frame", nil, page)
-	pace:SetSize(COLUMN_WIDTH, 24)
-	pace:SetPoint("TOPLEFT", keyEarned, "BOTTOMLEFT", 0, -4)
+	pace:SetSize(COLUMN_WIDTH, 26)
+	pace:SetPoint("TOPLEFT", keyEarned, "BOTTOMLEFT", 0, -7)
 	local spark = Figures.spark(pace, 54, 18)
 	spark:SetPoint("BOTTOMLEFT", 0, 2)
 	local perHour = text(pace, "serif", Stoa.typeSize.label + 2, "text")
 	perHour:SetPoint("TOPLEFT", pace, "TOPLEFT", 62, 0)
 	local perHourCap = text(pace, "sans", Stoa.typeSize.caption, "muted")
 	perHourCap:SetPoint("TOPLEFT", perHour, "BOTTOMLEFT", 0, -2)
+	-- Time to level halfway along what's left, so the two captions under
+	-- the numbers ("xp an hour", "to 12") never run into each other.
 	local toLevel = text(pace, "serif", Stoa.typeSize.label + 2, "text")
-	toLevel:SetPoint("TOPLEFT", pace, "TOPLEFT", 116, 0)
+	toLevel:SetPoint("TOPLEFT", pace, "TOPLEFT", 62 + math.floor((COLUMN_WIDTH - 62) / 2), 0)
 	local toLevelCap = text(pace, "sans", Stoa.typeSize.caption, "muted")
 	toLevelCap:SetPoint("TOPLEFT", toLevel, "BOTTOMLEFT", 0, -2)
 	pace.spark, pace.perHour, pace.perHourCap, pace.toLevel, pace.toLevelCap = spark, perHour, perHourCap, toLevel, toLevelCap
 	pace:Hide()
 	-- While the pace is still being worked out, a line of words instead.
 	local rate = text(page, "sans", Stoa.typeSize.caption + 1, "muted")
-	rate:SetPoint("TOPLEFT", keyEarned, "BOTTOMLEFT", 0, -4)
+	rate:SetPoint("TOPLEFT", keyEarned, "BOTTOMLEFT", 0, -7)
 	rate:SetWidth(COLUMN_WIDTH)
 	rate:SetWordWrap(false)
 	self.pace = pace
 	local quest = text(page, "italic", Stoa.typeSize.caption + 1, "muted")
-	quest:SetPoint("TOPLEFT", pace, "BOTTOMLEFT", 0, -3)
+	quest:SetPoint("TOPLEFT", pace, "BOTTOMLEFT", 0, -5)
 	quest:SetWidth(COLUMN_WIDTH)
 	quest:SetWordWrap(false)
 	-- New spells waiting at your trainer (Trainer.lua).
