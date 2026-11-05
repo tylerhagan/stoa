@@ -4,7 +4,8 @@
 --   * a flat bar in a rounded dark track, and a rounded bone edge around
 --     your target instead of Blizzard's frame
 --   * colour by what you can do, not red/yellow/green: amber for an enemy,
---     pale gold for neutral, blue for friends, and grey only for tapped or
+--     a pale straw for neutral (picked to stand apart from the theme's
+--     amber in lightness and hue), blue for friends, and grey only for tapped or
 --     dead, as in the base game; enemy players keep class colour
 --   * names and cast text in Stoa's sans with a fine outline; the level as
 --     a plain number shaded by how hard the fight is
@@ -70,6 +71,31 @@ end
 
 -- Colour ---------------------------------------------------------------------
 
+-- Neutral is not the theme's accent: in some themes the accent sits right
+-- next to the danger colour (Graphite uses the same amber for both), so a
+-- neutral mob looked hostile. The first of these that is clearly apart from
+-- both danger and the friendly blue is used.
+local NEUTRAL_CANDIDATES = {
+	{ 0.91, 0.86, 0.60 }, -- pale straw
+	{ 0.80, 0.80, 0.80 }, -- light grey
+	{ 0.62, 0.86, 0.70 }, -- sage
+}
+
+local function apart(a, b)
+	local dr, dg, db = a[1] - b[1], a[2] - b[2], a[3] - b[3]
+	return (dr * dr + dg * dg + db * db) > 0.09
+end
+
+local function neutralColour()
+	local danger, mana = { Stoa:Color("danger") }, { Stoa:Color("mana") }
+	for _, colour in ipairs(NEUTRAL_CANDIDATES) do
+		if apart(colour, danger) and apart(colour, mana) then return colour end
+	end
+	return NEUTRAL_CANDIDATES[1]
+end
+-- Tooltips name neutral units in the same colour.
+function Stoa:NeutralColour() return unpack(neutralColour()) end
+
 local function healthToken(frame)
 	local unit = frame.unit
 	if not known(UnitIsConnected(unit)) or known(UnitIsDead(unit)) then return "muted", 0.6 end
@@ -82,7 +108,10 @@ local function healthToken(frame)
 	if known(UnitIsTapDenied(unit)) and not known(UnitPlayerControlled(unit)) then return "muted", 0.6 end
 	local reaction = known(UnitReaction(unit, "player"))
 	if reaction and reaction >= 5 then return "mana" end
-	if reaction == 4 then return "accent" end
+	if reaction == 4 then
+		local c = neutralColour()
+		return { r = c[1], g = c[2], b = c[3] }
+	end
 	return "danger"
 end
 
