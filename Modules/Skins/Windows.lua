@@ -480,7 +480,7 @@ local function dressTooltip(tip)
 	if not tip or tip.stoaDressed then return end
 	tip.stoaDressed = true
 	hide(tip.NineSlice)
-	UI.roundPanel(tip, 0.96)
+	UI.surface(tip, "card", { alpha = 0.96 })
 	-- Blizzard re-applies its backdrop style each time a tooltip shows.
 	tip:HookScript("OnShow", function(self) hide(self.NineSlice) end)
 end
@@ -494,6 +494,7 @@ local function dressTooltips()
 		bar:ClearAllPoints()
 		bar:SetPoint("TOPLEFT", GameTooltip, "BOTTOMLEFT", 8, -3)
 		bar:SetPoint("TOPRIGHT", GameTooltip, "BOTTOMRIGHT", -8, -3)
+		UI.surface(bar, "well", { outset = 1 })
 		hooksecurefunc(bar, "SetStatusBarColor", function(self)
 			if self.stoaColouring then return end
 			self.stoaColouring = true

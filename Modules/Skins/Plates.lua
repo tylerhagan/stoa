@@ -220,16 +220,16 @@ local function buildParts(frame)
 
 	-- A dark well behind the bar in every style, so the missing health
 	-- reads against the fill even over the target glow or bright ground.
-	local well = bar:CreateTexture(nil, "BACKGROUND", nil, -6)
-	well:SetAllPoints(bar)
-	well:SetColorTexture(0, 0, 0, 0.72)
+	-- (The rulebook's well, in the plates' small corner.)
+	local well = UI.pillFill(bar, 0)
+	well:SetDrawLayer("BACKGROUND", -6)
+	well:SetVertexColor(0, 0, 0, UI.SURFACES.well.black)
 	parts.well = well
 
 	-- Bold: a dark box well past the bar's edges.
-	local box = bar:CreateTexture(nil, "BACKGROUND", nil, -7)
-	box:SetPoint("TOPLEFT", -3, 3)
-	box:SetPoint("BOTTOMRIGHT", 3, -3)
-	box:SetColorTexture(0, 0, 0, 0.92)
+	local box = UI.pillFill(bar, 3)
+	box:SetDrawLayer("BACKGROUND", -7)
+	box:SetVertexColor(0, 0, 0, 0.92)
 	parts.box = box
 	-- A bevel: light along the top, shade along the foot, over the fill.
 	local bevel = holder:CreateTexture(nil, "ARTWORK")
@@ -243,14 +243,24 @@ local function buildParts(frame)
 	parts.bevel = bevel
 
 	-- Brass: an accent edge and a small level badge on the right.
-	parts.brass = UI.border(holder, 2, 2)
+	-- Two fine rounded lines make the 2px brass edge.
+	local brassOuter, brassInner = UI.pillEdge(holder, 2), UI.pillEdge(holder, 1)
+	parts.brass = {
+		Set = function(_, r, g, b, a)
+			brassOuter:Set(r, g, b, a)
+			brassInner:Set(r, g, b, a)
+		end,
+		Clear = function()
+			brassOuter:Clear()
+			brassInner:Clear()
+		end,
+	}
 	local badge = CreateFrame("Frame", nil, holder)
 	badge:SetSize(26, 18)
 	badge:SetPoint("LEFT", bar, "RIGHT", 3, 0)
-	local badgeFill = badge:CreateTexture(nil, "BACKGROUND")
-	badgeFill:SetAllPoints()
-	badgeFill:SetColorTexture(0, 0, 0, 0.85)
-	badge.edge = UI.border(badge, 2, 0)
+	local badgeFill = UI.pillFill(badge, 0)
+	badgeFill:SetVertexColor(0, 0, 0, 0.85)
+	badge.edge = UI.pillEdge(badge, 0)
 	badge.text = UI.text(badge, "sans", Stoa.typeSize.caption, "accent", "CENTER")
 	badge.text:SetPoint("CENTER", 0, 0)
 	parts.badge = badge

@@ -215,6 +215,7 @@ Stoa.states = {
 	READY = "accent", VALUE = "text", UPGRADE = "accent", BEST = "accent",
 	RESTING = "mana", OOM = "mana", DRINKING = "mana",
 	DEAD = "muted", GHOST = "muted", OFFLINE = "muted", AFK = "muted",
+	HURT = "accent", STEADY = "muted",
 	LOW = "danger", HOSTILE = "danger", TAUNT = "danger", KICK = "danger", AGGRO = "danger",
 	ELITE = "accent", RARE = "text", BOSS = "danger",
 }
