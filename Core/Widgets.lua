@@ -596,6 +596,7 @@ function UI.band(frame, size, family, plain)
 		-- The same dark as Blizzard's content below, so the window reads as
 		-- one dark sheet with its title on it.
 		header:SetVertexColor(0, 0, 0, UI.PLAIN_HEADER_DARK)
+		frame.stoaPlainHeader = true
 	else
 		local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
 		UI.tint(header, tint.token, tint.alpha)
