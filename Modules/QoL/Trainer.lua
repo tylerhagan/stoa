@@ -295,7 +295,9 @@ function Trainer:Build()
 	title:SetText("Training")
 	local lede = UI.text(page, "italic", Stoa.typeSize.label, "muted", "LEFT")
 	lede:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
-	lede:SetText("What your trainer has now, and what's coming. Right-click to skip a spell.")
+	lede:SetWidth(WIDTH - PAD * 2)
+	lede:SetWordWrap(false)
+	lede:SetText("What you can train now, and what's coming.")
 
 	self.rows = {}
 	for i = 1, ROWS do self.rows[i] = self:BuildRow(page, i) end
