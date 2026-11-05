@@ -566,7 +566,7 @@ end
 local WATCH_WIDTH = 214
 local WATCH_PAD = 14
 -- Room on the right for the half of the coin inside the plaque.
-local WATCH_COIN_SPACE = 40
+local WATCH_COIN_SPACE = UI.PLAQUE_COIN_SPACE
 local HURT_HEALTH = 0.7
 
 local function watchedUnit()
@@ -614,13 +614,13 @@ function Party:BuildWatch()
 	name:SetWordWrap(false)
 	local percent = UI.text(watch, "serif", Stoa.typeSize.title, "text", "RIGHT")
 	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -4)
-	local hp = UI.bar(watch, WATCH_WIDTH, 4, "health")
+	local hp = UI.bar(watch, WATCH_WIDTH, 7, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
 	hp:SetClipsChildren(true)
 	local absorb = CreateFrame("StatusBar", nil, hp)
 	absorb:SetStatusBarTexture(UI.WHITE)
 	absorb:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
-	absorb:SetSize(WATCH_WIDTH, 4)
+	absorb:SetSize(WATCH_WIDTH, 7)
 	absorb:SetStatusBarColor(Stoa:Color("shield"))
 	UI.engrave(hp, WATCH_WIDTH)
 	local buffs = UI.caption(watch, "")
