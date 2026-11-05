@@ -781,7 +781,10 @@ end
 function UI.itemButton(parent, name, size)
 	local button = CreateFrame("Button", name, parent, "SecureActionButtonTemplate")
 	button:SetSize(size, size)
-	button:RegisterForClicks("AnyUp")
+	-- Both: the game acts on the press or the release depending on the
+	-- "cast on key down" setting, and ignores the other, so the item is
+	-- used once either way. Up alone did nothing with that setting on.
+	button:RegisterForClicks("AnyUp", "AnyDown")
 	button:SetAttribute("type", "item")
 	local icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetAllPoints()
