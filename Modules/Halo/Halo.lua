@@ -451,7 +451,15 @@ function Halo:UpdateTarget()
 	local target = self.target
 	-- Showing and hiding is the unit watch's job, as the frame is secure.
 	if not UnitExists("target") then return end
-	target.name:SetText(UnitName("target"))
+	local name = UnitName("target")
+	target.name:SetText(name)
+	-- The first time the serif face is drawn the game may not have loaded
+	-- it yet and the string comes out empty; set it again a moment later.
+	if name and not Stoa:IsSecret(name) and (target.name:GetStringWidth() or 0) == 0 then
+		C_Timer.After(0.1, function()
+			if UnitExists("target") then target.name:SetText(UnitName("target")) end
+		end)
+	end
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
 	UI.setHealthPercent(target.health, "target")
