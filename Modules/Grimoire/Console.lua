@@ -227,18 +227,14 @@ function Console:BuildSeal(frame)
 	portrait:SetPoint("CENTER")
 	self.portrait = portrait
 
+	-- The progress ring, the level plate, the moment glow (BuildRing).
+	self:BuildRing(seal, portrait, size)
+
 	-- In an inn or a city: a small word across the foot of the portrait, in
 	-- the rested blue the experience bar uses.
-	local rest = CreateFrame("Frame", nil, seal)
+	local rest = UI.badge(seal, "RESTING")
 	rest:SetFrameLevel(seal:GetFrameLevel() + 4)
-	rest:SetSize(62, 15)
-	rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1))
-	local restFill = rest:CreateTexture(nil, "BACKGROUND")
-	restFill:SetAllPoints()
-	restFill:SetColorTexture(0, 0, 0, 0.72)
-	local restWord = text(rest, "sans", Stoa.typeSize.caption - 1, "mana", "CENTER")
-	restWord:SetPoint("CENTER", 0, 0)
-	restWord:SetText("RESTING")
+	rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1) + 4)
 	rest:Hide()
 	self.restMark = rest
 
@@ -538,11 +534,148 @@ function Console:BuildFellowship(frame, space)
 	open:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
+-- The medallion ring --------------------------------------------------------
+-- Round the portrait: a bezel of fine ticks that fill with experience (lit
+-- in the accent, the rested stretch in mana blue, the rest faint), and a
+-- small plate at its foot with your level. At the level cap the bezel sits
+-- evenly lit. A soft glow behind the ring marks moments and then settles:
+-- a level gained, a ready check, stepping into rest, low health out of
+-- combat. Nothing moves otherwise.
+
+local TICKS = 48
+local TICK_LENGTH = 5
+local TICK_GAP = 7
+local GLOW_SPREAD = 22
+
+function Console:BuildRing(seal, portrait, size)
+	local radius = size / 2 + TICK_GAP
+	local ticks = {}
+	for i = 1, TICKS do
+		-- Clockwise from the top, like a dial.
+		local angle = math.pi / 2 - (i - 0.5) / TICKS * 2 * math.pi
+		local tick = seal:CreateTexture(nil, "ARTWORK", nil, 3)
+		tick:SetTexture(UI.WHITE)
+		tick:SetSize(1.5, TICK_LENGTH)
+		tick:SetPoint("CENTER", portrait, "CENTER", math.cos(angle) * radius, math.sin(angle) * radius)
+		if tick.SetRotation then tick:SetRotation(angle - math.pi / 2) end
+		ticks[i] = tick
+	end
+	self.ringTicks = ticks
+
+	local plate = UI.badge(seal, "1", "accent")
+	plate:SetFrameLevel(seal:GetFrameLevel() + 5)
+	plate:SetPoint("CENTER", portrait, "BOTTOM", 0, -TICK_GAP + 1)
+	self.levelPlate = plate
+
+	-- A soft halo (Tools/art/ring_glow.py), empty over the face.
+	local glow = seal:CreateTexture(nil, "BORDER", nil, 4)
+	glow:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
+	glow:SetSize(size + GLOW_SPREAD * 2, size + GLOW_SPREAD * 2)
+	glow:SetPoint("CENTER", portrait, "CENTER")
+	glow:SetBlendMode("ADD")
+	glow:SetAlpha(0)
+	self.ringGlow = glow
+	local pulse = glow:CreateAnimationGroup()
+	local rise = pulse:CreateAnimation("Alpha")
+	rise:SetFromAlpha(0)
+	rise:SetToAlpha(0.45)
+	rise:SetDuration(0.7)
+	rise:SetSmoothing("OUT")
+	rise:SetOrder(1)
+	local fall = pulse:CreateAnimation("Alpha")
+	fall:SetFromAlpha(0.45)
+	fall:SetToAlpha(0)
+	fall:SetDuration(1.1)
+	fall:SetSmoothing("IN")
+	fall:SetOrder(2)
+	pulse:SetScript("OnFinished", function()
+		glow:SetAlpha(0)
+		self.pulsesLeft = (self.pulsesLeft or 1) - 1
+		if self.pulsesLeft > 0 or self.pulseHold then pulse:Play() else self.moment = nil end
+	end)
+	self.ringPulse = pulse
+end
+
+-- Lights the glow in a state colour. `times` pulses, or `hold` keeps
+-- pulsing until Settle; a stronger moment replaces a weaker one.
+local MOMENT_RANK = { rest = 1, low = 2, ready = 3, level = 4 }
+local MOMENT_TOKEN = { rest = "mana", low = "danger", ready = "accent", level = "accent" }
+
+function Console:Moment(kind, times, hold)
+	if not self.ringPulse then return end
+	if self.moment and (MOMENT_RANK[self.moment] or 0) > (MOMENT_RANK[kind] or 0) then return end
+	self.moment = kind
+	self.pulsesLeft = times or 1
+	self.pulseHold = hold and true or false
+	local r, g, b = Stoa:Color(MOMENT_TOKEN[kind] or "accent")
+	self.ringGlow:SetVertexColor(r, g, b)
+	if not self.ringPulse:IsPlaying() then self.ringPulse:Play() end
+end
+
+function Console:Settle(kind)
+	if self.moment == kind then
+		self.pulseHold = false
+		self.pulsesLeft = 0
+	end
+end
+
+function Console:UpdateRing()
+	local ticks = self.ringTicks
+	if not ticks then return end
+	local level = Stoa:PlainNumber(UnitLevel("player")) or 0
+	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel()
+	self.levelPlate:Set(tostring(level), "accent")
+	local done, rested = 1, 1
+	if not (maxLevel and level >= maxLevel) and not (IsXPUserDisabled and IsXPUserDisabled()) then
+		local xp, xpMax = Stoa:PlainNumber(UnitXP("player")), Stoa:PlainNumber(UnitXPMax("player"))
+		if xp and xpMax and xpMax > 0 then
+			local extra = Stoa:PlainNumber(GetXPExhaustion and GetXPExhaustion()) or 0
+			done = xp / xpMax
+			rested = math.min(xp + extra, xpMax) / xpMax
+		end
+	end
+	local ar, ag, ab = Stoa:Color("accent")
+	local mr, mg, mb = Stoa:Color("mana")
+	local tr, tg, tb = Stoa:Color("text")
+	for i, tick in ipairs(ticks) do
+		local at = (i - 0.5) / TICKS
+		if at <= done then
+			tick:SetVertexColor(ar, ag, ab, done >= 1 and 0.55 or 0.9)
+		elseif at <= rested then
+			tick:SetVertexColor(mr, mg, mb, 0.75)
+		else
+			tick:SetVertexColor(tr, tg, tb, 0.16)
+		end
+	end
+end
+
+-- Low health out of combat (the console folds in combat, and health is
+-- hidden then anyway): a slow danger pulse until you heal past the line.
+local LOW_HEALTH = 0.35
+
+function Console:CheckLowHealth()
+	if InCombatLockdown() then return end
+	local hp, hpMax = Stoa:PlainNumber(UnitHealth("player")), Stoa:PlainNumber(UnitHealthMax("player"))
+	if not hp or not hpMax or hpMax <= 0 or UnitIsDeadOrGhost("player") then
+		self:Settle("low")
+		return
+	end
+	if hp / hpMax < LOW_HEALTH then
+		if self.moment ~= "low" then self:Moment("low", 1, true) end
+	else
+		self:Settle("low")
+	end
+end
+
 -- Updates -------------------------------------------------------------------
 
 function Console:UpdateSeal()
 	SetPortraitTexture(self.portrait, "player")
-	if self.restMark then self.restMark:SetShown(IsResting and IsResting() and true or false) end
+	local resting = IsResting and IsResting() and true or false
+	if self.restMark then self.restMark:SetShown(resting) end
+	if resting and self.wasResting == false then self:Moment("rest", 1) end
+	self.wasResting = resting
+	self:UpdateRing()
 	local role = Stoa:GetRole()
 	local label = role and Stoa.ROLE_LABELS[role] or ""
 	-- A missing self-buff (Inner Fire, an aura, Righteous Fury) shows beside
@@ -822,6 +955,7 @@ function Console:OnEnable()
 		if unit == "player" then
 			setUnitBar(self.health, "player", "health")
 			self.healthText:SetText(UnitHealth("player"))
+			self:CheckLowHealth()
 		elseif unit and unit:find("^party") then
 			self:UpdateFellowship()
 		end
@@ -841,8 +975,24 @@ function Console:OnEnable()
 	Stoa:On("GROUP_ROSTER_UPDATE", function() self:UpdateFellowship() end)
 
 	for _, event in ipairs({ "PLAYER_XP_UPDATE", "UPDATE_EXHAUSTION", "PLAYER_LEVEL_UP" }) do
-		Stoa:On(event, function() self:UpdateJourney() end)
+		Stoa:On(event, function()
+			self:UpdateJourney()
+			self:UpdateRing()
+		end)
 	end
+	Stoa:On("PLAYER_LEVEL_UP", function()
+		self:Moment("level", 3)
+		-- UnitLevel catches up a moment after the event.
+		C_Timer.After(0.5, function() self:UpdateRing() end)
+	end)
+	Stoa:On("READY_CHECK", function() self:Moment("ready", 1, true) end)
+	Stoa:On("READY_CHECK_FINISHED", function() self:Settle("ready") end)
+	Stoa:On("READY_CHECK_CONFIRM", function(unit)
+		if unit and UnitIsUnit(unit, "player") then self:Settle("ready") end
+	end)
+	Stoa:On("PLAYER_REGEN_ENABLED", function() self:CheckLowHealth() end)
+	Stoa:On("PLAYER_REGEN_DISABLED", function() self:Settle("low") end)
+	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() end)
 	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
 		Stoa:On(event, function() self:UpdateKit() end)
 	end
