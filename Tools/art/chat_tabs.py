@@ -35,6 +35,11 @@ def profile(d):
     grey, alpha = px[..., 0], px[..., 3]
     gold = np.where(d >= 0, sample(lines, row), 0)
     alpha = np.where(row < 0, 0, np.where(d < 0, alpha * 0.7, alpha))
+    # Below its brass the edge strip is clear (on the console the leather
+    # tile shows through), so back the tab with leather from just inside
+    # its outer line; otherwise the world shows between rim and body.
+    backing = np.where(d >= 0, np.clip(d / 2, 0, 1) * 253, 0)
+    grey, alpha = over((grey, alpha), (np.full(grey.shape, FLAT), backing))
     # Deep inside: flat leather, opaque (the edge texture itself fades there).
     w = np.clip((d - 17) / 4, 0, 1)
     grey = grey * (1 - w) + FLAT * w
