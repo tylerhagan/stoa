@@ -53,12 +53,36 @@ function Trainer:Cost(id)
 	return Stoa.db.trainerCosts and Stoa.db.trainerCosts[id]
 end
 
+-- When each spell comes, by level: Stoa's list (Data/TrainerSpells.lua),
+-- corrected by what your class trainer has shown. The trainer lists every
+-- spell it will ever teach with the level it needs, so once you've opened
+-- it the levels are the game's own (Forever moved a few from classic).
+local function schedule(class)
+	local byLevel = Stoa.TRAINER_SPELLS and Stoa.TRAINER_SPELLS[class]
+	local seen = Stoa.db.trainerLevels and Stoa.db.trainerLevels[class]
+	if not seen or not next(seen) then return byLevel end
+	local merged = {}
+	for at, ids in pairs(byLevel or {}) do
+		for _, id in ipairs(ids) do
+			if not seen[id] then
+				merged[at] = merged[at] or {}
+				table.insert(merged[at], id)
+			end
+		end
+	end
+	for id, at in pairs(seen) do
+		merged[at] = merged[at] or {}
+		table.insert(merged[at], id)
+	end
+	return merged
+end
+
 -- Spells you don't know, as { id, level, skipped } sorted by level, from
 -- levels first..last. A later rank waits for an earlier one you know, or
 -- (looking ahead) one you could train first.
 function Trainer:Spells(first, last)
 	local _, class = UnitClass("player")
-	local byLevel = Stoa.TRAINER_SPELLS and Stoa.TRAINER_SPELLS[class]
+	local byLevel = schedule(class)
 	if not byLevel then return {} end
 	local myRace, faction = race(), UnitFactionGroup("player")
 	local Spells = Stoa.Spells
@@ -69,7 +93,8 @@ function Trainer:Spells(first, last)
 				local races = Stoa.TRAINER_RACE[id]
 				local side = Stoa.TRAINER_FACTION[id]
 				local fits = (not races or races[myRace]) and (not side or side == faction)
-				if fits and not seen[id] and not Spells.knows(id) then
+				-- A spell this client doesn't know by ID isn't on Forever.
+				if fits and not seen[id] and Spells.name(id) and not Spells.knows(id) then
 					seen[id] = true
 					if not Stoa.TRAINER_RANKED[id] or Spells.best(id) then
 						list[#list + 1] = { id = id, level = at, skipped = self:Skipped(id) }
@@ -94,7 +119,7 @@ end
 -- The next two levels that bring something new, and their spells.
 function Trainer:Coming()
 	local _, class = UnitClass("player")
-	local byLevel = Stoa.TRAINER_SPELLS and Stoa.TRAINER_SPELLS[class]
+	local byLevel = schedule(class)
 	if not byLevel then return {}, nil end
 	local level, levels = myLevel(), {}
 	for at in pairs(byLevel) do
@@ -160,7 +185,10 @@ function Trainer:Learn()
 	if InCombatLockdown() or not (GetNumTrainerServices and GetTrainerServiceCost) then return end
 	if not (C_TooltipInfo and C_TooltipInfo.GetTrainerService) then return end
 	Stoa.db.trainerCosts = Stoa.db.trainerCosts or {}
-	local costs, learned = Stoa.db.trainerCosts, false
+	local _, class = UnitClass("player")
+	Stoa.db.trainerLevels = Stoa.db.trainerLevels or {}
+	Stoa.db.trainerLevels[class] = Stoa.db.trainerLevels[class] or {}
+	local costs, levels, learned = Stoa.db.trainerCosts, Stoa.db.trainerLevels[class], false
 	for i = 1, Stoa:PlainNumber(GetNumTrainerServices()) or 0 do
 		local ok, data = pcall(C_TooltipInfo.GetTrainerService, i)
 		local id = ok and type(data) == "table" and Stoa:PlainNumber(data.id)
@@ -168,6 +196,15 @@ function Trainer:Learn()
 		if id and cost and cost > 0 and costs[id] ~= cost then
 			costs[id] = cost
 			learned = true
+		end
+		-- The level it needs, from the trainer's own list.
+		if id and GetTrainerServiceInfo then
+			local fine, _, _, _, need = pcall(GetTrainerServiceInfo, i)
+			need = fine and Stoa:PlainNumber(need)
+			if need then
+				need = math.max(need, 1)
+				if levels[id] ~= need then levels[id] = need; learned = true end
+			end
 		end
 	end
 	if learned then self:Refresh() end
