@@ -727,7 +727,8 @@ end
 -- Showing and hiding --------------------------------------------------------
 
 function Halo:SetShown(shown)
-	UI.fade(self.frame, shown and 1 or 0, shown and FADE_IN or FADE_OUT)
+	local t = Stoa.TRANSITION
+	UI.fade(self.frame, shown and 1 or 0, shown and (t and t.into or FADE_IN) or (t and t.out or FADE_OUT))
 end
 
 -- Blizzard frames that repeat what the seal and Halo show.

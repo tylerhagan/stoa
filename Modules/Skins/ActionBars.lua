@@ -216,6 +216,10 @@ function Bars:UpdateTray()
 		for i, bar in ipairs(bars) do bar:SetAlpha(targets[i]) end
 	else
 		local seconds = halo and TRAY_FADE_IN or lit and TRAY_FADE_IN or TRAY_FADE_OUT
+		-- Coming and going with the combat look, they keep its timing.
+		if self.stateChanged and Stoa.TRANSITION then
+			seconds = halo and Stoa.TRANSITION.into or Stoa.TRANSITION.out
+		end
 		fadeTray(bars, targets, seconds)
 	end
 end
@@ -231,7 +235,11 @@ function Bars:StartTray()
 		EventRegistry:RegisterCallback("EditMode.Exit", find, self)
 	end
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:UpdateTray() end)
-	Stoa:On("STOA_STATE_CHANGED", function() self:UpdateTray() end)
+	Stoa:On("STOA_STATE_CHANGED", function()
+		self.stateChanged = true
+		self:UpdateTray()
+		self.stateChanged = false
+	end)
 	-- If the tray ever errors it stops, rather than repeating ten times a
 	-- second; the rows are left showing.
 	local ticker

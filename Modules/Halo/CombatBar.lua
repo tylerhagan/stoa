@@ -472,8 +472,24 @@ function Bar:OnEnable()
 	end)
 	-- /stoa combat practice: the game only shows the row in real combat,
 	-- so the filled buttons are shown by hand while practising.
-	Stoa:On("STOA_STATE_CHANGED", function()
+	-- The row fades with the Halo and the console (Stoa.TRANSITION): in as
+	-- the fight starts, out as the calm ends, then it is laid out again.
+	local pager = self.pager
+	Stoa:On("STOA_STATE_CHANGED", function(state)
+		if state == Stoa.STATE_COMBAT then
+			pager:SetAlpha(0)
+			UI.fade(pager, 1, Stoa.TRANSITION.into)
+		end
 		if InCombatLockdown() then return end
+		if state == Stoa.STATE_WORLD and not Stoa:IsPractising() then
+			UI.fade(pager, 0, Stoa.TRANSITION.out)
+			C_Timer.After(Stoa.TRANSITION.out, function()
+				if Stoa:GetState() ~= Stoa.STATE_WORLD or InCombatLockdown() then return end
+				layout()
+				pager:SetAlpha(1)
+			end)
+			return
+		end
 		if Stoa:IsPractising() then
 			for _, button in ipairs(self.shown or {}) do
 				UnregisterStateDriver(button, "visibility")

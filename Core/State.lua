@@ -15,6 +15,12 @@ local CALM_SECONDS = 5
 local CALM_STEP = 0.5
 local GROUP_HOLD = 20
 
+-- One timing for the change between the two states, shared by the console
+-- fold, the Halo, the combat bar and the console's action bars, so they
+-- all move together: into a fight quickly, back to the world a little
+-- slower.
+Stoa.TRANSITION = { into = 0.3, out = 0.5 }
+
 Stoa.STATE_WORLD = WORLD
 Stoa.STATE_COMBAT = COMBAT
 

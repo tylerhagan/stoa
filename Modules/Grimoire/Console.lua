@@ -887,7 +887,8 @@ function Console:SetOpen(open, instant)
 	end
 
 	frame:SetScript("OnUpdate", Stoa:GuardUpdate(function()
-		local progress = math.min((GetTime() - start) / FOLD_SECONDS, 1)
+		local seconds = Stoa.TRANSITION and (open and Stoa.TRANSITION.out or Stoa.TRANSITION.into) or FOLD_SECONDS
+		local progress = math.min((GetTime() - start) / seconds, 1)
 		-- Ease out so the fold settles rather than stops.
 		progress = 1 - (1 - progress) ^ 3
 		step(progress)
