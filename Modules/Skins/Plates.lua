@@ -218,6 +218,13 @@ local function buildParts(frame)
 	holder:SetFrameLevel(bar:GetFrameLevel() + 2)
 	parts.holder = holder
 
+	-- A dark well behind the bar in every style, so the missing health
+	-- reads against the fill even over the target glow or bright ground.
+	local well = bar:CreateTexture(nil, "BACKGROUND", nil, -6)
+	well:SetAllPoints(bar)
+	well:SetColorTexture(0, 0, 0, 0.72)
+	parts.well = well
+
 	-- Bold: a dark box well past the bar's edges.
 	local box = bar:CreateTexture(nil, "BACKGROUND", nil, -7)
 	box:SetPoint("TOPLEFT", -3, 3)
