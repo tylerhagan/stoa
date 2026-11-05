@@ -225,7 +225,7 @@ function Tooltip:DressUnit(tip)
 	local name = line(tip, 1)
 	if name then
 		name:SetTextColor(r, g, b)
-		Stoa:SetFont(name, "serif", Stoa.typeSize.label + 2)
+		Stoa:SetFont(name, "serif", Stoa.typeSize.name)
 	end
 	self:Rank(tip, known(UnitClassification(unit)))
 
@@ -313,7 +313,7 @@ function Tooltip:DressItem(tip, data)
 	tip.stoaEdge:Clear()
 	self:Fade(tip, r, g, b)
 	local name = line(tip, 1)
-	if name then Stoa:SetFont(name, "serif", Stoa.typeSize.label + 2) end
+	if name then Stoa:SetFont(name, "serif", Stoa.typeSize.name) end
 
 	if tip ~= GameTooltip or InCombatLockdown() then return end
 	self:Upgrade(tip, link)

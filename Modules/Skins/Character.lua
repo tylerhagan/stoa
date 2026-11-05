@@ -49,7 +49,7 @@ local function wearText(button)
 	if not parts then return nil end
 	if not parts.wear then
 		parts.wear = button:CreateFontString(nil, "OVERLAY", nil, 7)
-		Stoa:SetFont(parts.wear, "sans", Stoa.typeSize.caption - 2, "OUTLINE")
+		Stoa:SetFont(parts.wear, "sans", Stoa.typeSize.micro, "OUTLINE")
 		parts.wear:SetPoint("BOTTOM", button, "BOTTOM", 0, 3)
 	end
 	return parts.wear

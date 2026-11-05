@@ -273,7 +273,7 @@ function Top:MinimapHeader()
 	UI.roundPanel(panel, 0.9)
 
 	if MinimapZoneText then
-		Stoa:SetFont(MinimapZoneText, "serif", Stoa.typeSize.body + 1)
+		Stoa:SetFont(MinimapZoneText, "serif", Stoa.typeSize.body)
 		MinimapZoneText:SetShadowOffset(0, 0)
 	end
 	if _G.Minimap_Update then hooksecurefunc("Minimap_Update", zoneColour) end

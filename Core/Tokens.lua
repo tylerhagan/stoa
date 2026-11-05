@@ -201,9 +201,12 @@ local CLASS_THEMES = {
 	SHAMAN = "Shaman", MAGE = "Mage", WARLOCK = "Warlock", DRUID = "Druid",
 }
 
--- Spacing scale in pixels (4 px grid) and type sizes.
+-- Spacing scale in pixels (4 px grid) and type sizes. Every piece of text
+-- takes one of these as it is, never one plus or minus a point: micro is
+-- for words and keys on icons, name for unit names and the console's big
+-- numbers.
 Stoa.space = { xs = 4, s = 8, m = 12, l = 16, xl = 24, xxl = 36 }
-Stoa.typeSize = { caption = 11, body = 12, label = 14, title = 20, display = 28, hero = 38 }
+Stoa.typeSize = { micro = 10, caption = 11, body = 12, label = 14, name = 16, title = 20, display = 28, hero = 38 }
 
 -- State words and the one colour each takes, everywhere Stoa writes them
 -- (badges, tooltips, plaques, cells). Colour never carries a state alone:

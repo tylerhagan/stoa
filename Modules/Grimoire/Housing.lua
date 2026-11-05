@@ -166,7 +166,7 @@ local function makeTab()
 	tab.base = capped(tab, 1)
 	tab.lines = capped(tab, 2, true)
 	local label = tab:CreateFontString(nil, "OVERLAY")
-	Stoa:SetFont(label, "sans", Stoa.typeSize.caption + 1)
+	Stoa:SetFont(label, "sans", Stoa.typeSize.body)
 	label:SetShadowOffset(0, 0)
 	label:SetPoint("CENTER", 0, -3)
 	tab.label = label
@@ -253,7 +253,7 @@ end
 local function relabel()
 	for _, tab in ipairs(tabs) do
 		local text = tab.label:GetText()
-		Stoa:SetFont(tab.label, "sans", Stoa.typeSize.caption + 1)
+		Stoa:SetFont(tab.label, "sans", Stoa.typeSize.body)
 		tab.label:SetText("")
 		tab.label:SetText(text or "")
 	end
