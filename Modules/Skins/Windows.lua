@@ -276,16 +276,60 @@ end
 -- again, the title and close are seated, then any extra steps a skin
 -- registered with Windows:OnSettle. It runs on show and on the next frame.
 
-local function bandHeight(frame)
+-- How far down the top row of Blizzard's small controls reaches (tabs,
+-- search boxes, buttons under the title), measured from the window's top.
+-- Only controls whose top is within REACH of the window's top count, and
+-- only ones shorter than a control can be, so content panels don't.
+local REACH, CONTROL_MAX, CONTROL_PAD = 90, 48, 8
+
+local function controlsDepth(frame)
+	local top = frame:GetTop()
+	if not top or Stoa:IsSecret(top) then return nil end
+	local deepest
+	local function scan(parent, depth)
+		for _, child in ipairs({ parent:GetChildren() }) do
+			if child:IsShown() and child ~= frame.stoaHeader and not (child.IsForbidden and child:IsForbidden()) then
+				local ctop, cbottom, height = child:GetTop(), child:GetBottom(), child:GetHeight()
+				if ctop and cbottom and height and not Stoa:IsSecret(ctop) and not Stoa:IsSecret(cbottom) and not Stoa:IsSecret(height) then
+					local below = top - ctop
+					if below >= 4 and below <= REACH and height > 0 and height <= CONTROL_MAX then
+						local reach = top - cbottom
+						if not deepest or reach > deepest then deepest = reach end
+					end
+				end
+				if depth < 2 then scan(child, depth + 1) end
+			end
+		end
+	end
+	scan(frame, 1)
+	return deepest and math.floor(deepest + CONTROL_PAD + 0.5)
+end
+
+local function insetGap(frame)
 	local inset = frame.Inset
 	if not (inset and inset.GetTop and frame.GetTop) then return nil end
 	local top, start = frame:GetTop(), inset:GetTop()
 	if Stoa:IsSecret(top) or Stoa:IsSecret(start) or not top or not start then return nil end
-	local gap = top - start
+	return top - start
+end
+
+local function bandHeight(frame)
+	local gap = insetGap(frame)
+	-- A dark strip holds the title row and every control Blizzard puts
+	-- under it, down to where the content starts.
+	-- Where Blizzard marks the content with an Inset, that is the line;
+	-- otherwise the controls are measured. Bags hold item buttons at the
+	-- top, so they keep the compact row.
+	if frame.stoaPlainHeader then
+		local name = frame.GetName and frame:GetName() or ""
+		local depth = (not gap and not name:find("^ContainerFrame")) and controlsDepth(frame) or nil
+		local want = math.max(gap or 0, depth or 0, HEADER_FALLBACK)
+		return math.floor(math.min(want, 140) + 0.5)
+	end
+	if not gap then return nil end
 	-- A window with a two-line header asks for more (frame.stoaBandHeight).
 	-- "inset" makes the band reach all the way down to where content starts.
-	-- A dark strip meets Blizzard's dark content with no light gap between.
-	if (frame.stoaBandHeight == "inset" or frame.stoaPlainHeader) and gap >= HEADER_FALLBACK then return math.floor(gap + 0.5) end
+	if frame.stoaBandHeight == "inset" and gap >= HEADER_FALLBACK then return math.floor(gap + 0.5) end
 	local want = tonumber(frame.stoaBandHeight) or BAND
 	if gap >= want then return want end
 	return nil
