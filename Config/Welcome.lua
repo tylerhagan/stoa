@@ -441,7 +441,6 @@ function Welcome:Build()
 	page:SetScript("OnDragStop", page.StopMovingOrSizing)
 	page:SetScript("OnHide", function() self:Closed() end)
 	page:Hide()
-	table.insert(UISpecialFrames, "StoaWelcomePage")
 	UI.windowPanel(page, 0.97, { header = HEADER, footer = FOOTER })
 	self.page = page
 
@@ -901,6 +900,16 @@ function Welcome:Show()
 		return
 	end
 	if not self.page then self:Build() end
+	-- The first showing on a character ignores Escape, so a key pressed to
+	-- clear a quest window or a cinematic at login can't close it unseen;
+	-- it closes from its own buttons. Opened again later, Escape closes it.
+	local escapes = false
+	for i = #UISpecialFrames, 1, -1 do
+		if UISpecialFrames[i] == "StoaWelcomePage" then
+			if Stoa.char.welcomed then escapes = true else table.remove(UISpecialFrames, i) end
+		end
+	end
+	if Stoa.char.welcomed and not escapes then table.insert(UISpecialFrames, "StoaWelcomePage") end
 	local db = halo()
 	self.opened = { ornament = Stoa.db.ornament, halo = not (db and db.enabled == false) }
 	self.applied = nil
