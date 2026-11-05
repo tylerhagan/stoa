@@ -269,7 +269,9 @@ local function bandHeight(frame)
 	if Stoa:IsSecret(top) or Stoa:IsSecret(start) or not top or not start then return nil end
 	local gap = top - start
 	-- A window with a two-line header asks for more (frame.stoaBandHeight).
-	local want = frame.stoaBandHeight or BAND
+	-- "inset" makes the band reach all the way down to where content starts.
+	if frame.stoaBandHeight == "inset" and gap >= BAND then return math.floor(gap + 0.5) end
+	local want = tonumber(frame.stoaBandHeight) or BAND
 	if gap >= want then return want end
 	return nil
 end

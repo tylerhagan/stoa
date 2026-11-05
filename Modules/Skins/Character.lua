@@ -83,8 +83,9 @@ local function averageText(frame)
 	return frame.stoaAverage
 end
 
--- The character sheet's header holds the name; "Level 4 Priest · Item
--- level 12" sits just under the band on the left, in quiet type. Blizzard centres the
+-- The character sheet's band reaches down to where the sheet starts and
+-- holds two lines on the left: the name, then "Level 4 Priest · Item level
+-- 12" in quiet type. Blizzard centres the
 -- level line in the middle of the band on every update, so it is seated
 -- again after each one.
 local function seatLevel()
@@ -93,11 +94,15 @@ local function seatLevel()
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	if title then
 		title:ClearAllPoints()
-		title:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
+		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10)
 		title:SetJustifyH("LEFT")
 	end
 	level:ClearAllPoints()
-	level:SetPoint("TOPLEFT", frame.stoaHeader, "BOTTOMLEFT", 18, -8)
+	if title then
+		level:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -5)
+	else
+		level:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
+	end
 	level:SetWidth(0)
 	level:SetJustifyH("LEFT")
 	Stoa:SetFont(level, "sans", Stoa.typeSize.body)
@@ -107,14 +112,34 @@ local function seatLevel()
 	average:SetPoint("LEFT", level, "RIGHT", 12, 0)
 end
 
+-- The average item level of what you're wearing (shirt and tabard aside).
+local function wornAverage()
+	local total, count = 0, 0
+	for slotID = 1, 18 do
+		if slotID ~= 4 then
+			local link = GetInventoryItemLink and GetInventoryItemLink("player", slotID)
+			local level = link and Stoa.ItemSkin and Stoa.ItemSkin.itemLevel(link)
+			if level then total, count = total + level, count + 1 end
+		end
+	end
+	if count > 0 then return total / count end
+end
+
 function Character:Refresh()
 	if not (CharacterFrame and CharacterFrame.IsShown and CharacterFrame:IsShown()) then return end
 	for _, button in ipairs(slotButtons("Character")) do
 		guarded(updateSlot, button, "player", true)
 	end
-	if GetAverageItemLevel then
-		local overall, equipped = GetAverageItemLevel()
-		overall, equipped = Stoa:PlainNumber(overall), Stoa:PlainNumber(equipped)
+	do
+		local overall, equipped
+		if GetAverageItemLevel then
+			overall, equipped = GetAverageItemLevel()
+			overall, equipped = Stoa:PlainNumber(overall), Stoa:PlainNumber(equipped)
+		end
+		-- Forever reports 0 here, so the worn gear is averaged by hand.
+		if not overall or overall <= 0 then
+			overall, equipped = wornAverage(), nil
+		end
 		if overall and overall > 0 then
 			local text = "Item level " .. math.floor(overall + 0.5)
 			if equipped and math.floor(equipped + 0.5) ~= math.floor(overall + 0.5) then
@@ -153,8 +178,9 @@ local function dressCharacter()
 			if button and button.stoaItem then guarded(updateSlot, button, "player", true) end
 		end)
 	end
-	-- Title and level make a two-line header, so this window's band is
-	-- taller than the shared one; the level is seated as its settle step.
+	-- Title and level make a two-line header, so this window's band reaches
+	-- down to where the sheet starts; the level is seated as its settle step.
+	frame.stoaBandHeight = "inset"
 	local windows = Stoa.modules.Windows
 	if windows and windows.OnSettle then windows:OnSettle(frame, function() guarded(seatLevel) end) end
 	frame:HookScript("OnShow", function()
