@@ -165,7 +165,7 @@ local function makeTab()
 	tab:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
 	tab.base = capped(tab, 1)
 	tab.lines = capped(tab, 2, true)
-	local label = tab:CreateFontString(nil, "ARTWORK")
+	local label = tab:CreateFontString(nil, "OVERLAY")
 	Stoa:SetFont(label, "sans", Stoa.typeSize.caption + 1)
 	label:SetShadowOffset(0, 0)
 	label:SetPoint("CENTER", 0, -3)
@@ -205,8 +205,16 @@ local function refreshTabs()
 		tabs[i] = tab
 		tab.chatFrame = chatFrame
 		local blizzard = blizzardTab(chatFrame)
+		-- Blizzard's tab may not be named yet at login; the window's own
+		-- name is the same text.
 		local text = blizzard and blizzard.GetText and blizzard:GetText()
-		tab.label:SetText(text or "")
+		local info = FCF_GetChatWindowInfo or GetChatWindowInfo
+		if (type(text) ~= "string" or text == "") and info and chatFrame.GetID then
+			text = (info(chatFrame:GetID()))
+		end
+		if type(text) ~= "string" then text = "" end
+		tab.label:SetText(text)
+		tab.label:Show()
 		local width = tab.label:GetStringWidth()
 		if type(width) ~= "number" then width = 40 end
 		tab:SetWidth(width + TAB_TEXT_PAD * 2)
@@ -396,6 +404,14 @@ function Console:House()
 			if _G[name] then hooksecurefunc(name, safeRefresh) end
 		end
 		Stoa:On("STOA_THEME_CHANGED", safeRefresh)
+		Stoa:On("UPDATE_CHAT_WINDOWS", safeRefresh)
+		Stoa:On("UPDATE_FLOATING_CHAT_WINDOWS", safeRefresh)
+		-- Names can arrive a moment after login.
+		Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(1, safeRefresh) end)
+		for i = 1, (NUM_CHAT_WINDOWS or 10) do
+			local blizzard = _G["ChatFrame" .. i .. "Tab"]
+			if blizzard and blizzard.SetText then hooksecurefunc(blizzard, "SetText", safeRefresh) end
+		end
 	end
 	local bar = actionBar()
 	if bar and bar.UpdateEndCaps then

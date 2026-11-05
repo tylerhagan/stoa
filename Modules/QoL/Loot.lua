@@ -8,7 +8,9 @@ local Stoa = ns.Stoa
 local UI = Stoa.UI
 
 local Loot = Stoa:NewModule("Loot", {
-	show = "WORLD",
+	-- The chat already lists your loot and stays up in combat, so the list
+	-- is off unless picked in the settings.
+	show = "NEVER",
 	lines = 5,
 	seconds = 8,
 })
@@ -102,7 +104,7 @@ function Loot:Build()
 	frame:SetSize(300, 90)
 	frame:SetFrameStrata("LOW")
 	if ChatFrame1 then
-		frame:SetPoint("BOTTOMLEFT", ChatFrame1, "TOPLEFT", 4, 34)
+		frame:SetPoint("BOTTOMLEFT", ChatFrame1, "TOPLEFT", 4, 56)
 	else
 		frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 24, 240)
 	end
