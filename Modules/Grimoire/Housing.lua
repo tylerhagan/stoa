@@ -247,6 +247,19 @@ local function safeRefresh()
 	xpcall(refreshTabs, Stoa.catch)
 end
 
+-- On a cold start the game can measure a label (the tab takes its width)
+-- yet draw nothing, while the font file is still loading. Setting the
+-- font and the words again once it has loaded makes them draw.
+local function relabel()
+	for _, tab in ipairs(tabs) do
+		local text = tab.label:GetText()
+		Stoa:SetFont(tab.label, "sans", Stoa.typeSize.caption + 1)
+		tab.label:SetText("")
+		tab.label:SetText(text or "")
+	end
+	safeRefresh()
+end
+
 local function actionBar()
 	return MainActionBar or MainMenuBar
 end
@@ -407,7 +420,12 @@ function Console:House()
 		Stoa:On("UPDATE_CHAT_WINDOWS", safeRefresh)
 		Stoa:On("UPDATE_FLOATING_CHAT_WINDOWS", safeRefresh)
 		-- Names can arrive a moment after login.
-		Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(1, safeRefresh) end)
+		Stoa:On("PLAYER_ENTERING_WORLD", function()
+			C_Timer.After(1, safeRefresh)
+			for _, delay in ipairs({ 2, 5 }) do
+				C_Timer.After(delay, function() xpcall(relabel, Stoa.catch) end)
+			end
+		end)
 		for i = 1, (NUM_CHAT_WINDOWS or 10) do
 			local blizzard = _G["ChatFrame" .. i .. "Tab"]
 			if blizzard and blizzard.SetText then hooksecurefunc(blizzard, "SetText", safeRefresh) end
