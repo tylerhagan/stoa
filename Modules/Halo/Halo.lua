@@ -257,6 +257,25 @@ local TARGET_PAD = 12
 -- Room on the left for the half of the coin inside the plaque.
 local TARGET_COIN_SPACE = UI.PLAQUE_COIN_SPACE
 
+-- Out of combat the plaque rests just above the console on the mana side,
+-- beside the bars you read there (Tyler's pick, 2026-11-05); in a fight it
+-- moves to the Halo's upper right. A spot set with the movers wins.
+local TARGET_REST_Y = 14
+
+function Halo:PlaceTarget()
+	local target, frame = self.target, self.frame
+	if not target or InCombatLockdown() or Stoa:HasSavedPosition("target") then return end
+	local console = Stoa.modules.Grimoire
+	local edge = console and console.enabled and console.frame
+	target:ClearAllPoints()
+	if edge and Stoa:GetState() == Stoa.STATE_WORLD then
+		local gap = 150 * (console.ART_SCALE or 0.556) + 22
+		target:SetPoint("BOTTOMLEFT", edge, "TOP", gap, TARGET_REST_Y)
+	else
+		target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
+	end
+end
+
 function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
@@ -276,7 +295,15 @@ function Halo:BuildTarget(frame)
 	-- DEAD, so the plaque always matches what you have targeted.
 	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
 	self.target = target
-	Stoa:RegisterMover("target", target, "Target plaque")
+	Stoa:RegisterMover("target", target, "Target plaque", {
+		default = function() self:PlaceTarget() end,
+	})
+	self:PlaceTarget()
+	for _, event in ipairs({ "STOA_STATE_CHANGED", "PLAYER_ENTERING_WORLD" }) do
+		Stoa:On(event, function()
+			if not InCombatLockdown() then self:PlaceTarget() end
+		end)
+	end
 
 	-- A plaque like the tank watch opposite: the coin faces the Halo.
 	local plaque = UI.plaque(target, "LEFT")
