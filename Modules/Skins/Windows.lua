@@ -271,7 +271,7 @@ local function bandHeight(frame)
 	-- A window with a two-line header asks for more (frame.stoaBandHeight).
 	-- "inset" makes the band reach all the way down to where content starts.
 	-- A dark strip meets Blizzard's dark content with no light gap between.
-	if (frame.stoaBandHeight == "inset" or frame.stoaPlainHeader) and gap > 0 then return math.floor(gap + 0.5) end
+	if (frame.stoaBandHeight == "inset" or frame.stoaPlainHeader) and gap >= HEADER_FALLBACK then return math.floor(gap + 0.5) end
 	local want = tonumber(frame.stoaBandHeight) or BAND
 	if gap >= want then return want end
 	return nil
