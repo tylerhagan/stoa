@@ -31,7 +31,8 @@ local function parts(button)
 	p.edge = UI.roundBorder and UI.roundBorder(button, "CardEdge.tga", 1)
 	p.word = button:CreateFontString(nil, "OVERLAY", nil, 7)
 	Stoa:SetFont(p.word, "sans", Stoa.typeSize.caption, "OUTLINE")
-	p.word:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
+	-- Just above the button's right edge, clear of the item's name.
+	p.word:SetPoint("BOTTOMRIGHT", button, "TOPRIGHT", -2, 1)
 	return p
 end
 
