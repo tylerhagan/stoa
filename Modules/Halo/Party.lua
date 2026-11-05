@@ -274,9 +274,22 @@ function Party:UpdateGrid()
 	local grid = self.grid
 	local clickCast = Stoa.modules.ClickCast
 	local bindings = clickCast and clickCast.Bindings and clickCast:Bindings() or {}
+	local blank = false
 	for key, fs in pairs(grid.cells) do
+		-- Cleared first: the game skips a SetText with the same words, so a
+		-- name drawn before the serif face loaded (empty) would stay empty.
+		fs:SetText("")
 		fs:SetText(shortName(bindings[key]))
 		fs.spell = bindings[key]
+		if (fs:GetStringWidth() or 0) == 0 then blank = true end
+	end
+	self.gridTries = blank and (self.gridTries or 0) + 1 or 0
+	if blank and not self.gridRetry and self.gridTries <= 10 then
+		self.gridRetry = true
+		C_Timer.After(0.5, function()
+			self.gridRetry = nil
+			if self.grid then self:UpdateGrid() end
+		end)
 	end
 	self:UpdateGridCosts()
 	local cards = Stoa.previewing or IsInGroup()
