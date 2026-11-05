@@ -39,7 +39,9 @@ local ART_SEAL_SIZE = 110
 local ART_HEIGHT = 176
 local ART_SCALE = 0.556
 Console.ART_SCALE = ART_SCALE
-local LEATHER_W, LEATHER_H = 1024, 256
+-- The leather tile (Tools/art/leather_tile.py) is drawn one texel per screen
+-- pixel, so its grain stays sharp at any UI scale.
+local LEATHER_W, LEATHER_H = 2048, 512
 local EDGE_H, EDGE_TOP, LEATHER_TOP = 64, 36, 10
 local MEDALLION_WIDTH, MEDALLION_LINE = 1024, 257
 -- The ring's centre row in the medallion texture; the seal sits on it.
@@ -157,7 +159,14 @@ function Console:BuildArt(frame)
 	local function tileLeather()
 		local width, height = leather:GetWidth(), leather:GetHeight()
 		if not width or width <= 0 then return end
-		leather:SetTexCoord(0, width / ART_SCALE / LEATHER_W, 0, height / ART_SCALE / LEATHER_H)
+		-- Screen pixels per UI unit here; the painting's scale if unknown.
+		local perUnit = 1 / ART_SCALE
+		local _, screenHeight = GetPhysicalScreenSize and GetPhysicalScreenSize()
+		local scale = leather:GetEffectiveScale()
+		if screenHeight and screenHeight > 0 and scale and scale > 0 then
+			perUnit = scale * screenHeight / 768
+		end
+		leather:SetTexCoord(0, width * perUnit / LEATHER_W, 0, height * perUnit / LEATHER_H)
 	end
 	tileLeather()
 	frame:HookScript("OnSizeChanged", tileLeather)
