@@ -209,7 +209,7 @@ function Tray:BuildOwn()
 	button:SetScript("OnEnter", function()
 		if not GameTooltip then return end
 		GameTooltip:SetOwner(button, "ANCHOR_LEFT")
-		GameTooltip:AddLine("Stoa")
+		GameTooltip:AddLine("STOA")
 		GameTooltip:AddLine("Click for settings.", 1, 1, 1)
 		GameTooltip:AddLine("Right click to move frames.", 1, 1, 1)
 		GameTooltip:Show()
@@ -218,7 +218,7 @@ function Tray:BuildOwn()
 		if GameTooltip then GameTooltip:Hide() end
 	end)
 	-- First in the tray's name order.
-	self:Take(button, " Stoa", false)
+	self:Take(button, " STOA", false)
 	self.own = button
 end
 

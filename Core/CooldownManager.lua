@@ -229,7 +229,7 @@ end
 
 function Manager:Probe()
 	local ok, why = self:Available()
-	Stoa:Print(("Cooldown Manager: %s%s. Stoa reading it: %s. In combat: %s."):format(
+	Stoa:Print(("Cooldown Manager: %s%s. STOA reading it: %s. In combat: %s."):format(
 		ok and "here" or "missing", ok and "" or (" (" .. tostring(why) .. ")"),
 		self.enabled and "on" or "off (Settings > Combat)", InCombatLockdown() and "yes" or "no"))
 	if not ok then return end
@@ -249,7 +249,7 @@ function Manager:Probe()
 		for _, field in ipairs(FIELDS[item.stoaKind] or {}) do
 			parts[#parts + 1] = field .. "=" .. describe(item[field])
 		end
-		Stoa:Print(("  %s (%d, %s): %s; Stoa reads ready=%s active=%s"):format(name, spellID, item.stoaKind,
+		Stoa:Print(("  %s (%d, %s): %s; STOA reads ready=%s active=%s"):format(name, spellID, item.stoaKind,
 			table.concat(parts, " "), describe(self:Ready(spellID)), describe(self:Active(spellID))))
 	end
 end

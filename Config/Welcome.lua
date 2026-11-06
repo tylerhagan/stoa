@@ -34,9 +34,9 @@ local PRESET_ORDER = { "full", "quiet", "classic", "taer" }
 -- Full is how Stoa ships; the other two are described against it, so the
 -- page says exactly what a choice takes away.
 local PRESET_WORDS = {
-	full = { "Full", "Everything on, as Stoa ships: tooltip details, the quest line, At a glance, every bar row out of combat, and Stoa's look on windows, bags, tooltips, the top of the screen and nameplates." },
-	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; extra bar rows only on mouseover; the click grid folded for healers, hidden otherwise. Stoa's look stays." },
-	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of Stoa's. The console, Halo, frames and words stay as in Full." },
+	full = { "Full", "Everything on, as STOA ships: tooltip details, the quest line, At a glance, every bar row out of combat, and STOA's look on windows, bags, tooltips, the top of the screen and nameplates." },
+	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; extra bar rows only on mouseover; the click grid folded for healers, hidden otherwise. STOA's look stays." },
+	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of STOA's. The console, Halo, frames and words stay as in Full." },
 	taer = { "Same as Designer", "Full as its designer plays it: the Graphite theme, painted frames, three bar rows, a longer calm after a fight, the loot feed out in the world, faded nameplates with a glow on your target, quests accepted for you, cooldowns read from the game's Cooldown Manager, and the designer's Edit Mode layout." },
 }
 
@@ -167,7 +167,7 @@ local COMBAT_ORDER = { "fold", "open", "none" }
 local COMBAT_WORDS = {
 	fold = { "Fold the console, the Halo rises", "Chat and pages fold to a thin line; health, mana and your spells gather around your character." },
 	open = { "Keep the console open, the Halo rises too", "Everything stays where it is; the Halo adds itself around your character." },
-	none = { "Keep the console open, no Halo", "For players who use other unit frames. Stoa looks the same in and out of a fight." },
+	none = { "Keep the console open, no Halo", "For players who use other unit frames. STOA looks the same in and out of a fight." },
 }
 local CALMS = { "1", "3", "5", "8" }
 local MAX_SETUPS = 4
@@ -228,7 +228,7 @@ local builders = {}
 function builders.start(self, step)
 	local hello = UI.text(step, "serif", Stoa.typeSize.display, "text")
 	hello:SetPoint("TOPLEFT")
-	hello:SetText("Welcome to Stoa")
+	hello:SetText("Welcome to STOA")
 	local words = lede(step, "A handful of choices and your screen is ready. Each can be changed later in settings, and /stoa welcome brings this back.")
 	words:SetPoint("TOPLEFT", hello, "BOTTOMLEFT", 0, -10)
 	step.top = 92
@@ -236,7 +236,7 @@ function builders.start(self, step)
 	local options = {
 		{ "guided", "Set it up with me", "Five short steps, about a minute." },
 		{ "saved", "Use a saved setup", "Every character you play saves its setup when it logs out. Pick one to copy its frames, At a glance and combat rows." },
-		{ "ships", "Start as Stoa ships", "Full, the theme you have now and your class's usual roles. Nothing else to choose." },
+		{ "ships", "Start as STOA ships", "Full, the theme you have now and your class's usual roles. Nothing else to choose." },
 	}
 	for _, option in ipairs(options) do
 		local id = option[1]
@@ -269,7 +269,7 @@ function builders.start(self, step)
 end
 
 function builders.specs(self, step)
-	local words = lede(step, "Stoa lays out the screen for the role you play. Each spec keeps its own layout, combat rows and At a glance lines, and switches with your spec.")
+	local words = lede(step, "STOA lays out the screen for the role you play. Each spec keeps its own layout, combat rows and At a glance lines, and switches with your spec.")
 	words:SetPoint("TOPLEFT")
 	local width = math.floor((BODY_W - 3 * 8) / 4)
 	self.roleRows = {}
@@ -413,7 +413,7 @@ function builders.combat(self, step)
 end
 
 function builders.preset(self, step)
-	local words = lede(step, "How much Stoa does. Full is how it ships; the others say exactly what they take away.")
+	local words = lede(step, "How much STOA does. Full is how it ships; the others say exactly what they take away.")
 	words:SetPoint("TOPLEFT")
 	self.presetCards = {}
 	for i, name in ipairs(PRESET_ORDER) do
@@ -428,7 +428,7 @@ function builders.preset(self, step)
 end
 
 function builders.addons(self, step)
-	local words = lede(step, "Stoa found these addons. Each keeps working; say who looks after what.")
+	local words = lede(step, "STOA found these addons. Each keeps working; say who looks after what.")
 	words:SetPoint("TOPLEFT")
 	step.rows = {}
 end
@@ -604,7 +604,7 @@ function Welcome:GatherAddons()
 	local rows = {}
 	local covered = {}
 	for _, companion in ipairs(Stoa.Companions and Stoa.Companions:Loaded() or {}) do
-		rows[#rows + 1] = { name = companion.name, note = companion.note or "Works beside Stoa. Where both do a small job, its switch wins." }
+		rows[#rows + 1] = { name = companion.name, note = companion.note or "Works beside STOA. Where both do a small job, its switch wins." }
 	end
 	local Conflicts = Stoa.Conflicts
 	for _, entry in ipairs(Conflicts and Conflicts:Found() or {}) do
@@ -614,12 +614,12 @@ function Welcome:GatherAddons()
 			local row = { name = them, note = "Both look after " .. entry.rule.job .. ".", entry = entry, look = look or nil, options = {} }
 			if look then
 				covered[look.key] = true
-				row.options[1] = { "look", them .. ", in Stoa's look" }
+				row.options[1] = { "look", them .. ", in STOA's look" }
 				row.options[2] = { "theirs", them .. " as it is" }
 			else
 				row.options[1] = { "theirs", "Keep " .. them }
 			end
-			row.options[#row.options + 1] = { "ours", "Use Stoa's" }
+			row.options[#row.options + 1] = { "ours", "Use STOA's" }
 			local saved = Conflicts:Saved(entry)
 			if saved == "theirs" then
 				row.choice = (look and Stoa.Looks:IsOn(look)) and "look" or "theirs"
@@ -632,8 +632,8 @@ function Welcome:GatherAddons()
 	for _, look in ipairs(Stoa.Looks and Stoa.Looks.list or {}) do
 		if not covered[look.key] and Stoa.Looks:Ready(look) then
 			rows[#rows + 1] = {
-				name = look.name, note = "Stoa can dress " .. look.what .. " in its type and colours.", look = look,
-				options = { { "look", "Stoa's look" }, { "theirs", "Leave it" } },
+				name = look.name, note = "STOA can dress " .. look.what .. " in its type and colours.", look = look,
+				options = { { "look", "STOA's look" }, { "theirs", "Leave it" } },
 				choice = "look",
 			}
 		end

@@ -94,7 +94,7 @@ function Layout:Apply(quiet, kind)
 	local k = kindOf(kind)
 	local NAME = k.name
 	if not ready(kind) then
-		if not quiet then Stoa:Print("Stoa has no Edit Mode layout to apply yet.") end
+		if not quiet then Stoa:Print("STOA has no Edit Mode layout to apply yet.") end
 		return
 	end
 	if InCombatLockdown() then
@@ -108,7 +108,7 @@ function Layout:Apply(quiet, kind)
 	if not index or refresh then
 		local ok, layout = pcall(C_EditMode.ConvertStringToLayoutInfo, Stoa[k.text])
 		if not (ok and layout) then
-			Stoa:Print("Stoa's Edit Mode layout couldn't be read; nothing was changed.")
+			Stoa:Print("STOA's Edit Mode layout couldn't be read; nothing was changed.")
 			return
 		end
 		layout.layoutName = NAME
@@ -136,7 +136,7 @@ function Layout:Apply(quiet, kind)
 	self:Bars()
 	Stoa.char.layoutApplied = true
 	if not quiet then
-		local whose = kind == "designer" and "the designer's" or "Stoa's"
+		local whose = kind == "designer" and "the designer's" or "STOA's"
 		Stoa:Print(refresh and ("Switched to " .. whose .. " Edit Mode layout, updated to the newest version.")
 			or ("Switched to " .. whose .. " Edit Mode layout. Edit Mode can change it or pick another."))
 	end

@@ -235,20 +235,20 @@ function Conflicts:Ask(entry)
 	self.asking = entry
 	local single = #entry.loaded == 1
 	local everyone = { unpack(entry.loaded) }
-	everyone[#everyone + 1] = { "Stoa", "Stoa" }
+	everyone[#everyone + 1] = { "Stoa", "STOA" }
 	if rule.suite then
 		-- A whole UI and Stoa can't share the screen: no keeping both.
 		page.title:SetText("These don't work together")
-		page.body:SetText(("Stoa and %s are both whole interfaces and don't work together. Please turn one of them off."):format(them))
+		page.body:SetText(("STOA and %s are both whole interfaces and don't work together. Please turn one of them off."):format(them))
 		page.note:SetText("Either button turns that addon off and reloads.")
-		page.theirs.text:SetText("Turn Stoa off")
+		page.theirs.text:SetText("Turn STOA off")
 		page.ours.text:SetText(single and ("Turn " .. them .. " off") or "Turn the others off")
 	else
 		page.title:SetText("Two addons, one job")
 		page.body:SetText(("%s %s look after %s. Pick one so they don't get in each other's way."):format(names(everyone), single and "both" or "all", rule.job))
 		page.theirs.text:SetText(single and ("Keep " .. them) or "Keep theirs")
-		page.ours.text:SetText("Use Stoa's")
-		page.note:SetText(("Stoa's part waits until you choose. Using Stoa's turns %s off and reloads; /stoa addons asks again."):format(them))
+		page.ours.text:SetText("Use STOA's")
+		page.note:SetText(("STOA's part waits until you choose. Using STOA's turns %s off and reloads; /stoa addons asks again."):format(them))
 	end
 	page:Show()
 end
@@ -298,7 +298,7 @@ end)
 Stoa.commands.addons = function()
 	if Stoa.Companions then Stoa.Companions:Report() end
 	if #found == 0 then
-		Stoa:Print("No other addon is doing one of Stoa's jobs.")
+		Stoa:Print("No other addon is doing one of STOA's jobs.")
 		return
 	end
 	for _, entry in ipairs(found) do

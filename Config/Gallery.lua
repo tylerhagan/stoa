@@ -95,7 +95,7 @@ local function buildType(page, x, y)
 		else
 			fs:SetPoint("TOPLEFT", x, y - S.l - S.xs)
 		end
-		fs:SetText(key == "hero" and "Stoa" or (key:sub(1, 1):upper() .. key:sub(2)))
+		fs:SetText(key == "hero" and "STOA" or (key:sub(1, 1):upper() .. key:sub(2)))
 		local size = UI.text(page, "sans", T.caption, "muted", "LEFT")
 		size:SetPoint("BOTTOMLEFT", fs, "BOTTOMRIGHT", S.s, 2)
 		size:SetText(T[key] .. "  " .. (kind == "serif" and "Tenor Sans" or "Inter"))

@@ -8,16 +8,16 @@ local category
 
 local function build()
 	local layout
-	category, layout = Settings.RegisterVerticalLayoutCategory("Stoa")
+	category, layout = Settings.RegisterVerticalLayoutCategory("STOA")
 	if CreateSettingsButtonInitializer then
-		layout:AddInitializer(CreateSettingsButtonInitializer("Stoa settings", "Open", function()
+		layout:AddInitializer(CreateSettingsButtonInitializer("STOA settings", "Open", function()
 			-- The game's panel covers the screen, so step out of its way first.
 			if not InCombatLockdown() and SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
 			Stoa:OpenSettings()
-		end, "Every Stoa setting, by page, with search. Also /stoa.", true))
+		end, "Every STOA setting, by page, with search. Also /stoa.", true))
 		layout:AddInitializer(CreateSettingsButtonInitializer("Safe mode", "Turn on", function()
 			Stoa.commands.safe()
-		end, "If a Stoa skin ever breaks the game's own windows: turns off every skin that reaches into them and reloads. /stoa safe", true))
+		end, "If a STOA skin ever breaks the game's own windows: turns off every skin that reaches into them and reloads. /stoa safe", true))
 	end
 	Settings.RegisterAddOnCategory(category)
 end
