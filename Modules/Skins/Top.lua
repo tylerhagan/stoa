@@ -334,7 +334,8 @@ end
 
 -- The day and night dial (Forever's Diel frame, MinimapCluster.DielFrame)
 -- sat on the minimap's top-right corner, over the frame. It moves into the
--- header row, just left of the clock, sized to the row. The game re-places
+-- header row at its right end, sized to the row, with the clock just
+-- before it and the zone name stopping short of the clock. The game re-places
 -- it when Edit Mode scales the minimap, so any outside move is undone.
 local placingSun
 function Top:PlaceSun()
@@ -352,12 +353,22 @@ function Top:PlaceSun()
 		sun:SetScale(math.min(1, (rowHeight + 6) / own) * ratio)
 	end
 	sun:ClearAllPoints()
-	if clock and clock:IsShown() then
-		sun:SetPoint("RIGHT", clock, "LEFT", -2, 0)
-	else
-		sun:SetPoint("RIGHT", zone, "RIGHT", -4, 0)
-	end
+	sun:SetPoint("RIGHT", zone, "RIGHT", -3, 0)
 	sun:SetFrameLevel(zone:GetFrameLevel() + 2)
+	local before = sun
+	if clock and clock.SetPoint and not (clock.IsForbidden and clock:IsForbidden()) then
+		clock:ClearAllPoints()
+		clock:SetPoint("RIGHT", sun, "LEFT", -2, -1)
+		if clock:IsShown() then before = clock end
+	end
+	local text = _G.MinimapZoneText
+	if text and text.SetPoint then
+		text:ClearAllPoints()
+		text:SetPoint("LEFT", zone, "LEFT", 8, -1)
+		text:SetPoint("RIGHT", before, "LEFT", -4, 0)
+		text:SetJustifyH("LEFT")
+		text:SetWordWrap(false)
+	end
 	placingSun = false
 	if not sun.stoaSunHooked then
 		sun.stoaSunHooked = true
@@ -372,6 +383,14 @@ function Top:PlaceSun()
 		end
 		hooksecurefunc(sun, "SetPoint", again)
 		hooksecurefunc(sun, "SetScale", again)
+		sun.stoaAgain = again
+	end
+	-- The clock comes with its own addon, sometimes after the sun is placed.
+	if clock and clock.SetPoint and not clock.stoaSunHooked and sun.stoaAgain then
+		clock.stoaSunHooked = true
+		hooksecurefunc(clock, "SetPoint", sun.stoaAgain)
+		clock:HookScript("OnShow", sun.stoaAgain)
+		clock:HookScript("OnHide", sun.stoaAgain)
 	end
 end
 
@@ -431,7 +450,10 @@ function Top:OnEnable()
 	guarded(self.MinimapHeader, self)
 	if _G.TimeManagerClockTicker then guarded(self.Clock, self) end
 	Stoa:On("ADDON_LOADED", function(name)
-		if name == "Blizzard_TimeManager" then guarded(Top.Clock, Top) end
+		if name == "Blizzard_TimeManager" then
+			guarded(Top.Clock, Top)
+			C_Timer.After(0, function() guarded(Top.PlaceSun, Top) end)
+		end
 		if name == "Blizzard_ObjectiveTracker" and not Top.trackerDressed then guarded(Top.Tracker, Top) end
 	end)
 	-- Buff buttons can be made after login (the consolidation tooltip, edit mode).
