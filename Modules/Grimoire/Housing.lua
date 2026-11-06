@@ -17,8 +17,9 @@ local CHAT_BOTTOM = 20
 local CHAT_TOP_PAD = 16
 local CHAT_TAB_HEIGHT = 22
 -- With the leather art the chat starts just under the gold top border and
--- its tabs stand on that border.
-local ART_CHAT_GAP = 14
+-- its tabs stand on that border. The gap gives the top line some air;
+-- the tabs sit on their own strip, so it never moves them.
+local ART_CHAT_GAP = 24
 
 -- Tab art, in texture pixels (drawn at the console art's scale): the tab's
 -- sides at X0 and 128 - X0, its top at TOP and the console's top edge at
