@@ -579,11 +579,11 @@ local function build()
 	page = "setup"
 	group = "Start"
 	button("welcome", "Welcome page", "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of Stoa, and other addons.", "Open", function() Stoa.Welcome:Show() end, { cmd = "/stoa welcome", words = "wizard first time" })
-	choice(function() return Stoa.db end, "preset", "How much Stoa", "Full is everything. Quiet folds more away. Classic feel keeps Blizzard's layout with Stoa's look. Taer is Full as its designer plays it. Choosing one sets several settings at once.", "full", {
-		{ "full", "Full" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Taer" },
+	choice(function() return Stoa.db end, "preset", "How much Stoa", "Full is everything. Quiet folds more away. Classic feel keeps Blizzard's layout with Stoa's look. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once.", "full", {
+		{ "full", "Full" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Same as Designer" },
 	}, {
 		reload = true, cmd = "/stoa preset", words = "preset minimal",
-		set = function(v) Stoa.Welcome:ApplyPreset(v) end,
+		set = function(v) if Stoa.Welcome:ApplyPreset(v) then Stoa.Welcome:FollowLayout() end end,
 	})
 	button("setups", "Saved setups", "Load the setup from another of your characters.", "Choose", function(owner) Stoa.Setups:Menu(owner) end, { cmd = "/stoa setups", words = "profile alt" })
 	button("backup", "Backup", "All of Stoa's settings as one line of text to keep safe, and a place to paste one back.", "Open", function() Stoa.Backup:Show() end, { cmd = "/stoa backup", words = "profile export import string" })

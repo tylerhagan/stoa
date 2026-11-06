@@ -82,8 +82,14 @@ local function endCountdown()
 	countdown = nil
 end
 
+local showEndButton
+
 Stoa:On("PLAYER_REGEN_DISABLED", function()
-	practising = false
+	if practising then
+		practising = false
+		showEndButton(false)
+		Stoa:Fire("STOA_PRACTICE", false)
+	end
 	endCountdown()
 	if calmTimer then
 		calmTimer:Cancel()
@@ -140,6 +146,25 @@ function Stoa:IsPractising()
 	return practising
 end
 
+-- While practising, an END COMBAT button sits at the top of the screen.
+local endButton
+function showEndButton(on)
+	if not on then
+		if endButton then endButton:Hide() end
+		return
+	end
+	if not endButton then
+		endButton = Stoa.UI.button(UIParent, "END COMBAT", 180, function()
+			if practising then Stoa.commands.combat() end
+		end)
+		endButton:SetHeight(34)
+		endButton:SetFrameStrata("DIALOG")
+		endButton:SetPoint("TOP", UIParent, "TOP", 0, -140)
+		Stoa:SetFont(endButton.text, "serif", Stoa.typeSize.label)
+	end
+	endButton:Show()
+end
+
 Stoa.commands.combat = function()
 	if InCombatLockdown() then
 		Stoa:Print("You're already in combat.")
@@ -148,7 +173,9 @@ Stoa.commands.combat = function()
 	practising = not practising
 	setCombatLayout(practising)
 	setState(practising and COMBAT or WORLD)
-	Stoa:Print(practising and "Practice combat on. /stoa combat again to end it." or "Practice combat off.")
+	showEndButton(practising)
+	Stoa:Print(practising and "Practice combat on. END COMBAT, or /stoa combat again, ends it." or "Practice combat off.")
+	Stoa:Fire("STOA_PRACTICE", practising)
 end
 
 local function countdownWanted()
