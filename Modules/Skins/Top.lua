@@ -295,37 +295,46 @@ function Top:SeatHeader()
 	end
 end
 
--- The day and night button (with the calendar on click) sat on the
--- minimap's top-right edge, over the frame. It moves into the header row,
--- just left of the clock, sized to the row.
+-- The day and night dial (Forever's Diel frame, MinimapCluster.DielFrame)
+-- sat on the minimap's top-right corner, over the frame. It moves into the
+-- header row, just left of the clock, sized to the row. The game re-places
+-- it when Edit Mode scales the minimap, so any outside move is undone.
 local placingSun
 function Top:PlaceSun()
-	local sun, zone = _G.GameTimeFrame, _G.MinimapCluster and _G.MinimapCluster.ZoneTextButton
+	local cluster = _G.MinimapCluster
+	local sun, zone = cluster and cluster.DielFrame, cluster and cluster.ZoneTextButton
 	if not (sun and zone and sun.SetPoint) or InCombatLockdown() then return end
-	if sun.IsProtected and sun:IsProtected() then return end
+	if sun.IsForbidden and sun:IsForbidden() then return end
 	local clock = _G.TimeManagerClockButton
 	local rowHeight = Stoa:PlainNumber(zone:GetHeight()) or 0
 	local own = Stoa:PlainNumber(sun:GetHeight()) or 0
 	placingSun = true
-	if rowHeight > 0 and own > 0 then sun:SetScale(math.min(1, (rowHeight + 4) / own)) end
+	if rowHeight > 0 and own > 0 then
+		-- Scale against the zone row's own effective scale.
+		local ratio = (zone:GetEffectiveScale() or 1) / ((sun:GetParent() and sun:GetParent():GetEffectiveScale()) or 1)
+		sun:SetScale(math.min(1, (rowHeight + 6) / own) * ratio)
+	end
 	sun:ClearAllPoints()
 	if clock and clock:IsShown() then
 		sun:SetPoint("RIGHT", clock, "LEFT", -2, 0)
 	else
 		sun:SetPoint("RIGHT", zone, "RIGHT", -4, 0)
 	end
+	sun:SetFrameLevel(zone:GetFrameLevel() + 2)
 	placingSun = false
 	if not sun.stoaSunHooked then
 		sun.stoaSunHooked = true
 		local pending
-		hooksecurefunc(sun, "SetPoint", function()
+		local function again()
 			if placingSun or pending then return end
 			pending = true
 			C_Timer.After(0, function()
 				pending = false
 				Stoa:AfterCombat(function() xpcall(Top.PlaceSun, Stoa.catch, Top) end)
 			end)
-		end)
+		end
+		hooksecurefunc(sun, "SetPoint", again)
+		hooksecurefunc(sun, "SetScale", again)
 	end
 end
 
