@@ -190,10 +190,25 @@ function Trainer:Learn()
 	Stoa.db.trainerLevels = Stoa.db.trainerLevels or {}
 	Stoa.db.trainerLevels[class] = Stoa.db.trainerLevels[class] or {}
 	local costs, levels, learned = Stoa.db.trainerCosts, Stoa.db.trainerLevels[class], false
+	Stoa.db.trainerGroups = Stoa.db.trainerGroups or {}
+	Stoa.db.trainerGroups[class] = Stoa.db.trainerGroups[class] or {}
+	local groups, group = Stoa.db.trainerGroups[class], nil
 	for i = 1, Stoa:PlainNumber(GetNumTrainerServices()) or 0 do
+		-- The trainer lists its spells under headers (Holy, Protection...);
+		-- each spell keeps the header above it, for the page's sections.
+		if GetTrainerServiceInfo then
+			local fine, label, _, kind = pcall(GetTrainerServiceInfo, i)
+			if fine and kind == "header" and type(label) == "string" and not Stoa:IsSecret(label) and label ~= "" then
+				group = label
+			end
+		end
 		local ok, data = pcall(C_TooltipInfo.GetTrainerService, i)
 		local id = ok and type(data) == "table" and Stoa:PlainNumber(data.id)
 		local cost = id and Stoa:PlainNumber((GetTrainerServiceCost(i)))
+		if id and group and groups[id] ~= group then
+			groups[id] = group
+			learned = true
+		end
 		if id and cost and cost > 0 and costs[id] ~= cost then
 			costs[id] = cost
 			learned = true
@@ -223,7 +238,7 @@ function Trainer:BuildRow(page, i)
 	row:SetHeight(ROW_HEIGHT)
 	row:SetPoint("TOPLEFT", PAD, -112 - (i - 1) * ROW_HEIGHT)
 	row:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
-	row:RegisterForClicks("RightButtonUp")
+	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	local hover = row:CreateTexture(nil, "BACKGROUND")
 	hover:SetAllPoints()
 	UI.paint(hover, "text", 0.06)
@@ -247,14 +262,24 @@ function Trainer:BuildRow(page, i)
 	cost:SetPoint("RIGHT", -4, 0)
 	cost:SetWidth(80)
 	-- Section headings use the same row: a caption and the section's total.
+	-- Headings fold: a quiet plus or minus before the caption.
+	local fold = UI.text(row, "sans", Stoa.typeSize.label, "muted", "CENTER")
+	fold:SetPoint("LEFT", 0, -1)
+	fold:SetWidth(14)
 	local head = UI.text(row, "sans", Stoa.typeSize.caption, "accent", "LEFT")
-	head:SetPoint("LEFT", 4, -2)
+	head:SetPoint("LEFT", fold, "RIGHT", 4, -1)
 	local rule = UI.line(row, "hairline", 0.8)
 	rule:SetPoint("BOTTOMLEFT", 0, 2)
 	rule:SetPoint("BOTTOMRIGHT", 0, 2)
 	Stoa.UI.pixel(rule, "height")
 	row:SetScript("OnEnter", function()
-		if not row.entry or row.entry.heading then return end
+		if not row.entry then return end
+		if row.entry.key then
+			hover:Show()
+			fold:SetTextColor(Stoa:Color("accent"))
+			return
+		end
+		if row.entry.heading then return end
 		hover:Show()
 		if GameTooltip then
 			GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
@@ -265,13 +290,19 @@ function Trainer:BuildRow(page, i)
 	end)
 	row:SetScript("OnLeave", function()
 		hover:Hide()
+		fold:SetTextColor(Stoa:Color("muted"))
 		if GameTooltip then GameTooltip:Hide() end
 	end)
-	row:SetScript("OnClick", function()
+	row:SetScript("OnClick", function(_, button)
 		local entry = row.entry
-		if entry and not entry.heading then self:SetSkipped(entry.id, not entry.skipped) end
+		if not entry then return end
+		if entry.key then
+			self:SetFolded(entry.key, not self:Folded(entry.key))
+		elseif not entry.heading and button == "RightButton" then
+			self:SetSkipped(entry.id, not entry.skipped)
+		end
 	end)
-	row.icon, row.name, row.level, row.cost, row.head, row.rule = icon, name, level, cost, head, rule
+	row.icon, row.name, row.level, row.cost, row.head, row.rule, row.fold = icon, name, level, cost, head, rule, fold
 	return row
 end
 
@@ -317,19 +348,77 @@ function Trainer:Build()
 	UI.applyTheme()
 end
 
--- Headings and spells as one list for the rows.
+-- Folded sections, on this character, by key ("now", "now:Holy"...).
+function Trainer:Folds()
+	Stoa.char.trainerFolds = Stoa.char.trainerFolds or {}
+	return Stoa.char.trainerFolds
+end
+
+function Trainer:Folded(key)
+	return self:Folds()[key] or false
+end
+
+function Trainer:SetFolded(key, on)
+	self:Folds()[key] = on and true or nil
+	self:Fill()
+end
+
+-- The trainer's own header for a spell (Holy, Protection...), once you've
+-- opened a trainer of your class; spells it hasn't shown share "Other".
+local OTHER = "Other"
+function Trainer:Group(id)
+	local _, class = UnitClass("player")
+	local groups = Stoa.db.trainerGroups and Stoa.db.trainerGroups[class]
+	return groups and groups[id] or OTHER
+end
+
+local function priceOf(self, spells)
+	local total, known = self:Total(spells)
+	return total > 0 and ((known and "" or "about ") .. money(total)) or ""
+end
+
+-- Headings and spells as one list for the rows: NOW and NEXT, each split
+-- into the trainer's groups when there's more than one. Every heading folds.
 function Trainer:Rows()
 	local list = {}
-	local function section(label, spells, emptyText)
-		local total, known = self:Total(spells)
-		local price = total > 0 and ((known and "" or "about ") .. money(total)) or (#spells > 0 and "" or nil)
-		list[#list + 1] = { heading = label, price = price }
-		for _, entry in ipairs(spells) do list[#list + 1] = entry end
-		if #spells == 0 then list[#list + 1] = { heading = "", empty = emptyText } end
+	local function section(key, label, spells, emptyText)
+		local folded = self:Folded(key)
+		list[#list + 1] = { heading = label, key = key, folded = folded, price = #spells > 0 and priceOf(self, spells) or nil }
+		if folded then return end
+		if #spells == 0 then
+			list[#list + 1] = { heading = "", empty = emptyText }
+			return
+		end
+		local byGroup, names = {}, {}
+		for _, entry in ipairs(spells) do
+			local group = self:Group(entry.id)
+			if not byGroup[group] then byGroup[group] = {}; names[#names + 1] = group end
+			table.insert(byGroup[group], entry)
+		end
+		if #names == 1 then
+			for _, entry in ipairs(spells) do list[#list + 1] = entry end
+			return
+		end
+		table.sort(names, function(a, b)
+			if a == OTHER or b == OTHER then return b == OTHER and a ~= OTHER end
+			return a < b
+		end)
+		for _, group in ipairs(names) do
+			local items, subKey = byGroup[group], key .. ":" .. group
+			local subFolded = self:Folded(subKey)
+			list[#list + 1] = { heading = ("%s  ·  %d"):format(group, #items), key = subKey, sub = true,
+				folded = subFolded, price = priceOf(self, items) }
+			if not subFolded then
+				for _, entry in ipairs(items) do
+					entry.indent = true
+					list[#list + 1] = entry
+				end
+			end
+		end
 	end
-	section("NOW", self:Spells(1, myLevel()), "Nothing waiting. You know it all.")
+	section("now", "NOW", self:Spells(1, myLevel()), "Nothing waiting. You know it all.")
 	local coming, last = self:Coming()
-	if last then section(("NEXT  ·  to level %d"):format(last), coming, "Nothing new for a while.") end
+	if last then section("next", ("NEXT  ·  to level %d"):format(last), coming, "Nothing new for a while.") end
 	return list
 end
 
@@ -346,7 +435,12 @@ function Trainer:Fill()
 		row.name:SetShown(spell)
 		row.level:SetShown(spell)
 		row.head:SetShown(entry and entry.heading and true or false)
-		row.rule:SetShown(entry and entry.heading and entry.heading ~= "" and true or false)
+		row.rule:SetShown(entry and entry.heading and entry.heading ~= "" and not entry.sub and true or false)
+		row.fold:SetShown(entry and entry.key and true or false)
+		row.fold:ClearAllPoints()
+		row.fold:SetPoint("LEFT", entry and entry.sub and 14 or 0, -1)
+		row.icon:ClearAllPoints()
+		row.icon:SetPoint("LEFT", spell and entry.indent and 18 or 4, 0)
 		row.cost:SetShown(entry and true or false)
 		if spell then
 			local name = Stoa.Spells.name(entry.id) or ("spell " .. entry.id)
@@ -364,7 +458,8 @@ function Trainer:Fill()
 			row.cost:SetTextColor(Stoa:Color("muted"))
 		elseif entry then
 			row.head:SetText(entry.empty or entry.heading)
-			row.head:SetTextColor(Stoa:Color(entry.empty and "muted" or "accent"))
+			row.head:SetTextColor(Stoa:Color((entry.empty or entry.sub) and "muted" or "accent"))
+			if entry.key then row.fold:SetText(entry.folded and "+" or "–") end
 			row.cost:SetText(entry.price or "")
 			row.cost:SetTextColor(Stoa:Color("text"))
 		end
