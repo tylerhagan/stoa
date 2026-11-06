@@ -49,11 +49,20 @@ function Reward:Pick()
 	local count = Stoa:PlainNumber(call(GetNumQuestChoices)) or 0
 	if count < 2 or not GetQuestItemLink then return nil end
 	local bestGain, gainIndex, bestValue, valueIndex = 0, nil, 0, nil
+	-- Item level only decides when no choice can be scored by stats: the
+	-- two measure different things (percent against item levels).
+	local bestLevel, levelIndex, anyScored = 0, nil, false
 	for i = 1, count do
 		local link = call(GetQuestItemLink, "choice", i)
 		if link and not Stoa:IsSecret(link) then
-			local delta = Stoa.Items.upgrade(link) or Stoa.Items.compare(link)
-			if delta and delta > bestGain then bestGain, gainIndex = delta, i end
+			local gain = Stoa.Items.upgrade(link)
+			if gain then
+				anyScored = true
+				if gain > bestGain then bestGain, gainIndex = gain, i end
+			else
+				local delta = Stoa.Items.compare(link)
+				if delta and delta > bestLevel then bestLevel, levelIndex = delta, i end
+			end
 			local _, _, amount = call(GetQuestItemInfo, "choice", i)
 			amount = Stoa:PlainNumber(amount) or 1
 			local value = (Stoa.Items.sellPrice(link) or 0) * amount
@@ -62,6 +71,7 @@ function Reward:Pick()
 	end
 	-- Another addon marks upgrades among rewards already (Core/Companions.lua):
 	-- Stoa keeps to the best sale.
+	gainIndex = gainIndex or (not anyScored and levelIndex) or nil
 	if gainIndex and not Stoa:SharedBy("rewardUpgrade") then return gainIndex, "UPGRADE" end
 	if valueIndex then return valueIndex, "VALUE" end
 end

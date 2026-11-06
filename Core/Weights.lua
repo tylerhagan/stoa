@@ -119,6 +119,8 @@ function Weights.current()
 	return built[key]
 end
 
+local ARMOR_FLOOR = 0.005
+
 local getStats = (C_Item and C_Item.GetItemStats) or GetItemStats
 
 -- An item's worth to your role, or nil when its stats aren't known.
@@ -131,7 +133,10 @@ function Weights.score(link)
 	for key, value in pairs(stats) do
 		local name = type(key) == "string" and short(key)
 		value = Stoa:PlainNumber(value)
-		if name and value then total = total + value * (weights[name] or 0) end
+		-- Every role values armour a little, so plain armour with no other
+		-- stats still scores (and mail beats leather for the same slot).
+		local weight = weights[name] or (name == "armor" and ARMOR_FLOOR) or 0
+		if name and value then total = total + value * weight end
 	end
 	return total
 end
