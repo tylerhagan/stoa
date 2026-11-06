@@ -37,14 +37,14 @@ local PRESET_WORDS = {
 	full = { "Full", "Everything on, as STOA ships: tooltip details, the quest line, At a glance, every bar row out of combat, and STOA's look on windows, bags, tooltips, the top of the screen and nameplates." },
 	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; extra bar rows only on mouseover; the click grid folded for healers, hidden otherwise. STOA's look stays." },
 	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of STOA's. The console, Halo, frames and words stay as in Full." },
-	taer = { "Same as Designer", "Full as its designer plays it: the Graphite theme, painted frames, three bar rows, a longer calm after a fight, the loot feed out in the world, faded nameplates with a glow on your target, quests accepted for you, cooldowns read from the game's Cooldown Manager, and the designer's Edit Mode layout." },
+	taer = { "Same as Designer", "Full as its designer plays it: painted frames, three bar rows, a longer calm, the loot feed in the world, faded nameplates, quests accepted for you and the designer's Edit Mode layout." },
 }
 
 -- Same as Designer's own changes against Full ("taer" in saved settings).
 -- "db" means the account settings. It also switches to the designer's Edit
 -- Mode layout (Modules/QoL/Layout.lua) when the page finishes.
 local TAER = {
-	{ "db", "theme", "Graphite" }, { "db", "ornament", "painted" }, { "db", "calm", "8" },
+	{ "db", "theme", "Bone" }, { "db", "ornament", "painted" }, { "db", "calm", "8" },
 	{ "CombatBar", "rows", "3" }, { "CombatBar", "healerRows", "3" },
 	{ "Comforts", "acceptQuests", true },
 	{ "Loot", "show", "WORLD" },
