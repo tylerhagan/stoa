@@ -22,7 +22,7 @@ do
 		local note = CreateFrame("Frame")
 		note:RegisterEvent("PLAYER_LOGIN")
 		note:SetScript("OnEvent", function()
-			print("|cffd8b66aStoa|r is made for WoW Forever and stays off on this game version. Your Stoa settings are kept as they are.")
+			print("|cffd8b66aSTOA|r is made for WoW Forever and stays off on this game version. Your STOA settings are kept as they are.")
 		end)
 	end
 end
@@ -170,7 +170,7 @@ end)
 Stoa.commands = {}
 
 function Stoa:Print(...)
-	print("|cffd8b66aStoa|r", ...)
+	print("|cffd8b66aSTOA|r", ...)
 end
 
 SLASH_STOA1 = "/stoa"
@@ -208,7 +208,7 @@ end
 
 function Stoa_OnCompartmentEnter(_, menuButton)
 	GameTooltip:SetOwner(menuButton, "ANCHOR_LEFT")
-	GameTooltip:AddLine("Stoa")
+	GameTooltip:AddLine("STOA")
 	GameTooltip:AddLine("Left-click: settings", 1, 1, 1)
 	GameTooltip:AddLine("Right-click: move frames", 1, 1, 1)
 	GameTooltip:Show()

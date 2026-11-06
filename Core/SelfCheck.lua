@@ -333,7 +333,7 @@ end
 -- The results as text, for the report page.
 function Check:Text()
 	local problems = self.problems or self:Run()
-	if #problems == 0 then return "Launch check: everything Stoa relies on is where it expects." end
+	if #problems == 0 then return "Launch check: everything STOA relies on is where it expects." end
 	local lines = { ("Launch check: %d to look at."):format(#problems) }
 	for _, level in ipairs({ "broken", "changed" }) do
 		for _, problem in ipairs(problems) do
@@ -365,7 +365,7 @@ Stoa:On("STOA_READY", function()
 			Stoa.db.checkedBuild = build
 			if broken > 0 then
 				Stoa:Print(("Launch check: %d %s changed in this game build, so %s off. /stoa check lists %s."):format(
-					broken, broken == 1 and "thing Stoa uses has" or "things Stoa uses have",
+					broken, broken == 1 and "thing STOA uses has" or "things STOA uses have",
 					broken == 1 and "a feature is" or "some features are", broken == 1 and "it" or "them"))
 			elseif #problems > 0 then
 				Stoa:Print("Launch check: all features work; /stoa check has a few notes.")

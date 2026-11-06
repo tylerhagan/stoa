@@ -1045,7 +1045,7 @@ function Window:Defaults()
 			n = n + 1
 		end
 	end
-	self:Say(n == 0 and "Already as Stoa comes." or (n == 1 and "1 setting put back." or ("%d settings put back."):format(n)))
+	self:Say(n == 0 and "Already as STOA comes." or (n == 1 and "1 setting put back." or ("%d settings put back."):format(n)))
 end
 
 function Window:Show(pageId)

@@ -108,7 +108,7 @@ local COMPANIONS = {
 			if db[key] == nil then return key ~= "ShowBagUpgradeAdvisor" end
 			return db[key] and true or false
 		end,
-		note = "Scores your gear; Stoa's upgrade marks show Pawn's answer.",
+		note = "Scores your gear; STOA's upgrade marks show Pawn's answer.",
 	},
 	{
 		folder = "DoesItDie", name = "DoesItDie",
@@ -116,7 +116,7 @@ local COMPANIONS = {
 		-- the target plaque through its public API (Modules/Halo/Lethal.lua).
 		keys = {},
 		get = function() return false end,
-		note = "Tracks your DoTs; Stoa shows their damage left and a kill skull on the target plaque.",
+		note = "Tracks your DoTs; STOA shows their damage left and a kill skull on the target plaque.",
 	},
 }
 
@@ -175,12 +175,12 @@ function Companions:Report()
 			if key and companion.get(key) then jobs[#jobs + 1] = JOBS[job] end
 		end
 		if companion.note then
-			local also = #jobs > 0 and (" It also looks after %s itself, so Stoa leaves those to it."):format(table.concat(jobs, ", ")) or ""
-			Stoa:Print(("%s is here too and works with Stoa. %s%s"):format(companion.name, companion.note, also))
+			local also = #jobs > 0 and (" It also looks after %s itself, so STOA leaves those to it."):format(table.concat(jobs, ", ")) or ""
+			Stoa:Print(("%s is here too and works with STOA. %s%s"):format(companion.name, companion.note, also))
 		elseif #jobs == 0 then
-			Stoa:Print(("%s is here too and works beside Stoa; none of its helpers repeat Stoa's right now."):format(companion.name))
+			Stoa:Print(("%s is here too and works beside STOA; none of its helpers repeat STOA's right now."):format(companion.name))
 		else
-			Stoa:Print(("%s is here too and works beside Stoa. It looks after %s; Stoa leaves those to it while they're on in %s."):format(
+			Stoa:Print(("%s is here too and works beside STOA. It looks after %s; STOA leaves those to it while they're on in %s."):format(
 				companion.name, table.concat(jobs, ", "), companion.name))
 		end
 	end

@@ -106,8 +106,8 @@ Stoa.commands.restore = function()
 	for _ in pairs(ledger()) do count = count + 1 end
 	GameSettings:RestoreAll()
 	if count == 0 then
-		Stoa:Print("Stoa hasn't changed any game settings.")
+		Stoa:Print("STOA hasn't changed any game settings.")
 	else
-		Stoa:Print(("Put back %d game setting%s Stoa had changed. Parts still switched on set theirs again at the next login; switch them off to keep the game's."):format(count, count == 1 and "" or "s"))
+		Stoa:Print(("Put back %d game setting%s STOA had changed. Parts still switched on set theirs again at the next login; switch them off to keep the game's."):format(count, count == 1 and "" or "s"))
 	end
 end
