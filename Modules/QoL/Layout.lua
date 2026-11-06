@@ -7,6 +7,8 @@
 -- is never replaced; /stoa editmode applies Stoa's on demand. When Stoa
 -- ships a newer layout (Stoa.EDIT_MODE_VERSION), a saved "Stoa" layout is
 -- refreshed to it at the next login, while it is the active one.
+-- The "Same as Designer" preset uses a second layout the same way
+-- ("Stoa Designer", Stoa.DESIGNER_LAYOUT).
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -14,13 +16,28 @@ local Layout = Stoa:NewModule("Layout", {
 	enabled = true,
 })
 
-local NAME = "Stoa"
+-- Each layout Stoa can add: its saved name, string, version and the
+-- account key that remembers which version was saved.
+local KINDS = {
+	stoa = { name = "Stoa", text = "EDIT_MODE_LAYOUT", version = "EDIT_MODE_VERSION", saved = "editModeVersion" },
+	designer = { name = "Stoa Designer", text = "DESIGNER_LAYOUT", version = "DESIGNER_LAYOUT_VERSION", saved = "designerLayoutVersion" },
+}
 
-local function ready()
+-- The layout this account wants: the designer's while that preset is on.
+function Layout:Kind()
+	return Stoa.db and Stoa.db.preset == "taer" and type(Stoa.DESIGNER_LAYOUT) == "string" and "designer" or "stoa"
+end
+
+local function kindOf(kind)
+	return KINDS[kind or Layout:Kind()] or KINDS.stoa
+end
+
+local function ready(kind)
+	local k = kindOf(kind)
 	return C_EditMode and C_EditMode.GetLayouts and C_EditMode.SaveLayouts
 		and C_EditMode.ConvertStringToLayoutInfo and Enum and Enum.EditModeLayoutType
-		and Enum.EditModePresetLayoutsMeta and type(Stoa.EDIT_MODE_LAYOUT) == "string"
-		and Stoa.EDIT_MODE_LAYOUT ~= ""
+		and Enum.EditModePresetLayoutsMeta and type(Stoa[k.text]) == "string"
+		and Stoa[k.text] ~= ""
 end
 
 local function presets()
@@ -43,42 +60,53 @@ function Layout:Bars()
 	SetActionBarToggles(unpack(toggles))
 end
 
--- True when the saved "Stoa" layout came from an older Stoa string.
-function Layout:Stale()
-	return (Stoa.db.editModeVersion or 1) < (Stoa.EDIT_MODE_VERSION or 1)
+-- True when the saved layout came from an older Stoa string.
+function Layout:Stale(kind)
+	local k = kindOf(kind)
+	return (Stoa.db[k.saved] or 1) < (Stoa[k.version] or 1)
 end
 
--- Where the "Stoa" layout sits in the saved list, if it's there.
-local function find(info)
+-- Where a layout sits in the saved list, if it's there.
+local function find(info, name)
 	for i, layout in ipairs(info.layouts) do
-		if layout.layoutName == NAME then return i end
+		if layout.layoutName == name then return i end
 	end
 end
 
--- True while the "Stoa" layout is the active one.
-function Layout:OnStoa()
+-- True while one of Stoa's layouts is the active one (any kind when none
+-- is named).
+function Layout:OnStoa(kind)
 	local info = C_EditMode.GetLayouts()
-	local index = info and info.layouts and find(info)
-	return index ~= nil and info.activeLayout == presets() + index
+	if not (info and info.layouts) then return false end
+	for key, k in pairs(KINDS) do
+		if not kind or key == kind then
+			local index = find(info, k.name)
+			if index and info.activeLayout == presets() + index then return true end
+		end
+	end
+	return false
 end
 
--- Adds Stoa's layout if it isn't saved yet (or refreshes one saved from an
--- older string), and switches to it.
-function Layout:Apply(quiet)
-	if not ready() then
+-- Adds Stoa's layout (or the designer's) if it isn't saved yet, or
+-- refreshes one saved from an older string, and switches to it.
+function Layout:Apply(quiet, kind)
+	kind = kind or self:Kind()
+	local k = kindOf(kind)
+	local NAME = k.name
+	if not ready(kind) then
 		if not quiet then Stoa:Print("Stoa has no Edit Mode layout to apply yet.") end
 		return
 	end
 	if InCombatLockdown() then
-		Stoa:AfterCombat(function() self:Apply(quiet) end)
+		Stoa:AfterCombat(function() self:Apply(quiet, kind) end)
 		return
 	end
 	local info = C_EditMode.GetLayouts()
 	if not (info and info.layouts) then return end
-	local index = find(info)
-	local refresh = index and self:Stale()
+	local index = find(info, NAME)
+	local refresh = index and self:Stale(kind)
 	if not index or refresh then
-		local ok, layout = pcall(C_EditMode.ConvertStringToLayoutInfo, Stoa.EDIT_MODE_LAYOUT)
+		local ok, layout = pcall(C_EditMode.ConvertStringToLayoutInfo, Stoa[k.text])
 		if not (ok and layout) then
 			Stoa:Print("Stoa's Edit Mode layout couldn't be read; nothing was changed.")
 			return
@@ -102,31 +130,35 @@ function Layout:Apply(quiet)
 				C_EditMode.OnLayoutAdded(presets() + index, true, true)
 			end
 		end
-		Stoa.db.editModeVersion = Stoa.EDIT_MODE_VERSION or 1
+		Stoa.db[k.saved] = Stoa[k.version] or 1
 	end
 	C_EditMode.SetActiveLayout(presets() + index)
 	self:Bars()
 	Stoa.char.layoutApplied = true
 	if not quiet then
-		Stoa:Print(refresh and "Stoa's Edit Mode layout is updated to the newest version."
-			or "Switched to Stoa's Edit Mode layout. Edit Mode can change it or pick another.")
+		local whose = kind == "designer" and "the designer's" or "Stoa's"
+		Stoa:Print(refresh and ("Switched to " .. whose .. " Edit Mode layout, updated to the newest version.")
+			or ("Switched to " .. whose .. " Edit Mode layout. Edit Mode can change it or pick another."))
 	end
 end
 
 function Layout:OnEnable()
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
-		if not ready() then return end
-		if Stoa.char.layoutApplied and not self:Stale() then return end
+		local kind = self:Kind()
+		if not ready(kind) then return end
 		-- Edit Mode finishes loading its layouts just after this event.
 		C_Timer.After(1, function()
-			if self:Stale() and self:OnStoa() then
-				-- A newer Stoa layout: refresh the saved one while it's in use.
-				self:Apply(false)
+			if InCombatLockdown() then return end
+			-- On one of Stoa's layouts: follow the preset (Stoa's or the
+			-- designer's), and refresh a saved one from an older string.
+			local onOther = self:OnStoa() and not self:OnStoa(kind)
+			if onOther or (self:Stale(kind) and self:OnStoa(kind)) then
+				self:Apply(false, kind)
 				return
 			end
 			if Stoa.char.layoutApplied then return end
 			if self:OnPreset() then
-				self:Apply(false)
+				self:Apply(false, kind)
 			else
 				-- A layout of the player's own: leave it, and don't ask again.
 				Stoa.char.layoutApplied = true
@@ -136,6 +168,7 @@ function Layout:OnEnable()
 end
 
 -- /stoa layout is the backup page's shareable line (Config/Backup.lua).
-Stoa.commands.editmode = function()
-	Layout:Apply(false)
+Stoa.commands.editmode = function(rest)
+	local word = strtrim(rest or ""):lower()
+	Layout:Apply(false, (word == "designer" and "designer") or (word == "stoa" and "stoa") or nil)
 end

@@ -37,20 +37,24 @@ local PRESET_WORDS = {
 	full = { "Full", "Everything on, as Stoa ships: tooltip details, the quest line, At a glance, every bar row out of combat, and Stoa's look on windows, bags, tooltips, the top of the screen and nameplates." },
 	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; extra bar rows only on mouseover; the click grid folded for healers, hidden otherwise. Stoa's look stays." },
 	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of Stoa's. The console, Halo, frames and words stay as in Full." },
-	taer = { "Taer", "Full as its designer plays it: painted frames, three bar rows, a longer calm after a fight, the loot feed out in the world, faded nameplates with a glow on your target, quests accepted for you and Blizzard's cooldown manager left alone." },
+	taer = { "Same as Designer", "Full as its designer plays it: the Graphite theme, painted frames, three bar rows, a longer calm after a fight, the loot feed out in the world, faded nameplates with a glow on your target, quests accepted for you, cooldowns read from the game's Cooldown Manager, and the designer's Edit Mode layout." },
 }
 
--- Taer's own changes against Full. "db" means the account settings.
+-- Same as Designer's own changes against Full ("taer" in saved settings).
+-- "db" means the account settings. It also switches to the designer's Edit
+-- Mode layout (Modules/QoL/Layout.lua) when the page finishes.
 local TAER = {
-	{ "db", "ornament", "painted" }, { "db", "calm", "8" },
+	{ "db", "theme", "Graphite" }, { "db", "ornament", "painted" }, { "db", "calm", "8" },
 	{ "CombatBar", "rows", "3" }, { "CombatBar", "healerRows", "3" },
 	{ "Comforts", "acceptQuests", true },
 	{ "Loot", "show", "WORLD" },
-	{ "Manager", "enabled", false },
+	{ "Manager", "enabled", true },
 	{ "Plates", "fade", 25 }, { "Plates", "fadeChoice", "25" }, { "Plates", "marker", "glow" },
 	{ "Social", "declineStrangerGuildInvites", false },
 }
 local ACCOUNT_DEFAULTS = { ornament = "plain", calm = "5" }
+-- Kept when leaving the preset: a theme is the player's own pick.
+local KEEP_ON_LEAVE = { theme = true }
 local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "Tooltip", "Top", "Plates" }
 
 -- Settings every preset resets: { module, key }.
@@ -85,15 +89,26 @@ local function changesFor(name)
 end
 
 local function setValue(module, key, value)
-	if module == "db" then Stoa.db[key] = value return end
+	if module == "db" then
+		if key == "theme" then
+			if value and Stoa.db.theme ~= value then Stoa:SetTheme(value) end
+			return
+		end
+		Stoa.db[key] = value
+		return
+	end
 	local m = Stoa.modules[module]
 	if m and m.db then m.db[key] = value end
 end
 
 local function defaultOf(module, key)
 	if module == "db" then return ACCOUNT_DEFAULTS[key] end
-	if key == "enabled" then return true end
 	local m = Stoa.modules[module]
+	if key == "enabled" then
+		-- Most modules start on; a few (the Cooldown Manager) start off.
+		if m and m.defaults and m.defaults.enabled ~= nil then return m.defaults.enabled end
+		return true
+	end
 	return m and m.defaults[key]
 end
 
@@ -104,7 +119,11 @@ function Welcome:ApplyPreset(name)
 	-- Leaving Taer puts its own changes back; other presets leave those
 	-- settings as the player set them.
 	if Stoa.db.preset == "taer" and name ~= "taer" then
-		for _, entry in ipairs(TAER) do setValue(entry[1], entry[2], defaultOf(entry[1], entry[2])) end
+		for _, entry in ipairs(TAER) do
+			if not (entry[1] == "db" and KEEP_ON_LEAVE[entry[2]]) then
+				setValue(entry[1], entry[2], defaultOf(entry[1], entry[2]))
+			end
+		end
 	end
 	for _, module in ipairs(SKINS) do setValue(module, "enabled", true) end
 	local comforts = Stoa.modules.Comforts
@@ -434,8 +453,9 @@ function builders.ready(self, step)
 	local page = self.page
 	local tries = {
 		{ "Sample party", function() Stoa.commands.test("") end },
-		{ "Practice combat", function() page:Hide(); Stoa.commands.combat("") end },
-		{ "Move frames", function() page:Hide(); Stoa:ToggleMovers() end },
+		-- END COMBAT brings the page back at this step (STOA_PRACTICE below).
+		{ "Practice combat", function() Welcome.trying = "combat"; page:Hide(); Stoa.commands.combat("") end },
+		{ "Move frames", function() Welcome.trying = "movers"; page:Hide(); Stoa:ToggleMovers() end },
 	}
 	for i, entry in ipairs(tries) do
 		local button = UI.button(step, entry[1], 140, entry[2])
@@ -701,25 +721,48 @@ function Welcome:NeedsReload()
 	return false
 end
 
+-- Switches Edit Mode to the layout the preset wants: the designer's for
+-- Same as Designer; back to Stoa's when leaving it from the designer's.
+function Welcome:FollowLayout()
+	local layout = Stoa.modules.Layout
+	if not (layout and layout.enabled and layout.Kind and layout.Apply) then return end
+	local kind = layout:Kind()
+	if kind == "designer" or layout:OnStoa("designer") then
+		xpcall(layout.Apply, Stoa.catch, layout, true, kind)
+	end
+end
+
+-- Finish always reloads, so every choice, the preset's settings and its
+-- Edit Mode layout take hold together.
 function Welcome:Finish()
-	local reload = self:NeedsReload()
 	self:SettleAddons()
 	self.finished = true
 	Stoa.char.welcomed = true
 	if self.start == "ships" then
 		for slot = 1, 2 do Stoa:SetRoleForSlot(slot, "AUTO") end
-		if (Stoa.db.preset or "full") ~= "full" then self:ApplyPreset("full"); reload = true end
+		if (Stoa.db.preset or "full") ~= "full" then self:ApplyPreset("full") end
 	end
 	if self.start == "saved" and self.setup and Stoa.Setups:Load(self.setup) then return end
+	if self.applied then self:FollowLayout() end
 	self.page:Hide()
-	if reload then ReloadUI() end
+	ReloadUI()
 end
 
 -- Closed by Finish, Escape or a Try it button.
 function Welcome:Closed()
 	Stoa.char.welcomed = true
+	-- Practice combat brings the page back; nothing is settled yet.
+	if self.trying == "combat" then return end
 	if not self.finished and self:NeedsReload() and self.start ~= "saved" then
-		Stoa:Print("Some of your choices take effect after /reload.")
+		if self.trying then
+			Stoa:Print("Some of your choices take effect after /reload.")
+		else
+			-- Closed without Finish: the choices made still need a reload.
+			if self.applied then self:FollowLayout() end
+			self.finished = true
+			ReloadUI()
+			return
+		end
 	end
 	-- Anything the page didn't settle is asked about now (Core/Conflicts.lua).
 	if Stoa.Conflicts then C_Timer.After(1, function() Stoa.Conflicts:Next() end) end
@@ -899,7 +942,7 @@ function Welcome:Refresh()
 			line.key:SetText(entry and entry[1] or "")
 			line.value:SetText(entry and entry[2] or "")
 		end
-		step.reloadNote:SetText(self:NeedsReload() and "Finish reloads the interface once, so every choice takes hold." or "Everything is already in place.")
+		step.reloadNote:SetText("Finish reloads the interface once, so every choice takes hold.")
 	end
 
 	-- Header and footer.
@@ -911,7 +954,7 @@ function Welcome:Refresh()
 	self.counter:SetText((current ~= "start" and current ~= "ready") and ("Step %d of %d"):format(index - 1, middle) or "")
 	local word = "Next"
 	if current == "ready" then
-		word = self:NeedsReload() and "Finish and reload" or "Finish"
+		word = "Finish and reload"
 	elseif current == "start" and self.start ~= "guided" then
 		word = "Continue"
 	end
@@ -940,6 +983,7 @@ function Welcome:Show()
 	self.opened = { ornament = Stoa.db.ornament, halo = not (db and db.enabled == false) }
 	self.applied = nil
 	self.finished = nil
+	self.trying = nil
 	self.start = "guided"
 	self.setups = Stoa.Setups and Stoa.Setups:List() or {}
 	while #self.setups > MAX_SETUPS do table.remove(self.setups) end
@@ -962,6 +1006,22 @@ end
 
 Stoa.commands.welcome = function() Welcome:Show() end
 
+-- Back from practice combat: the page again, at its last step, as it was.
+function Welcome:Resume()
+	self.trying = nil
+	if not self.page or self.finished then return end
+	if InCombatLockdown() then
+		Stoa:AfterCombat(function() Welcome:Resume() end)
+		return
+	end
+	self:Refresh()
+	self.page:Show()
+end
+
+Stoa:On("STOA_PRACTICE", function(on)
+	if not on and Welcome.trying == "combat" then Welcome:Resume() end
+end)
+
 Stoa:On("STOA_READY", function()
 	if Stoa.char.welcomed then return end
 	-- Let the world and the rest of the UI settle first.
@@ -976,14 +1036,17 @@ Stoa:On("STOA_THEME_CHANGED", function()
 	if Welcome.page and Welcome.page:IsShown() then Welcome:Refresh() end
 end)
 
--- /stoa preset full|quiet|classic|taer
+-- /stoa preset full|quiet|classic|designer
 Stoa.commands.preset = function(rest)
 	local name = strtrim(rest or ""):lower()
 	if name == "classic feel" then name = "classic" end
+	if name == "designer" or name == "same as designer" then name = "taer" end
 	if Welcome:ApplyPreset(name) then
+		Welcome:FollowLayout()
 		Stoa:Print(PRESET_WORDS[name][1] .. " set. Type /reload to finish.")
 		if Welcome.page then Welcome:Refresh() end
 	else
-		Stoa:Print("Presets: full, quiet, classic or taer. Now: " .. tostring(Stoa.db.preset or "none") .. ".")
+		local now = Stoa.db.preset and PRESET_WORDS[Stoa.db.preset] and PRESET_WORDS[Stoa.db.preset][1] or "none"
+		Stoa:Print("Presets: full, quiet, classic or designer. Now: " .. now .. ".")
 	end
 end
