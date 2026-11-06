@@ -47,7 +47,8 @@ end
 -- cloth wearers; mail for warriors and paladins, and hunters and shamans
 -- from 40; plate for warriors and paladins from 40; shields, librams, idols
 -- and totems for their classes. An item outside this is never an upgrade.
--- Weapons aren't checked (proficiencies are learnt, so the game is the judge).
+-- Weapons go by the game's own verdict: it paints a weapon type you can't
+-- use red on the item's tooltip (Daggers for a paladin), so that's asked.
 local ARMOR = 4
 local ARMOR_RULES = {
 	[2] = function(class) return class ~= "PRIEST" and class ~= "MAGE" and class ~= "WARLOCK" end,
@@ -61,8 +62,40 @@ local ARMOR_RULES = {
 	[9] = function(class) return class == "SHAMAN" end,
 }
 
+local WEAPON = 2
+local unusable = {}
+
+-- True when the item's tooltip has a red line other than its level need:
+-- a weapon or armour type you can't use. Kept per link until your skills
+-- or level change.
+local function redLine(link)
+	if unusable[link] ~= nil then return unusable[link] end
+	local getLines = C_TooltipInfo and C_TooltipInfo.GetHyperlink
+	if not getLines then return false end
+	local ok, data = pcall(getLines, link)
+	if not ok or type(data) ~= "table" or type(data.lines) ~= "table" then return false end
+	local levelPattern = type(ITEM_MIN_LEVEL) == "string" and ("^" .. ITEM_MIN_LEVEL:gsub("%%d", "%%d+")) or "^Requires Level"
+	local red = false
+	for _, line in ipairs(data.lines) do
+		for _, side in ipairs({ { line.leftText, line.leftColor }, { line.rightText, line.rightColor } }) do
+			local text, color = side[1], side[2]
+			if type(text) == "string" and type(color) == "table" and not Stoa:IsSecret(text) then
+				local r, g, b = Stoa:PlainNumber(color.r), Stoa:PlainNumber(color.g), Stoa:PlainNumber(color.b)
+				if r and g and b and r > 0.9 and g < 0.25 and b < 0.25 and not text:match(levelPattern) then red = true end
+			end
+		end
+	end
+	unusable[link] = red
+	return red
+end
+
+function Items.forgetUsable()
+	wipe(unusable)
+end
+
 function Items.wearable(link)
 	local _, _, _, classID, subclassID = Items.info(link)
+	if classID == WEAPON then return not redLine(link) end
 	if classID ~= ARMOR or not subclassID then return true end
 	local rule = ARMOR_RULES[subclassID]
 	if not rule then return true end
@@ -88,6 +121,30 @@ Items.SLOT_NAMES = {
 	[15] = "back", [16] = "main hand", [17] = "off hand", [18] = "ranged slot",
 }
 
+-- The slots an item would take from what you wear now. A one-hand weapon
+-- goes in the main hand only when you can't dual wield, or when you hold a
+-- two-hander (it would replace that); off-hand things next to a two-hander
+-- have no fair comparison, so they get none.
+local OFF_HAND_ONLY = { INVTYPE_WEAPONOFFHAND = true, INVTYPE_SHIELD = true, INVTYPE_HOLDABLE = true }
+local MAIN_ONLY = { 16 }
+
+function Items.slotsFor(equipLoc)
+	local slots = equipLoc and Items.SLOTS[equipLoc]
+	if not slots then return nil end
+	if equipLoc ~= "INVTYPE_WEAPON" and not OFF_HAND_ONLY[equipLoc] then return slots end
+	local main = call(GetInventoryItemLink, "player", 16)
+	local mainLoc
+	if main then mainLoc = select(3, Items.info(main)) end
+	if mainLoc == "INVTYPE_2HWEAPON" then
+		return equipLoc == "INVTYPE_WEAPON" and MAIN_ONLY or nil
+	end
+	if equipLoc == "INVTYPE_WEAPON" and CanDualWield then
+		local ok, can = pcall(CanDualWield)
+		if ok and not can then return MAIN_ONLY end
+	end
+	return slots
+end
+
 -- The item against the weaker of the slots it goes in: the item level
 -- difference, that slot's name, and true when the slot is empty. Nil for
 -- things you can't wear, or when it is what you wear.
@@ -96,7 +153,7 @@ function Items.compare(link)
 	local level = Items.level(link)
 	if not level then return nil end
 	local _, _, equipLoc = Items.info(link)
-	local slots = equipLoc and Items.SLOTS[equipLoc]
+	local slots = Items.slotsFor(equipLoc)
 	if not slots then return nil end
 	local worstSlot, worst
 	for _, slot in ipairs(slots) do
@@ -118,7 +175,7 @@ local function pawnUpgrade(link)
 	local ok, item = pcall(_G.PawnGetItemData, link)
 	if not ok or type(item) ~= "table" or not item.Link then return nil end
 	local _, _, equipLoc = Items.info(link)
-	local slots = equipLoc and Items.SLOTS[equipLoc]
+	local slots = Items.slotsFor(equipLoc)
 	if not slots then return nil end
 	local fine, list = pcall(_G.PawnIsItemAnUpgrade, item)
 	if not fine then return nil end
@@ -154,7 +211,7 @@ function Items.upgrade(link)
 	local score = Stoa.Weights.score(link)
 	if not score or score <= 0 then return nil end
 	local _, _, equipLoc = Items.info(link)
-	local slots = equipLoc and Items.SLOTS[equipLoc]
+	local slots = Items.slotsFor(equipLoc)
 	if not slots then return nil end
 	local worstSlot, worst
 	for _, slot in ipairs(slots) do
@@ -221,3 +278,8 @@ function Items.eachBagSlot(fn)
 		end
 	end
 end
+
+-- A trained weapon skill or a new level can make a red line go away.
+Stoa:On("PLAYER_LEVEL_UP", Items.forgetUsable)
+Stoa:On("SKILL_LINES_CHANGED", Items.forgetUsable)
+Stoa:On("STOA_SPELLS_CHANGED", Items.forgetUsable)
