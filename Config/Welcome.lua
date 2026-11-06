@@ -26,18 +26,31 @@ local function slotRole(slot)
 end
 
 -- Presets ---------------------------------------------------------------------
--- Three starting points. Every preset first puts the settings any preset
+-- Four starting points. Every preset first puts the settings any preset
 -- touches back to their defaults, then applies its own changes, so picking
 -- one after another never leaves leftovers. Skins and the like only change
 -- after /reload.
-local PRESET_ORDER = { "full", "quiet", "classic" }
+local PRESET_ORDER = { "full", "quiet", "classic", "taer" }
 -- Full is how Stoa ships; the other two are described against it, so the
 -- page says exactly what a choice takes away.
 local PRESET_WORDS = {
 	full = { "Full", "Everything on, as Stoa ships: tooltip details, the quest line, At a glance, every bar row out of combat, and Stoa's look on windows, bags, tooltips, the top of the screen and nameplates." },
 	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; extra bar rows only on mouseover; the click grid folded for healers, hidden otherwise. Stoa's look stays." },
 	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of Stoa's. The console, Halo, frames and words stay as in Full." },
+	taer = { "Taer", "Full as its designer plays it: painted frames, three bar rows, a longer calm after a fight, the loot feed out in the world, faded nameplates with a glow on your target, quests accepted for you and Blizzard's cooldown manager left alone." },
 }
+
+-- Taer's own changes against Full. "db" means the account settings.
+local TAER = {
+	{ "db", "ornament", "painted" }, { "db", "calm", "8" },
+	{ "CombatBar", "rows", "3" }, { "CombatBar", "healerRows", "3" },
+	{ "Comforts", "acceptQuests", true },
+	{ "Loot", "show", "WORLD" },
+	{ "Manager", "enabled", false },
+	{ "Plates", "fade", 25 }, { "Plates", "fadeChoice", "25" }, { "Plates", "marker", "glow" },
+	{ "Social", "declineStrangerGuildInvites", false },
+}
+local ACCOUNT_DEFAULTS = { ornament = "plain", calm = "5" }
 local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "Tooltip", "Top", "Plates" }
 
 -- Settings every preset resets: { module, key }.
@@ -65,16 +78,20 @@ local function changesFor(name)
 		list[#list + 1] = { "ActionBars", "hoverTray", true }
 	elseif name == "classic" then
 		for _, module in ipairs(SKINS) do list[#list + 1] = { module, "enabled", false } end
+	elseif name == "taer" then
+		for _, change in ipairs(TAER) do list[#list + 1] = change end
 	end
 	return list
 end
 
 local function setValue(module, key, value)
+	if module == "db" then Stoa.db[key] = value return end
 	local m = Stoa.modules[module]
 	if m and m.db then m.db[key] = value end
 end
 
 local function defaultOf(module, key)
+	if module == "db" then return ACCOUNT_DEFAULTS[key] end
 	if key == "enabled" then return true end
 	local m = Stoa.modules[module]
 	return m and m.defaults[key]
@@ -84,6 +101,11 @@ end
 function Welcome:ApplyPreset(name)
 	if not PRESET_WORDS[name] then return false end
 	for _, entry in ipairs(TOUCHED) do setValue(entry[1], entry[2], defaultOf(entry[1], entry[2])) end
+	-- Leaving Taer puts its own changes back; other presets leave those
+	-- settings as the player set them.
+	if Stoa.db.preset == "taer" and name ~= "taer" then
+		for _, entry in ipairs(TAER) do setValue(entry[1], entry[2], defaultOf(entry[1], entry[2])) end
+	end
 	for _, module in ipairs(SKINS) do setValue(module, "enabled", true) end
 	local comforts = Stoa.modules.Comforts
 	if comforts and comforts.db then
@@ -950,7 +972,7 @@ Stoa:On("STOA_THEME_CHANGED", function()
 	if Welcome.page and Welcome.page:IsShown() then Welcome:Refresh() end
 end)
 
--- /stoa preset full|quiet|classic
+-- /stoa preset full|quiet|classic|taer
 Stoa.commands.preset = function(rest)
 	local name = strtrim(rest or ""):lower()
 	if name == "classic feel" then name = "classic" end
@@ -958,6 +980,6 @@ Stoa.commands.preset = function(rest)
 		Stoa:Print(PRESET_WORDS[name][1] .. " set. Type /reload to finish.")
 		if Welcome.page then Welcome:Refresh() end
 	else
-		Stoa:Print("Presets: full, quiet or classic. Now: " .. tostring(Stoa.db.preset or "none") .. ".")
+		Stoa:Print("Presets: full, quiet, classic or taer. Now: " .. tostring(Stoa.db.preset or "none") .. ".")
 	end
 end
