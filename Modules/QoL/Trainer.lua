@@ -94,7 +94,7 @@ function Trainer:Spells(first, last)
 				local side = Stoa.TRAINER_FACTION[id]
 				local fits = (not races or races[myRace]) and (not side or side == faction)
 				-- A spell this client doesn't know by ID isn't on Forever.
-				if fits and not seen[id] and Spells.name(id) and not Spells.knows(id) then
+				if fits and not seen[id] and Spells.name(id) and not Spells.covered(id) then
 					seen[id] = true
 					if not Stoa.TRAINER_RANKED[id] or Spells.best(id) then
 						list[#list + 1] = { id = id, level = at, skipped = self:Skipped(id) }
