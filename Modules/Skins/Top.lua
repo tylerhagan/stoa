@@ -295,6 +295,40 @@ function Top:SeatHeader()
 	end
 end
 
+-- The day and night button (with the calendar on click) sat on the
+-- minimap's top-right edge, over the frame. It moves into the header row,
+-- just left of the clock, sized to the row.
+local placingSun
+function Top:PlaceSun()
+	local sun, zone = _G.GameTimeFrame, _G.MinimapCluster and _G.MinimapCluster.ZoneTextButton
+	if not (sun and zone and sun.SetPoint) or InCombatLockdown() then return end
+	if sun.IsProtected and sun:IsProtected() then return end
+	local clock = _G.TimeManagerClockButton
+	local rowHeight = Stoa:PlainNumber(zone:GetHeight()) or 0
+	local own = Stoa:PlainNumber(sun:GetHeight()) or 0
+	placingSun = true
+	if rowHeight > 0 and own > 0 then sun:SetScale(math.min(1, (rowHeight + 4) / own)) end
+	sun:ClearAllPoints()
+	if clock and clock:IsShown() then
+		sun:SetPoint("RIGHT", clock, "LEFT", -2, 0)
+	else
+		sun:SetPoint("RIGHT", zone, "RIGHT", -4, 0)
+	end
+	placingSun = false
+	if not sun.stoaSunHooked then
+		sun.stoaSunHooked = true
+		local pending
+		hooksecurefunc(sun, "SetPoint", function()
+			if placingSun or pending then return end
+			pending = true
+			C_Timer.After(0, function()
+				pending = false
+				Stoa:AfterCombat(function() xpcall(Top.PlaceSun, Stoa.catch, Top) end)
+			end)
+		end)
+	end
+end
+
 function Top:MinimapHeader()
 	local cluster = _G.MinimapCluster
 	local zone = cluster and cluster.ZoneTextButton
@@ -314,6 +348,7 @@ function Top:MinimapHeader()
 	end
 	if _G.Minimap_Update then hooksecurefunc("Minimap_Update", zoneColour) end
 	self:SeatHeader()
+	xpcall(self.PlaceSun, Stoa.catch, self)
 	zoneColour()
 
 	-- The header's buttons wait for the mouse.
