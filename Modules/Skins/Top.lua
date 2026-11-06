@@ -223,6 +223,39 @@ local function dressModule(module)
 	end
 end
 
+-- The tracker grows down to its Edit Mode height (or the screen's foot),
+-- which with a long quest log ran it over the bags, the menu and the
+-- console. Its height is capped so it stops above the highest of them; the
+-- tracker then folds what doesn't fit, as it does at its own limit.
+local FLOOR_GAP = 10
+
+local function floorY(scale)
+	local best = 0
+	local console = Stoa.modules.Grimoire
+	if console and console.OpenHeight and console.frame and console.frame:IsShown() then
+		best = (Stoa:PlainNumber(console:OpenHeight()) or 0) * UIParent:GetEffectiveScale()
+	end
+	for _, frame in ipairs({ _G.MicroMenuContainer or _G.MicroMenu, _G.BagsBar }) do
+		if frame and frame:IsShown() and not (frame.IsForbidden and frame:IsForbidden()) then
+			local ok, top = pcall(frame.GetTop, frame)
+			top = ok and Stoa:PlainNumber(top)
+			if top then best = math.max(best, top * frame:GetEffectiveScale()) end
+		end
+	end
+	return best / scale
+end
+
+function Top:FitTracker()
+	local tracker = _G.ObjectiveTrackerFrame
+	if not tracker or (tracker.IsForbidden and tracker:IsForbidden()) then return end
+	local ok, top = pcall(tracker.GetTop, tracker)
+	top = ok and Stoa:PlainNumber(top)
+	local height = Stoa:PlainNumber(tracker:GetHeight())
+	if not (top and height) then return end
+	local room = top - floorY(tracker:GetEffectiveScale()) - FLOOR_GAP
+	if room > 60 and height > room + 0.5 then tracker:SetHeight(room) end
+end
+
 function Top:Tracker()
 	local tracker = _G.ObjectiveTrackerFrame
 	if not tracker or self.trackerDressed then return end
@@ -233,6 +266,10 @@ function Top:Tracker()
 	end
 	dressHeader(tracker.Header, tracker.IsCollapsed and tracker:IsCollapsed())
 	for _, module in ipairs(tracker.modules or {}) do guarded(dressModule, module) end
+	if tracker.UpdateHeight then
+		hooksecurefunc(tracker, "UpdateHeight", function() guarded(Top.FitTracker, Top) end)
+	end
+	guarded(self.FitTracker, self)
 	if tracker.AddModule then
 		hooksecurefunc(tracker, "AddModule", function(_, module) guarded(dressModule, module) end)
 	end
@@ -398,7 +435,11 @@ function Top:OnEnable()
 		if name == "Blizzard_ObjectiveTracker" and not Top.trackerDressed then guarded(Top.Tracker, Top) end
 	end)
 	-- Buff buttons can be made after login (the consolidation tooltip, edit mode).
-	Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(1, function() guarded(Top.Buffs, Top) end) end)
+	Stoa:On("PLAYER_ENTERING_WORLD", function()
+		C_Timer.After(1, function() guarded(Top.Buffs, Top) end)
+		-- The menu and bags settle after login; fit the tracker to where they end up.
+		C_Timer.After(2, function() if Top.trackerDressed then guarded(Top.FitTracker, Top) end end)
+	end)
 	Stoa:On("STOA_THEME_CHANGED", function()
 		zoneColour()
 		local tracker = _G.ObjectiveTrackerFrame
