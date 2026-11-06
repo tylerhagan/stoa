@@ -1,6 +1,6 @@
 -- Stoa: the icon tray. Other addons hang their buttons round the minimap's
 -- edge, where they crowd the frame and the zone name. Stoa gathers them into
--- one small button below the map's left corner; a click opens a tray
+-- one small button beside the map's bottom-left corner; a click opens a tray
 -- beside it with the icons in rows, in sockets of the map's own shape
 -- (round or rounded square), and it folds away again a moment after the
 -- mouse leaves.
@@ -226,16 +226,17 @@ end
 
 function Tray:Build()
 	local map = Minimap
-	-- Under the map's left edge, on the row below its frame. The painted
-	-- frames show about 6.5% of the map's width below it (the texture's
-	-- own margin is clear, so its full size overstates it).
-	local below = 7
+	-- Beside the map's bottom-left corner, outside its frame. (Under the
+	-- map it sat on the quest tracker's header.) The painted frames reach
+	-- about 6.5% of the map's width past it (the texture's own margin is
+	-- clear, so its full size overstates it).
+	local beside = 7
 	local style = Stoa.modules.Minimap
-	if style and style.painted then below = math.floor(map:GetWidth() * 0.065) + 4 end
+	if style and style.painted then beside = math.floor(map:GetWidth() * 0.065) + 4 end
 
 	local handle = CreateFrame("Button", "StoaTrayButton", map:GetParent() or UIParent)
 	handle:SetSize(22, 22)
-	handle:SetPoint("TOPLEFT", map, "BOTTOMLEFT", 0, -below)
+	handle:SetPoint("BOTTOMRIGHT", map, "BOTTOMLEFT", -beside, 0)
 	handle:SetFrameStrata("MEDIUM")
 	handle:SetFrameLevel(map:GetFrameLevel() + 6)
 	local glow
