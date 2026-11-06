@@ -461,8 +461,11 @@ function Welcome:Build()
 	page:RegisterForDrag("LeftButton")
 	page:SetScript("OnDragStart", page.StartMoving)
 	page:SetScript("OnDragStop", page.StopMovingOrSizing)
-	page:SetScript("OnHide", function() self:Closed() end)
+	-- Hidden before OnHide is set: hiding the new page must not count as
+	-- closing it (that marked the character welcomed and broke the build,
+	-- so the first login's page never showed).
 	page:Hide()
+	page:SetScript("OnHide", function() self:Closed() end)
 	UI.windowPanel(page, 0.97, { header = HEADER, footer = FOOTER })
 	self.page = page
 
@@ -688,6 +691,7 @@ end
 function Welcome:NeedsReload()
 	if self.start == "saved" and self.setup then return true end
 	if self.applied then return true end
+	if not self.opened then return false end
 	if Stoa.db.ornament ~= self.opened.ornament then return true end
 	local db = halo()
 	if db and (db.enabled ~= false) ~= self.opened.halo then return true end

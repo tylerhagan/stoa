@@ -54,9 +54,18 @@ local special = {
 	HookScript = function(self, k, fn) self.__scripts[k] = self.__scripts[k] or fn end,
 	GetAttribute = function(self, k) return self.__attr[k] end,
 	SetAttribute = function(self, k, v) self.__attr[k] = v end,
-	Show = function(self) self.__shown = true end,
-	Hide = function(self) self.__shown = false end,
-	SetShown = function(self, v) self.__shown = v and true or false end,
+	-- Like the game, a change of shown state runs OnShow / OnHide.
+	Show = function(self)
+		local was = self.__shown
+		self.__shown = true
+		if not was and self.__scripts.OnShow then self.__scripts.OnShow(self) end
+	end,
+	Hide = function(self)
+		local was = self.__shown
+		self.__shown = false
+		if was and self.__scripts.OnHide then self.__scripts.OnHide(self) end
+	end,
+	SetShown = function(self, v) if v then self:Show() else self:Hide() end end,
 	IsShown = function(self) return self.__shown end,
 	IsVisible = function(self) return self.__shown end,
 	GetFont = function() return "Fonts\\FRIZQT__.TTF", 12, "" end,
