@@ -50,7 +50,9 @@ local function colourEntry(entry)
 	if bar then
 		local mine = entry.isLocalPlayer == true
 		local r, g, b = Stoa:Color(mine and "accent" or "muted")
-		bar:SetVertexColor(r, g, b, mine and 0.55 or 0.3)
+		-- Faint enough that the white words over them keep their contrast;
+		-- at 0.55 your own bar washed the row out.
+		bar:SetVertexColor(r, g, b, mine and 0.3 or 0.18)
 	end
 	local name = entry.GetName and entry:GetName()
 	if name and name.SetTextColor then
