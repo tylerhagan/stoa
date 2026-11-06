@@ -1,7 +1,8 @@
 -- Stoa QoL: small comforts, each its own setting.
 --   On by default: loot lands the moment the window would open, the camera
---   pulls further out, and an NPC with nothing to say but one option skips
---   straight past it.
+--   pulls further out, an NPC with nothing to say but one option skips
+--   straight past it, and the tracking you last chose (Find Minerals, Find
+--   Herbs...) comes back on after you log in or come back from the dead.
 --   Also on: other people's duel results and drunken lines stay out of chat.
 --   Off by default: accepting and handing in quests (a quest with a choice
 --   of reward always waits for you), skipping cinematics, quieting the
@@ -24,6 +25,7 @@ local Comforts = Stoa:NewModule("Comforts", {
 	declineDuels = false,
 	releaseInPvP = false,
 	acceptRes = false,
+	keepTracking = true,
 })
 
 local FAR_CAMERA = 2.6
@@ -60,6 +62,94 @@ function Comforts:Camera()
 	else
 		Stoa.GameSettings:Restore("cameraDistanceMaxZoomFactor")
 	end
+end
+
+-- Tracking --------------------------------------------------------------------
+-- The game drops Find Minerals, Find Herbs and the rest when you log in or
+-- die. Stoa remembers the last one you turned on (from the minimap menu or
+-- by casting it) per character, and turns it back on out of combat.
+
+local function trackingInfo(index)
+	local a, b, c, d, e, f = C_Minimap.GetTrackingInfo(index)
+	if type(a) == "table" then return a.name, a.active, a.spellID end
+	-- Older shape: name, texture, active, category, nested, spellID.
+	return a, c, f
+end
+
+local function trackingIndex(spellID, name)
+	for index = 1, (C_Minimap.GetNumTrackingTypes() or 0) do
+		local entryName, active, entrySpell = trackingInfo(index)
+		if (spellID and entrySpell == spellID) or (not spellID and name and entryName == name) then
+			return index, active
+		end
+	end
+end
+
+function Comforts:RememberTracking(index, on)
+	local name, _, spellID = trackingInfo(index)
+	-- Only tracking that comes from a spell is lost on death and login.
+	if not spellID then return end
+	if on then
+		Stoa.char.tracking = { spellID = spellID, name = name }
+	elseif Stoa.char.tracking and Stoa.char.tracking.spellID == spellID then
+		Stoa.char.tracking = nil
+	end
+end
+
+-- Tracking already on (after a /reload, say) counts as chosen.
+local function learnActive()
+	for index = 1, (C_Minimap.GetNumTrackingTypes() or 0) do
+		local name, active, spellID = trackingInfo(index)
+		if active and spellID then
+			Stoa.char.tracking = { spellID = spellID, name = name }
+			return
+		end
+	end
+end
+
+function Comforts:RestoreTracking()
+	if C_Minimap and C_Minimap.GetTrackingInfo and not Stoa.char.tracking then learnActive() end
+	local saved = Stoa.char.tracking
+	if not (self.db.keepTracking and saved and C_Minimap and C_Minimap.SetTracking) then return end
+	if UnitIsDeadOrGhost("player") then return end
+	if InCombatLockdown() then
+		self.trackAfterCombat = true
+		return
+	end
+	local index, active = trackingIndex(saved.spellID, saved.name)
+	if index and not active then
+		self.restoring = true
+		C_Minimap.SetTracking(index, true)
+		self.restoring = false
+	end
+end
+
+function Comforts:WatchTracking()
+	if not (C_Minimap and C_Minimap.SetTracking and C_Minimap.GetTrackingInfo) then return end
+	Stoa.SafeHook(C_Minimap, "SetTracking", function(index, on)
+		if not self.restoring then self:RememberTracking(index, on) end
+	end)
+	if C_Minimap.ClearAllTracking then
+		Stoa.SafeHook(C_Minimap, "ClearAllTracking", function() Stoa.char.tracking = nil end)
+	end
+	-- Cast from the spellbook or a bar.
+	Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(_, _, spellID)
+		if not spellID or Stoa:IsSecret(spellID) then return end
+		local index = trackingIndex(spellID)
+		if index then self:RememberTracking(index, true) end
+	end)
+	local function soon(delay)
+		C_Timer.After(delay, function() xpcall(self.RestoreTracking, Stoa.catch, self) end)
+	end
+	Stoa:On("PLAYER_ENTERING_WORLD", function() soon(2) end)
+	Stoa:On("PLAYER_ALIVE", function() soon(1) end)
+	Stoa:On("PLAYER_UNGHOST", function() soon(1) end)
+	Stoa:On("PLAYER_REGEN_ENABLED", function()
+		if self.trackAfterCombat then
+			self.trackAfterCombat = false
+			soon(0.5)
+		end
+	end)
 end
 
 -- Gossip and quests -------------------------------------------------------------
@@ -255,4 +345,5 @@ function Comforts:OnEnable()
 	on("PLAYER_DEAD", "Dead")
 	Stoa:On("RESURRECT_REQUEST", function(from) xpcall(self.Resurrect, Stoa.catch, self, from) end)
 	xpcall(self.ChatNoise, Stoa.catch, self)
+	xpcall(self.WatchTracking, Stoa.catch, self)
 end

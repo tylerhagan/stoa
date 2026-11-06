@@ -190,6 +190,15 @@ SIM_ADVANCE = function(s) now = now + s end
 
 local timers = {}
 SIM_TIMERS = timers
+C_Minimap = C_Minimap or {
+	GetNumTrackingTypes = function() return 2 end,
+	GetTrackingInfo = function(i)
+		return { name = i == 1 and "Find Minerals" or "Find Herbs", active = false, type = "spell", spellID = i == 1 and 2580 or 2383 }
+	end,
+	SetTracking = function() end,
+	ClearAllTracking = function() end,
+}
+
 C_Timer = {
 	After = function(s, fn) timers[#timers + 1] = fn end,
 	NewTimer = function(s, fn) timers[#timers + 1] = fn; return NewObject("Timer") end,
