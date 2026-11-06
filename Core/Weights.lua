@@ -120,6 +120,19 @@ function Weights.current()
 end
 
 local ARMOR_FLOOR = 0.005
+-- In the first levels gear has only a point or two of stats, and armour is a
+-- real share of staying alive, so it counts for more. The extra fades out by
+-- ARMOR_EARLY_UNTIL; roles that already weigh armour higher keep their weight.
+local ARMOR_EARLY = 0.04
+local ARMOR_EARLY_UNTIL = 20
+
+local function armorWeight(weights)
+	local base = weights.armor or ARMOR_FLOOR
+	local level = Stoa:PlainNumber(UnitLevel("player")) or 60
+	if level >= ARMOR_EARLY_UNTIL then return base end
+	local early = ARMOR_FLOOR + ARMOR_EARLY * (ARMOR_EARLY_UNTIL - level) / (ARMOR_EARLY_UNTIL - 1)
+	return math.max(base, early)
+end
 
 local getStats = (C_Item and C_Item.GetItemStats) or GetItemStats
 
@@ -130,12 +143,13 @@ function Weights.score(link)
 	local ok, stats = pcall(getStats, link)
 	if not ok or type(stats) ~= "table" then return nil end
 	local total = 0
+	local armor = armorWeight(weights)
 	for key, value in pairs(stats) do
 		local name = type(key) == "string" and short(key)
 		value = Stoa:PlainNumber(value)
 		-- Every role values armour a little, so plain armour with no other
 		-- stats still scores (and mail beats leather for the same slot).
-		local weight = weights[name] or (name == "armor" and ARMOR_FLOOR) or 0
+		local weight = (name == "armor" and armor) or weights[name] or 0
 		if name and value then total = total + value * weight end
 	end
 	return total
