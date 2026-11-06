@@ -1,6 +1,6 @@
 -- Stoa QoL: move Blizzard windows. Hold Shift and
 -- drag a quest, gossip, merchant, bag, character, spellbook, mail or other
--- window by any empty part of it. It keeps that spot every time it opens,
+-- window by any empty part of it, its header too. It keeps that spot every time it opens,
 -- since the game would otherwise put it back. Shift and right-click puts a
 -- window back where the game wants it.
 --
@@ -63,7 +63,7 @@ function WindowMover:Hook(name)
 	if frame.IsForbidden and frame:IsForbidden() then return end
 	hooked[name] = true
 
-	frame:HookScript("OnMouseDown", function(window, button)
+	local function down(window, button)
 		if not self:Wants() or not canMove(window) then return end
 		if button == "RightButton" then
 			spots()[name] = nil
@@ -75,8 +75,8 @@ function WindowMover:Hook(name)
 		window:SetClampedToScreen(true)
 		window:StartMoving()
 		window.stoaMoving = true
-	end)
-	frame:HookScript("OnMouseUp", function(window)
+	end
+	local function up(window)
 		if not window.stoaMoving then return end
 		window.stoaMoving = nil
 		window:StopMovingOrSizing()
@@ -84,11 +84,43 @@ function WindowMover:Hook(name)
 		if window.SetUserPlaced then window:SetUserPlaced(false) end
 		local left, top = window:GetLeft(), window:GetTop()
 		if left and top then spots()[name] = { left, top } end
-	end)
+	end
+	frame:HookScript("OnMouseDown", down)
+	frame:HookScript("OnMouseUp", up)
+	-- The header is often a frame of its own that takes the mouse (the
+	-- title bar), so a drag there never reached the window: hand it on.
+	self:HookHeader(frame, down, up)
 	frame:HookScript("OnShow", function(window)
 		xpcall(place, Stoa.catch, name, window)
+		-- Laid out now, so the frames along its top can be found.
+		xpcall(self.HookHeader, Stoa.catch, self, window, down, up)
 	end)
 	xpcall(place, Stoa.catch, name, frame)
+end
+
+local HEADER_KEYS = { "TitleContainer", "TitleBar", "DragBar", "TitleButton", "Header", "TitleRegion" }
+local HEADER_REACH = 48
+
+function WindowMover:HookHeader(frame, down, up)
+	local function take(child)
+		if type(child) ~= "table" or child.stoaHeaderHooked or not child.HookScript then return end
+		if child.IsForbidden and child:IsForbidden() then return end
+		-- Buttons keep their clicks (close, tabs, dropdowns).
+		if child.IsObjectType and child:IsObjectType("Button") then return end
+		child.stoaHeaderHooked = true
+		child:HookScript("OnMouseDown", function(_, button) down(frame, button) end)
+		child:HookScript("OnMouseUp", function() up(frame) end)
+	end
+	for _, key in ipairs(HEADER_KEYS) do take(frame[key]) end
+	-- Any other mouse-taking frame along the top edge.
+	local top = frame:GetTop()
+	for _, child in ipairs({ frame:GetChildren() }) do
+		local childTop, height = child:GetTop(), child:GetHeight()
+		if top and childTop and height and height <= HEADER_REACH * 1.5 and top - childTop <= HEADER_REACH
+			and child.IsMouseEnabled and child:IsMouseEnabled() then
+			take(child)
+		end
+	end
 end
 
 function WindowMover:HookAll()
