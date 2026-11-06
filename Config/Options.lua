@@ -578,8 +578,8 @@ local function build()
 	page = "setup"
 	group = "Start"
 	button("welcome", "Welcome page", "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of Stoa, and other addons.", "Open", function() Stoa.Welcome:Show() end, { cmd = "/stoa welcome", words = "wizard first time" })
-	choice(function() return Stoa.db end, "preset", "How much Stoa", "Full is everything. Quiet folds more away. Classic feel keeps Blizzard's layout with Stoa's look. Choosing one sets several settings at once.", "full", {
-		{ "full", "Full" }, { "quiet", "Quiet" }, { "classic", "Classic feel" },
+	choice(function() return Stoa.db end, "preset", "How much Stoa", "Full is everything. Quiet folds more away. Classic feel keeps Blizzard's layout with Stoa's look. Taer is Full as its designer plays it. Choosing one sets several settings at once.", "full", {
+		{ "full", "Full" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Taer" },
 	}, {
 		reload = true, cmd = "/stoa preset", words = "preset minimal",
 		set = function(v) Stoa.Welcome:ApplyPreset(v) end,
