@@ -107,6 +107,21 @@ function Spells.outranked(spellID)
 	return entry and entry.id ~= spellID and (Spells.rank(spellID) or 0) < entry.rank or false
 end
 
+-- True when you know this spell or a higher rank of it. Learning a new rank
+-- can drop the old one from the spellbook, so the old rank's ID reads as
+-- unknown though nothing is missing. Ranks are read from the spell's
+-- subtext ("Rank 2"); a rank the game can't name counts as 0.
+function Spells.covered(spellID)
+	if Spells.knows(spellID) then return true end
+	local name = Spells.name(spellID)
+	local entry = name and best[name]
+	if not entry then return false end
+	local sub = C_Spell and C_Spell.GetSpellSubtext and call(C_Spell.GetSpellSubtext, spellID)
+	local rank = rankOf(sub)
+	if rank == 0 then return false end
+	return entry.rank >= rank
+end
+
 -- What a spell costs in a power type (mana by default), as a plain number.
 function Spells.cost(spellID, powerType)
 	powerType = powerType or (Enum and Enum.PowerType and Enum.PowerType.Mana) or 0
