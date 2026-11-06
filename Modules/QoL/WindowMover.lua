@@ -113,12 +113,20 @@ function WindowMover:HookHeader(frame, down, up)
 	end
 	for _, key in ipairs(HEADER_KEYS) do take(frame[key]) end
 	-- Any other mouse-taking frame along the top edge.
-	local top = frame:GetTop()
+	local okTop, top = pcall(frame.GetTop, frame)
+	if not okTop then return end
+	-- Some children are forbidden (the game's own secure frames): asking
+	-- them anything is an error, so they're skipped, and each look is guarded.
 	for _, child in ipairs({ frame:GetChildren() }) do
-		local childTop, height = child:GetTop(), child:GetHeight()
-		if top and childTop and height and height <= HEADER_REACH * 1.5 and top - childTop <= HEADER_REACH
-			and child.IsMouseEnabled and child:IsMouseEnabled() then
-			take(child)
+		local forbidden = child.IsForbidden and child:IsForbidden()
+		if not forbidden then
+			local ok, childTop, height, mouse = pcall(function()
+				return child:GetTop(), child:GetHeight(), child.IsMouseEnabled and child:IsMouseEnabled()
+			end)
+			if ok and top and childTop and height and mouse and height <= HEADER_REACH * 1.5
+				and top - childTop <= HEADER_REACH then
+				take(child)
+			end
 		end
 	end
 end
