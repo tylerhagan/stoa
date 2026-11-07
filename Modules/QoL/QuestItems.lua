@@ -46,14 +46,49 @@ function QuestItems:Build()
 	local frame = CreateFrame("Frame", "StoaQuestItems", UIParent)
 	frame:SetSize(SIZE, SIZE)
 	frame:SetFrameStrata("MEDIUM")
+	self.frame, self.buttons = frame, {}
+	self:Place()
+	Stoa:RegisterMover("questItems", frame, "Quest items", { default = function() self:Place() end })
+end
+
+-- A frame's box in UIParent's units (group frames can carry their own scale).
+local function box(frame)
+	if not (frame and frame.IsShown and frame:IsShown() and frame.GetRect) then return end
+	local left, bottom, width, height = frame:GetRect()
+	if not (left and width and width > 1) then return end
+	local k = (frame:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+	return left * k, bottom * k, (left + width) * k, (bottom + height) * k
+end
+
+local function overlaps(a, b)
+	local al, ab, ar, at = box(a)
+	local bl, bb, br, bt = box(b)
+	if not (al and bl) then return false end
+	return al < br and ar > bl and ab < bt and at > bb
+end
+
+-- Left of the Halo, beside the emergency buttons. If the group frames sit
+-- there (a party row, a moved group), the row steps to the group's left
+-- so it never covers a name or a health bar. Out of combat only: the
+-- buttons are secure. A spot you set with /stoa move wins.
+function QuestItems:Place()
+	local frame = self.frame
+	if not frame or InCombatLockdown() or Stoa:HasSavedPosition("questItems") then return end
 	local halo = _G.StoaHalo
+	frame:ClearAllPoints()
 	if halo then
 		frame:SetPoint("RIGHT", halo, "LEFT", -150, -40)
 	else
 		frame:SetPoint("BOTTOM", UIParent, "BOTTOM", -380, 300)
 	end
-	self.frame, self.buttons = frame, {}
-	Stoa:RegisterMover("questItems", frame, "Quest items")
+	for _, name in ipairs({ "StoaParty", "StoaRaid" }) do
+		local group = _G[name]
+		if group and overlaps(frame, group) then
+			frame:ClearAllPoints()
+			frame:SetPoint("TOPRIGHT", group, "TOPLEFT", -12, 0)
+			return
+		end
+	end
 end
 
 function QuestItems:Button(i)
@@ -89,6 +124,7 @@ function QuestItems:Update()
 	local shown = math.min(#list, max)
 	self.frame:SetWidth(math.max(1, shown) * (SIZE + GAP) - GAP)
 	self.frame:SetShown(shown > 0)
+	if shown > 0 then self:Place() end
 end
 
 function QuestItems:Refresh()
@@ -113,7 +149,7 @@ function QuestItems:OnEnable()
 			xpcall(function() self:Update() end, Stoa.catch)
 		end)
 	end
-	for _, event in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "BAG_UPDATE_DELAYED" }) do
+	for _, event in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "BAG_UPDATE_DELAYED", "GROUP_ROSTER_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED" }) do
 		Stoa:On(event, soon)
 	end
 	Stoa:On("PLAYER_REGEN_ENABLED", function() if self.pending then soon() end end)
