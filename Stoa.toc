@@ -10,6 +10,7 @@
 ## AddonCompartmentFuncOnEnter: Stoa_OnCompartmentEnter
 ## AddonCompartmentFuncOnLeave: Stoa_OnCompartmentLeave
 ## X-Game: Forever
+## X-Curse-Project-ID: 1772375
 
 Core\Init.lua
 Core\Report.lua
