@@ -262,17 +262,6 @@ local TARGET_COIN_SPACE = UI.PLAQUE_COIN_SPACE
 -- moves to the Halo's upper right. A spot set with the movers wins.
 local TARGET_REST_Y = 14
 
--- The top of the target plaque's resting spot above the console, in
--- UIParent units, so the group row can sit clear of it. Nil when the plaque
--- doesn't rest there (no console, or moved by hand).
-function Halo:TargetRestTop()
-	local console = Stoa.modules.Grimoire
-	if not (self.target and console and console.enabled and console.frame) then return end
-	if Stoa:HasSavedPosition("target") then return end
-	-- The aura row rides above the resting plaque (see PlaceTargetAuras).
-	return console:OpenHeight() + TARGET_REST_Y + (self.target:GetHeight() or 84) + 6 + AURA_SIZE
-end
-
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
 -- edge (Tyler, 2026-11-07). Out of combat only: the plaque is secure.
@@ -294,7 +283,9 @@ function Halo:PlaceTarget()
 	local console = Stoa.modules.Grimoire
 	local edge = console and console.enabled and console.frame
 	target:ClearAllPoints()
-	if edge and Stoa:GetState() == Stoa.STATE_WORLD then
+	-- In a group the cards sit under the Halo, over the resting spot, so
+	-- the plaque keeps its Halo spot there in and out of combat.
+	if edge and Stoa:GetState() == Stoa.STATE_WORLD and not IsInGroup() then
 		-- Pinned to the screen where the open console's top edge sits, never
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.
@@ -331,11 +322,12 @@ function Halo:BuildTarget(frame)
 		default = function() self:PlaceTarget() end,
 	})
 	self:PlaceTarget()
-	for _, event in ipairs({ "STOA_STATE_CHANGED", "PLAYER_ENTERING_WORLD" }) do
+	for _, event in ipairs({ "STOA_STATE_CHANGED", "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE" }) do
 		Stoa:On(event, function()
 			if not InCombatLockdown() then self:PlaceTarget() end
 		end)
 	end
+	Stoa:On("PLAYER_REGEN_ENABLED", function() self:PlaceTarget() end)
 
 	-- A plaque like the tank watch opposite: the coin faces the Halo.
 	local plaque = UI.plaque(target, "LEFT")
