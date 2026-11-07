@@ -14,6 +14,8 @@ local Stoa = ns.Stoa
 
 local Layout = Stoa:NewModule("Layout", {
 	enabled = true,
+	-- Switch to the compact layout on narrow screens (and back).
+	compact = true,
 })
 
 -- Each layout Stoa can add: its saved name, string, version and the
@@ -21,11 +23,30 @@ local Layout = Stoa:NewModule("Layout", {
 local KINDS = {
 	stoa = { name = "Stoa", text = "EDIT_MODE_LAYOUT", version = "EDIT_MODE_VERSION", saved = "editModeVersion" },
 	designer = { name = "Stoa Designer", text = "DESIGNER_LAYOUT", version = "DESIGNER_LAYOUT_VERSION", saved = "designerLayoutVersion" },
+	compact = { name = "Stoa Compact", text = "COMPACT_LAYOUT", version = "COMPACT_LAYOUT_VERSION", saved = "compactLayoutVersion" },
 }
+
+-- Below this many UI units wide, the wide layout's bar row crowds the
+-- console (1920x1200 with the UI scale off is about 1230; 3440x1440 at a
+-- small scale is well over 2000).
+local COMPACT_BELOW = 2000
 
 -- The layout this account wants: the designer's while that preset is on.
 function Layout:Kind()
 	return Stoa.db and Stoa.db.preset == "taer" and type(Stoa.DESIGNER_LAYOUT) == "string" and "designer" or "stoa"
+end
+
+-- True when the screen is narrow enough for the compact layout.
+function Layout:Narrow()
+	local width = UIParent and UIParent:GetWidth()
+	return type(width) == "number" and width < COMPACT_BELOW
+end
+
+-- The layout to be on right now: compact on a narrow screen, else the
+-- preset's.
+function Layout:Wanted()
+	if self.db.compact ~= false and self:Narrow() and type(Stoa.COMPACT_LAYOUT) == "string" then return "compact" end
+	return self:Kind()
 end
 
 local function kindOf(kind)
@@ -90,7 +111,7 @@ end
 -- Adds Stoa's layout (or the designer's) if it isn't saved yet, or
 -- refreshes one saved from an older string, and switches to it.
 function Layout:Apply(quiet, kind)
-	kind = kind or self:Kind()
+	kind = kind or self:Wanted()
 	local k = kindOf(kind)
 	local NAME = k.name
 	if not ready(kind) then
@@ -136,15 +157,43 @@ function Layout:Apply(quiet, kind)
 	self:Bars()
 	Stoa.char.layoutApplied = true
 	if not quiet then
-		local whose = kind == "designer" and "the designer's" or "STOA's"
-		Stoa:Print(refresh and ("Switched to " .. whose .. " Edit Mode layout, updated to the newest version.")
-			or ("Switched to " .. whose .. " Edit Mode layout. Edit Mode can change it or pick another."))
+		if kind == "compact" then
+			Stoa:Print("Switched to STOA's compact Edit Mode layout for this screen size. /stoa editmode wide keeps the wide one.")
+		else
+			local whose = kind == "designer" and "the designer's" or "STOA's"
+			Stoa:Print(refresh and ("Switched to " .. whose .. " Edit Mode layout, updated to the newest version.")
+				or ("Switched to " .. whose .. " Edit Mode layout. Edit Mode can change it or pick another."))
+		end
 	end
 end
 
+-- On one of Stoa's layouts, follows the screen: compact when narrow, wide
+-- when not. A layout of the player's own is never touched.
+function Layout:FollowScreen()
+	if InCombatLockdown() or not self:OnStoa() then return end
+	local kind = self:Wanted()
+	if ready(kind) and not self:OnStoa(kind) then self:Apply(false, kind) end
+end
+
 function Layout:OnEnable()
+	local queued = false
+	local function follow()
+		if queued then return end
+		queued = true
+		C_Timer.After(0.5, function()
+			queued = false
+			if InCombatLockdown() then
+				Stoa:AfterCombat(function() self:FollowScreen() end)
+			else
+				self:FollowScreen()
+			end
+		end)
+	end
+	Stoa:On("UI_SCALE_CHANGED", follow)
+	Stoa:On("DISPLAY_SIZE_CHANGED", follow)
+
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
-		local kind = self:Kind()
+		local kind = self:Wanted()
 		if not ready(kind) then return end
 		-- Edit Mode finishes loading its layouts just after this event.
 		C_Timer.After(1, function()
@@ -170,5 +219,17 @@ end
 -- /stoa layout is the backup page's shareable line (Config/Backup.lua).
 Stoa.commands.editmode = function(rest)
 	local word = strtrim(rest or ""):lower()
-	Layout:Apply(false, (word == "designer" and "designer") or (word == "stoa" and "stoa") or nil)
+	if word == "wide" or word == "stoa" or word == "designer" then
+		-- Choosing the wide layout by hand keeps it on any screen.
+		Layout.db.compact = false
+		Layout:Apply(false, word ~= "wide" and word or Layout:Kind())
+		Stoa:Print("STOA won't switch to the compact layout on narrow screens now. /stoa editmode auto turns that back on.")
+	elseif word == "compact" then
+		Layout:Apply(false, "compact")
+	elseif word == "auto" then
+		Layout.db.compact = true
+		Layout:Apply(false, Layout:Wanted())
+	else
+		Layout:Apply(false, Layout:Wanted())
+	end
 end
