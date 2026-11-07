@@ -580,6 +580,16 @@ function Pet:BuildCells()
 	self:LayoutCells()
 end
 
+-- Room the party pets' cells take under the cards (0 when none show), so
+-- the party row can keep them clear of the target plaque too.
+function Pet:CellRoom()
+	if not (self.cells and self.db.partyPets and Stoa:GetRole() == "HEALER") then return 0 end
+	for _, unit in ipairs(OWNERS) do
+		if plain(UnitExists(unit)) then return 30 end
+	end
+	return 0
+end
+
 -- Healers in a party only; out of combat, as the cells are secure.
 function Pet:LayoutCells()
 	if not self.cells or InCombatLockdown() then return end
