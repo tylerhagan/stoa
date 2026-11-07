@@ -81,12 +81,19 @@ function QuestItems:Place()
 	else
 		frame:SetPoint("BOTTOM", UIParent, "BOTTOM", -380, 300)
 	end
-	for _, name in ipairs({ "StoaParty", "StoaRaid" }) do
-		local group = _G[name]
-		if group and overlaps(frame, group) then
-			frame:ClearAllPoints()
+	-- Only the group frames you can see in your group count: solo, an
+	-- empty holder could still claim the spot and send the row to the
+	-- screen's edge (Tyler, 2026-11-07).
+	local group = IsInRaid() and _G.StoaRaid or IsInGroup() and _G.StoaParty or nil
+	if group and overlaps(frame, group) then
+		frame:ClearAllPoints()
+		local left = box(group)
+		local k = (UIParent:GetEffectiveScale() or 1) / (frame:GetEffectiveScale() or 1)
+		if left and left * k > frame:GetWidth() + 24 then
 			frame:SetPoint("TOPRIGHT", group, "TOPLEFT", -12, 0)
-			return
+		else
+			-- No room to its left (a column at the screen's edge): above it.
+			frame:SetPoint("BOTTOMLEFT", group, "TOPLEFT", 0, 12)
 		end
 	end
 end
