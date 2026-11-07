@@ -500,8 +500,8 @@ function Console:BuildFellowship(frame, space)
 	quest:SetPoint("TOPLEFT", pace, "BOTTOMLEFT", 0, -9)
 	quest:SetWidth(COLUMN_WIDTH)
 	quest:SetWordWrap(false)
-	-- New spells waiting at your trainer (Trainer.lua). One "next" line:
-	-- the trainer when there's training, otherwise the nearest quest.
+	-- New spells waiting at your trainer, or the next training level
+	-- (Trainer.lua), under the quest line (Console:SettleNext places it).
 	local trainer = text(page, "sans", Stoa.typeSize.body, "accent")
 	trainer:SetPoint("TOPLEFT", quest, "TOPLEFT")
 	trainer:SetWidth(COLUMN_WIDTH)
@@ -856,30 +856,19 @@ function Console:UpdateKitLines()
 	self:SettleNext()
 end
 
--- The trainer line and the quest line share one row. Training you can do
--- now holds the row; the next training level takes turns with the nearest
--- quest, a few seconds each.
-local SWAP_SECONDS = 6
+-- The nearest quest and the trainer line stack under the pace: both show
+-- when there's something to say; the trainer moves up when there's no quest.
 function Console:SettleNext()
 	if not (self.trainerNote and self.questNote) then return end
 	local training = (self.trainerNote:GetText() or "") ~= ""
 	local quest = (self.questNote:GetText() or "") ~= ""
-	local swapping = training and quest and self.trainerKind == "next"
-	if swapping and not self.nextSwapper then
-		self.nextTurn = "trainer"
-		self.nextSwapper = Stoa:NewTicker(SWAP_SECONDS, function()
-			self.nextTurn = self.nextTurn == "trainer" and "quest" or "trainer"
-			self:SettleNext()
-		end)
-	elseif not swapping and self.nextSwapper then
-		self.nextSwapper:Cancel()
-		self.nextSwapper = nil
-	end
-	local showTrainer = training and (not swapping or self.nextTurn == "trainer")
-	self.trainerNote:SetShown(showTrainer)
-	self.questNote:SetShown(not showTrainer)
-	if Stoa.modules.Trainer and Stoa.modules.Trainer.noteButton then
-		Stoa.modules.Trainer.noteButton:SetShown(showTrainer)
+	self.questNote:SetShown(quest)
+	self.trainerNote:SetShown(training)
+	self.trainerNote:ClearAllPoints()
+	if quest then
+		self.trainerNote:SetPoint("TOPLEFT", self.questNote, "BOTTOMLEFT", 0, -4)
+	else
+		self.trainerNote:SetPoint("TOPLEFT", self.questNote, "TOPLEFT")
 	end
 end
 
