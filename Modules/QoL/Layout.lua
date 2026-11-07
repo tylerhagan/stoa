@@ -191,6 +191,9 @@ function Layout:OnEnable()
 	end
 	Stoa:On("UI_SCALE_CHANGED", follow)
 	Stoa:On("DISPLAY_SIZE_CHANGED", follow)
+	-- A windowed resize doesn't always send either event; UIParent's own
+	-- size always changes.
+	UIParent:HookScript("OnSizeChanged", follow)
 
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		local kind = self:Wanted()
@@ -226,6 +229,12 @@ Stoa.commands.editmode = function(rest)
 		Stoa:Print("STOA won't switch to the compact layout on narrow screens now. /stoa editmode auto turns that back on.")
 	elseif word == "compact" then
 		Layout:Apply(false, "compact")
+	elseif word == "status" then
+		local info = C_EditMode and C_EditMode.GetLayouts and C_EditMode.GetLayouts()
+		local active = info and info.activeLayout and info.layouts and info.layouts[info.activeLayout - presets()]
+		Stoa:Print(("Screen %d UI units wide (compact below %d). Wants %s; active layout: %s; switching %s."):format(
+			math.floor(UIParent:GetWidth() or 0), COMPACT_BELOW, kindOf(Layout:Wanted()).name,
+			active and active.layoutName or "a game preset", Layout.db.compact ~= false and "on" or "off"))
 	elseif word == "auto" then
 		Layout.db.compact = true
 		Layout:Apply(false, Layout:Wanted())
