@@ -298,6 +298,9 @@ function Windows:Settle(frame)
 	if not frame or InCombatLockdown() then return end
 	hide(frame.NineSlice)
 	hide(frame.PortraitContainer)
+	-- Guild & Communities draws its guild tabard or club icon on its own
+	-- overlay, above the title.
+	hide(frame.PortraitOverlay)
 	local header = frame.stoaHeader
 	local height = header and bandHeight(frame)
 	if height and header.stoaHeight ~= height then
@@ -340,7 +343,7 @@ function Windows:Dress(frame)
 	if not frame or frame.stoaDressed or self:Leaves(frame) then return end
 	frame.stoaDressed = true
 	strip(frame)
-	for _, key in ipairs({ "NineSlice", "Bg", "TopTileStreaks", "PortraitContainer", "portrait", "PortraitFrame" }) do
+	for _, key in ipairs({ "NineSlice", "Bg", "TopTileStreaks", "PortraitContainer", "PortraitOverlay", "portrait", "PortraitFrame" }) do
 		hide(frame[key])
 	end
 	if frame.TitleContainer then strip(frame.TitleContainer) end
