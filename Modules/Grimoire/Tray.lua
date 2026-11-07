@@ -125,7 +125,12 @@ function Tray:Take(button, name, isLib)
 	self.taken[button] = name
 	table.insert(self.buttons, button)
 	button:SetParent(self.tray)
+	-- LibDBIcon pins its buttons to MEDIUM, level 8 (fixed), which put them
+	-- under the tray's own panel: the slot showed, the icon didn't.
+	if button.SetFixedFrameStrata then button:SetFixedFrameStrata(false) end
+	if button.SetFixedFrameLevel then button:SetFixedFrameLevel(false) end
 	button:SetFrameStrata("DIALOG")
+	button:SetFrameLevel(self.tray:GetFrameLevel() + 3)
 	button:SetScale(1)
 	if button.RegisterForDrag then button:RegisterForDrag() end
 	button:SetScript("OnDragStart", nil)
