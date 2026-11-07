@@ -111,24 +111,12 @@ function Party:Layout()
 	if not Stoa:HasSavedPosition("party") then
 		frame:ClearAllPoints()
 		if layout.row and halo then
-			-- In combat under the combat bar when there is one; otherwise,
-			-- and with the console open, just under the Halo's cast line.
-			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa:CombatLayout()
-			local offset = combatBar and Stoa.modules.CombatBar:GroupOffset() or -52
-			-- Out of combat the target plaque rests on the console's top
-			-- edge; the row lifts so its cards never sit on the plaque.
-			local haloModule = Stoa.modules.Halo
-			local restTop = haloModule and haloModule.TargetRestTop and haloModule:TargetRestTop()
-			local haloBottom = halo:GetBottom()
-			-- Out of combat only: in a fight the plaque is at the Halo and
-			-- the row belongs under the combat bar, clear of the cast bar.
-			if restTop and haloBottom and not Stoa:CombatLayout() then
-				local k = (halo:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
-				local pets = Stoa.Pet and Stoa.Pet.CellRoom and Stoa.Pet:CellRoom() or 0
-				local bottom = haloBottom * k + offset - layout.height - pets
-				local clear = restTop + 10
-				if bottom < clear then offset = offset + (clear - bottom) end
-			end
+			-- Under the combat bar when there is one, in and out of combat:
+			-- the row stays put when a fight starts or ends (Tyler found it
+			-- jumping, 2026-11-07). In a group the target plaque keeps its
+			-- Halo spot out of combat too, so nothing needs the room.
+			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa.modules.CombatBar
+			local offset = combatBar and combatBar:GroupOffset() or -52
 			frame:SetPoint("TOP", halo, "BOTTOM", 0, offset)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
@@ -839,8 +827,6 @@ function Party:OnEnable()
 		Stoa:AfterCombat(function() self:Layout() end)
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateAll() end)
-	-- A pet coming or going changes the room its cell takes under the row.
-	Stoa:On("UNIT_PET", function() Stoa:AfterCombat(function() self:Layout() end) end)
 	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateAll() end)
 	Stoa:On("STOA_CLICKS_CHANGED", function() self:UpdateGrid() end)
 	Stoa:On("MODIFIER_STATE_CHANGED", function()

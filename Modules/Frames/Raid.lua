@@ -161,8 +161,9 @@ function Raid:Place()
 	self.holder:ClearAllPoints()
 	local halo = _G.StoaHalo
 	if healer and halo then
-		local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa:CombatLayout()
-		self.holder:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and Stoa.modules.CombatBar:GroupOffset() or -52)
+		-- Under the combat bar in and out of combat, so it never jumps.
+		local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa.modules.CombatBar
+		self.holder:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and combatBar:GroupOffset() or -52)
 	elseif healer then
 		self.holder:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 	else
