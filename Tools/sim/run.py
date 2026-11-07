@@ -137,6 +137,25 @@ for _, word in ipairs(words) do
 	drain()
 end
 updates()
+-- Procs with every talent known: the game-drawn coins, the list, the art
+-- (the mock finds no file, so the own-arc fallback runs too).
+do
+	local real = IsPlayerSpell
+	IsPlayerSpell = function() return true end
+	local ok, e = xpcall(function()
+		local procs = Stoa.modules.Procs
+		if procs and procs.enabled then
+			procs:Refresh()
+			SlashCmdList.STOA("procs list")
+			SlashCmdList.STOA("procs test")
+			procs:ShowArt("sim", "Hot_Streak", { "left", "right", "top", "bottom" })
+			procs:HideArt("sim")
+		end
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "procs: " .. e end
+	IsPlayerSpell = real
+	drain()
+end
 -- Small figures: bags with room, worn gear, a pace and gold history.
 do
 	local realSlots, realFree, realDurability = C_Container.GetContainerNumSlots, C_Container.GetContainerNumFreeSlots, GetInventoryItemDurability
@@ -597,6 +616,32 @@ for path in list(paths.keys()):
     if not (os.path.exists(base) or glob.glob(base + ".*")):
         missing.append(rel)
 print("Own files used:", sum(1 for p in paths.keys() if "AddOns" in p.replace("\\", "/")), "missing:", " ".join(sorted(missing)) or "none")
+
+# Forever's client has per-addon object caps (LimitedLuaResources in Logs/General.log;
+# off on build 70634, but the numbers are there). Everything the sim made, every
+# preview and /stoa command included, so a high-water mark, not a typical session.
+CAPS = {"Frame": 10000, "Texture": 40000, "FontString": 5000, "AnimGroup": 2000, "Timer": 500}
+FRAMES = {"Frame", "Button", "CheckButton", "StatusBar", "EditBox", "ScrollFrame", "Slider", "Cooldown", "GameTooltip", "Model", "PlayerModel", "MessageFrame", "ScrollingMessageFrame"}
+made = {k: 0 for k in CAPS}
+objects = G.SIM_OBJECTS
+for i in range(1, len(objects) + 1):
+    if not objects[i]["__made"]:
+        continue
+    kind = objects[i]["__type"]
+    if kind in FRAMES:
+        kind = "Frame"
+    elif kind in ("MaskTexture", "Line"):
+        kind = "Texture"
+    elif kind == "AnimationGroup":
+        kind = "AnimGroup"
+    elif kind in ("Ticker",):
+        kind = "Timer"
+    if kind in made:
+        made[kind] += 1
+print("Objects made vs Forever's per-addon caps:", ", ".join("%s %d/%d" % (k, made[k], CAPS[k]) for k in CAPS))
+over = [k for k in CAPS if made[k] > CAPS[k] * 0.5]
+if over:
+    print("OVER HALF A CAP:", " ".join(over))
 
 if "-v" in sys.argv:
     prints = G.SIM_PRINTS
