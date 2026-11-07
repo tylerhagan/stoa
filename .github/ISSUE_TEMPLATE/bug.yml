@@ -1,0 +1,22 @@
+name: Bug report
+description: Something in STOA looks wrong, errors, or doesn't work.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you were doing, what you saw, and what you expected. A screenshot helps a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: /stoa report
+      description: Type /stoa report in game, press "Select all to copy", then paste it here. It lists your version, class, screen size, other addons and any errors STOA caught.
+      render: text
+  - type: input
+    id: class
+    attributes:
+      label: Class and spec
+      placeholder: e.g. Shadow Priest

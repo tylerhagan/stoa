@@ -203,6 +203,10 @@ Fonts are the main gap: see below.
 
 Then restart the game (not just `/reload`) the first time, so it picks up STOA's fonts and textures. A welcome page opens on each character's first login; `/stoa welcome` brings it back.
 
+## Reporting a bug
+
+Open an [issue](https://github.com/tylerhagan/stoa/issues/new/choose). Type `/stoa report` in game, press "Select all to copy" and paste it in: it carries your version, class, screen size, other addons and any errors STOA caught. A screenshot helps too.
+
 ## Releases
 
 Installers download the latest `Stoa-<version>.zip` from the repository's Releases page and unpack it into the AddOns folder; the zip already holds a single `Stoa` folder.
