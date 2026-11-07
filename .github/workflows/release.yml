@@ -53,10 +53,9 @@ jobs:
             --verify-tag
 
       # Uploads the same zip to CurseForge (project 1772375, read from the TOC).
-      # Needs the repository secret CF_API_KEY. The game version is matched by
-      # name: set the repository variable CF_GAME_VERSION (e.g. the name the
-      # CurseForge upload page shows for WoW Forever). Runs after the GitHub
-      # Release, so a CurseForge problem never blocks it.
+      # Needs the repository secret CF_API_KEY. Uses the newest WoW Forever game
+      # version unless the repository variable CF_GAME_VERSION names one. Runs
+      # after the GitHub Release, so a CurseForge problem never blocks it.
       - name: Upload to CurseForge
         if: ${{ env.CF_API_KEY != '' }}
         env:
@@ -65,12 +64,19 @@ jobs:
           project_id="$(sed -n 's/^## X-Curse-Project-ID:[[:space:]]*//p' Stoa.toc | tr -d '\r' | head -n 1)"
           api="https://wow.curseforge.com/api"
           curl -fsS -H "X-Api-Token: $CF_API_KEY" "$api/game/versions" > versions.json
-          version_id="$(jq --arg n "$CF_GAME_VERSION" '[.[] | select(.name == $n) | .id] | first // empty' versions.json)"
-          if [ -z "$CF_GAME_VERSION" ] || [ -z "$version_id" ]; then
-            echo "::error::Set the repository variable CF_GAME_VERSION to one of these names:"
-            jq -r '.[].name' versions.json | sort -u | tail -n 80
+          # WoW Forever's versions are game version type 88568 on CurseForge.
+          # Without CF_GAME_VERSION, the newest version of that type is used.
+          if [ -n "$CF_GAME_VERSION" ]; then
+            version_id="$(jq --arg n "$CF_GAME_VERSION" '[.[] | select(.name == $n) | .id] | first // empty' versions.json)"
+          else
+            version_id="$(jq '[.[] | select(.gameVersionTypeID == 88568)] | max_by(.id) | .id // empty' versions.json)"
+          fi
+          if [ -z "$version_id" ]; then
+            echo "::error::No CurseForge game version found. Forever versions:"
+            jq -r '.[] | select(.gameVersionTypeID == 88568) | .name' versions.json
             exit 1
           fi
+          echo "CurseForge game version id: $version_id"
           jq -n --rawfile notes notes.md --arg name "STOA $VERSION" --argjson v "$version_id" \
             '{changelog: $notes, changelogType: "markdown", displayName: $name, gameVersions: [$v], releaseType: "release"}' > metadata.json
           curl -fsS -H "X-Api-Token: $CF_API_KEY" \
