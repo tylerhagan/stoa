@@ -856,12 +856,31 @@ function Console:UpdateKitLines()
 	self:SettleNext()
 end
 
--- The trainer line and the quest line share one row: training first.
+-- The trainer line and the quest line share one row. Training you can do
+-- now holds the row; the next training level takes turns with the nearest
+-- quest, a few seconds each.
+local SWAP_SECONDS = 6
 function Console:SettleNext()
 	if not (self.trainerNote and self.questNote) then return end
 	local training = (self.trainerNote:GetText() or "") ~= ""
-	self.trainerNote:SetShown(training)
-	self.questNote:SetShown(not training)
+	local quest = (self.questNote:GetText() or "") ~= ""
+	local swapping = training and quest and self.trainerKind == "next"
+	if swapping and not self.nextSwapper then
+		self.nextTurn = "trainer"
+		self.nextSwapper = Stoa:NewTicker(SWAP_SECONDS, function()
+			self.nextTurn = self.nextTurn == "trainer" and "quest" or "trainer"
+			self:SettleNext()
+		end)
+	elseif not swapping and self.nextSwapper then
+		self.nextSwapper:Cancel()
+		self.nextSwapper = nil
+	end
+	local showTrainer = training and (not swapping or self.nextTurn == "trainer")
+	self.trainerNote:SetShown(showTrainer)
+	self.questNote:SetShown(not showTrainer)
+	if Stoa.modules.Trainer and Stoa.modules.Trainer.noteButton then
+		Stoa.modules.Trainer.noteButton:SetShown(showTrainer)
+	end
 end
 
 function Console:AddNote(_, message)
