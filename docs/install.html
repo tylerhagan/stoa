@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Install · STOA</title>
+<meta name="description" content="How to install STOA and report a bug.">
+<meta property="og:title" content="Install · STOA">
+<meta property="og:description" content="How to install STOA and report a bug.">
+<meta property="og:image" content="screenshots/world.jpg">
+<meta name="theme-color" content="#0d0d0f">
+<link rel="icon" href="logo/stoa-essence-symbol.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tenor+Sans&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="bar">
+    <a class="mark" href="index.html" aria-label="STOA home"><img src="logo/stoa-essence.svg" alt="STOA" width="116" height="35"></a>
+    <nav class="pages" aria-label="Pages"><a href="index.html">Overview</a><a href="features.html">Features</a><a href="classes.html">Classes</a><a href="commands.html">Commands</a><a href="install.html" aria-current="page">Install</a><a href="changelog.html">Changelog</a></nav>
+    <a class="get" href="https://www.curseforge.com/projects/1772375">Download</a>
+  </div>
+</header>
+<main id="main">
+
+<section class="bar head">
+  <h1>Install</h1>
+  <p class="lede">STOA is one folder named <code>Stoa</code> in your AddOns folder. Here is how to get it there, and what to know after.</p>
+</section>
+<div class="bar prose"><section class="block" id="install"><h2>Install</h2><ul><li><strong>CurseForge app:</strong> search for STOA under World of Warcraft, Forever, and install it.</li><li><strong>By hand:</strong> download <code>Stoa-&lt;version&gt;.zip</code> from <a href="https://github.com/tylerhagan/stoa/releases">Releases</a> (or CurseForge) and unpack it into <code>World of Warcraft\_forever_\Interface\AddOns</code>. The zip already holds one folder named <code>Stoa</code>, so there's nothing to rename.</li><li><strong>From the code:</strong> GitHub's "Download ZIP" of the repository unpacks as <code>stoa-main</code>. Rename that folder to exactly <code>Stoa</code>, or the game won't load it.</li></ul>
+<p>Then restart the game (not just <code>/reload</code>) the first time, so it picks up STOA's fonts and textures. A welcome page opens on each character's first login; <code>/stoa welcome</code> brings it back.</p></section><section class="block" id="reporting-a-bug"><h2>Reporting a bug</h2><p>Open an <a href="https://github.com/tylerhagan/stoa/issues/new/choose">issue</a>. Type <code>/stoa report</code> in game, press "Select all to copy" and paste it in: it carries your version, class, screen size, other addons and any errors STOA caught. A screenshot helps too.</p></section><section class="block" id="forever-notes"><h2>Forever notes</h2><p>If a game patch raises the interface number before STOA catches up, the AddOns list shows it as out of date: tick "Load out of date AddOns" there and it loads as before.</p>
+<p>Forever runs the modern client, so STOA follows Midnight-era rules: unit values can be secret in combat, and the combat log is closed to addons. STOA never does maths on a value without checking <code>issecretvalue</code> first (see <code>Core/Util.lua</code>), and it skins Blizzard's own data rather than recalculating it. When the game says auras are hidden (<code>C_Secrets.ShouldAurasBeSecret</code>), buff reminders and aura lists stand down rather than reading an empty list as "missing".</p></section><section class="block" id="fonts"><h2>Fonts</h2><p>STOA ships with Tenor Sans for names and numbers and Inter SemiBold (18pt cut) for labels, in <code>Media/Fonts</code>. Both are under the SIL Open Font License; see <code>Media/Fonts/OFL.txt</code>. If a font file is missing, STOA falls back to Cormorant Garamond if present, then the game's own fonts.</p>
+<p>A font file that is new to the game is only picked up after a full restart of the game, not a <code>/reload</code>.</p></section></div>
+
+</main>
+<footer class="foot">
+  <div class="bar">
+    <p>STOA 1.0.0 for WoW Forever (interface 16001). Made by Tyler.</p>
+    <p><a href="https://github.com/tylerhagan/stoa">GitHub</a> · <a href="https://www.curseforge.com/projects/1772375">CurseForge</a> · <a href="https://github.com/tylerhagan/stoa/issues/new/choose">Report a bug</a></p>
+  </div>
+</footer>
+<script>
+document.querySelectorAll('[data-filter]').forEach(function (input) {
+  var scope = document.getElementById(input.getAttribute('data-filter'));
+  var none = scope.querySelector('.none');
+  input.addEventListener('input', function () {
+    var q = input.value.trim().toLowerCase(), shown = 0;
+    scope.querySelectorAll('[data-text]').forEach(function (row) {
+      var hit = !q || row.getAttribute('data-text').indexOf(q) !== -1;
+      row.hidden = !hit; if (hit) shown++;
+    });
+    scope.querySelectorAll('[data-group]').forEach(function (g) {
+      g.hidden = !g.querySelector('[data-text]:not([hidden])');
+    });
+    if (none) none.hidden = shown !== 0;
+  });
+});
+</script>
+</body>
+</html>

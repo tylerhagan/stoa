@@ -2,9 +2,7 @@
 
 Each release has a `## <version>` heading matching the `## Version:` line in `Stoa.toc`. The release workflow uses that section as the release notes, so a tag without one fails.
 
-Pushing a tag such as `v0.9.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip` and publishes a GitHub Release.
-
-To also publish to CurseForge, Wago and WoWInterface once the repository is public: add the project IDs to `Stoa.toc` (`## X-Curse-Project-ID`, `## X-Wago-ID`, `## X-WoWI-ID`), add `CF_API_KEY`, `WAGO_API_TOKEN` and `WOWI_API_TOKEN` as repository secrets, and add a step running `BigWigsMods/packager@v2` to the workflow (checkout with `fetch-depth: 0`). The `.pkgmeta` is already in place. The packager step is left out for now on purpose.
+Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
 ## 1.0.0
 
