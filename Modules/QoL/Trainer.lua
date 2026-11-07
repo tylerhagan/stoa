@@ -163,8 +163,7 @@ function Trainer:UpdateConsole()
 	if not (console and console.trainerNote) then return end
 	local count = self:Count()
 	-- Training waiting now reads in the accent; otherwise the next training
-	-- level, quieter. Beside a quest line it shortens to a tag at the row's
-	-- right end (Console:SettleNext picks).
+	-- level, quieter, under the nearest quest (Console:SettleNext).
 	local kind, full, short = nil, "", ""
 	if count > 0 then
 		local total, known = self:Total(self:Missing())
