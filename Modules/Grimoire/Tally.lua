@@ -791,7 +791,8 @@ function Tally:Fit()
 	local width = plain(console.frame:GetWidth())
 	if not width then return end
 	local inset = console:PageInset()
-	local room = width / 2 - CENTRE_CLEAR - inset - CHAT_RIGHT
+	local clear = console.CentreClear and console:CentreClear() or CENTRE_CLEAR
+	local room = width / 2 - clear - inset - CHAT_RIGHT
 	self.columns = room >= COLUMN_WIDTH * 2 + COLUMN_GAP and 2 or room >= COLUMN_WIDTH and 1 or 0
 	self.page:SetShown(self.columns > 0)
 	self.page:SetWidth(self.columns == 2 and COLUMN_WIDTH * 2 + COLUMN_GAP or COLUMN_WIDTH)
