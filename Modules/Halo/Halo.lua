@@ -262,6 +262,16 @@ local TARGET_COIN_SPACE = UI.PLAQUE_COIN_SPACE
 -- moves to the Halo's upper right. A spot set with the movers wins.
 local TARGET_REST_Y = 14
 
+-- The top of the target plaque's resting spot above the console, in
+-- UIParent units, so the group row can sit clear of it. Nil when the plaque
+-- doesn't rest there (no console, or moved by hand).
+function Halo:TargetRestTop()
+	local console = Stoa.modules.Grimoire
+	if not (self.target and console and console.enabled and console.frame) then return end
+	if Stoa:HasSavedPosition("target") then return end
+	return console:OpenHeight() + TARGET_REST_Y + (self.target:GetHeight() or 84)
+end
+
 function Halo:PlaceTarget()
 	local target, frame = self.target, self.frame
 	if not target or InCombatLockdown() or Stoa:HasSavedPosition("target") then return end
