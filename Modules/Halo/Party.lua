@@ -120,7 +120,9 @@ function Party:Layout()
 			local haloModule = Stoa.modules.Halo
 			local restTop = haloModule and haloModule.TargetRestTop and haloModule:TargetRestTop()
 			local haloBottom = halo:GetBottom()
-			if restTop and haloBottom then
+			-- Out of combat only: in a fight the plaque is at the Halo and
+			-- the row belongs under the combat bar, clear of the cast bar.
+			if restTop and haloBottom and not Stoa:CombatLayout() then
 				local k = (halo:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
 				local pets = Stoa.Pet and Stoa.Pet.CellRoom and Stoa.Pet:CellRoom() or 0
 				local bottom = haloBottom * k + offset - layout.height - pets
