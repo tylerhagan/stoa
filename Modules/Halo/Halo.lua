@@ -269,7 +269,23 @@ function Halo:TargetRestTop()
 	local console = Stoa.modules.Grimoire
 	if not (self.target and console and console.enabled and console.frame) then return end
 	if Stoa:HasSavedPosition("target") then return end
-	return console:OpenHeight() + TARGET_REST_Y + (self.target:GetHeight() or 84)
+	-- The aura row rides above the resting plaque (see PlaceTargetAuras).
+	return console:OpenHeight() + TARGET_REST_Y + (self.target:GetHeight() or 84) + 6 + AURA_SIZE
+end
+
+-- The aura row hangs under the plaque at the Halo, and sits on top of it
+-- while it rests on the console, where under it would run over the gold
+-- edge (Tyler, 2026-11-07). Out of combat only: the plaque is secure.
+function Halo:PlaceTargetAuras()
+	local icons = self.target and self.target.auras
+	if not (icons and icons[1]) or InCombatLockdown() then return end
+	icons[1]:ClearAllPoints()
+	if self.targetResting then
+		icons[1]:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", TARGET_COIN_SPACE, 6)
+	else
+		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
+	end
+	icons.placed = true
 end
 
 function Halo:PlaceTarget()
@@ -284,9 +300,12 @@ function Halo:PlaceTarget()
 		-- anchored to it would make that fold a blocked action.
 		local gap = 150 * (console.ART_SCALE or 0.556) + 22
 		target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
+		self.targetResting = true
 	else
 		target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
+		self.targetResting = false
 	end
+	self:PlaceTargetAuras()
 end
 
 function Halo:BuildTarget(frame)
@@ -581,13 +600,8 @@ function Halo:UpdateTargetAuras()
 			collect("HELPFUL")
 		end
 	end
-	-- The row hangs under the card, from its inner edge. The card is a
-	-- secure button, so the anchor is set once, out of combat.
-	if not icons.placed and not InCombatLockdown() then
-		icons[1]:ClearAllPoints()
-		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
-		icons.placed = true
-	end
+	-- From the card's inner edge, under it or above it (PlaceTargetAuras).
+	if not icons.placed then self:PlaceTargetAuras() end
 	for i, icon in ipairs(icons) do
 		local aura = found[i]
 		if aura then
