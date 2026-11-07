@@ -179,6 +179,32 @@ function Trainer:Refresh()
 	self:Fill()
 end
 
+-- True when the open trainer is your class's: it lists at least one spell
+-- from your class's list (Data/TrainerSpells.lua). Profession trainers and
+-- other classes' trainers list none.
+function Trainer:IsMyClassTrainer(class)
+	local ours = {}
+	for _, ids in pairs(Stoa.TRAINER_SPELLS and Stoa.TRAINER_SPELLS[class] or {}) do
+		for _, id in ipairs(ids) do ours[id] = true end
+	end
+	for i = 1, Stoa:PlainNumber(GetNumTrainerServices()) or 0 do
+		local ok, data = pcall(C_TooltipInfo.GetTrainerService, i)
+		local id = ok and type(data) == "table" and Stoa:PlainNumber(data.id)
+		if id and ours[id] then return true end
+	end
+	return false
+end
+
+-- Before 2026-11-07 every trainer's list was learned as your class's, so
+-- profession recipes and other classes' spells crept in. Those lists are
+-- dropped once; your class trainer fills them again on the next visit.
+local function cleanOldLists()
+	if Stoa.db.trainerListsV == 2 then return end
+	Stoa.db.trainerLevels = nil
+	Stoa.db.trainerGroups = nil
+	Stoa.db.trainerListsV = 2
+end
+
 -- Prices from an open trainer: every spell it lists, priced, even the ones
 -- for later levels. Only for your class's trainer, and only out of combat
 -- (the tooltip data is kept from tainted code in combat).
@@ -190,6 +216,10 @@ function Trainer:Learn()
 	Stoa.db.trainerLevels = Stoa.db.trainerLevels or {}
 	Stoa.db.trainerLevels[class] = Stoa.db.trainerLevels[class] or {}
 	local costs, levels, learned = Stoa.db.trainerCosts, Stoa.db.trainerLevels[class], false
+	-- Levels and headings come only from your own class's trainer: a
+	-- profession trainer (Smelt Heavy Thorium) or another class's (Fear)
+	-- would otherwise land on your list. Prices are kept by spell either way.
+	local mine = self:IsMyClassTrainer(class)
 	Stoa.db.trainerGroups = Stoa.db.trainerGroups or {}
 	Stoa.db.trainerGroups[class] = Stoa.db.trainerGroups[class] or {}
 	local groups, group = Stoa.db.trainerGroups[class], nil
@@ -205,7 +235,7 @@ function Trainer:Learn()
 		local ok, data = pcall(C_TooltipInfo.GetTrainerService, i)
 		local id = ok and type(data) == "table" and Stoa:PlainNumber(data.id)
 		local cost = id and Stoa:PlainNumber((GetTrainerServiceCost(i)))
-		if id and group and groups[id] ~= group then
+		if mine and id and group and groups[id] ~= group then
 			groups[id] = group
 			learned = true
 		end
@@ -214,7 +244,7 @@ function Trainer:Learn()
 			learned = true
 		end
 		-- The level it needs, from the trainer's own list.
-		if id and GetTrainerServiceInfo then
+		if mine and id and GetTrainerServiceInfo then
 			local fine, _, _, _, need = pcall(GetTrainerServiceInfo, i)
 			need = fine and Stoa:PlainNumber(need)
 			if need then
@@ -532,6 +562,7 @@ function Trainer:ShowTrainerButton()
 end
 
 function Trainer:OnEnable()
+	cleanOldLists()
 	Stoa:On("STOA_SPELLS_CHANGED", function() self:Refresh() end)
 	Stoa:On("PLAYER_LEVEL_UP", function(level)
 		-- The spellbook and level settle a moment after the event.
