@@ -6,8 +6,8 @@
 --     Missile Barrage is up (Arcane Missiles outlined), and CLEARCAST
 --     (Arcane Blast outlined, as the guides spend it).
 --   Fire: coins FB (Fire Blast), C (Combustion) and, with Improved Scorch,
---     S for Fire Vulnerability on the target; HOT STREAK n under them,
---     Pyroblast outlined at three.
+--     S for Fire Vulnerability on the target; HEATING UP after one crit
+--     and HOT STREAK after two under them, Pyroblast outlined then.
 --   Frost: coins N (Frost Nova), B (Ice Barrier) and IB (Ice Block);
 --     FINGERS n under them while Fingers of Frost is up, Ice Lance
 --     outlined then and straight after each Frostbolt.
@@ -35,7 +35,9 @@ local SPELLS = {
 	pyroblast = 11366,
 	scorch = 2948,
 	combustion = 11129,
-	hotStreak = 400624,
+	-- In Forever this ID is Heating Up (one crit); two crits in a row give
+	-- Hot Streak, a buff of its own found by name (no ID known yet).
+	heatingUp = 400624,
 	improvedScorch = 11095,
 	vulnerability = 22959,
 	blastWave = 11113,
@@ -56,14 +58,15 @@ local COOLDOWNS = {
 	frostNova = 25, iceBarrier = 30, iceBlock = 300,
 }
 local VULNERABILITY_LENGTH = 30
-local HOT_STREAK_MAX = 3
+-- The Hot Streak buff's name: the instant Pyroblast is ready.
+local HOT_STREAK_NAMES = { "Hot Streak!", "Hot Streak" }
 -- After a Frostbolt lands, Ice Lance is the press for this long.
 local LANCE_WINDOW = 1.5
 
 -- The deepest talents of each tree. The tree you know most of is yours.
 local TREES = {
 	arcane = { "arcanePower", "presence", "missileBarrage" },
-	fire = { "combustion", "hotStreak", "blastWave", "improvedScorch" },
+	fire = { "combustion", "heatingUp", "blastWave", "improvedScorch" },
 	frost = { "iceBarrier", "iceBlock", "coldSnap", "fingers" },
 }
 
@@ -148,6 +151,14 @@ function Mage:UpdateCoins()
 	self.state = state
 end
 
+-- 2 with Hot Streak up, 1 while Heating Up, nil with neither.
+local function streak()
+	for _, name in ipairs(HOT_STREAK_NAMES) do
+		if Sign.aura("player", name, "HELPFUL") then return 2 end
+	end
+	if buff("heatingUp") then return 1 end
+end
+
 local function stacksOf(key)
 	local aura = buff(key)
 	if not aura then return nil end
@@ -162,8 +173,8 @@ function Mage:UpdateCaption()
 			if blast then parts[#parts + 1] = "ARCANE BLAST " .. blast end
 			if buff("missileBarrage") then parts[#parts + 1] = "MISSILES" end
 		elseif self.tree == "fire" then
-			local streak = Sign.knows(SPELLS.hotStreak) and stacksOf("hotStreak")
-			if streak then parts[#parts + 1] = ("HOT STREAK %d/%d"):format(math.min(streak, HOT_STREAK_MAX), HOT_STREAK_MAX) end
+			local hot = streak()
+			if hot == 2 then parts[#parts + 1] = "HOT STREAK" elseif hot == 1 then parts[#parts + 1] = "HEATING UP" end
 		elseif self.tree == "frost" then
 			local fingers = Sign.knows(SPELLS.fingers) and stacksOf("fingers")
 			if fingers then parts[#parts + 1] = "FINGERS " .. fingers end
@@ -187,8 +198,7 @@ function Mage:NextPress()
 		if buff("missileBarrage") then return nameOf("missiles") end
 		if Sign.knows(SPELLS.arcaneBlast) then return nameOf("arcaneBlast") end
 	elseif self.tree == "fire" then
-		local streak = stacksOf("hotStreak") or 0
-		if streak >= HOT_STREAK_MAX and Sign.knows(SPELLS.pyroblast) then return nameOf("pyroblast") end
+		if streak() == 2 and Sign.knows(SPELLS.pyroblast) then return nameOf("pyroblast") end
 		if state.vulnerability == "off" then return nameOf("scorch") end
 		if ready("fireBlast") then return nameOf("fireBlast") end
 		return nameOf("fireball")
