@@ -368,11 +368,10 @@ end
 local COLUMN_WIDTH = 196
 local COLUMN_GAP = 40
 
-local function column(page, index, label)
-	local x = (index - 1) * (COLUMN_WIDTH + COLUMN_GAP)
-	local heading = caption(page, label)
-	heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
-	local rule = line(page)
+local function column(col, label)
+	local heading = caption(col, label)
+	heading:SetPoint("TOPLEFT", col, "TOPLEFT", 0, 0)
+	local rule = line(col)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
 	rule:SetWidth(COLUMN_WIDTH)
 	return rule
@@ -384,18 +383,23 @@ function Console:BuildFellowship(frame, space)
 	page:SetPoint("TOPRIGHT", -inset, top)
 	page:SetSize(COLUMN_WIDTH * 3 + COLUMN_GAP * 2, 110)
 	self.rightPage = page
+	-- Each column on its own frame, so a narrow screen can drop one
+	-- (FitPages) and close the others up to the right.
+	local readyCol, journeyCol, companyCol = CreateFrame("Frame", nil, page), CreateFrame("Frame", nil, page), CreateFrame("Frame", nil, page)
+	for _, col in ipairs({ readyCol, journeyCol, companyCol }) do col:SetSize(COLUMN_WIDTH, 110) end
+	self.pageColumns = { ready = readyCol, journey = journeyCol, company = companyCol }
 
 	-- Ready.
-	local ready = column(page, 1, "Ready")
-	local role = text(page, "serif", Stoa.typeSize.title, "accent")
+	local ready = column(readyCol, "Ready")
+	local role = text(readyCol, "serif", Stoa.typeSize.title, "accent")
 	role:SetPoint("TOPLEFT", ready, "BOTTOMLEFT", 0, -6)
-	local note = text(page, "italic", Stoa.typeSize.label, "danger")
+	local note = text(readyCol, "italic", Stoa.typeSize.label, "danger")
 	note:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -3)
 	note:SetWidth(COLUMN_WIDTH)
 	note:SetWordWrap(false)
 	-- Gear: the most worn piece as ten cells, its share on the right.
 	local Figures = Stoa.Figures
-	local gear = CreateFrame("Button", nil, page)
+	local gear = CreateFrame("Button", nil, readyCol)
 	gear:SetSize(COLUMN_WIDTH, 12)
 	gear:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -8)
 	local gearLabel = text(gear, "sans", Stoa.typeSize.body, "muted")
@@ -407,7 +411,7 @@ function Console:BuildFellowship(frame, space)
 	cells:SetPoint("LEFT", gear, "LEFT", 40, 0)
 	gear.cells, gear.value = cells, gearValue
 	-- Bags: one column per bag, the free count to the right.
-	local bags = CreateFrame("Button", nil, page)
+	local bags = CreateFrame("Button", nil, readyCol)
 	bags:SetSize(COLUMN_WIDTH, 22)
 	bags:SetPoint("TOPLEFT", gear, "BOTTOMLEFT", 0, -9)
 	local columns = Figures.columns(bags, 5, 6, 22, 3)
@@ -430,25 +434,25 @@ function Console:BuildFellowship(frame, space)
 		end)
 	end
 	-- Group buffs you could cast that someone near you lacks.
-	local groupBuffs = text(page, "sans", Stoa.typeSize.body, "accent")
+	local groupBuffs = text(readyCol, "sans", Stoa.typeSize.body, "accent")
 	groupBuffs:SetPoint("TOPLEFT", bags, "BOTTOMLEFT", 0, -5)
 	groupBuffs:SetWidth(COLUMN_WIDTH)
 	groupBuffs:SetWordWrap(false)
 	self.roleWord, self.roleNote, self.gear, self.bags, self.groupBuffs = role, note, gear, bags, groupBuffs
 
 	-- Journey.
-	local journey = column(page, 2, "Journey")
-	local level = text(page, "serif", Stoa.typeSize.title, "text")
+	local journey = column(journeyCol, "Journey")
+	local level = text(journeyCol, "serif", Stoa.typeSize.title, "text")
 	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, -6)
 	-- Earned in the text colour, rest in blue behind it, and an accent mark
 	-- where an hour at your pace would take you.
 	-- Your share of the level on the same row, at the column's right edge.
-	local share = text(page, "sans", Stoa.typeSize.body, "muted", "RIGHT")
+	local share = text(journeyCol, "sans", Stoa.typeSize.body, "muted", "RIGHT")
 	share:SetPoint("BOTTOMRIGHT", level, "BOTTOMLEFT", COLUMN_WIDTH, 2)
-	local xp = Figures.xp(page, COLUMN_WIDTH, 5)
+	local xp = Figures.xp(journeyCol, COLUMN_WIDTH, 5)
 	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, -8)
 	-- The bar's key (earned, rested to, in an hour) on hover, not as a row.
-	local xpHover = CreateFrame("Frame", nil, page)
+	local xpHover = CreateFrame("Frame", nil, journeyCol)
 	xpHover:SetPoint("TOPLEFT", xp, "TOPLEFT", 0, 6)
 	xpHover:SetPoint("BOTTOMRIGHT", xp, "BOTTOMRIGHT", 0, -6)
 	xpHover:EnableMouse(true)
@@ -466,14 +470,14 @@ function Console:BuildFellowship(frame, space)
 	xpHover:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	-- The one key kept on the page: what the gold mark is, under the bar's
 	-- right end.
-	local hourKey = Figures.key(page, "accent")
+	local hourKey = Figures.key(journeyCol, "accent")
 	hourKey:SetPoint("TOPRIGHT", xp, "BOTTOMRIGHT", 0, -4)
 	hourKey:SetText(nil)
 	self.levelText, self.levelShare, self.xpBar, self.hourKey = level, share, xp, hourKey
 	-- The dungeon kit (Kit.lua): your pace as a line chart over the last
 	-- half hour, experience an hour and time to level beside it, and the
 	-- nearest watched quest's progress when alone.
-	local pace = CreateFrame("Frame", nil, page)
+	local pace = CreateFrame("Frame", nil, journeyCol)
 	pace:SetSize(COLUMN_WIDTH, 26)
 	pace:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -17)
 	local spark = Figures.spark(pace, 54, 18)
@@ -491,28 +495,28 @@ function Console:BuildFellowship(frame, space)
 	pace.spark, pace.perHour, pace.perHourCap, pace.toLevel, pace.toLevelCap = spark, perHour, perHourCap, toLevel, toLevelCap
 	pace:Hide()
 	-- While the pace is still being worked out, a line of words instead.
-	local rate = text(page, "sans", Stoa.typeSize.body, "muted")
+	local rate = text(journeyCol, "sans", Stoa.typeSize.body, "muted")
 	rate:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -17)
 	rate:SetWidth(COLUMN_WIDTH)
 	rate:SetWordWrap(false)
 	self.pace = pace
-	local quest = text(page, "italic", Stoa.typeSize.body, "muted")
+	local quest = text(journeyCol, "italic", Stoa.typeSize.body, "muted")
 	quest:SetPoint("TOPLEFT", pace, "BOTTOMLEFT", 0, -9)
 	quest:SetWidth(COLUMN_WIDTH)
 	quest:SetWordWrap(false)
 	-- New spells waiting at your trainer, or the next training level
 	-- (Trainer.lua), under the quest line (Console:SettleNext places both).
-	local trainer = text(page, "sans", Stoa.typeSize.body, "accent")
+	local trainer = text(journeyCol, "sans", Stoa.typeSize.body, "accent")
 	trainer:SetPoint("TOPLEFT", quest, "TOPLEFT")
 	trainer:SetWidth(COLUMN_WIDTH)
 	trainer:SetWordWrap(false)
 	self.rateNote, self.questNote, self.trainerNote = rate, quest, trainer
 
 	-- Company.
-	local company = column(page, 3, "Company")
+	local company = column(companyCol, "Company")
 	self.members = {}
 	for i = 1, 4 do
-		local row = CreateFrame("Frame", nil, page)
+		local row = CreateFrame("Frame", nil, companyCol)
 		row:SetSize(COLUMN_WIDTH, 18)
 		row:SetPoint("TOPLEFT", company, "BOTTOMLEFT", 0, -6 - (i - 1) * rowGap)
 		local name = text(row, "serif", Stoa.typeSize.label, "text")
@@ -524,21 +528,21 @@ function Console:BuildFellowship(frame, space)
 		row.name, row.hp, row.unit = name, hp, "party" .. i
 		self.members[i] = row
 	end
-	self.alone = text(page, "italic", Stoa.typeSize.label, "muted")
+	self.alone = text(companyCol, "italic", Stoa.typeSize.label, "muted")
 	self.alone:SetPoint("TOPLEFT", company, "BOTTOMLEFT", 0, -6)
 	self.alone:SetText("Travelling alone")
-	local online = text(page, "sans", Stoa.typeSize.body, "muted")
+	local online = text(companyCol, "sans", Stoa.typeSize.body, "muted")
 	online:SetPoint("TOPLEFT", self.alone, "BOTTOMLEFT", 0, -4)
 	self.onlineCount = online
 	-- A few of them by name, so the column says who as well as how many.
-	local names = text(page, "serif", Stoa.typeSize.label, "text")
+	local names = text(companyCol, "serif", Stoa.typeSize.label, "text")
 	names:SetPoint("TOPLEFT", online, "BOTTOMLEFT", 0, -4)
 	names:SetWidth(COLUMN_WIDTH)
 	names:SetWordWrap(false)
 	self.onlineNames = names
 
 	-- The whole column opens the roster.
-	local open = CreateFrame("Button", nil, page)
+	local open = CreateFrame("Button", nil, companyCol)
 	open:SetPoint("TOPLEFT", company, "TOPLEFT", 0, 22)
 	open:SetSize(COLUMN_WIDTH, 104)
 	open:SetScript("OnClick", function()
@@ -984,6 +988,103 @@ function Console:Refold()
 	self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant)
 end
 
+-- Fitting the screen --------------------------------------------------------
+-- The pages keep clear of the centre: health and mana either side of the
+-- medallion, and any action bar Edit Mode has put down over the console.
+-- What's left decides how many columns each page shows, so a narrow window
+-- or a large UI scale drops a column instead of piling text on text.
+
+-- Bars that may sit over the console out of combat.
+local CENTRE_BARS = { "MainActionBar", "MainMenuBar", "MultiBarBottomLeft", "MultiBarBottomRight",
+	"StanceBar", "PetActionBar", "PossessActionBar" }
+local CLEAR_MARGIN = 18
+
+-- left, bottom, right, top of a frame, in the console's units.
+local function rect(frame, scale)
+	if not (frame and frame.GetRect and frame.GetEffectiveScale) then return end
+	local ok, left, bottom, width, height = pcall(frame.GetRect, frame)
+	if not ok or type(left) ~= "number" or type(width) ~= "number" or issecretvalue and issecretvalue(left) then return end
+	local k = frame:GetEffectiveScale() / scale
+	return left * k, bottom * k, (left + width) * k, (bottom + height) * k
+end
+
+-- How far either side of the console's centre the pages must stay out of.
+function Console:CentreClear()
+	local frame = self.frame
+	if not frame then return 340, 340 end
+	local scale = frame:GetEffectiveScale()
+	local cl, _, cr, ctop = rect(frame, scale)
+	if not cl then return 340, 340 end
+	local centre = (cl + cr) / 2
+	local left, right = 0, 0
+	local function take(other, mustOverlap)
+		local l, b, r = rect(other, scale)
+		if not l then return end
+		if mustOverlap and b >= ctop then return end
+		left = math.max(left, centre - l)
+		right = math.max(right, r - centre)
+	end
+	take(self.health)
+	take(self.mana)
+	for _, name in ipairs(CENTRE_BARS) do
+		local bar = _G[name]
+		if bar and bar.IsShown and bar:IsShown() then take(bar, true) end
+	end
+	return left + CLEAR_MARGIN, right + CLEAR_MARGIN
+end
+
+-- Which right-page columns fit, right to left. Company goes first; then
+-- Journey at the level cap, Ready while you level.
+local PAGE_GAPS = { COLUMN_GAP, 24 }
+
+function Console:FitPages()
+	local frame, page, cols = self.frame, self.rightPage, self.pageColumns
+	if not (frame and page and cols) then return end
+	local width = frame:GetWidth()
+	if type(width) ~= "number" or (issecretvalue and issecretvalue(width)) then return end
+	local inset = self:PageInset()
+	local _, rightClear = self:CentreClear()
+	local room = width / 2 - rightClear - inset
+
+	local capped = (GetMaxPlayerLevel and UnitLevel("player") >= GetMaxPlayerLevel())
+	local orders = {
+		{ "ready", "journey", "company" },
+		{ "ready", "journey" },
+		{ capped and "ready" or "journey" },
+	}
+	local chosen, gap = {}, COLUMN_GAP
+	for _, order in ipairs(orders) do
+		for _, g in ipairs(PAGE_GAPS) do
+			if #order * COLUMN_WIDTH + (#order - 1) * g <= room then
+				chosen, gap = order, g
+				break
+			end
+		end
+		if #chosen > 0 then break end
+	end
+	local shown = {}
+	for i, key in ipairs(chosen) do
+		shown[key] = true
+		local col = cols[key]
+		col:ClearAllPoints()
+		col:SetPoint("TOPLEFT", page, "TOPLEFT", (i - 1) * (COLUMN_WIDTH + gap), 0)
+	end
+	for key, col in pairs(cols) do col:SetShown(shown[key] == true) end
+	page:SetWidth(math.max(1, #chosen * COLUMN_WIDTH + math.max(0, #chosen - 1) * gap))
+	if Stoa.modules.Tally and Stoa.modules.Tally.Fit then Stoa.modules.Tally:Fit() end
+end
+
+-- Runs a moment after anything that moves the centre or the screen.
+function Console:QueueFit()
+	if self.fitQueued then return end
+	self.fitQueued = true
+	C_Timer.After(0.3, function()
+		self.fitQueued = false
+		if InCombatLockdown() then return end
+		self:FitPages()
+	end)
+end
+
 -- Lifecycle -----------------------------------------------------------------
 
 function Console:OnEnable()
@@ -1067,4 +1168,20 @@ function Console:OnEnable()
 
 	-- Notes fade after NOTE_SECONDS.
 	Stoa:NewTicker(5, function() self:RenderNotes() end)
+
+	-- Keep the pages clear of the centre on any screen.
+	for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED",
+		"EDIT_MODE_LAYOUTS_UPDATED", "PLAYER_REGEN_ENABLED", "PLAYER_LEVEL_UP" }) do
+		Stoa:On(event, function() self:QueueFit() end)
+	end
+	self.frame:HookScript("OnSizeChanged", function() self:QueueFit() end)
+	if EditModeManagerFrame then EditModeManagerFrame:HookScript("OnHide", function() self:QueueFit() end) end
+	for _, name in ipairs(CENTRE_BARS) do
+		local bar = _G[name]
+		if bar and bar.HookScript then
+			bar:HookScript("OnShow", function() self:QueueFit() end)
+			bar:HookScript("OnHide", function() self:QueueFit() end)
+		end
+	end
+	self:FitPages()
 end
