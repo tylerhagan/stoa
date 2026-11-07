@@ -501,7 +501,7 @@ function Console:BuildFellowship(frame, space)
 	quest:SetWidth(COLUMN_WIDTH)
 	quest:SetWordWrap(false)
 	-- New spells waiting at your trainer, or the next training level
-	-- (Trainer.lua), under the quest line (Console:SettleNext places it).
+	-- (Trainer.lua), on the quest line's row (Console:SettleNext places it).
 	local trainer = text(page, "sans", Stoa.typeSize.body, "accent")
 	trainer:SetPoint("TOPLEFT", quest, "TOPLEFT")
 	trainer:SetWidth(COLUMN_WIDTH)
@@ -856,20 +856,32 @@ function Console:UpdateKitLines()
 	self:SettleNext()
 end
 
--- The nearest quest and the trainer line stack under the pace: both show
--- when there's something to say; the trainer moves up when there's no quest.
+-- The nearest quest and the trainer share one row. With both, the quest
+-- keeps the left and the trainer becomes a short tag at the right end
+-- ("3 to train", "Train at 12"); alone, either has the whole row.
 function Console:SettleNext()
 	if not (self.trainerNote and self.questNote) then return end
-	local training = (self.trainerNote:GetText() or "") ~= ""
+	local full, short = self.trainerFull or (self.trainerNote:GetText() or ""), self.trainerShort or ""
+	local training = full ~= ""
 	local quest = (self.questNote:GetText() or "") ~= ""
-	self.questNote:SetShown(quest)
-	self.trainerNote:SetShown(training)
-	self.trainerNote:ClearAllPoints()
-	if quest then
-		self.trainerNote:SetPoint("TOPLEFT", self.questNote, "BOTTOMLEFT", 0, -4)
+	local note = self.trainerNote
+	note:ClearAllPoints()
+	if training and quest then
+		note:SetText(short ~= "" and short or full)
+		note:SetWidth(0)
+		note:SetJustifyH("RIGHT")
+		note:SetPoint("TOPRIGHT", self.questNote, "TOPLEFT", COLUMN_WIDTH, 0)
+		local tag = Stoa:PlainNumber(note:GetStringWidth()) or 0
+		self.questNote:SetWidth(math.max(COLUMN_WIDTH - tag - 10, 40))
 	else
-		self.trainerNote:SetPoint("TOPLEFT", self.questNote, "TOPLEFT")
+		note:SetText(full)
+		note:SetJustifyH("LEFT")
+		note:SetPoint("TOPLEFT", self.questNote, "TOPLEFT")
+		note:SetWidth(COLUMN_WIDTH)
+		self.questNote:SetWidth(COLUMN_WIDTH)
 	end
+	self.questNote:SetShown(quest)
+	note:SetShown(training)
 end
 
 function Console:AddNote(_, message)

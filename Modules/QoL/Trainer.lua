@@ -163,12 +163,14 @@ function Trainer:UpdateConsole()
 	if not (console and console.trainerNote) then return end
 	local count = self:Count()
 	-- Training waiting now reads in the accent; otherwise the next training
-	-- level, quieter, under the nearest quest (Console:SettleNext).
-	local kind
+	-- level, quieter. Beside a quest line it shortens to a tag at the row's
+	-- right end (Console:SettleNext picks).
+	local kind, full, short = nil, "", ""
 	if count > 0 then
 		local total, known = self:Total(self:Missing())
 		local cost = total > 0 and ("  ·  %s%s"):format(known and "" or "~", money(total)) or ""
-		console.trainerNote:SetText(("%d %s to train%s"):format(count, count == 1 and "spell" or "spells", cost))
+		full = ("%d %s to train%s"):format(count, count == 1 and "spell" or "spells", cost)
+		short = ("%d to train"):format(count)
 		kind = "now"
 	else
 		local coming = self:Coming()
@@ -178,12 +180,13 @@ function Trainer:UpdateConsole()
 			if entry.level == first and not entry.skipped then at = at + 1 end
 		end
 		if first and at > 0 then
-			console.trainerNote:SetText(("Next training: level %d  ·  %d %s"):format(first, at, at == 1 and "spell" or "spells"))
+			full = ("Next training: level %d  ·  %d %s"):format(first, at, at == 1 and "spell" or "spells")
+			short = ("Train at %d"):format(first)
 			kind = "next"
-		else
-			console.trainerNote:SetText("")
 		end
 	end
+	console.trainerFull, console.trainerShort = full, short
+	console.trainerNote:SetText(full)
 	console.trainerKind = kind
 	console.trainerNote:SetTextColor(Stoa:Color(kind == "next" and "muted" or "accent"))
 	if self.noteButton then self.noteButton:SetShown(kind ~= nil) end
