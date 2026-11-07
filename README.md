@@ -9,6 +9,34 @@ A calm, two-state UI suite for **WoW Forever** (interface 16001).
 
 Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a small **spec signature** on top. Changing spec swaps the layout automatically.
 
+## Screenshots
+
+**In the world:** the console along the bottom, with At a glance, Ready, Journey and Company. The minimap and quest tracker sit top right.
+
+![STOA in the world](docs/screenshots/world.jpg)
+
+**In combat:** the console folds away and the Halo rises: health and mana arcs, the target card, the signature slot and the combat bar.
+
+![STOA in combat](docs/screenshots/combat.jpg)
+
+**The console up close**
+
+![The console](docs/screenshots/console.jpg)
+
+**Healing a group:** party cards under the combat bar, with shields, buffs and dispellable debuffs as words, and a watch card for the tank.
+
+![Party cards for a healer](docs/screenshots/party-healer.jpg)
+
+<p>
+<img src="docs/screenshots/tooltip-compare.jpg" alt="Item tooltip with upgrade line" width="49%">
+<img src="docs/screenshots/training.jpg" alt="The Training page" width="40%">
+</p>
+<p>
+<img src="docs/screenshots/character.jpg" alt="Character window" width="49%">
+<img src="docs/screenshots/bags.jpg" alt="Bags" width="30%">
+<img src="docs/screenshots/minimap.jpg" alt="Minimap" width="19%">
+</p>
+
 ## What STOA is not
 
 STOA does a lot, so it helps to say what it leaves alone. These are decisions, not gaps.
