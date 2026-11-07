@@ -122,7 +122,8 @@ function Party:Layout()
 			local haloBottom = halo:GetBottom()
 			if restTop and haloBottom then
 				local k = (halo:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
-				local bottom = haloBottom * k + offset - layout.height
+				local pets = Stoa.Pet and Stoa.Pet.CellRoom and Stoa.Pet:CellRoom() or 0
+				local bottom = haloBottom * k + offset - layout.height - pets
 				local clear = restTop + 10
 				if bottom < clear then offset = offset + (clear - bottom) end
 			end
@@ -836,6 +837,8 @@ function Party:OnEnable()
 		Stoa:AfterCombat(function() self:Layout() end)
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateAll() end)
+	-- A pet coming or going changes the room its cell takes under the row.
+	Stoa:On("UNIT_PET", function() Stoa:AfterCombat(function() self:Layout() end) end)
 	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateAll() end)
 	Stoa:On("STOA_CLICKS_CHANGED", function() self:UpdateGrid() end)
 	Stoa:On("MODIFIER_STATE_CHANGED", function()
