@@ -114,7 +114,19 @@ function Party:Layout()
 			-- In combat under the combat bar when there is one; otherwise,
 			-- and with the console open, just under the Halo's cast line.
 			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa:CombatLayout()
-			frame:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and Stoa.modules.CombatBar:GroupOffset() or -52)
+			local offset = combatBar and Stoa.modules.CombatBar:GroupOffset() or -52
+			-- Out of combat the target plaque rests on the console's top
+			-- edge; the row lifts so its cards never sit on the plaque.
+			local haloModule = Stoa.modules.Halo
+			local restTop = haloModule and haloModule.TargetRestTop and haloModule:TargetRestTop()
+			local haloBottom = halo:GetBottom()
+			if restTop and haloBottom then
+				local k = (halo:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+				local bottom = haloBottom * k + offset - layout.height
+				local clear = restTop + 10
+				if bottom < clear then offset = offset + (clear - bottom) end
+			end
+			frame:SetPoint("TOP", halo, "BOTTOM", 0, offset)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 		else
