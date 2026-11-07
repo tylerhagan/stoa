@@ -6,9 +6,9 @@ Pushing a tag such as `v0.9.1` runs `.github/workflows/release.yml`, which build
 
 To also publish to CurseForge, Wago and WoWInterface once the repository is public: add the project IDs to `Stoa.toc` (`## X-Curse-Project-ID`, `## X-Wago-ID`, `## X-WoWI-ID`), add `CF_API_KEY`, `WAGO_API_TOKEN` and `WOWI_API_TOKEN` as repository secrets, and add a step running `BigWigsMods/packager@v2` to the workflow (checkout with `fetch-depth: 0`). The `.pkgmeta` is already in place. The packager step is left out for now on purpose.
 
-## Unreleased
+## 1.0.0
 
-Everything below is on the launch branch and not yet in a numbered release.
+The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
 - More procs: Hammer of Wrath and Infusion of Light (Paladin), Searing Light (Priest), Eclipse (Druid), Maelstrom Weapon (Shaman), Conflagrate (Warlock) and Cutthroat (Rogue). Procs only the game can see (Redoubt, Vengeance, Reckoning, Martyrdom, Nature's Grace, Rapid Killing, Quick Shots, Remorseless Attacks, Thousand Cuts) show as small game-drawn coins above the Halo. Proc art is found by file ID, with STOA's own arc if a picture is ever missing; `/stoa procs list`.
 - Tooltips grow by the room the header adds, so the last line no longer runs over the bottom edge.
