@@ -232,6 +232,12 @@ function builders.start(self, step)
 	local words = lede(step, "A handful of choices and your screen is ready. Each can be changed later in settings, and /stoa welcome brings this back.")
 	words:SetPoint("TOPLEFT", hello, "BOTTOMLEFT", 0, -10)
 	step.top = 92
+	if Stoa:MediaMissing() then
+		local warn = lede(step, Stoa.RESTART_NOTE)
+		warn:SetTextColor(Stoa:Color("danger"))
+		warn:SetPoint("TOPLEFT", words, "BOTTOMLEFT", 0, -6)
+		step.top = 116
+	end
 	step.cards = {}
 	local options = {
 		{ "guided", "Set it up with me", "Five short steps, about a minute." },
