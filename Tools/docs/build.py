@@ -350,21 +350,43 @@ def features(status):
 
 def row(area, text):
     return '<div class="row" id="%s" data-text="%s"><dt>%s</dt><dd>%s</dd></div>' % (
-        slug(area), html.escape((area + " " + text).lower()), html.escape(area), inline(text))
+        slug(area), html.escape((area + " " + text).lower()), html.escape(area), inline(sentence(text)))
+
+
+LABEL = re.compile(r"(?:^|(?<=\. ))(?:For )?([A-Z][A-Za-z ,'-]{1,30}?):\s")
+
+
+def sentence(text):
+    text = text.strip()
+    if not text:
+        return ""
+    text = text[0].upper() + text[1:]
+    return text if text.endswith((".", ")")) else text + "."
+
+
+def signature(area, text, several):
+    """Splits a class row into its intro and labelled parts (Protection:, Next press: ...)."""
+    parts = LABEL.split(text)
+    intro, pairs = parts[0], list(zip(parts[1::2], parts[2::2]))
+    if several and pairs and not intro.strip():
+        pairs[0] = (area, pairs[0][1])  # "For Shadow Priests:" reads as Shadow
+    elif several:
+        pairs.insert(0, (area, intro))
+        intro = ""
+    out = '<p class="intro">%s</p>' % inline(sentence(intro)) if intro.strip() else ""
+    out += '<dl class="parts">' + "".join(
+        '<div><dt>%s</dt><dd>%s</dd></div>' % (html.escape(label), inline(sentence(body))) for label, body in pairs) + "</dl>"
+    return out
 
 
 def classes(status):
     rows = {r[0]: r[1] for r in status}
     cards = []
     for name, colour, areas in CLASSES:
-        parts = []
-        for area in areas:
-            if area in rows:
-                label = '<h3>%s</h3>' % area if len(areas) > 1 else ""
-                parts.append(label + "<p>%s</p>" % inline(rows[area]))
-        cards.append('<article class="class" id="%s" style="--class:#%s"><h2>%s</h2>%s</article>' % (
-            slug(name), colour, name, "".join(parts)))
-    general = "".join("<p>%s</p>" % inline(rows[a]) for a in ["Halo", "Procs"] if a in rows)
+        body = "".join(signature(a, rows[a], len(areas) > 1) for a in areas if a in rows)
+        cards.append('<section class="class" id="%s" style="--class:#%s"><h2>%s</h2><div>%s</div></section>' % (
+            slug(name), colour, name, body))
+    general = "".join(row(a, rows[a]) for a in ["Halo", "Procs", "Combat bar", "Coin art"] if a in rows)
     return """
 <section class="bar head">
   <h1>Classes</h1>
@@ -372,7 +394,7 @@ def classes(status):
   <nav class="jump" aria-label="Classes">{toc}</nav>
 </section>
 <div class="bar classes">{cards}</div>
-<section class="bar block"><h2>For every class</h2>{general}</section>
+<section class="bar group"><h2>For every class</h2><dl class="rows">{general}</dl></section>
 """.format(toc="".join('<a href="#%s">%s</a>' % (slug(n), n) for n, _, _ in CLASSES), cards="".join(cards),
            general=general)
 
@@ -380,7 +402,7 @@ def classes(status):
 def commands(rows):
     items = "".join(
         '<div class="row" data-text="%s"><dt><code>%s</code></dt><dd>%s</dd></div>' % (
-            html.escape((c + " " + d).lower()), html.escape(c.strip("`")), inline(d)) for c, d in rows)
+            html.escape((c + " " + d).lower()), html.escape(c.strip("`")), inline(sentence(d))) for c, d in rows)
     return """
 <section class="bar head">
   <h1>Commands</h1>
