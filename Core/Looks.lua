@@ -318,8 +318,25 @@ function Looks:Next()
 	end
 end
 
+-- Font files added while the game was running can't be read until it restarts
+-- (a /reload isn't enough), so a fresh install or an update with new files
+-- falls back to the game's fonts. A fresh font object reports no file then.
+function Stoa:MediaMissing()
+	if Looks.missing ~= nil then return Looks.missing end
+	local ok, missing = pcall(function()
+		local probe = CreateFont("StoaFontProbe" .. math.random(1, 1e9))
+		local set = probe:SetFont(FONT_UI_FILE, 12, "")
+		return set == false or probe:GetFont() == nil
+	end)
+	Looks.missing = ok and missing or false
+	return Looks.missing
+end
+
+Stoa.RESTART_NOTE = "STOA's fonts and art need a full game restart after installing or updating (a /reload isn't enough)."
+
 Stoa:On("PLAYER_LOGIN", function()
 	media()
+	if Stoa:MediaMissing() then Stoa:Print(Stoa.RESTART_NOTE) end
 	xpcall(registerBagnon, Stoa.catch)
 	xpcall(registerDetails, Stoa.catch)
 end)
@@ -346,7 +363,7 @@ Stoa.commands.looks = function()
 		end
 	end
 	if not any then
-		Stoa:Print("None of the addons Stoa can dress are here (Questie, Bagnon, Details).")
+		Stoa:Print("None of the addons STOA can dress are here (Questie, Bagnon, Details).")
 		return
 	end
 	-- Asks about each one again, starting with those in Stoa's look.
@@ -356,8 +373,8 @@ Stoa.commands.looks = function()
 			Looks.asking = look
 			look.offered = true
 			Looks:Ask(look)
-			Looks.page.title:SetText(look.name .. " is in Stoa's look")
-			Looks.page.left.text:SetText("Keep Stoa's look")
+			Looks.page.title:SetText(look.name .. " is in STOA's look")
+			Looks.page.left.text:SetText("Keep STOA's look")
 			Looks.page.right.text:SetText("Its own look")
 			return
 		end
