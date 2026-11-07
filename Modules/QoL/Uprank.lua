@@ -1,6 +1,8 @@
 -- Stoa QoL: auto-uprank. When you learn a new rank of a spell, any action
--- bar slot still holding an older rank is given the new one, so you never
--- keep casting Flash Heal rank 3 by accident. Macros are left alone.
+-- bar slot holding the rank that was your best until then is given the new
+-- one, so you never keep casting Flash Heal rank 3 by accident. A lower rank
+-- you put on a bar yourself (a cheap heal, downranking) is left alone, and
+-- so are macros. /stoa uprank upgrades every slot, on purpose.
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -22,24 +24,48 @@ local function cursorBusy()
 	return GetCursorInfo and call(GetCursorInfo) ~= nil
 end
 
--- Walks the bars once and swaps every outranked spell for its best rank.
--- Returns the list of { name, rank } it upgraded.
-function Uprank:Run()
+-- The best rank you knew of each spell on your bars, by name, as of the
+-- last look. A slot is upgraded on its own only if it held that rank.
+local function remember(self)
+	local spells = Stoa.Spells
+	self.known = self.known or {}
+	for slot = 1, SLOTS do
+		local kind, id = call(GetActionInfo, slot)
+		id = Stoa:PlainNumber(id)
+		local name = kind == "spell" and id and spells.name(id)
+		if name and not Stoa:IsSecret(name) then
+			local bestID = spells.best(id)
+			if bestID then self.known[name] = bestID end
+		end
+	end
+end
+
+-- Walks the bars once and swaps outranked spells for their best rank: every
+-- one when asked (all), or only those that were your best rank until a new
+-- one was learned. Returns the list of { name, rank } it upgraded.
+function Uprank:Run(all)
 	if InCombatLockdown() then
-		Stoa:AfterCombat(function() self:Run() end)
+		Stoa:AfterCombat(function() self:Run(all) end)
 		return {}
 	end
 	local spells = Stoa.Spells
 	if not (spells and GetActionInfo and PlaceAction) then return {} end
 	-- Never fight the player's hands: a spell already on the cursor waits.
 	if cursorBusy() then return {} end
+	-- The first look after login only learns what the bars hold.
+	if not all and not self.known then
+		remember(self)
+		return {}
+	end
+	local known = self.known or {}
 	local done, seen = {}, {}
 	for slot = 1, SLOTS do
 		local kind, id = call(GetActionInfo, slot)
 		id = Stoa:PlainNumber(id)
 		if kind == "spell" and id and spells.outranked(id) then
 			local bestID, rank = spells.best(id)
-			if bestID and bestID ~= id then
+			local wasBest = known[spells.name(id) or ""] == id
+			if bestID and bestID ~= id and (all or wasBest) then
 				local ok = pickup(bestID)
 				if ok and cursorBusy() then
 					pcall(PlaceAction, slot)
@@ -54,6 +80,7 @@ function Uprank:Run()
 			end
 		end
 	end
+	remember(self)
 	for _, entry in ipairs(done) do
 		local text = entry[2] > 0 and ("Upgraded %s to rank %d on your bars."):format(entry[1], entry[2])
 			or ("Upgraded %s on your bars."):format(entry[1])
@@ -70,6 +97,6 @@ function Uprank:OnEnable()
 end
 
 Stoa.commands.uprank = function()
-	local list = Uprank:Run()
+	local list = Uprank:Run(true)
 	if #list == 0 and not InCombatLockdown() then Stoa:Print("Your bars already hold your best ranks.") end
 end
