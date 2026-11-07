@@ -9,6 +9,8 @@ A calm, two-state UI suite for **WoW Forever** (interface 16001).
 
 Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a small **spec signature** on top. Changing spec swaps the layout automatically.
 
+**Best on an ultrawide (21:9).** STOA is designed on a 3440×1440 screen. It fits 16:9 and 16:10 too: on a narrower window the console drops a column and switches to a compact Edit Mode layout by itself.
+
 ## Screenshots
 
 **In the world:** the console along the bottom, with At a glance, Ready, Journey and Company. The minimap and quest tracker sit top right.
@@ -202,6 +204,8 @@ Fonts are the main gap: see below.
 - **From the code:** GitHub's "Download ZIP" of the repository unpacks as `stoa-main`. Rename that folder to exactly `Stoa`, or the game won't load it.
 
 Then restart the game (not just `/reload`) the first time, so it picks up STOA's fonts and textures. A welcome page opens on each character's first login; `/stoa welcome` brings it back.
+
+STOA looks best on an ultrawide (21:9) screen, which it was designed on. On 16:9 or 16:10 it switches to a compact layout by itself; `/stoa editmode status` shows which layout it picked and why.
 
 ## Reporting a bug
 

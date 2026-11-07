@@ -285,6 +285,7 @@ def home(readme, ver):
     <h1>Calm out of combat.<br>Clear inside it.</h1>
     <p class="lede">STOA gives your screen two states. Out of combat a leather console along the bottom holds chat, your group, the minimap and notes. When a fight starts it folds away and the Halo rises around your character.</p>
     <p class="actions"><a class="btn primary" href="{cf}">Get it on CurseForge</a><a class="btn" href="{repo}/releases/latest">GitHub release {ver}</a></p>
+    <p class="fit">Best on an ultrawide (21:9). Fits 16:9 and 16:10 too.</p>
   </div>
   {world}
 </section>
