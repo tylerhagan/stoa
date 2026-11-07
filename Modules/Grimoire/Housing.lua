@@ -37,6 +37,20 @@ end
 
 local placing = false
 
+-- The chat keeps clear of any action bar Edit Mode puts over the console,
+-- so on a narrow screen it wraps sooner instead of running under the bar.
+local CHAT_MIN_WIDTH = 260
+local CHAT_BAR_GAP = 12
+
+function Console:ChatWidth()
+	local frame = self.frame
+	local width = frame and frame:GetWidth()
+	if type(width) ~= "number" or (issecretvalue and issecretvalue(width)) or not self.CentreClear then return CHAT_WIDTH end
+	local left = self:CentreClear()
+	local room = width / 2 - left - self:PageInset() - CHAT_BAR_GAP
+	return math.max(CHAT_MIN_WIDTH, math.min(CHAT_WIDTH, math.floor(room)))
+end
+
 local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
@@ -48,7 +62,7 @@ local function placeChat()
 	local top = artOn() and ART_CHAT_GAP or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
 	chat:ClearAllPoints()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), bottom)
-	chat:SetSize(CHAT_WIDTH, Console:OpenHeight() - bottom - top)
+	chat:SetSize(Console:ChatWidth(), Console:OpenHeight() - bottom - top)
 	-- The ink panel is the background, so the chat window's own goes.
 	if FCF_SetWindowAlpha then FCF_SetWindowAlpha(chat, 0) end
 	placing = false
@@ -71,6 +85,8 @@ local function replaceChat()
 	end
 	xpcall(placeChat, Stoa.catch)
 end
+
+function Console:ReplaceChat() replaceChat() end
 
 -- At most a few re-placings a second, in case Blizzard answers each one with
 -- another move.
