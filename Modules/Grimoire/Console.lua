@@ -1072,6 +1072,7 @@ function Console:FitPages()
 	for key, col in pairs(cols) do col:SetShown(shown[key] == true) end
 	page:SetWidth(math.max(1, #chosen * COLUMN_WIDTH + math.max(0, #chosen - 1) * gap))
 	if Stoa.modules.Tally and Stoa.modules.Tally.Fit then Stoa.modules.Tally:Fit() end
+	if self.ReplaceChat then self:ReplaceChat() end
 end
 
 -- Runs a moment after anything that moves the centre or the screen.
