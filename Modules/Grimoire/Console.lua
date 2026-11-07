@@ -501,7 +501,7 @@ function Console:BuildFellowship(frame, space)
 	quest:SetWidth(COLUMN_WIDTH)
 	quest:SetWordWrap(false)
 	-- New spells waiting at your trainer, or the next training level
-	-- (Trainer.lua), on the quest line's row (Console:SettleNext places it).
+	-- (Trainer.lua), under the quest line (Console:SettleNext places both).
 	local trainer = text(page, "sans", Stoa.typeSize.body, "accent")
 	trainer:SetPoint("TOPLEFT", quest, "TOPLEFT")
 	trainer:SetWidth(COLUMN_WIDTH)
@@ -856,31 +856,33 @@ function Console:UpdateKitLines()
 	self:SettleNext()
 end
 
--- The nearest quest and the trainer share one row. With both, the quest
--- keeps the left and the trainer becomes a short tag at the right end
--- ("3 to train", "Train at 12"); alone, either has the whole row.
+-- Under the pace, the nearest quest then the trainer line, each full width.
+-- The rows flow up: with the pace (or its words) hidden, the quest takes
+-- their place, and the trainer takes the quest's when there's no quest.
 function Console:SettleNext()
 	if not (self.trainerNote and self.questNote) then return end
-	local full, short = self.trainerFull or (self.trainerNote:GetText() or ""), self.trainerShort or ""
+	local full = self.trainerFull or (self.trainerNote:GetText() or "")
 	local training = full ~= ""
 	local quest = (self.questNote:GetText() or "") ~= ""
-	local note = self.trainerNote
-	note:ClearAllPoints()
-	if training and quest then
-		note:SetText(short ~= "" and short or full)
-		note:SetWidth(0)
-		note:SetJustifyH("RIGHT")
-		note:SetPoint("TOPRIGHT", self.questNote, "TOPLEFT", COLUMN_WIDTH, 0)
-		local tag = Stoa:PlainNumber(note:GetStringWidth()) or 0
-		self.questNote:SetWidth(math.max(COLUMN_WIDTH - tag - 10, 40))
+	local questNote, note = self.questNote, self.trainerNote
+	questNote:ClearAllPoints()
+	if self.pace and self.pace:IsShown() then
+		questNote:SetPoint("TOPLEFT", self.pace, "BOTTOMLEFT", 0, -9)
+	elseif self.rateNote and self.rateNote:IsShown() then
+		questNote:SetPoint("TOPLEFT", self.rateNote, "BOTTOMLEFT", 0, -6)
+	elseif self.xpBar then
+		questNote:SetPoint("TOPLEFT", self.xpBar, "BOTTOMLEFT", 0, -17)
 	else
-		note:SetText(full)
-		note:SetJustifyH("LEFT")
-		note:SetPoint("TOPLEFT", self.questNote, "TOPLEFT")
-		note:SetWidth(COLUMN_WIDTH)
-		self.questNote:SetWidth(COLUMN_WIDTH)
+		questNote:SetPoint("TOPLEFT", self.pace, "BOTTOMLEFT", 0, -9)
 	end
-	self.questNote:SetShown(quest)
+	note:SetText(full)
+	note:ClearAllPoints()
+	if quest then
+		note:SetPoint("TOPLEFT", questNote, "BOTTOMLEFT", 0, -4)
+	else
+		note:SetPoint("TOPLEFT", questNote, "TOPLEFT")
+	end
+	questNote:SetShown(quest)
 	note:SetShown(training)
 end
 
