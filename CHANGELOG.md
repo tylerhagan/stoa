@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Narrow screens and large UI scales: the console's pages keep clear of health, mana and the action bars, dropping a column instead of overlapping; the chat wraps sooner; and STOA's Edit Mode layout has a compact version (bars stacked under the medallion) that STOA switches to and from by screen width (`/stoa editmode wide` keeps the wide one).
 - More procs: Hammer of Wrath and Infusion of Light (Paladin), Searing Light (Priest), Eclipse (Druid), Maelstrom Weapon (Shaman), Conflagrate (Warlock) and Cutthroat (Rogue). Procs only the game can see (Redoubt, Vengeance, Reckoning, Martyrdom, Nature's Grace, Rapid Killing, Quick Shots, Remorseless Attacks, Thousand Cuts) show as small game-drawn coins above the Halo. Proc art is found by file ID, with STOA's own arc if a picture is ever missing; `/stoa procs list`.
 - Tooltips grow by the room the header adds, so the last line no longer runs over the bottom edge.
 - Launch night: the stone behind windows is much fainter (it read far too strong in the game), the world map's border no longer lays a panel and stone over the map, gossip options read light on the dark window, Shadow Word: Death is gone from the Shadow signature (Forever doesn't have it), and At a glance names where you are quietly beside its heading.
