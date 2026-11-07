@@ -97,7 +97,7 @@ local SPELLS = {
 		{ 11366, "Pyroblast", "Fire" },
 		{ 2948, "Scorch", "Fire" },
 		{ 11129, "Combustion", "Fire and the Halo signature" },
-		{ 400624, "Hot Streak", "Fire" },
+		{ 400624, "Heating Up", "Fire" },
 		{ 11095, "Improved Scorch", "Fire" },
 		{ 22959, "Fire Vulnerability", "Fire" },
 		{ 116, "Frostbolt", "Frost" },
