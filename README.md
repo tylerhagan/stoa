@@ -197,10 +197,11 @@ Fonts are the main gap: see below.
 
 ## Install
 
-Copy this folder into the game's AddOns folder and name it exactly `Stoa`:
+- **CurseForge app:** search for STOA under World of Warcraft, Forever, and install it.
+- **By hand:** download `Stoa-<version>.zip` from [Releases](https://github.com/tylerhagan/stoa/releases) (or CurseForge) and unpack it into `World of Warcraft\_forever_\Interface\AddOns`. The zip already holds one folder named `Stoa`, so there's nothing to rename.
+- **From the code:** GitHub's "Download ZIP" of the repository unpacks as `stoa-main`. Rename that folder to exactly `Stoa`, or the game won't load it.
 
-- Beta: `World of Warcraft\_classic_beta_\Interface\AddOns\Stoa`
-- Live (from launch): check the Forever folder name in your install, e.g. `World of Warcraft\_forever_\Interface\AddOns\Stoa`
+Then restart the game (not just `/reload`) the first time, so it picks up STOA's fonts and textures. A welcome page opens on each character's first login; `/stoa welcome` brings it back.
 
 ## Releases
 
