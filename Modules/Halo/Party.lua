@@ -117,6 +117,19 @@ function Party:Layout()
 			-- Halo spot out of combat too, so nothing needs the room.
 			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa.modules.CombatBar
 			local offset = combatBar and combatBar:GroupOffset() or -52
+			-- A tall combat bar can push the row down onto the open
+			-- console. Out of combat it then stops just above the console
+			-- (it moves only in that case); in a fight the console folds
+			-- and the row keeps its place under the bar.
+			local console = Stoa.modules.Grimoire
+			local haloBottom = halo:GetBottom()
+			if not Stoa:CombatLayout() and haloBottom and console and console.enabled and console.OpenHeight then
+				local k = (halo:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+				local pets = (Stoa.Pet and Stoa.Pet.enabled and Stoa.Pet.db.partyPets and layout.grid) and 30 or 0
+				local bottom = haloBottom * k + offset - layout.height - pets
+				local clear = console:OpenHeight() + 14
+				if bottom < clear then offset = offset + (clear - bottom) end
+			end
 			frame:SetPoint("TOP", halo, "BOTTOM", 0, offset)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
