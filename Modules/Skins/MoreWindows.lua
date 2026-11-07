@@ -57,7 +57,7 @@ local function dressBorder(frame, bare)
 	if frame.stoaBorderDressed or (windows and windows.Leaves and windows:Leaves(frame)) then return end
 	frame.stoaBorderDressed = true
 	hideOwnArt(frame)
-	for _, key in ipairs({ "TopTileStreaks", "PortraitContainer", "portrait", "PortraitFrame" }) do
+	for _, key in ipairs({ "TopTileStreaks", "PortraitContainer", "PortraitOverlay", "portrait", "PortraitFrame" }) do
 		hide(frame[key])
 	end
 	if frame.TitleContainer then hideOwnArt(frame.TitleContainer) end
