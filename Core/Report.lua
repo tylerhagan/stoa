@@ -236,7 +236,7 @@ function Report:Build()
 	local lede = UI.text(page, "italic", Stoa.typeSize.label, "muted", "LEFT")
 	lede:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
 	lede:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
-	lede:SetText("Your setup and any errors Stoa caught this session. Copy it and send it along with what you were doing.")
+	lede:SetText("Your setup and any errors STOA caught this session. Copy it and send it along with what you were doing.")
 
 	local holder = CreateFrame("Frame", nil, page)
 	holder:SetPoint("TOPLEFT", PAD, -110)
