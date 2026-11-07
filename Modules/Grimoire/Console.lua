@@ -500,8 +500,8 @@ function Console:BuildFellowship(frame, space)
 	quest:SetPoint("TOPLEFT", pace, "BOTTOMLEFT", 0, -9)
 	quest:SetWidth(COLUMN_WIDTH)
 	quest:SetWordWrap(false)
-	-- New spells waiting at your trainer (Trainer.lua). One "next" line:
-	-- the trainer when there's training, otherwise the nearest quest.
+	-- New spells waiting at your trainer, or the next training level
+	-- (Trainer.lua), under the quest line (Console:SettleNext places it).
 	local trainer = text(page, "sans", Stoa.typeSize.body, "accent")
 	trainer:SetPoint("TOPLEFT", quest, "TOPLEFT")
 	trainer:SetWidth(COLUMN_WIDTH)
@@ -856,12 +856,20 @@ function Console:UpdateKitLines()
 	self:SettleNext()
 end
 
--- The trainer line and the quest line share one row: training first.
+-- The nearest quest and the trainer line stack under the pace: both show
+-- when there's something to say; the trainer moves up when there's no quest.
 function Console:SettleNext()
 	if not (self.trainerNote and self.questNote) then return end
 	local training = (self.trainerNote:GetText() or "") ~= ""
+	local quest = (self.questNote:GetText() or "") ~= ""
+	self.questNote:SetShown(quest)
 	self.trainerNote:SetShown(training)
-	self.questNote:SetShown(not training)
+	self.trainerNote:ClearAllPoints()
+	if quest then
+		self.trainerNote:SetPoint("TOPLEFT", self.questNote, "BOTTOMLEFT", 0, -4)
+	else
+		self.trainerNote:SetPoint("TOPLEFT", self.questNote, "TOPLEFT")
+	end
 end
 
 function Console:AddNote(_, message)

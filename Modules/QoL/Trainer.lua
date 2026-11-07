@@ -162,14 +162,31 @@ function Trainer:UpdateConsole()
 	local console = Stoa.modules.Grimoire
 	if not (console and console.trainerNote) then return end
 	local count = self:Count()
+	-- Training waiting now reads in the accent; otherwise the next training
+	-- level, quieter, under the nearest quest (Console:SettleNext).
+	local kind
 	if count > 0 then
 		local total, known = self:Total(self:Missing())
 		local cost = total > 0 and ("  ·  %s%s"):format(known and "" or "~", money(total)) or ""
 		console.trainerNote:SetText(("%d %s to train%s"):format(count, count == 1 and "spell" or "spells", cost))
+		kind = "now"
 	else
-		console.trainerNote:SetText("")
+		local coming = self:Coming()
+		local first = coming[1] and coming[1].level
+		local at = 0
+		for _, entry in ipairs(coming) do
+			if entry.level == first and not entry.skipped then at = at + 1 end
+		end
+		if first and at > 0 then
+			console.trainerNote:SetText(("Next training: level %d  ·  %d %s"):format(first, at, at == 1 and "spell" or "spells"))
+			kind = "next"
+		else
+			console.trainerNote:SetText("")
+		end
 	end
-	if self.noteButton then self.noteButton:SetShown(count > 0) end
+	console.trainerKind = kind
+	console.trainerNote:SetTextColor(Stoa:Color(kind == "next" and "muted" or "accent"))
+	if self.noteButton then self.noteButton:SetShown(kind ~= nil) end
 	if console.SettleNext then console:SettleNext() end
 end
 
@@ -531,7 +548,7 @@ function Trainer:HookConsole()
 		end
 	end)
 	button:SetScript("OnLeave", function()
-		note:SetTextColor(Stoa:Color("accent"))
+		note:SetTextColor(Stoa:Color(console.trainerKind == "next" and "muted" or "accent"))
 		if GameTooltip then GameTooltip:Hide() end
 	end)
 	self.noteButton = button
