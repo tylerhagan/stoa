@@ -327,7 +327,7 @@ local function build()
 	end
 	group = "Tools"
 	local groupRules = Stoa.Rules.options({ "GROUP", "RAID", "ALWAYS", "NEVER" })
-	choice(of("Threat"), "show", "Threat meter", "Up to five people by threat on your target, or your tank's, under the damage meters.", "GROUP", groupRules, { id = "threat", list = true, words = "aggro tank", change = rulesChanged })
+	choice(of("Threat"), "show", "Threat meter", "Up to five people by threat on your target, or your tank's, to the left of the combat bar in a fight.", "GROUP", groupRules, { id = "threat", list = true, words = "aggro tank", change = rulesChanged })
 	toggle(of("Threat"), "combatOnly", "Threat meter only in combat", "Hide the threat list out of combat.", true, { id = "threatCombat", change = rulesChanged })
 	choice(of("Markers"), "show", "Raid marker strip", "Eight markers and clear for tanks and leaders. Click marks your target; Shift-click places a world marker.", "GROUP", groupRules, { id = "markers", list = true, words = "skull icons target markers", change = rulesChanged })
 	toggle(of("Buffs"), "enabled", "Group buff reminders", "Out of combat, the console's Ready page says who in range is missing a buff you can cast, such as FORTITUDE · 3 missing.", true, { id = "buffs", reload = true, words = "fortitude mark of the wild intellect" })

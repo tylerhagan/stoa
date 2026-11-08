@@ -234,7 +234,7 @@ function Backup:ImportLayout(text)
 		return false, "That layout is missing its positions."
 	end
 	for role, spots in pairs(data.layouts or {}) do
-		if type(role) ~= "string" or not goodSpots(spots) then return false, "That layout has a position Stoa can't place." end
+		if type(role) ~= "string" or not goodSpots(spots) then return false, "That layout has a position STOA can't place." end
 	end
 	Stoa.char.layouts = data.layouts or {}
 	Stoa.char.positions = data.positions or {}
@@ -252,7 +252,7 @@ function Backup:Import(text)
 	text = strtrim(text or "")
 	if text:sub(1, #LAYOUT_PREFIX) == LAYOUT_PREFIX then return self:ImportLayout(text) end
 	if text:sub(1, #PREFIX) ~= PREFIX then
-		return false, "That isn't a Stoa backup: it should start with " .. PREFIX
+		return false, "That isn't a STOA backup: it should start with " .. PREFIX
 	end
 	local data, why = parse(text:sub(#PREFIX + 1))
 	if not data then return false, "That backup can't be read: " .. why .. "." end
@@ -296,7 +296,7 @@ function Backup:Build()
 	local lede = UI.text(page, "italic", Stoa.typeSize.label, "muted", "LEFT")
 	lede:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
 	lede:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
-	lede:SetText("All of Stoa's settings, account-wide and this character's. Copy it somewhere safe, or paste one in and import it. Share layout gives a shorter line, just where frames sit and the look, to post for others.")
+	lede:SetText("All of STOA's settings, account-wide and this character's. Copy it somewhere safe, or paste one in and import it. Share layout gives a shorter line, just where frames sit and the look, to post for others.")
 
 	-- The text sits in a scrolling box, since a backup is long.
 	local holder = CreateFrame("Frame", nil, page)

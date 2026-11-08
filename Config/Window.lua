@@ -784,7 +784,7 @@ function Window:Footer()
 		self.note:SetText(waiting == 1 and "1 change waits for a reload." or ("%d changes wait for a reload."):format(waiting))
 		colour(self.note, "accent")
 	else
-		self.note:SetText("Settings are for all your characters unless a setting says otherwise.")
+		self.note:SetText("Settings are saved per character. Saved setups, on the Setup page, copy another's.")
 		colour(self.note, "muted")
 	end
 end

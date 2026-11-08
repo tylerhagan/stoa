@@ -10,8 +10,8 @@
 -- The answer is remembered account-wide; /stoa looks asks again.
 --
 -- Stoa's fonts and a flat bar are also offered through LibSharedMedia, so
--- any addon with a font or texture list can pick "Stoa Display", "Stoa UI"
--- or "Stoa Flat".
+-- any addon with a font or texture list can pick "STOA Display", "STOA UI"
+-- or "STOA Flat".
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -19,9 +19,9 @@ local UI = Stoa.UI
 local Looks = {}
 Stoa.Looks = Looks
 
-local FONT_DISPLAY = "Stoa Display"
-local FONT_UI = "Stoa UI"
-local BAR = "Stoa Flat"
+local FONT_DISPLAY = "STOA Display"
+local FONT_UI = "STOA UI"
+local BAR = "STOA Flat"
 local FONT_DISPLAY_FILE = UI.MEDIA .. "Fonts\\TenorSans-Regular.ttf"
 local FONT_UI_FILE = UI.MEDIA .. "Fonts\\Inter-SemiBold.ttf"
 local BAR_FILE = "Interface\\Buttons\\WHITE8X8"
@@ -136,7 +136,7 @@ local function registerDetails()
 	local base = addon:GetSkin("Minimalistic")
 	if type(base) ~= "table" then return end
 	local skin = copy(base)
-	skin.author, skin.desc, skin.no_cache, skin.is_cached_skin = "Stoa", "Stoa's quiet meters: no panel, faint bars, Stoa's type.", true, nil
+	skin.author, skin.desc, skin.no_cache, skin.is_cached_skin = "Stoa", "STOA's quiet meters: no panel, faint bars, STOA's type.", true, nil
 	local props = skin.instance_cprops or {}
 	skin.instance_cprops = props
 	props.bg_alpha = 0
@@ -282,11 +282,11 @@ function Looks:Ask(look)
 	end
 	local page = self.page
 	self.asking = look
-	page.title:SetText(look.name .. " in Stoa's look")
-	page.body:SetText(("Stoa can dress %s in its own type and colours, so %s sits with the rest of your screen. %s keeps working exactly as it does now."):format(
+	page.title:SetText(look.name .. " in STOA's look")
+	page.body:SetText(("STOA can dress %s in its own type and colours, so %s sits with the rest of your screen. %s keeps working exactly as it does now."):format(
 		look.name, look.what, look.name))
 	page.note:SetText(("You can change it back any time with /stoa looks, or in %s's own settings."):format(look.name))
-	page.left.text:SetText("Use Stoa's look")
+	page.left.text:SetText("Use STOA's look")
 	page.right.text:SetText("Leave it")
 	page:Show()
 end

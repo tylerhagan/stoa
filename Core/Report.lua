@@ -178,16 +178,17 @@ function Report:Text()
 	end
 	local version, build, date, interface = "", "", "", ""
 	if GetBuildInfo then version, build, date, interface = GetBuildInfo() end
-	add("Stoa ", Stoa.version or "dev")
+	add("STOA ", Stoa.version or "dev")
 	add("Game ", tostring(version), " (", tostring(build), ", ", tostring(date), "), interface ", tostring(interface))
 	local className, classFile = UnitClass("player")
-	local spec = GetActiveTalentGroup and GetActiveTalentGroup() or "?"
+	local spec = (C_SpecializationInfo and C_SpecializationInfo.GetActiveSpecGroup and C_SpecializationInfo.GetActiveSpecGroup())
+		or (GetActiveTalentGroup and GetActiveTalentGroup()) or "?"
 	add("Character: ", tostring(className or classFile), ", level ", tostring(UnitLevel and UnitLevel("player") or "?"), ", spec slot ", tostring(spec), ", role ", tostring(Stoa:GetRole()))
 	add("Theme: ", tostring(Stoa.db and Stoa.db.theme), Stoa.ThemeName and (" (" .. Stoa:ThemeName() .. ")") or "")
 	add("Screen: ", screen())
 	add("Language: ", tostring(GetLocale and GetLocale() or "?"))
 	local held = Stoa.GameSettings and Stoa.GameSettings:List() or {}
-	add("Game settings Stoa holds: ", #held > 0 and table.concat(held, ", ") or "none")
+	add("Game settings STOA holds: ", #held > 0 and table.concat(held, ", ") or "none")
 	local on, off = enabledModules()
 	add("On: ", table.concat(on, ", "))
 	add("Off: ", #off > 0 and table.concat(off, ", ") or "none")
@@ -199,7 +200,7 @@ function Report:Text()
 		if ok then add(text) add("") end
 	end
 	if #kept == 0 then
-		add("No errors from Stoa this session.")
+		add("No errors from STOA this session.")
 	else
 		add(#kept, #kept == 1 and " error" or " errors", " this session:")
 		for i, entry in ipairs(kept) do

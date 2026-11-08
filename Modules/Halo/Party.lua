@@ -112,8 +112,8 @@ function Party:Layout()
 		frame:ClearAllPoints()
 		if layout.row and halo then
 			-- Under the combat bar when there is one, in and out of combat:
-			-- the row stays put when a fight starts or ends (Tyler found it
-			-- jumping, 2026-11-07). In a group the target plaque keeps its
+			-- the row stays put when a fight starts or ends instead of
+			-- jumping. In a group the target plaque keeps its
 			-- Halo spot out of combat too, so nothing needs the room.
 			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa.modules.CombatBar
 			local offset = combatBar and combatBar:GroupOffset() or -52

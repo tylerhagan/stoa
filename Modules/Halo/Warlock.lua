@@ -1,5 +1,5 @@
 -- Stoa: the Warlock signatures.
---   Coins on the Halo's right for Corruption (C), Curse of Agony (A) and
+--   Coins on the Halo's right for Corruption (C), Bane of Agony (A) and
 --   Immolate (I) on the target, timed from your casts when the game hides
 --   them, like the Shadow Priest's.
 --   SHARDS n under them from your bags, and TAP when your mana is low and
