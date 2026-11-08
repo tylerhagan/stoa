@@ -273,7 +273,7 @@ end
 -- Page ------------------------------------------------------------------------
 
 local WIDTH, HEIGHT = 760, 380
-local PAD = 28
+local PAD = Stoa.space.xl
 
 function Backup:Build()
 	local page = CreateFrame("Frame", "StoaBackupPage", UIParent)
