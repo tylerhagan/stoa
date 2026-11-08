@@ -39,7 +39,6 @@ local SPELLS = {
 	claw = 1082,
 	bite = 22568,
 	tigersFury = 5217,
-	berserk = 417141,
 	shiftingPower = 1322605,
 	catForm = 768,
 	bearForm = 5487,

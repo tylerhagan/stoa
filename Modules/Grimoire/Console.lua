@@ -48,7 +48,6 @@ local MEDALLION_WIDTH, MEDALLION_LINE = 1024, 257
 local MEDALLION_CENTRE = 267.6
 local MEDALLION_SCALE = ART_SCALE
 -- How far either side of centre the medallion's shoulders reach.
-local MEDALLION_REACH = 310 * MEDALLION_SCALE
 local FOLD_SECONDS = 0.3
 local MAX_NOTES = 4
 local NOTE_SECONDS = 30

@@ -139,12 +139,12 @@ function Tray:Take(button, name, isLib)
 	-- LibDBIcon can fade its buttons until the map is hovered; in the tray
 	-- they always show.
 	if button.fadeOut and button.fadeOut.Play then
-		hooksecurefunc(button.fadeOut, "Play", function(anim)
+		Stoa.SafeHook(button.fadeOut, "Play", function(anim)
 			anim:Stop()
 			button:SetAlpha(1)
 		end)
 	end
-	hooksecurefunc(button, "SetPoint", function()
+	Stoa.SafeHook(button, "SetPoint", function()
 		if self.placing then return end
 		self:Place(button)
 	end)

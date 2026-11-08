@@ -13,7 +13,6 @@
 -- the classic ones; wherever the game shows them, its own wins.
 local _, ns = ...
 local Stoa = ns.Stoa
-local UI = Stoa.UI
 local Sign = Stoa.Sign
 
 local Warrior = Stoa:NewModule("Warrior", {})

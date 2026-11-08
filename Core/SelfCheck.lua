@@ -41,8 +41,8 @@ local SPELLS = {
 		{ 20925, "Holy Shield", "Protection" },
 		{ 1311649, "Seal of Fury", "Protection" },
 		{ 1311015, "Templar's Bulwark", "the Halo signature for tanks" },
-		{ 20375, "Seal of Command", "Retribution and Twist of Light" },
-		{ 21084, "Seal of Righteousness", "Retribution and Twist of Light" },
+		{ 20375, "Seal of Command", "Retribution" },
+		{ 21084, "Seal of Righteousness", "Retribution" },
 		{ 21082, "Seal of the Crusader", "Retribution" },
 		{ 879, "Exorcism", "Retribution" },
 		{ 20473, "Holy Shock", "the Halo signature for Holy" },
@@ -141,7 +141,7 @@ local SPELLS = {
 	},
 	WARLOCK = {
 		{ 172, "Corruption", "coin and next press" },
-		{ 980, "Curse of Agony", "coin and next press" },
+		{ 980, "Bane of Agony", "coin and next press" },
 		{ 348, "Immolate", "coin and next press" },
 		{ 686, "Shadow Bolt", "next press" },
 		{ 1454, "Life Tap", "TAP" },
@@ -187,7 +187,6 @@ local APIS = {
 	{ "GetInventoryItemDurability", "WORN and BROKEN, gear wear" },
 	{ "Settings.RegisterAddOnSetting", "the settings panel", true },
 	{ "CreateSettingsButtonInitializer", "settings buttons" },
-	{ "Enum.PlayerSwingType", "Twist of Light" },
 	{ "GetMaxPlayerLevel", "experience pace on the console" },
 	{ "C_QuestLog.GetNumQuestWatches", "the console's quest line" },
 	{ "C_QuestLog.GetQuestIDForQuestWatchIndex", "the console's quest line" },
@@ -248,7 +247,6 @@ local FRAMES = {
 
 -- Events the signatures and frames need from this client.
 local EVENTS = {
-	{ "PLAYER_SWING", "Twist of Light" },
 	{ "MIRROR_TIMER_START", "breath and fatigue timers" },
 	{ "PLAYER_CONTROL_LOST", "the flight timer" },
 	{ "TAXIMAP_OPENED", "the flight timer" },
@@ -292,7 +290,7 @@ function Check:Run()
 
 	local interface = select(4, GetBuildInfo())
 	if interface and interface ~= BUILT_FOR then
-		add("changed", ("The game is on interface %s; Stoa was written for %d. If it shows as out of date, tick Load out of date AddOns."):format(tostring(interface), BUILT_FOR))
+		add("changed", ("The game is on interface %s; STOA was written for %d. If it shows as out of date, tick Load out of date AddOns."):format(tostring(interface), BUILT_FOR))
 	end
 
 	local english = not GetLocale or GetLocale() == "enUS" or GetLocale() == "enGB"

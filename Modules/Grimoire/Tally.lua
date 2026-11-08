@@ -497,7 +497,6 @@ local ROLE_STATS = {
 
 -- Situations: out in the world, in a dungeon, in a raid. Battlegrounds
 -- and arenas count as dungeons.
-local SITUATIONS = { "world", "dungeon", "raid" }
 local SITUATION_WORDS = { world = "Out in the world", dungeon = "In a dungeon", raid = "In a raid" }
 local AFTER_STATS = {
 	dungeon = { "durability", "bags", "gold", "prof1" },
