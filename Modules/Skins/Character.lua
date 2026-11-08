@@ -94,12 +94,13 @@ local function seatLevel()
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	if title then
 		title:ClearAllPoints()
-		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10 - (frame.stoaHeader.stoaRaise or 0) / 2)
+		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10)
 		title:SetJustifyH("LEFT")
 	end
 	level:ClearAllPoints()
 	if title then
-		level:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -5)
+		-- The level line keeps its own spot; the title sits higher above it.
+		level:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -42)
 	else
 		level:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
 	end
