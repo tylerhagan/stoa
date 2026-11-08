@@ -2,7 +2,7 @@
 --   Fade: the world map goes see-through while you move, so you can read the
 --   ground through it. The game's own "mapFade" setting is used where this
 --   client has it; otherwise the map's alpha follows your movement.
---   Levels: a quiet "Level 10-20" under the map's title and on the minimap's
+--   Levels: a quiet "Level 10-20" beside the map's title and on the minimap's
 --   zone tooltip. The game's own numbers (C_Map.GetMapLevels) are used when
 --   it has them; Forever gives none, so a small table of the classic
 --   levelling zones fills in. English zone names only.
@@ -103,73 +103,22 @@ end
 
 -- Levels ---------------------------------------------------------------------------
 
--- The map's headline sits on its own plaque, raised over the window's top
--- edge: the title in the display face with the zone's levels under it, a
--- short accent rule between. The strip below keeps the map's buttons.
--- When the map fills the screen, the plaque stays on screen and hangs down.
-local CROWN_RAISE = 26
-local CROWN_HEIGHT = 54
-local CROWN_PAD = 36
-
-function Map:Crown()
-	local map = WorldMapFrame
-	local border = map and map.BorderFrame
-	if not border then return nil end
-	if self.crown then return self.crown end
-	local crown = CreateFrame("Frame", nil, border)
-	-- Above the band along the window's top, under the title's own frame.
-	crown:SetFrameLevel(border:GetFrameLevel() + 1)
-	local holder = border.TitleContainer
-	if holder and holder:GetFrameLevel() <= crown:GetFrameLevel() then
-		holder:SetFrameLevel(crown:GetFrameLevel() + 1)
-	end
-	crown:SetHeight(CROWN_HEIGHT)
-	crown:SetPoint("TOP", border, "TOP", 0, CROWN_RAISE)
-	crown:SetClampedToScreen(true)
-	Stoa.UI.surface(crown, "card")
-	local rule = crown:CreateTexture(nil, "ARTWORK")
-	rule:SetTexture(Stoa.UI.WHITE)
-	Stoa.UI.tint(rule, "accent", 0.7)
-	rule:SetSize(28, 1)
-	crown.rule = rule
-	self.crown = crown
-	return crown
-end
-
-function Map:SeatTitle()
-	local map = WorldMapFrame
-	local border = map and map.BorderFrame
-	local title = border and border.TitleContainer and border.TitleContainer.TitleText
-	local crown = self:Crown()
-	local label = self.label
-	if not (crown and title and title.GetObjectType) then return end
-	Stoa:SetFont(title, "serif", Stoa.typeSize.title)
-	title:SetTextColor(Stoa:Color("text"))
-	title:ClearAllPoints()
-	local hasLabel = label and label:IsShown()
-	title:SetPoint("TOP", crown, "TOP", 0, hasLabel and -9 or -17)
-	crown.rule:ClearAllPoints()
-	crown.rule:SetPoint("TOP", title, "BOTTOM", 0, -4)
-	crown.rule:SetShown(hasLabel)
-	if label then
-		label:ClearAllPoints()
-		label:SetPoint("TOP", crown.rule, "BOTTOM", 0, -4)
-	end
-	local width = Stoa.safe.plain(title:GetStringWidth()) or 160
-	local under = hasLabel and Stoa.safe.plain(label:GetStringWidth()) or 0
-	crown:SetWidth(math.max(width, under, 120) + CROWN_PAD * 2)
-end
-
 function Map:MapLabel()
 	local map = WorldMapFrame
 	if not map then return end
 	if self.label then return self.label end
 	local border = map.BorderFrame
+	local title = border and border.TitleContainer and border.TitleContainer.TitleText
 	local parent = border and border.TitleContainer or map
 	local label = parent:CreateFontString(nil, "OVERLAY")
 	Stoa:SetFont(label, "sans", Stoa.typeSize.caption)
 	label:SetTextColor(Stoa:Color("muted"))
-	label:SetPoint("TOP", map, "TOP", 0, -28)
+	if title and title.GetObjectType then
+		-- Beside the title on the window's metal header.
+		label:SetPoint("BOTTOMLEFT", title, "BOTTOMRIGHT", 12, 2)
+	else
+		label:SetPoint("TOP", map, "TOP", 0, -28)
+	end
 	self.label = label
 	return label
 end
@@ -187,7 +136,6 @@ function Map:ShowMapLevels()
 	end
 	label:SetText(text or "")
 	label:SetShown(text ~= nil)
-	xpcall(self.SeatTitle, Stoa.catch, self)
 end
 
 function Map:SetupLevels()
@@ -198,6 +146,15 @@ function Map:SetupLevels()
 		hooksecurefunc(WorldMapFrame, "OnMapChanged", function() Map:ShowMapLevels() end)
 	end
 	WorldMapFrame:HookScript("OnShow", Stoa:Guard(function() Map:ShowMapLevels() end, "Map"))
+	-- The header drops its rise when the map fills the screen.
+	local windows = Stoa.modules.Windows
+	for _, method in ipairs({ "Maximize", "Minimize" }) do
+		if WorldMapFrame[method] and windows and windows.Settle then
+			hooksecurefunc(WorldMapFrame, method, function()
+				if WorldMapFrame.BorderFrame then windows:Settle(WorldMapFrame.BorderFrame) end
+			end)
+		end
+	end
 end
 
 -- On the minimap's zone tooltip, after the game's own lines.

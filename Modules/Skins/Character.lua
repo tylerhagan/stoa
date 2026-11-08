@@ -94,7 +94,7 @@ local function seatLevel()
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	if title then
 		title:ClearAllPoints()
-		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10)
+		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10 - (frame.stoaHeader.stoaRaise or 0) / 2)
 		title:SetJustifyH("LEFT")
 	end
 	level:ClearAllPoints()
