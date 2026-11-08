@@ -208,6 +208,31 @@ local CLASS_THEMES = {
 Stoa.space = { xs = 4, s = 8, m = 12, l = 16, xl = 24, xxl = 36 }
 Stoa.typeSize = { micro = 10, caption = 11, body = 12, label = 14, name = 16, title = 20, display = 28, hero = 38 }
 
+-- The rare's silver, wherever a rank is drawn (plaques, tooltips, gallery).
+Stoa.silver = { 0.79, 0.8, 0.82 }
+
+-- Text size (Stoa.db.textSize): one factor over every size above, chosen
+-- in Settings > Look. Whatever the factor, the smallest text keeps at
+-- least MIN_PIXELS on the screen, since a low UI scale on a tall monitor
+-- can shrink a caption past reading.
+Stoa.textScales = { standard = 1, larger = 1.12, largest = 1.25 }
+local MIN_PIXELS = 13
+
+local function pointsPerPixel()
+	local scale = UIParent and UIParent.GetEffectiveScale and UIParent:GetEffectiveScale() or 1
+	local height = GetPhysicalScreenSize and select(2, GetPhysicalScreenSize()) or 768
+	return scale * (height / 768)
+end
+
+-- A size in points after the text size setting and the floor.
+function Stoa:TypeSize(size)
+	local factor = Stoa.textScales[self.db and self.db.textSize or "standard"] or 1
+	size = size * factor
+	local perPixel = pointsPerPixel()
+	if perPixel > 0 and size * perPixel < MIN_PIXELS then size = MIN_PIXELS / perPixel end
+	return size
+end
+
 -- State words and the one colour each takes, everywhere Stoa writes them
 -- (badges, tooltips, plaques, cells). Colour never carries a state alone:
 -- the word is always there. muted = idle or out of play, text = normal,
@@ -244,6 +269,13 @@ Stoa.fonts = {
 -- SetFont raises an error for a missing file, so each candidate is tried in a
 -- pcall and the first one that loads wins.
 function Stoa:SetFont(fontString, kind, size, flags)
+	size = self:TypeSize(size)
+	-- Outlined text is text over the world; it always gets the same soft
+	-- shadow too, so every such word reads the same.
+	if flags and flags:find("OUTLINE") then
+		fontString:SetShadowColor(0, 0, 0, 0.9)
+		fontString:SetShadowOffset(1, -1)
+	end
 	for _, candidate in ipairs(self.fonts[kind] or self.fonts.sans) do
 		local path, scale = candidate[1], candidate[2]
 		local ok, loaded = pcall(fontString.SetFont, fontString, path, size * scale, flags or "")

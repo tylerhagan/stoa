@@ -132,7 +132,7 @@ function Away:FillWhispers()
 	self.heard:SetText(#list > 0 and "WHILE YOU WERE AWAY" or "")
 	for i, fs in ipairs(self.lines) do
 		local entry = list[#list - i + 1]
-		fs:SetText(entry and ("|cffa39e94%s|r  %s"):format(entry[1], entry[2]) or "")
+		fs:SetText(entry and ("%s%s|r  %s"):format(Stoa:Hex("muted"), entry[1], entry[2]) or "")
 	end
 end
 

@@ -151,11 +151,15 @@ end
 
 -- Type -----------------------------------------------------------------------
 
--- Keeps the size Blizzard chose (it follows the nameplate size setting).
+-- Keeps the size Blizzard chose (it follows the nameplate size setting),
+-- remembered from the first look so the text size setting applies once.
 local function sans(fs)
 	if not (fs and fs.GetFont) then return end
-	local _, size = fs:GetFont()
-	Stoa:SetFont(fs, "sans", size or Stoa.typeSize.body)
+	if not fs.stoaBaseSize then
+		local _, size = fs:GetFont()
+		fs.stoaBaseSize = size or Stoa.typeSize.body
+	end
+	Stoa:SetFont(fs, "sans", fs.stoaBaseSize)
 	UI.legible(fs)
 end
 

@@ -535,7 +535,7 @@ function Halo:UpdateTarget()
 		or (rank == "elite" or rank == "worldboss") and "elite" or nil
 	target.plaque:SetRank(plaqueRank)
 	target.caption:SetTextColor(Stoa:Color(plaqueRank and "accent" or "muted"))
-	if plaqueRank == "rare" then target.caption:SetTextColor(0.79, 0.8, 0.82) end
+	if plaqueRank == "rare" then target.caption:SetTextColor(unpack(Stoa.silver)) end
 
 	-- A dead target says so in words and steps back, rather than reading as
 	-- a hostile at zero.
@@ -709,8 +709,7 @@ function Halo:UpdateReminders()
 	end
 	local line = self.reminders
 	local parts = {}
-	local r, g, b = Stoa:Color("danger")
-	local warn = string.format("|cff%02x%02x%02x", r * 255, g * 255, b * 255)
+	local warn = Stoa:Hex("danger")
 	for _, word in ipairs(missing) do parts[#parts + 1] = warn .. word .. "|r" end
 	if active then parts[#parts + 1] = active end
 	line:SetText(table.concat(parts, "  ·  "))

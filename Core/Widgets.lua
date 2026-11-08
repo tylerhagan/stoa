@@ -924,7 +924,7 @@ end
 -- and a thin strip along the top in the unit's reaction colour (hostile
 -- targets). Elite edges turn gold and rare silver. A solid card read
 -- better than the earlier see-through leather plaque with a double edge.
-local SILVER = { 0.79, 0.8, 0.82 }
+local SILVER = Stoa.silver
 local PORTRAIT = 46
 local PORTRAIT_INSET = 10
 -- Room the portrait takes from the side it sits on: callers keep their
