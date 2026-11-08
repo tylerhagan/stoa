@@ -808,7 +808,14 @@ function UI.button(parent, label, width, onClick)
 	text:SetPoint("CENTER")
 	text:SetText(label)
 	button.text = text
+	-- Four looks: plain, lit (hovered or selected: accent word and edge),
+	-- pressed (the word sinks a pixel), and disabled (muted word, no edge).
 	local function colour()
+		if not button:IsEnabled() then
+			text:SetTextColor(Stoa:Color("muted"))
+			glow:Clear()
+			return
+		end
 		local lit = button.selected or button:IsMouseOver()
 		text:SetTextColor(Stoa:Color(lit and "accent" or "text"))
 		if lit then glow:Set(Stoa:Color("accent")) else glow:Clear() end
@@ -819,6 +826,12 @@ function UI.button(parent, label, width, onClick)
 	end
 	button:SetScript("OnEnter", colour)
 	button:SetScript("OnLeave", colour)
+	button:SetScript("OnMouseDown", function(self)
+		if self:IsEnabled() then text:SetPoint("CENTER", 1, -1) end
+	end)
+	button:SetScript("OnMouseUp", function() text:SetPoint("CENTER", 0, 0) end)
+	button:SetScript("OnEnable", colour)
+	button:SetScript("OnDisable", colour)
 	if onClick then button:SetScript("OnClick", onClick) end
 	Stoa:On("STOA_THEME_CHANGED", colour)
 	colour()
