@@ -61,12 +61,7 @@ for key in pairs(accountDefaults) do
 	if key ~= "schema" and key ~= "junk" and key ~= "modules" then PERSONAL[#PERSONAL + 1] = key end
 end
 
-local function copy(value)
-	if type(value) ~= "table" then return value end
-	local out = {}
-	for k, v in pairs(value) do out[k] = copy(v) end
-	return out
-end
+local copy = Stoa.copy
 
 -- This character's settings into StoaDB, where the code reads them.
 local function loadSettings()

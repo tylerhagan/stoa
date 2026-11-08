@@ -19,12 +19,7 @@ local OWN = { welcomed = true }
 -- Class-bound: only taken from a setup of the same class.
 local CLASS_BOUND = { roles = true, clicks = true }
 
-local function copy(value)
-	if type(value) ~= "table" then return value end
-	local out = {}
-	for k, v in pairs(value) do out[k] = copy(v) end
-	return out
-end
+local copy = Stoa.copy
 
 local function store()
 	StoaDB.setups = StoaDB.setups or {}

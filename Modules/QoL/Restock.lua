@@ -17,11 +17,7 @@ local function list()
 end
 Restock.list = list
 
-local function money(copper)
-	local format = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetCoinTextureString
-	if format then return format(copper) end
-	return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
-end
+local function money(copper) return Stoa:Money(copper) end
 
 function Restock.name(id)
 	local name = C_Item and C_Item.GetItemNameByID and Stoa.safe.call(C_Item.GetItemNameByID, id)
