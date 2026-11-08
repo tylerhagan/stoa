@@ -2,6 +2,26 @@
 local _, ns = ...
 local Stoa = ns.Stoa
 
+-- Tables ---------------------------------------------------------------------------
+
+-- A deep copy of a value: tables copied through, everything else as is.
+function Stoa.copy(value)
+	if type(value) ~= "table" then return value end
+	local out = {}
+	for k, v in pairs(value) do out[k] = Stoa.copy(v) end
+	return out
+end
+
+-- Money ----------------------------------------------------------------------------
+
+-- Copper as the game writes it, with coin icons; plain letters without them.
+function Stoa:Money(copper)
+	copper = self:PlainNumber(copper) or 0
+	local format = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetCoinTextureString
+	if format then return format(copper) end
+	return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
+end
+
 -- Colour escapes ---------------------------------------------------------------
 
 -- The chat colour code for a colour, from numbers or a token name.

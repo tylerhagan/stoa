@@ -849,6 +849,7 @@ function UI.itemButton(parent, name, size)
 	button.cooldown = cooldown
 
 	function button:SetItem(link)
+		if InCombatLockdown() then return end
 		self.link = link
 		local id = link and Stoa.Items.id(link)
 		self:SetAttribute("item", id and ("item:" .. id) or nil)

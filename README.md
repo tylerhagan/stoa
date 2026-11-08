@@ -165,7 +165,7 @@ Fonts are the main gap: see below.
 | `/stoa windows reset` | Put every moved Blizzard window back in its usual place |
 | `/stoa theme` | Cycle the themes (house, Your class, then each class) |
 | `/stoa keywords inv, invite` | Set auto-invite keywords |
-| `/stoa friends` | Open the Company roster |
+| `/stoa friends` | Open the Company roster (`/stoa company` too) |
 | `/stoa glance` | List what At a glance can show; `/stoa glance add <name>`, `remove <name>`, `reset` (`/stoa tally` still works) |
 | `/stoa welcome` | Open the welcome wizard again |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames STOA relies on against this game build |
@@ -196,6 +196,13 @@ Fonts are the main gap: see below.
 | `/stoa test` | Show sample party cards without a group; `/stoa test raid`, `raid10` or `raid40` for a raid |
 | `/stoa probe` | In a fight, print what the game hides from addons right now |
 | `/stoa combat` | Practice combat out of combat: the console folds, the Halo, combat bar and group frames take their combat places. Again to end it |
+| `/stoa setups` | List the setups your other characters saved; `/stoa setups load <number>` copies one |
+| `/stoa looks` | Which supported addons (Questie, Bagnon, Details) wear STOA's look, and offers it again where declined |
+| `/stoa gallery` | Open the widget gallery: every STOA control and surface on one page |
+| `/stoa procs list` | What procs your class watches and whether each is known; `/stoa procs test` shows the proc art and glow |
+| `/stoa auras [ids]` | Out of combat, report what the game's aura container can draw, for the given spell IDs |
+| `/stoa timers` | Show sample flight and breath timers |
+| `/stoa move` | Same as `/stoa unlock` |
 
 ## Install
 

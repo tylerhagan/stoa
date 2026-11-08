@@ -16,11 +16,7 @@ local Mail = Stoa:NewModule("Mail", {
 local RECENT = 10
 local STEP = 0.3
 
-local function money(copper)
-	local format = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetCoinTextureString
-	if format then return format(copper) end
-	return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
-end
+local function money(copper) return Stoa:Money(copper) end
 
 local function recent()
 	StoaDB.mailRecent = StoaDB.mailRecent or {}

@@ -104,6 +104,8 @@ end
 
 -- Sizes and places the cards for the current role. Out of combat only.
 function Party:Layout()
+	-- Secure frames can't move in a fight; the caller comes back after it.
+	if InCombatLockdown() then return end
 	local layout = layoutFor(Stoa:GetRole())
 	local frame = self.frame
 	local count = self:VisibleCount()

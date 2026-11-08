@@ -23,12 +23,7 @@ function Stoa:SpecSettings(module, list)
 	for _, key in ipairs(list) do table.insert(keys[module.name], key) end
 end
 
-local function copy(value)
-	if type(value) ~= "table" then return value end
-	local out = {}
-	for k, v in pairs(value) do out[k] = copy(v) end
-	return out
-end
+local copy = Stoa.copy
 
 local function store(slot)
 	if not slot then return end
