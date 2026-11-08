@@ -40,8 +40,7 @@ local Tooltip = Stoa:NewModule("Tooltip", {
 	combatHide = false,
 })
 
--- The rare's silver, as on the target plaque.
-local RARE_SILVER = { 0.79, 0.8, 0.82 }
+local RARE_SILVER = Stoa.silver
 -- Room around the name: above it, and between the header and the lines.
 local HEADER_TOP = 14
 local HEADER_BELOW = 8
@@ -58,12 +57,8 @@ local function known(value)
 	return value
 end
 
-local function hex(r, g, b)
-	return ("|cff%02x%02x%02x"):format(r * 255, g * 255, b * 255)
-end
-
 local function tokenHex(token)
-	return hex(Stoa:Color(token))
+	return Stoa:Hex(token)
 end
 
 -- Colours -----------------------------------------------------------------------
@@ -602,14 +597,15 @@ local function edge(tip)
 	tip:HookScript("OnHide", clear)
 end
 
+-- The game's tooltip fonts in Stoa's faces and sizes (the text size
+-- setting and its floor apply through Stoa:SetFont).
 local function fonts()
-	local serif, sans = Stoa.fonts.serif[1], Stoa.fonts.sans[1]
-	local function face(object, file, size)
-		if object and object.SetFont then pcall(object.SetFont, object, file[1], size * file[2], "") end
+	local function face(object, kind, size)
+		if object and object.SetFont then Stoa:SetFont(object, kind, size) end
 	end
-	face(GameTooltipHeaderText, serif, 15)
-	face(GameTooltipText, sans, 12)
-	face(GameTooltipTextSmall, sans, 11)
+	face(GameTooltipHeaderText, "serif", Stoa.typeSize.name)
+	face(GameTooltipText, "sans", Stoa.typeSize.body)
+	face(GameTooltipTextSmall, "sans", Stoa.typeSize.caption)
 end
 
 -- Unit cards hidden in combat unless you hold Shift.

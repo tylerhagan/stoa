@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Text size: a setting in Look (Standard, Larger, Largest) scales every STOA size together, and the smallest text never drops below 13 pixels on the screen whatever the UI scale, so captions, tooltips and nameplate cast names stay readable on a tall monitor at a low UI scale. Every outlined word over the world now carries the same soft shadow.
 - Class signatures checked against Forever's launch notes: Shadow Word: Death is back in the Shadow next press (it arrives at level 32), Twist of Light is gone from the Paladin signature (Forever removed the talent), the Warlock coin is named Bane of Agony. Settings and the welcome page say what's true now: settings are per character, setup is a few short steps. The repo carries a LICENSE (all rights reserved; fonts under the OFL).
 - The threat meter sits to the left of the combat bar in a fight, instead of at the screen's edge under the damage meters.
 - Every Blizzard window (map, character, spellbook and the rest) wears one header: a dark embossed metal plate, full width, rising a little above the window, with the title larger in the display face.

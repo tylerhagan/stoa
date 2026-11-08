@@ -18,6 +18,8 @@ local accountDefaults = {
 	schema = 1,
 	theme = "Bone",
 	vision = "Standard",
+	-- One factor over every STOA type size: "standard", "larger", "largest".
+	textSize = "standard",
 	-- The stone behind windows.
 	windowStone = true,
 	smoothBars = true,

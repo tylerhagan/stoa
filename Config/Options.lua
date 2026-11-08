@@ -191,6 +191,9 @@ local function build()
 		list = true, cmd = "/stoa vision", words = "colour blind color blind cvd deuteranopia protanopia tritanopia accessibility",
 		change = function(_, v) Stoa:SetVision(v) end,
 	})
+	choice(db, "textSize", "Text size", "Every STOA size together: words, numbers, tooltips and pages. Whatever you pick, the smallest text keeps at least 13 pixels on the screen, so a low UI scale never shrinks a caption past reading.", "standard", {
+		{ "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" },
+	}, { reload = true, words = "font size scale readable small big" })
 	group = "Painted pieces"
 	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, words = "brass frame leather fancy" })
 	toggle(db, "windowStone", "Stone behind windows", "Faint rings and grain in the theme's colour behind windows and STOA's own pages. The console keeps its leather.", true, {
