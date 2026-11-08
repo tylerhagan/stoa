@@ -11,11 +11,7 @@ local Merchant = Stoa:NewModule("Merchant", {
 
 -- Money as gold, silver and copper. The coin helper moved between clients,
 -- so each home is tried before a plain text fallback.
-local function money(copper)
-	local format = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetCoinTextureString
-	if format then return format(copper) end
-	return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
-end
+local function money(copper) return Stoa:Money(copper) end
 
 local function junkValue()
 	local total = 0

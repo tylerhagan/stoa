@@ -45,12 +45,7 @@ local function saved()
 	return Stoa.db.looks
 end
 
-local function copy(value)
-	if type(value) ~= "table" then return value end
-	local out = {}
-	for k, v in pairs(value) do out[k] = copy(v) end
-	return out
-end
+local copy = Stoa.copy
 
 -- Questie -------------------------------------------------------------------------
 -- Questie reads its tracker's fonts by LibSharedMedia name from its profile.
