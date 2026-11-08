@@ -282,7 +282,7 @@ local function build()
 	})
 	toggle(of("Manager"), "showBlizzard", "Keep the Cooldown Manager's rows on screen", "Off keeps the game's rows running but see-through, so the Halo is the one place cooldowns show.", false, { id = "cdmShow", change = refresh("Manager", "Quiet") })
 	actions("cdmProbe", "Check it", "Lists the spells the Cooldown Manager tracks, and what STOA can read of each, in chat.", { { "What it tracks", command("cdm") } }, { cmd = "/stoa cdm" })
-	group = "Will my DoTs kill it"
+	group = "DoT kill marks"
 	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in bone, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", words = "dot damage execute", change = refresh("Lethal", "Update") })
 	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", change = refresh("Lethal", "Update") })
 	group = "Shadow priest"
@@ -301,9 +301,9 @@ local function build()
 	page = "group"
 	group = "Party and raid cards"
 	toggle(party, "enabled", "Show STOA party cards", "Large beside the Halo when you heal, compact on the left otherwise.", true, { id = "partyOn", reload = true, words = "party frames unit" })
-	toggle(party, "hideBlizzardParty", "Hide Blizzard's party frames", "", true, { reload = true })
+	toggle(party, "hideBlizzardParty", "Hide Blizzard's party frames", "The game's own party frames stay hidden while STOA's cards show. Off keeps both.", true, { reload = true })
 	toggle(of("Raid"), "enabled", "Show STOA raid frames", "A grid of compact cards, one column per group.", true, { id = "raidOn", reload = true, words = "raid frames unit" })
-	toggle(of("Raid"), "hideBlizzardRaid", "Hide Blizzard's raid frames", "", true, { reload = true })
+	toggle(of("Raid"), "hideBlizzardRaid", "Hide Blizzard's raid frames", "The game's own raid frames stay hidden while STOA's grid shows. Off keeps both.", true, { reload = true })
 	toggle(party, "quietCards", "Quiet group frames when not healing", "Tanking or dealing damage, party and raid cards show health and only the words you can act on: a debuff you can dispel, dead or offline. No buff words.", true, {
 		words = "party raid frames unit", change = function() if Stoa.modules.Party.cards then Stoa.modules.Party:UpdateAll() end end,
 	})
@@ -444,7 +444,7 @@ local function build()
 	group = "Chat"
 	local look = of("ChatLook")
 	toggle(look, "times", "Times on chat lines", "Each line starts with a quiet time and a thin rule, so messages line up in a column. Skipped when the game's own timestamps are on.", true, { words = "timestamps clock" })
-	toggle(look, "air", "More space between chat lines", "", true, { words = "spacing", change = refresh("ChatLook", "Air") })
+	toggle(look, "air", "More space between chat lines", "A little air between lines, so a busy chat reads in rows rather than a block.", true, { words = "spacing", change = refresh("ChatLook", "Air") })
 	toggle(look, "rail", "Chat buttons in a column", "Friends, channels, voice and the chat menu in one quiet column down the chat's left side.", true, { reload = true })
 	toggle(look, "input", "Quiet typing box", "The box you type in becomes a dark strip under the messages with a fine rule above.", true, { reload = true, words = "edit box" })
 	toggle(of("Chat"), "links", "Clickable web addresses", "Web addresses in chat become links; a click shows the address in a box to copy.", true, { reload = true, words = "url" })
@@ -503,9 +503,9 @@ local function build()
 	toggle(comforts, "acceptRes", "Accept resurrections", "Takes a resurrection as soon as it's offered, unless whoever cast it is still fighting. Hold Shift to wait.", false, { words = "rez resurrect" })
 	group = "Merchants"
 	local merchant = of("Merchant")
-	toggle(merchant, "sellJunk", "Sell grey junk", "", true, { words = "vendor" })
-	toggle(merchant, "autoRepair", "Repair gear", "", true, { words = "vendor durability" })
-	toggle(merchant, "useGuildFunds", "Use guild funds when allowed", "", true)
+	toggle(merchant, "sellJunk", "Sell grey junk", "At a merchant, greys and anything you marked as junk are sold at once, with what they fetched noted in chat. Hold Shift while opening the merchant to keep them.", true, { words = "vendor" })
+	toggle(merchant, "autoRepair", "Repair gear", "At a merchant who repairs, everything you wear is mended at once, with the cost noted in chat. Hold Shift while opening the merchant to skip it.", true, { words = "vendor durability" })
+	toggle(merchant, "useGuildFunds", "Use guild funds when allowed", "Repairs draw on the guild bank first when your rank may, and your own gold otherwise.", true)
 	add({
 		kind = "words", id = "junkList", name = "Always sell", cmd = "/stoa junk add",
 		desc = "Items sold with your grey junk, on every character. Shift-click an item in your bags while the box below is open, or type its name or number. The Junk button on your bags marks them by clicking.",
@@ -552,10 +552,10 @@ local function build()
 	button("awayNow", "See it now", "Shows the away screen without going away. Back or /stoa away closes it.", "Show", command("away"), { cmd = "/stoa away", words = "afk preview" })
 	group = "People"
 	local social = of("Social")
-	toggle(social, "acceptFriendInvites", "Accept friend and guild invites", "", true, { words = "party group" })
-	toggle(social, "declineStrangerInvites", "Decline stranger invites", "", false)
-	toggle(social, "declineStrangerDuels", "Decline stranger duels", "", true)
-	toggle(social, "declineStrangerGuildInvites", "Decline stranger guild invites", "", true)
+	toggle(social, "acceptFriendInvites", "Accept friend and guild invites", "A party invite from a friend, Battle.net friend or guildmate is taken as it comes, and noted in chat.", true, { words = "party group" })
+	toggle(social, "declineStrangerInvites", "Decline stranger invites", "A party invite from anyone you don't know is turned down quietly, and noted in chat.", false)
+	toggle(social, "declineStrangerDuels", "Decline stranger duels", "A duel from anyone you don't know is turned down quietly. Friends and guildmates still get through (Decline duels, under Comforts, turns down everyone).", true)
+	toggle(social, "declineStrangerGuildInvites", "Decline stranger guild invites", "A guild invite from anyone you don't know is turned down quietly, and noted in chat.", true)
 	group = "Auto-invite"
 	local invite = of("AutoInvite")
 	toggle(invite, "enabled", "Invite on a keyword", "Friends and guildmates who whisper one of the words below get an invite.", true, { id = "inviteOn", words = "auto invite inv" })
@@ -578,7 +578,7 @@ local function build()
 		end,
 	})
 	toggle(invite, "strangersToo", "Invite strangers too", "Anyone who whispers a word, not just friends and guildmates.", false)
-	toggle(invite, "convertToRaid", "Make a raid when full", "", true)
+	toggle(invite, "convertToRaid", "Make a raid when full", "When the fifth person joins and more are waiting, the party is turned into a raid so the rest can come in.", true)
 	toggle(invite, "guildChat", "Words work in guild chat", "A guildmate saying just the word in guild chat gets an invite.", false)
 	button("company", "Company", "Friends and guildmates who are online: click to whisper, Shift-click to invite.", "Open", function() Stoa.modules.Roster:Toggle() end, { cmd = "/stoa friends", words = "friends roster guild" })
 
