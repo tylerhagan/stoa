@@ -242,11 +242,20 @@ end
 -- in the middle of it on the left, the close cross on the right. Out of
 -- combat only, so moving them never touches a locked frame.
 local PLAIN_HEADER = 40
+-- Blizzard windows' metal header rises this far above the window's top, so
+-- the title has room without covering what Blizzard puts under it.
+local RAISE = 18
+Windows.RAISE = RAISE
 
 local function seatTitle(frame, title, close)
 	local header = frame.stoaHeader
 	if not header or InCombatLockdown() then return end
-	if title then
+	if title and frame.stoaPlainHeader and not frame.stoaOwnTitle then
+		Stoa:SetFont(title, "serif", Stoa.typeSize.title)
+		title:SetShadowColor(0, 0, 0, 0.9)
+		title:SetShadowOffset(1, -1)
+	end
+	if title and not frame.stoaOwnTitle then
 		title:ClearAllPoints()
 		title:SetPoint("LEFT", header, "LEFT", TITLE_INSET, 0)
 		title:SetJustifyH("LEFT")
@@ -294,6 +303,25 @@ local function bandHeight(frame)
 	return nil
 end
 
+-- How far this window's header rises: Blizzard windows with the metal
+-- header, except bags (stacked on each other) and the map filling the
+-- screen (no room above it).
+local function raiseOf(frame)
+	if not frame.stoaPlainHeader then return 0 end
+	local name = frame.GetName and frame:GetName() or ""
+	if name:find("^ContainerFrame") then return 0 end
+	local map = _G.WorldMapFrame
+	if map and frame == map.BorderFrame and map.IsMaximized and map:IsMaximized() then return 0 end
+	return RAISE
+end
+
+-- Lifts the panel's fill and edge with the header.
+local function liftPanel(frame, raise)
+	for _, tex in ipairs({ frame.stoaPanelBg, frame.stoaPanelEdge and frame.stoaPanelEdge.edges and frame.stoaPanelEdge.edges[1] }) do
+		if tex and tex.SetTextureSliceMargins then tex:SetPoint("TOPLEFT", 0, raise) end
+	end
+end
+
 function Windows:Settle(frame)
 	if not frame or InCombatLockdown() then return end
 	hide(frame.NineSlice)
@@ -303,16 +331,22 @@ function Windows:Settle(frame)
 	hide(frame.PortraitOverlay)
 	local header = frame.stoaHeader
 	local height = header and bandHeight(frame)
-	if height and header.stoaHeight ~= height then
+	local raise = header and raiseOf(frame) or 0
+	if height and (header.stoaHeight ~= height or header.stoaRaise ~= raise) then
 		header:ClearAllPoints()
-		header:SetPoint("TOPLEFT")
-		header:SetPoint("TOPRIGHT")
-		header:SetHeight(height)
-		header.stoaHeight = height
+		header:SetPoint("TOPLEFT", 0, raise)
+		header:SetPoint("TOPRIGHT", 0, raise)
+		header:SetHeight(height + raise)
+		header.stoaHeight, header.stoaRaise = height, raise
+		liftPanel(frame, raise)
 	end
+	local name = frame.GetName and frame:GetName()
 	if not frame.stoaBorderOnly then
-		local name = frame.GetName and frame:GetName()
 		pcall(seatTitle, frame, titleOf(frame), frame.CloseButton or (name and _G[name .. "CloseButton"]))
+	elseif frame.stoaPlainHeader then
+		-- Border-only windows keep their own buttons; only the title moves
+		-- onto the metal.
+		pcall(seatTitle, frame, titleOf(frame), nil)
 	end
 	for _, step in ipairs(frame.stoaSettlers or {}) do
 		xpcall(step, Stoa.catch, frame)
@@ -365,7 +399,7 @@ function Windows:Dress(frame)
 	})
 
 	if title then
-		Stoa:SetFont(title, "serif", Stoa.typeSize.label)
+		Stoa:SetFont(title, "serif", Stoa.typeSize.title)
 		title:SetTextColor(Stoa:Color("text"))
 	end
 
