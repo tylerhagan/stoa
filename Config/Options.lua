@@ -246,7 +246,7 @@ local function build()
 	toggle(of("CombatBar"), "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before.", true, { id = "combatBar", reload = true, words = "action bar" })
 	local rowChoices = { { "1", "1" }, { "2", "2" }, { "3", "3" } }
 	local function relayout() Stoa:AfterCombat(function() Stoa.modules.CombatBar:Layout() end) end
-	choice(of("CombatBar"), "rows", "Combat rows", "How many rows show under the Halo when you tank or deal damage: your main bar, then bottom-left, then bottom-right. Each extra row is a step smaller and shows only the buttons you've filled.", "2", rowChoices, { scope = "Per spec", words = "action bar buttons", change = relayout })
+	choice(of("CombatBar"), "rows", "Combat rows", "How many rows show under the Halo when you tank or deal damage: your main bar, then bottom-left, then bottom-right. Extra rows line up under the first and show only the buttons you've filled.", "2", rowChoices, { scope = "Per spec", words = "action bar buttons", change = relayout })
 	choice(of("CombatBar"), "healerRows", "Combat rows when healing", "The same, for healing. One keeps the group frames close under your spells.", "1", rowChoices, { scope = "Per spec", change = relayout })
 	toggle(of("ActionBars"), "combatHide", "Hand the bars to the Halo in combat", "With the combat bar on, the console's action bars step aside in combat and only the compact bar under the Halo shows. Your keybinds keep working.", true, {
 		change = function(_, v) Stoa.modules.ActionBars:SetOption("combatHide", v) end,
@@ -361,6 +361,9 @@ local function build()
 	choice(plates, "scaleChoice", "Target plate size", "Makes your target's plate a little larger, using the game's own setting.", "100", {
 		{ "100", "Same" }, { "115", "Larger" }, { "130", "Largest" },
 	}, { id = "plateScale", game = true, words = "nameplateSelectedScale", change = function(_, v) plates().targetScale = tonumber(v) or 100; restyle() end })
+	choice(plates, "damageText", "Damage numbers", "The size of the game's numbers over what you hit. The game draws them in the world, so they can't be moved, but smaller ones cover less of the Halo when an enemy stands on you.", "75", {
+		{ "100", "Game size" }, { "75", "Smaller" }, { "55", "Small" },
+	}, { id = "damageText", game = true, words = "floating combat text world text scale numbers", change = restyle })
 	group = "Tooltips"
 	toggle(tooltip, "enabled", "Tooltip cards", "Tooltips edged by rank or item quality, with whom a unit targets, what it casts, your threat, a player's item level and how many of an item you own.", true, { id = "tooltipOn", reload = true })
 	choice(tooltip, "anchor", "Tooltip position", "Where tooltips for the world and STOA's frames appear.", "console", {
@@ -384,6 +387,7 @@ local function build()
 	toggle(of("Character"), "enabled", "Restyle the character sheet", "Item level and quality edges on every slot, WORN and BROKEN on gear that needs repair, an average item level line. The inspect window gets item levels too.", true, { id = "character", reload = true, words = "paper doll gear durability" })
 	toggle(of("Top"), "enabled", "Restyle the top of the screen", "Buffs as cropped icons with quiet timers, the quest tracker in STOA's type, and the minimap's zone header on a dark panel.", true, { id = "top", reload = true, words = "buffs auras objective tracker" })
 	toggle(of("Top"), "buffList", "Buffs as a list", "Each buff's name and time left beside its icon, easy to scan before a pull. Works best with the buff frame set to one column in Edit Mode.", false, { words = "auras", change = refresh("Top", "RefreshBuffList") })
+	toggle(of("Top"), "trackerFocus", "Quiet quest list in combat", "In a fight, every quest in the tracker dims except the one you're working on: the last one that moved on, or the one you follow on the map. Hover the list to see it all.", true, { words = "objective tracker fade combat focus", change = refresh("Top", "FocusTracker") })
 	toggle(of("Swing"), "enabled", "Restyle the swing timer", "Blizzard's swing timer as a flat bar in a rounded dark track: pale gold for the main hand, blue for the off hand. Place it in Edit Mode.", true, { id = "swing", reload = true, words = "auto attack melee" })
 	toggle(of("Meters"), "enabled", "Restyle the damage meter", "Blizzard's damage and healing meters as words over the world with no panel: faint bone bars, your own bar in the accent.", true, { id = "meters", reload = true, words = "dps meter hps details recount" })
 	toggle(of("Meters"), "place", "Meters in the top-left corner", "Every meter window sits side by side in one strip flush with the top-left corner. Off leaves them where Edit Mode put them.", true, {
