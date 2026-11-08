@@ -19,8 +19,10 @@ local More = Stoa:NewModule("MoreWindows")
 -- world map's border frame alone. "parts" are extra named frames whose own
 -- art is hidden (insets and money bars).
 local TARGETS = {
-	{ name = "PlayerSpellsFrame" },
-	{ name = "SpellBookFrame" },
+	-- The spellbook's tabs start just under its title, so its metal strip
+	-- stays short and the title sits above them.
+	{ name = "PlayerSpellsFrame", band = 24 },
+	{ name = "SpellBookFrame", band = 24 },
 	{ name = "PlayerTalentFrame" },
 	{ name = "TalentFrame" },
 	{ name = "MailFrame", parts = { "MailFrameInset", "SendMailMoneyInset", "SendMailMoneyBg" } },
@@ -82,7 +84,7 @@ local function dressBorder(frame, bare)
 	if windows and windows.KeepSettled then
 		frame.stoaBorderOnly = true
 		-- The map's strip stays compact: its zone buttons start just under it.
-		if bare then frame.stoaBandHeight = 30 end
+		if bare then frame.stoaBandHeight = 24 end
 		windows:KeepSettled(frame)
 	end
 end
@@ -116,6 +118,7 @@ local function dressTarget(target, frame)
 		local details = QuestMapFrame and QuestMapFrame.DetailsFrame
 		if windows and windows.DressButtonsIn and details then windows.DressButtonsIn(details, 3) end
 	else
+		if target.band then frame.stoaBandHeight = target.band end
 		dressFull(frame)
 	end
 	for _, partName in ipairs(target.parts or {}) do
