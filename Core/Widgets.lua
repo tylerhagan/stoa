@@ -466,6 +466,7 @@ function UI.roundPanel(frame, alpha, kind)
 		tex:Show()
 	end
 	frame.stoaPanelEdge = edge
+	frame.stoaPanelBg = bg
 	UI.applyTheme()
 	return bg
 end
@@ -607,10 +608,13 @@ function UI.band(frame, size, family, plain)
 	header:SetDrawLayer("BACKGROUND", -6)
 	frame.stoaHeader = header
 	if plain then
-		-- The same dark as Blizzard's content below, so the window reads as
-		-- one dark sheet with its title on it.
+		-- Blizzard's windows: a dark metal plate across the top, embossed
+		-- (Tyler, 2026-11-08): a faint warm tone, a sheen on its upper
+		-- half, a bright hairline along its top and a dark line with a
+		-- soft fall under it.
 		header:SetVertexColor(0, 0, 0, UI.PLAIN_HEADER_DARK)
 		frame.stoaPlainHeader = true
+		UI.emboss(frame, header)
 	else
 		local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
 		UI.tint(header, tint.token, tint.alpha)
@@ -618,6 +622,38 @@ function UI.band(frame, size, family, plain)
 	end
 	UI.applyTheme()
 	return header
+end
+
+-- The embossed metal look on a header band (see UI.band).
+local EMBOSS_INSET = 8
+function UI.emboss(frame, header)
+	local tone = sliced(frame, "BACKGROUND", "WindowTop.tga")
+	if tone then
+		tone:ClearAllPoints()
+		tone:SetAllPoints(header)
+		tone:SetDrawLayer("BACKGROUND", -5)
+		UI.tint(tone, "accent", 0.09)
+	end
+	local sheen = frame:CreateTexture(nil, "BACKGROUND", nil, -4)
+	sheen:SetTexture(UI.WHITE)
+	sheen:SetPoint("TOPLEFT", header, "TOPLEFT", EMBOSS_INSET, -1)
+	sheen:SetPoint("TOPRIGHT", header, "TOPRIGHT", -EMBOSS_INSET, -1)
+	sheen:SetPoint("BOTTOM", header, "CENTER")
+	UI.gradient(sheen, "text", 0.07, "VERTICAL", 0, 1)
+	local top = frame:CreateTexture(nil, "BORDER", nil, 3)
+	top:SetTexture(UI.WHITE)
+	UI.pixel(top, "height")
+	top:SetPoint("TOPLEFT", header, "TOPLEFT", EMBOSS_INSET, -1)
+	top:SetPoint("TOPRIGHT", header, "TOPRIGHT", -EMBOSS_INSET, -1)
+	UI.tint(top, "text", 0.22)
+	local lip = frame:CreateTexture(nil, "BORDER", nil, 3)
+	lip:SetTexture(UI.WHITE)
+	UI.pixel(lip, "height")
+	lip:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 1)
+	lip:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 1)
+	UI.tint(lip, "text", 0.07)
+	UI.shadowLine(frame, header)
+	frame.stoaEmbossed = true
 end
 
 -- The footer tray along a frame's bottom, recessed under a dark line.
