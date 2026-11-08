@@ -869,7 +869,7 @@ function Welcome:Summary()
 	add("Ornament", Stoa.db.ornament == "painted" and "Painted" or "Plain")
 	add("Colour vision", VISION_WORDS[Stoa.db.vision or "Standard"] or "Standard")
 	local choice = combatChoice()
-	add("In combat", choice == "fold" and ("Fold, " .. (Stoa.db.calm or "3") .. " s" .. (Stoa.db.calmGroup ~= false and ", waits for group" or ""))
+	add("In combat", choice == "fold" and ("Fold, " .. (Stoa.db.calm or "5") .. " s" .. (Stoa.db.calmGroup ~= false and ", waits for group" or ""))
 		or choice == "open" and "Console open, Halo" or "Console open, no Halo")
 	add("How much", PRESET_WORDS[Stoa.db.preset or "full"][1])
 	for i, row in ipairs(self.addonRows) do

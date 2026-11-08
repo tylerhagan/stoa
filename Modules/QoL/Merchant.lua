@@ -92,6 +92,8 @@ end
 function Merchant:OnEnable()
 	local db = self.db
 	Stoa:On("MERCHANT_SHOW", function()
+		-- Shift stops every comfort; here it keeps your greys and your gold.
+		if IsShiftKeyDown() then return end
 		if db.sellJunk then xpcall(sellJunk, Stoa.catch) end
 		if db.autoRepair and not Stoa:SharedBy("repair") then xpcall(repair, Stoa.catch, db) end
 	end)
