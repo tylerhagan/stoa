@@ -259,8 +259,13 @@ function Backup:Import(text)
 	if type(data) ~= "table" or type(data.account) ~= "table" or type(data.character) ~= "table" then
 		return false, "That backup is missing its settings."
 	end
+	local setups = StoaDB.setups
 	replace(StoaDB, data.account)
+	if StoaDB.setups == nil then StoaDB.setups = setups end
 	replace(StoaCharDB, data.character)
+	-- The backup's account part holds the settings to use here.
+	Stoa:SaveSettings()
+	Stoa.loadingBackup = true
 	ReloadUI()
 	return true
 end
