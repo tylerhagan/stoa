@@ -37,6 +37,10 @@ local Plates = Stoa:NewModule("Plates", {
 	-- 100 to 150: the target plate's size, in percent.
 	targetScale = 100,
 	scaleChoice = "100",
+	-- The game's damage numbers over what you hit, in percent of its size.
+	-- They're drawn in the world, so no addon can move them; smaller keeps
+	-- them from covering the Halo when an enemy stands on you.
+	damageText = "75",
 })
 
 -- Bar height (nil keeps Blizzard's), edge kind and what's written in it.
@@ -465,6 +469,7 @@ end
 -- Settings changes: restyle every plate on screen.
 function Plates:Restyle()
 	self:TargetScale()
+	self:DamageText()
 	eachPlate(applyStyle)
 end
 
@@ -477,6 +482,15 @@ function Plates:TargetScale()
 	end
 end
 
+function Plates:DamageText()
+	local size = tonumber(self.db.damageText) or 100
+	if size ~= 100 then
+		Stoa.GameSettings:Set("Plates", "WorldTextScale", tostring(size / 100))
+	else
+		Stoa.GameSettings:Restore("WorldTextScale")
+	end
+end
+
 function Plates:OnEnable()
 	if not (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return end
 	if CompactUnitFrame_UpdateHealth then
@@ -485,7 +499,7 @@ function Plates:OnEnable()
 		end)
 	end
 	Stoa:On("PLAYER_TARGET_CHANGED", function() eachPlate(targetEdge) end)
-	Stoa:AfterCombat(function() self:TargetScale() end)
+	Stoa:AfterCombat(function() self:TargetScale(); self:DamageText() end)
 	if CompactUnitFrame_UpdateHealthColor then
 		hooksecurefunc("CompactUnitFrame_UpdateHealthColor", function(frame) guarded(colourHealth, frame) end)
 	end

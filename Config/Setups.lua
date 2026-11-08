@@ -1,9 +1,8 @@
 -- Stoa: saved setups, to take your setup to another character.
--- Theme, colour vision, ornament and every module's switches are already
--- account-wide. What a character keeps for itself (frame spots per role,
--- At a glance, combat rows and the other per-spec settings, roles and
--- click-casting) lives in its own saved file, which other characters can't
--- read. So each time you log out, Stoa keeps a copy of this character's
+-- Everything a character keeps for itself (its settings, frame spots per
+-- role, At a glance, combat rows and the other per-spec settings, roles
+-- and click-casting) lives in its own saved file, which other characters
+-- can't read. So each time you log out, Stoa keeps a copy of this character's
 -- setup in the account-wide save, under the character's name. On any other
 -- character, load it from the backup page, the welcome page or
 -- `/stoa setups`: no text to copy.
@@ -42,6 +41,7 @@ end
 function Setups:Save()
 	local key, name = me()
 	if not key then return end
+	Stoa:SaveSettings()
 	local _, classFile = UnitClass("player")
 	local character = {}
 	for k, v in pairs(StoaCharDB) do

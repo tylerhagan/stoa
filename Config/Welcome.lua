@@ -334,7 +334,7 @@ function builders.look(self, step)
 	local note = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
 	note:SetPoint("TOPLEFT", 0, -126)
 	note:SetWidth(BODY_W)
-	note:SetText("Your class follows whichever character you log in on; a named class keeps that theme on every character.")
+	note:SetText("Your class follows whichever character you log in on; a named class keeps that theme on this character.")
 
 	local ornament = UI.caption(step, "Ornament")
 	ornament:SetPoint("TOPLEFT", 0, -156)

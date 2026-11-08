@@ -1,6 +1,14 @@
 -- Stoa: saved settings.
--- StoaDB is account-wide (theme, module switches). StoaCharDB is per character
--- (which role each spec slot plays, frame positions).
+-- StoaDB is the account-wide save; StoaCharDB is per character (which role
+-- each spec slot plays, frame positions).
+--
+-- Settings are per character. The code reads them from StoaDB (Stoa.db and
+-- each module.db), so each character keeps its own copy in
+-- StoaCharDB.settings: at load that copy is put into StoaDB, and at logout
+-- StoaDB's settings are copied back. A character with no copy yet starts
+-- from the settings the last character left, so it's set up from the
+-- first login. What's shared stays shared: junk marks, other addons'
+-- choices, the game settings ledger, alts, saved setups, trainer data.
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -45,9 +53,39 @@ local characterDefaults = {
 	welcomed = false,
 }
 
+-- The account-wide keys that are really one character's settings.
+local PERSONAL = { "modules", "preset" }
+for key in pairs(accountDefaults) do
+	if key ~= "schema" and key ~= "junk" and key ~= "modules" then PERSONAL[#PERSONAL + 1] = key end
+end
+
+local function copy(value)
+	if type(value) ~= "table" then return value end
+	local out = {}
+	for k, v in pairs(value) do out[k] = copy(v) end
+	return out
+end
+
+-- This character's settings into StoaDB, where the code reads them.
+local function loadSettings()
+	local mine = StoaCharDB.settings
+	if type(mine) ~= "table" then return end
+	for _, key in ipairs(PERSONAL) do StoaDB[key] = copy(mine[key]) end
+end
+
+-- StoaDB's settings into this character's save.
+function Stoa:SaveSettings()
+	if not (StoaDB and StoaCharDB) then return end
+	local mine = {}
+	for _, key in ipairs(PERSONAL) do mine[key] = copy(StoaDB[key]) end
+	StoaCharDB.settings = mine
+end
+
 function Stoa:InitializeDatabase()
-	StoaDB = self:ApplyDefaults(StoaDB or {}, accountDefaults)
+	StoaDB = StoaDB or {}
 	StoaCharDB = self:ApplyDefaults(StoaCharDB or {}, characterDefaults)
+	loadSettings()
+	StoaDB = self:ApplyDefaults(StoaDB, accountDefaults)
 
 	for name, module in pairs(self.modules) do
 		StoaDB.modules[name] = self:ApplyDefaults(StoaDB.modules[name] or {}, module.defaults)
@@ -60,3 +98,10 @@ function Stoa:InitializeDatabase()
 	self.db = StoaDB
 	self.char = StoaCharDB
 end
+
+-- Loading a saved setup or a backup puts its own settings in place before the
+-- reload; this session's must not be written over them.
+Stoa:On("PLAYER_LOGOUT", function()
+	if Stoa.loadingSetup or Stoa.loadingBackup then return end
+	Stoa:SaveSettings()
+end)

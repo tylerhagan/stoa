@@ -1,7 +1,8 @@
 -- Stoa: the combat bar.
 -- In combat the console folds away and a compact row of your main bar's
 -- spells sits under the Halo, close to your eyes: rounded icons, the key
--- under each, a sweep for cooldowns, dimmed when you can't use them.
+-- small in each one's top corner, a sweep for cooldowns, dimmed when you
+-- can't use them.
 --
 -- The buttons are Stoa's own secure action buttons pointing at the same
 -- action slots as Blizzard's main bar, so your keybinds keep working on
@@ -11,8 +12,8 @@
 -- shows the row only in combat.
 --
 -- One or two more rows can follow from the bottom-left and bottom-right
--- bars, each a step smaller so the rotation stays biggest. Long cooldowns
--- sit dim until they're ready.
+-- bars, the same size and on the same columns as the first, so the rows
+-- read as one grid. Long cooldowns sit dim until they're ready.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -27,11 +28,11 @@ local TOP = -74
 -- Rows after the main bar: the bar each one mirrors (as its page of action
 -- slots and its key bindings) and its button size.
 local EXTRA_ROWS = {
-	{ page = 6, binding = "MULTIACTIONBAR1BUTTON", size = 34, gap = 7 },
-	{ page = 5, binding = "MULTIACTIONBAR2BUTTON", size = 30, gap = 6 },
+	{ page = 6, binding = "MULTIACTIONBAR1BUTTON", size = SIZE, gap = GAP },
+	{ page = 5, binding = "MULTIACTIONBAR2BUTTON", size = SIZE, gap = GAP },
 }
--- Room for the keys under a row, and between rows.
-local KEY_ROOM = 18
+-- The space between rows (the keys sit inside the buttons).
+local KEY_ROOM = GAP
 -- A cooldown longer than this dims its button until it's ready.
 local LONG_COOLDOWN = 30
 local WAITING_ALPHA = 0.38
@@ -50,10 +51,12 @@ local GetActionInfo = api("GetActionInfo")
 
 local plain = Stoa.safe.plain
 
--- "SHIFT-Q" reads as "s-Q", like Blizzard's short labels.
+-- "SHIFT-Q" reads as "⇧Q", the key's own symbol; Ctrl and Alt keep short
+-- letters ("c-", "a-").
+local SHIFT = "\226\135\167"
 local function shortKey(key)
 	if type(key) ~= "string" then return "" end
-	key = key:gsub("SHIFT%-", "s-"):gsub("CTRL%-", "c-"):gsub("ALT%-", "a-")
+	key = key:gsub("SHIFT%-", SHIFT):gsub("CTRL%-", "c-"):gsub("ALT%-", "a-")
 	key = key:gsub("BUTTON", "M"):gsub("MOUSEWHEELUP", "WU"):gsub("MOUSEWHEELDOWN", "WD")
 	return key
 end
@@ -132,10 +135,11 @@ function Bar:MakeButton(name, parent, size)
 	count:SetPoint("BOTTOMRIGHT", 1, 1)
 	Stoa:SetFont(count, "sans", Stoa.typeSize.caption, "OUTLINE")
 	button.count = count
-	-- The key sits under the button, where the eye already is.
-	local key = UI.text(button, "sans", Stoa.typeSize.label, "muted", "CENTER")
-	key:SetPoint("TOP", button, "BOTTOM", 0, -3)
-	UI.legible(key)
+	-- The key sits small in the top corner, so rows stay close together.
+	local key = UI.text(button, "sans", Stoa.typeSize.caption, "text", "RIGHT")
+	key:SetPoint("TOPRIGHT", -2, -2)
+	Stoa:SetFont(key, "sans", Stoa.typeSize.caption, "OUTLINE")
+	key:SetAlpha(0.85)
 	button.key = key
 
 	button:SetScript("OnEnter", function(own)
@@ -277,7 +281,9 @@ function Bar:Layout()
 			if r < rows and plain(HasAction(button.fixed)) then used[#used + 1] = button end
 		end
 		if #used > 0 then
-			local rowX = -(#used * row.size + (#used - 1) * row.gap) / 2
+			-- On the first row's columns, as near the middle as they fit.
+			local rowX = -width / 2 + math.floor(math.max(0, #filled - #used) / 2) * (SIZE + GAP)
+			if #used > #filled then rowX = -(#used * row.size + (#used - 1) * row.gap) / 2 end
 			for _, button in ipairs(used) do
 				button:ClearAllPoints()
 				button:SetPoint("TOPLEFT", self.anchor, "TOP", rowX, y - TOP)
@@ -396,7 +402,7 @@ function Bar:UpdateState()
 		end
 		local far = inRange == false
 		icon:SetAlpha(far and 0.5 or 1)
-		button.key:SetTextColor(Stoa:Color(far and "danger" or "muted"))
+		button.key:SetTextColor(Stoa:Color(far and "danger" or "text"))
 	end
 end
 
