@@ -81,8 +81,8 @@ local function font(fs, token)
 	fs:SetTextColor(Stoa:Color(token or "text"))
 end
 
--- Beside the combat bar, to its left, where the eye already is in a fight
--- (Tyler, 2026-11-08); under the damage meters when there's no combat bar.
+-- Beside the combat bar, to its left, where the eye already is in a fight;
+-- under the damage meters when there's no combat bar.
 -- A spot set with /stoa unlock wins over both.
 function Threat:Place()
 	local frame = self.frame

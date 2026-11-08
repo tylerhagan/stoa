@@ -286,7 +286,7 @@ local function bandHeight(frame)
 	-- A dark strip holds the title row and every control Blizzard puts
 	-- under it, down to where the content starts.
 	-- Blizzard's windows: a dark header of one set height that holds the
-	-- title (Tyler, 2026-11-05); their tabs and buttons sit below it.
+	-- title; their tabs and buttons sit below it.
 	-- Bags keep the compact row (their slots start near the top), and a
 	-- window can ask for more room (the character sheet's two lines).
 	if frame.stoaPlainHeader then

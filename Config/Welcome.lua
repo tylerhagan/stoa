@@ -240,7 +240,7 @@ function builders.start(self, step)
 	end
 	step.cards = {}
 	local options = {
-		{ "guided", "Set it up with me", "Five short steps, about a minute." },
+		{ "guided", "Set it up with me", "A few short steps, about a minute." },
 		{ "saved", "Use a saved setup", "Every character you play saves its setup when it logs out. Pick one to copy its frames, At a glance and combat rows." },
 		{ "ships", "Start as STOA ships", "Full, the theme you have now and your class's usual roles. Nothing else to choose." },
 	}
@@ -802,7 +802,7 @@ function Welcome:RefreshStart(step)
 						row.text:SetText(setup.name or entry.key)
 						local colour = setup.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[setup.class]
 						if colour then row.dot:SetColorTexture(colour.r, colour.g, colour.b, 1) else row.dot:SetColorTexture(Stoa:Color("muted")) end
-						row.what:SetText(same and "Same class: everything, roles and click-casting too" or "Another class: frames, At a glance and spec settings; roles stay your own")
+						row.what:SetText(same and "Same class: everything, roles and click-casting too" or "Another class: frames and At a glance; roles stay yours")
 						row:ClearAllPoints()
 						row:SetPoint("TOPLEFT", 16, -(y - GAP + 4))
 						row:SetSelected(self.setup == entry.key)
