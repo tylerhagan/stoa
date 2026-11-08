@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- The threat meter sits to the left of the combat bar in a fight, instead of at the screen's edge under the damage meters.
 - Every Blizzard window (map, character, spellbook and the rest) wears one header: a dark embossed metal plate, full width, rising a little above the window, with the title larger in the display face.
 - Settings are per character: each keeps its own, and a new character starts from the last one's (Saved setups still copies another's). The combat bar's keys sit small in each button's corner (⇧ for Shift) and every row is the same size on the same columns. In combat the quest list dims to the quest you're working on, and the game's damage numbers are drawn smaller so they cover less of the Halo.
 - Narrow screens and large UI scales: the console's pages keep clear of health, mana and the action bars, dropping a column instead of overlapping; the chat wraps sooner; and STOA's Edit Mode layout has a compact version (bars stacked under the medallion) that STOA switches to and from by screen width (`/stoa editmode wide` keeps the wide one).

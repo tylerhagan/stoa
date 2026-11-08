@@ -1,7 +1,8 @@
 -- Stoa: the threat meter.
 -- Up to five people in your group, ranked by how close each is to pulling
 -- the enemy you are looking at (or, with no target of your own, the enemy
--- your tank is fighting). It is dressed like the damage meters: outlined
+-- your tank is fighting), to the left of the combat bar. It is dressed
+-- like the damage meters: outlined
 -- words over faint bars, no panel. Your row takes the accent, names carry
 -- class colour, and whoever holds the enemy is marked TANK.
 --
@@ -80,20 +81,33 @@ local function font(fs, token)
 	fs:SetTextColor(Stoa:Color(token or "text"))
 end
 
+-- Beside the combat bar, to its left, where the eye already is in a fight
+-- (Tyler, 2026-11-08); under the damage meters when there's no combat bar.
+-- A spot set with /stoa unlock wins over both.
+function Threat:Place()
+	local frame = self.frame
+	if not frame then return end
+	frame:ClearAllPoints()
+	local bar = _G.StoaCombatBarAnchor
+	local meters = Stoa.modules.Meters
+	local anchor = meters and meters.Anchor and meters:Anchor()
+	if bar and Stoa:IsModuleEnabled("CombatBar") then
+		frame:SetPoint("TOPRIGHT", bar, "TOPLEFT", -24, 0)
+	elseif anchor then
+		frame:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", INSET, -8)
+	else
+		frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", INSET, -184)
+	end
+end
+
 function Threat:Build()
 	if self.frame then return self.frame end
 	local frame = CreateFrame("Frame", "StoaThreat", UIParent)
 	frame:SetSize(WIDTH, ROWS * ROW_HEIGHT)
 	frame:SetFrameStrata("LOW")
 	frame:EnableMouse(false)
-	-- Under the damage meters' strip when it is there, else the same corner.
-	local meters = Stoa.modules.Meters
-	local anchor = meters and meters.Anchor and meters:Anchor()
-	if anchor then
-		frame:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", INSET, -8)
-	else
-		frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", INSET, -184)
-	end
+	self.frame = frame
+	self:Place()
 	frame:SetAlpha(0)
 	frame.rows = {}
 	for i = 1, ROWS do
@@ -119,7 +133,7 @@ function Threat:Build()
 		frame.rows[i] = row
 	end
 	self.frame = frame
-	Stoa:RegisterMover("threat", frame, "Threat meter")
+	Stoa:RegisterMover("threat", frame, "Threat meter", { default = function() Threat:Place() end })
 	return frame
 end
 
