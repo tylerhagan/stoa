@@ -591,8 +591,8 @@ local FOOTER_SHADE = 0.32
 -- The header band along a frame's top. `size` is its height in pixels, or a
 -- region the band ends at (it stops at that region's top). `family` is a
 -- UI.WINDOW_FAMILIES key.
--- `plain`: the band is drawn dark like Blizzard's content under it (Tyler's
--- pick for Blizzard windows), with no shadow line.
+-- `plain`: the band is drawn dark like Blizzard's content under it (the
+-- Blizzard windows' treatment), with no shadow line.
 UI.PLAIN_HEADER_DARK = 0.62
 function UI.band(frame, size, family, plain)
 	local header = sliced(frame, "BACKGROUND", "WindowTop.tga")
@@ -608,8 +608,8 @@ function UI.band(frame, size, family, plain)
 	header:SetDrawLayer("BACKGROUND", -6)
 	frame.stoaHeader = header
 	if plain then
-		-- Blizzard's windows: a dark metal plate across the top, embossed
-		-- (Tyler, 2026-11-08): a faint warm tone, a sheen on its upper
+		-- Blizzard's windows: a dark metal plate across the top, embossed:
+		-- a faint warm tone, a sheen on its upper
 		-- half, a bright hairline along its top and a dark line with a
 		-- soft fall under it.
 		header:SetVertexColor(0, 0, 0, UI.PLAIN_HEADER_DARK)
@@ -922,8 +922,8 @@ end
 -- panel colour, like the windows and tooltips: one fine edge, a soft
 -- shadow under it, the portrait inside on the side that faces the Halo,
 -- and a thin strip along the top in the unit's reaction colour (hostile
--- targets). Elite edges turn gold and rare silver. Tyler chose this over
--- the see-through leather plaque with a double edge (2026-11-05).
+-- targets). Elite edges turn gold and rare silver. A solid card read
+-- better than the earlier see-through leather plaque with a double edge.
 local SILVER = { 0.79, 0.8, 0.82 }
 local PORTRAIT = 46
 local PORTRAIT_INSET = 10

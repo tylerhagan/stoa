@@ -83,7 +83,7 @@ function QuestItems:Place()
 	end
 	-- Only the group frames you can see in your group count: solo, an
 	-- empty holder could still claim the spot and send the row to the
-	-- screen's edge (Tyler, 2026-11-07).
+	-- screen's edge.
 	local group = IsInRaid() and _G.StoaRaid or IsInGroup() and _G.StoaParty or nil
 	if group and overlaps(frame, group) then
 		frame:ClearAllPoints()

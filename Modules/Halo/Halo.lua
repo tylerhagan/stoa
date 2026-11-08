@@ -258,13 +258,13 @@ local TARGET_PAD = 12
 local TARGET_COIN_SPACE = UI.PLAQUE_COIN_SPACE
 
 -- Out of combat the plaque rests just above the console on the mana side,
--- beside the bars you read there (Tyler's pick, 2026-11-05); in a fight it
+-- beside the bars you read there; in a fight it
 -- moves to the Halo's upper right. A spot set with the movers wins.
 local TARGET_REST_Y = 14
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
--- edge (Tyler, 2026-11-07). Out of combat only: the plaque is secure.
+-- edge. Out of combat only: the plaque is secure.
 function Halo:PlaceTargetAuras()
 	local icons = self.target and self.target.auras
 	if not (icons and icons[1]) or InCombatLockdown() then return end
