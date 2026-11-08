@@ -62,8 +62,11 @@ local function dress(frame, token)
 	UI.tint(UI.pillFill(bar, PAD), "panel", 0.85)
 	UI.pillEdge(bar, PAD):Set(0, 0, 0, 0.9)
 	for _, fs in ipairs({ bar.TypeLabel, bar.TimeLabel }) do
-		local _, size = fs:GetFont()
-		Stoa:SetFont(fs, "sans", size or Stoa.typeSize.caption)
+		if not fs.stoaBaseSize then
+			local _, size = fs:GetFont()
+			fs.stoaBaseSize = size or Stoa.typeSize.caption
+		end
+		Stoa:SetFont(fs, "sans", fs.stoaBaseSize)
 		UI.legible(fs)
 	end
 	if frame.ApplyRangePresentation then

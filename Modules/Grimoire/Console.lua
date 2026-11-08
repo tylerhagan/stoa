@@ -710,9 +710,8 @@ function Console:UpdateSeal()
 	-- the role, in the warning colour, so it's caught before the pull.
 	local missing = Stoa.missingBuffs
 	if missing and #missing > 0 then
-		local r, g, b = Stoa:Color("danger")
 		local words = table.concat(missing, " · "):lower():gsub("^%l", string.upper)
-		label = string.format("%s  |cff%02x%02x%02x%s|r", label, r * 255, g * 255, b * 255, words)
+		label = ("%s  %s%s|r"):format(label, Stoa:Hex("danger"), words)
 	end
 	self.roleText:SetText(label)
 	if self.roleWord then

@@ -50,7 +50,7 @@ local function isAddress(text)
 end
 
 local function hex(r, g, b)
-	return ("|cff%02x%02x%02x"):format(r * 255, g * 255, b * 255)
+	return Stoa:Hex(r, g, b)
 end
 
 local function makeLink(address, colour)

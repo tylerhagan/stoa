@@ -2,6 +2,14 @@
 local _, ns = ...
 local Stoa = ns.Stoa
 
+-- Colour escapes ---------------------------------------------------------------
+
+-- The chat colour code for a colour, from numbers or a token name.
+function Stoa:Hex(r, g, b)
+	if type(r) == "string" then r, g, b = self:Color(r) end
+	return ("|cff%02x%02x%02x"):format(r * 255, g * 255, b * 255)
+end
+
 -- Secret values -------------------------------------------------------------
 -- On Forever, many unit values are "secret" in combat: they can be shown by a
 -- widget (StatusBar:SetValue, FontString:SetText) but not compared or used in
