@@ -278,7 +278,7 @@ end
 -- The page --------------------------------------------------------------------
 
 local WIDTH, HEIGHT = 440, 560
-local PAD = 24
+local PAD = Stoa.space.xl
 local ROWS = 15
 local ROW_HEIGHT = 24
 

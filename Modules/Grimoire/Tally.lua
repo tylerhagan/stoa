@@ -710,10 +710,7 @@ function Tally:BuildRow(page, index)
 	UI.tint(pin, "accent")
 	if pin.SetMask then pcall(pin.SetMask, pin, "Interface\\CharacterFrame\\TempPortraitAlphaMask") end
 	pin:Hide()
-	local glow = row:CreateTexture(nil, "BACKGROUND")
-	glow:SetPoint("TOPLEFT", -4, 1)
-	glow:SetPoint("BOTTOMRIGHT", 4, -1)
-	glow:SetTexture("Interface\\Buttons\\WHITE8x8")
+	local glow = UI.pillFill(row, 4)
 	UI.tint(glow, "text", 0.08)
 	glow:Hide()
 	row.label, row.value, row.pin, row.glow = label, value, pin, glow

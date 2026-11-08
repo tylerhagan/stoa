@@ -264,7 +264,7 @@ function Kit:BuildPull()
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 160)
 	frame:SetFrameStrata("HIGH")
 	frame:EnableMouse(false)
-	local number = UI.text(frame, "serif", 96, "text", "CENTER")
+	local number = UI.text(frame, "serif", Stoa.typeSize.hero * 2.5, "text", "CENTER")
 	number:SetPoint("CENTER")
 	UI.legible(number)
 	frame.number = number

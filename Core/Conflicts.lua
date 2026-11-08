@@ -182,7 +182,7 @@ end
 -- The question ------------------------------------------------------------------
 
 local WIDTH, HEIGHT = 460, 220
-local PAD = 26
+local PAD = Stoa.space.xl
 
 -- A small question page with a title, a few lines and two buttons; Stoa's
 -- other questions about addons (Core/Looks.lua) use it too.
