@@ -11,7 +11,7 @@ local Roster = Stoa:NewModule("Roster", {
 })
 
 local WIDTH, HEIGHT = 460, 540
-local PAD = 24
+local PAD = Stoa.space.xl
 local ROWS = 14
 local ROW_HEIGHT = 24
 

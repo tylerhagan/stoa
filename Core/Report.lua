@@ -213,7 +213,7 @@ function Report:Text()
 end
 
 local WIDTH, HEIGHT = 600, 400
-local PAD = 28
+local PAD = 24 -- Stoa.space.xl; Tokens.lua loads after this file
 
 function Report:Build()
 	UI = Stoa.UI
