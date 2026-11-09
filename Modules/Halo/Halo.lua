@@ -386,7 +386,8 @@ function Halo:BuildTarget(frame)
 		cooldown:SetReverse(true)
 		icon.cooldown = cooldown
 		local count = UI.text(icon, "sans", Stoa.typeSize.caption, "text", "RIGHT")
-		count:SetPoint("BOTTOMRIGHT", 2, -2)
+		count:SetPoint("BOTTOMRIGHT", -1, 1)
+		UI.legible(count)
 		icon.count = count
 		-- Hover for the aura's tooltip, as on the game's own buff icons.
 		icon:EnableMouse(true)
@@ -512,6 +513,14 @@ function Halo:UpdateCooldown()
 	end)
 end
 
+function Halo:ResetTargetName()
+	local fs = self.target and self.target.name
+	if not fs or not UnitExists("target") then return end
+	Stoa:SetFont(fs, "serif", Stoa.typeSize.name)
+	fs:SetText("")
+	fs:SetText(UnitName("target"))
+end
+
 function Halo:UpdateTarget()
 	local target = self.target
 	-- Showing and hiding is the unit watch's job, as the frame is secure.
@@ -519,15 +528,11 @@ function Halo:UpdateTarget()
 	local name = UnitName("target")
 	target.name:SetText(name)
 	-- The first time the serif face is drawn the game may not have loaded
-	-- it yet and the string comes out empty; set it again a moment later.
-	-- The width can still come back secret (the string held a secret name a
-	-- moment ago), so it is only compared when it is a plain number.
-	local width = Stoa.safe.plain(target.name:GetStringWidth())
-	if name and not Stoa:IsSecret(name) and width == 0 then
-		C_Timer.After(0.1, function()
-			if UnitExists("target") then target.name:SetText(UnitName("target")) end
-		end)
-	end
+	-- it yet and the string comes out empty, and it can come out empty
+	-- while still measuring wide, so the width can't be trusted. The face
+	-- and the words are set again a moment later, clearing first, since the
+	-- game skips a SetText with the same words.
+	C_Timer.After(0.1, function() self:ResetTargetName() end)
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
 	UI.setHealthPercent(target.health, "target")
@@ -615,6 +620,7 @@ function Halo:UpdateTargetAuras()
 			icon.auraFilter, icon.auraIndex, icon.auraInstanceID = slot.filter, slot.index, slot.id
 			if GameTooltip.IsOwned and GameTooltip:IsOwned(icon) then icon:GetScript("OnEnter")(icon) end
 			icon.texture:SetTexture(aura.icon)
+			icon.count:SetText("")
 			pcall(function()
 				local n = aura.applications
 				icon.count:SetText(n and n > 1 and n or "")
