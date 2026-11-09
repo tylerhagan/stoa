@@ -916,8 +916,19 @@ function Halo:OnEnable()
 			if unit == "player" then self:StartCast(channel) end
 		end
 	end
+	-- A stop, fail or interrupt can belong to another cast than the one on
+	-- the bar: pressing a spell while one is casting fails that press, and
+	-- the game says so. Blizzard's bar checks the cast's ID; this asks the
+	-- game what is casting now and keeps the bar while it is.
 	local function onStop(unit)
-		if unit == "player" then self:StopCast() end
+		if unit ~= "player" then return end
+		-- A hidden name still means something is casting.
+		local function busy(info)
+			local name = info("player")
+			return Stoa:IsSecret(name) or name ~= nil
+		end
+		if busy(UnitCastingInfo) or busy(UnitChannelInfo) then return end
+		self:StopCast()
 	end
 	Stoa:On("UNIT_SPELLCAST_START", onCast(false))
 	Stoa:On("UNIT_SPELLCAST_DELAYED", onCast(false))
