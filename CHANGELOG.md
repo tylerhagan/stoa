@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Raid markers: the marker strip for group leaders is gone, as its buttons did not mark in game.
 - Target card: the name is set again a moment after each new target, so it no longer comes out blank; stack counts on its aura icons sit inside the corner with an outline, and clear when an aura has none.
 - Guild & Communities: a slimmer header band, and the channel dropdown, chat, member list and online count start a little lower, so they sit clear of the header.
 - Console: section headings such as READY are set again each time the console shows, so one that came out blank at login fills in.

@@ -210,7 +210,6 @@ local APIS = {
 	{ "GetNumQuestChoices", "the best quest reward" },
 	{ "GetQuestItemLink", "the best quest reward" },
 	{ "C_Container.UseContainerItem", "selling junk" },
-	{ "PlaceRaidMarker", "world markers on the marker strip" },
 	{ "GetQuestLogSpecialItemInfo", "quest item buttons" },
 	{ "C_TaxiMap.GetAllTaxiNodes", "the flight timer" },
 	{ "TakeTaxiNode", "the flight timer" },
