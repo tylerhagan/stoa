@@ -344,12 +344,19 @@ end
 
 -- The quiet tray: Blizzard's icons stay, their frames go. The rows' border
 -- and background art are hidden, each micro button loses its stone
--- backing, and the icons rest in bone with the accent under the mouse. A
--- faint brass hairline under both rows ties them to the console. Textures
+-- backing, and the glyphs rest in bone with the accent under the mouse.
+-- Bag slots sit in the action buttons' sockets, with the square frame
+-- Blizzard redraws on every bag change kept off. The console's own brass
+-- edge runs under the rows, so they need no line of their own. Textures
 -- and colours only, so it is safe on these buttons at load.
 local MICRO_PARTS = { "Background", "PushedBackground" }
 local ROW_ART = { "BorderArt", "BackgroundArt", "Background" }
-local RAIL_ALPHA = 0.35
+local MICRO_BUTTONS = {
+	"CharacterMicroButton", "ProfessionMicroButton", "SpellbookMicroButton", "TalentMicroButton",
+	"PlayerSpellsMicroButton", "LegacyMicroButton", "AchievementMicroButton", "QuestLogMicroButton",
+	"HousingMicroButton", "GuildMicroButton", "LFDMicroButton", "CollectionsMicroButton",
+	"EJMicroButton", "HelpMicroButton", "StoreMicroButton", "MainMenuMicroButton",
+}
 
 local function tintMicro(button)
 	local text = { Stoa:Color("text") }
@@ -365,8 +372,7 @@ local function tintMicro(button)
 	set("GetPushedTexture", accent, 1, true)
 	set("GetDisabledTexture", muted, 0.5, true)
 	set("GetHighlightTexture", accent, 0.9, true)
-	-- The character button is a portrait; the rest are glyphs. Blizzard
-	-- paints its own highlight as a lit copy of the glyph (FlashContent).
+	-- Blizzard's own hover is a lit copy of the glyph (FlashContent).
 	if button.FlashContent then pcall(button.FlashContent.SetVertexColor, button.FlashContent, accent[1], accent[2], accent[3]) end
 end
 
@@ -379,12 +385,29 @@ local function dressMicro(button)
 	tintMicro(button)
 end
 
-local menuRail
+-- The square frame off a bag slot, now and after Blizzard's redraws.
+local function quietBagSlot(slot)
+	local function hide()
+		for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture" }) do
+			local tex = slot[getter] and slot[getter](slot)
+			if tex then tex:SetAlpha(0) end
+		end
+		if slot.IconBorder then slot.IconBorder:SetAlpha(0) end
+		if slot.SlotHighlightTexture then slot.SlotHighlightTexture:SetAlpha(0) end
+	end
+	hide()
+	if not slot.stoaQuiet then
+		slot.stoaQuiet = true
+		if slot.UpdateTextures then Stoa.SafeHook(slot, "UpdateTextures", hide) end
+		if slot.SetBarExpanded then Stoa.SafeHook(slot, "SetBarExpanded", hide) end
+	end
+end
+
 local microHooked
 
 local function dressMenu()
 	local menu, bags = menuFrames()
-	for _, row in ipairs({ menu, bags, MicroMenuContainer, MicroButtonAndBagsBar }) do
+	for _, row in ipairs({ menu, bags, MicroMenu, MicroMenuContainer, MicroButtonAndBagsBar }) do
 		if row then
 			for _, key in ipairs(ROW_ART) do
 				local art = row[key]
@@ -392,34 +415,36 @@ local function dressMenu()
 			end
 		end
 	end
-	if menu then
-		for _, child in ipairs({ menu:GetChildren() }) do
-			if child.GetNormalTexture then xpcall(dressMicro, Stoa.catch, child) end
+	-- The buttons by name, then anything else the menu holds.
+	local seen = {}
+	for _, name in ipairs(MICRO_BUTTONS) do
+		local button = _G[name]
+		if button then
+			seen[button] = true
+			xpcall(dressMicro, Stoa.catch, button)
 		end
 	end
-	-- Blizzard reloads the button art on some events (guild colour, pushed
+	for _, holder in ipairs({ MicroMenu, menu }) do
+		if holder and holder.GetChildren then
+			for _, child in ipairs({ holder:GetChildren() }) do
+				if not seen[child] and child.GetNormalTexture and child.Background then
+					seen[child] = true
+					xpcall(dressMicro, Stoa.catch, child)
+				end
+			end
+		end
+	end
+	-- Blizzard reloads the glyph art on some events (guild colour, pushed
 	-- state); the tint goes back on after it.
 	if not microHooked and LoadMicroButtonTextures then
 		microHooked = true
 		Stoa.SafeHook("LoadMicroButtonTextures", function(button) xpcall(tintMicro, Stoa.catch, button) end)
 	end
-	-- The brass hairline under both rows.
-	local left, right = bags or menu, menu or bags
-	if left and right and not menuRail then
-		menuRail = CreateFrame("Frame", nil, UIParent)
-		menuRail:SetFrameStrata("LOW")
-		menuRail:SetHeight(1)
-		menuRail.line = UI.line(menuRail, "accent", RAIL_ALPHA)
-		menuRail.line:SetPoint("LEFT")
-		menuRail.line:SetPoint("RIGHT")
+	for _, name in ipairs(BAG_SLOTS) do
+		local slot = _G[name]
+		if slot then xpcall(quietBagSlot, Stoa.catch, slot) end
 	end
-	if menuRail then
-		menuRail:ClearAllPoints()
-		menuRail:SetPoint("TOPLEFT", left, "BOTTOMLEFT", 2, -3)
-		menuRail:SetPoint("TOPRIGHT", right, "BOTTOMRIGHT", -2, -3)
-		menuRail:SetAlpha(MENU_REST_ALPHA)
-	end
-	Console.menuRail = menuRail
+	if KeyRingButton then xpcall(quietBagSlot, Stoa.catch, KeyRingButton) end
 end
 
 -- Stoa's own moves are marked so the watch below lets them through.
@@ -504,7 +529,6 @@ local function watchMenu()
 		local alpha = over and 1 or MENU_REST_ALPHA
 		if menu then menu:SetAlpha(alpha) end
 		if bags then bags:SetAlpha(alpha) end
-		if Console.menuRail then Console.menuRail:SetAlpha(alpha) end
 	end
 	update()
 	Stoa:NewTicker(0.15, update)
