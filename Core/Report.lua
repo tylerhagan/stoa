@@ -23,6 +23,26 @@ local FILE_MODULES = { Console = "Grimoire", Housing = "Grimoire", Preview = "Ra
 local kept, byMessage = {}, {}
 Report.errors = kept
 
+-- "Interface action failed because of an AddOn": the game names the addon
+-- and the protected function it was blocked from, so the report can say
+-- who it was, STOA or another addon.
+local blocked, blockedByKey = {}, {}
+Report.blocked = blocked
+local MAX_BLOCKED = 20
+
+local function noteBlocked(event, addon, func)
+	local key = tostring(addon) .. ":" .. tostring(func)
+	local entry = blockedByKey[key]
+	if not entry then
+		entry = { addon = tostring(addon), func = tostring(func), count = 0, forbidden = event == "ADDON_ACTION_FORBIDDEN" }
+		blockedByKey[key] = entry
+		if #blocked < MAX_BLOCKED then blocked[#blocked + 1] = entry end
+	end
+	entry.count = entry.count + 1
+end
+Stoa:On("ADDON_ACTION_BLOCKED", function(addon, func) noteBlocked("ADDON_ACTION_BLOCKED", addon, func) end)
+Stoa:On("ADDON_ACTION_FORBIDDEN", function(addon, func) noteBlocked("ADDON_ACTION_FORBIDDEN", addon, func) end)
+
 local function now()
 	return GetTime and GetTime() or 0
 end
@@ -198,6 +218,13 @@ function Report:Text()
 	if Stoa.Check then
 		local ok, text = pcall(Stoa.Check.Text, Stoa.Check)
 		if ok then add(text) add("") end
+	end
+	if #blocked > 0 then
+		add("Blocked actions this session (the game's \"Interface action failed because of an AddOn\"):")
+		for _, entry in ipairs(blocked) do
+			add("  x", entry.count, " ", entry.addon, " calling ", entry.func, entry.forbidden and " (forbidden)" or "")
+		end
+		add("")
 	end
 	if #kept == 0 then
 		add("No errors from STOA this session.")

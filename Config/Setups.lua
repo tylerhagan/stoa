@@ -79,7 +79,7 @@ function Setups:Load(key)
 	-- The reload's logout must not write this session's per-spec values
 	-- over the ones just loaded (Core/Specs.lua).
 	Stoa.loadingSetup = true
-	ReloadUI()
+	Stoa:Reload()
 	return true
 end
 

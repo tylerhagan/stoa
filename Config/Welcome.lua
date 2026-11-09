@@ -761,7 +761,7 @@ function Welcome:Finish()
 	if self.start == "saved" and self.setup and step(Stoa.Setups.Load, Stoa.Setups, self.setup) then return end
 	if self.applied then step(self.FollowLayout, self) end
 	self.page:Hide()
-	ReloadUI()
+	Stoa:Reload()
 end
 
 -- Closed by Finish, Escape or a Try it button.
@@ -776,7 +776,7 @@ function Welcome:Closed()
 			-- Closed without Finish: the choices made still need a reload.
 			if self.applied then step(self.FollowLayout, self) end
 			self.finished = true
-			ReloadUI()
+			Stoa:Reload()
 			return
 		end
 	end
