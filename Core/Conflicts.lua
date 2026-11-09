@@ -262,10 +262,10 @@ function Conflicts:Answer(choice)
 	if choice == "ours" then
 		for _, addon in ipairs(entry.loaded) do disable(addon[1]) end
 		choices()[rule.key] = nil
-		ReloadUI()
+		Stoa:Reload()
 	elseif rule.suite then
 		disable("Stoa")
-		ReloadUI()
+		Stoa:Reload()
 	else
 		choices()[rule.key] = "theirs"
 		Stoa:Print(("Leaving %s to %s. /stoa addons to change."):format(rule.job, names(entry.loaded)))

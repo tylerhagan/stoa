@@ -1008,7 +1008,7 @@ function Window:Build()
 	-- Footer.
 	self.note = UI.text(page, "sans", Stoa.typeSize.body, "muted")
 	self.note:SetPoint("BOTTOMLEFT", PAD, 18)
-	self.reload = UI.button(page, "Reload now", 110, function() ReloadUI() end)
+	self.reload = UI.button(page, "Reload now", 110, function() Stoa:Reload() end)
 	self.reload:SetPoint("LEFT", self.note, "RIGHT", 12, 0)
 	local defaults
 	defaults = UI.button(page, "Defaults for this page", 180, function(button)
