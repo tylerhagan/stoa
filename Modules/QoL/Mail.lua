@@ -116,12 +116,37 @@ function Mail:ToMenu(owner)
 	end)
 end
 
+-- Blizzard's inbox puts Open All and the Prev / Next page buttons on one
+-- row, so a button beside Open All lands on Prev. With Take gold the inbox
+-- is a row taller: actions on the upper row, the pages on their own row
+-- below. Only the inbox tab grows; Send Mail keeps the usual height.
+local EXTRA_ROW = 32
+
+function Mail:TwoRows(openAll)
+	local frame = MailFrame
+	if not (frame and InboxFrame and openAll and frame.GetHeight) then return end
+	local base = Stoa:PlainNumber(frame:GetHeight())
+	if not base then return end
+	local function fit()
+		if InCombatLockdown() then return end
+		frame:SetHeight(InboxFrame:IsShown() and (base + EXTRA_ROW) or base)
+	end
+	-- Open All keeps its place under the letters; Prev and Next stay at the
+	-- bottom edge, which is now a row of their own.
+	openAll:ClearAllPoints()
+	openAll:SetPoint("CENTER", InboxFrame, "BOTTOM", 0, 26 + EXTRA_ROW)
+	InboxFrame:HookScript("OnShow", fit)
+	InboxFrame:HookScript("OnHide", fit)
+	fit()
+end
+
 function Mail:Dress()
 	if self.dressed then return end
 	self.dressed = true
 	local openAll = InboxFrame and (InboxFrame.OpenAllMail or _G.OpenAllMail)
 	self:WatchOpenAll(openAll)
 	if self.db.takeGold and InboxFrame then
+		xpcall(self.TwoRows, Stoa.catch, self, openAll)
 		local gold = UI.button(InboxFrame, "Take gold", 96, function() self:TakeGold() end)
 		gold:SetHeight(22)
 		if openAll then
