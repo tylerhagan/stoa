@@ -243,7 +243,7 @@ function Backup:ImportLayout(text)
 		local target = lookTable(entry[1])
 		if target and type(value) == entry[3] then target[entry[2]] = value end
 	end
-	ReloadUI()
+	Stoa:Reload()
 	return true
 end
 
@@ -266,7 +266,7 @@ function Backup:Import(text)
 	-- The backup's account part holds the settings to use here.
 	Stoa:SaveSettings()
 	Stoa.loadingBackup = true
-	ReloadUI()
+	Stoa:Reload()
 	return true
 end
 

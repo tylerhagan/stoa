@@ -131,6 +131,17 @@ end
 
 local queue = {}
 
+-- Every reload Stoa asks for. If the game blocks the call (it prints
+-- "Interface action failed because of an AddOn" and carries on), the player
+-- is told to finish by hand instead of being left with half a change.
+function Stoa:Reload()
+	local reload = (C_UI and C_UI.Reload) or ReloadUI
+	if reload then pcall(reload) end
+	C_Timer.After(1, function()
+		Stoa:Print("The game didn't let STOA reload. Type /reload to finish.")
+	end)
+end
+
 function Stoa:AfterCombat(fn)
 	if InCombatLockdown() then
 		table.insert(queue, fn)
