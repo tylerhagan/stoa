@@ -121,8 +121,44 @@ end
 -- is a row taller: actions on the upper row, the pages on their own row
 -- below. Only the inbox tab grows; Send Mail keeps the usual height.
 local EXTRA_ROW = 32
+local ACTION_WIDTH, ACTION_HEIGHT, ACTION_GAP = 110, 24, 8
 
-function Mail:TwoRows(openAll)
+-- A page button as a quiet word: the arrow art goes, the word takes
+-- Stoa's type, muted at rest and accent under the mouse, dim when there is
+-- no page that way.
+local function dressPage(button, side)
+	if not (button and button.GetRegions) or button.stoaPage then return end
+	button.stoaPage = true
+	for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetDisabledTexture", "GetHighlightTexture" }) do
+		local tex = button[getter] and button[getter](button)
+		if tex then tex:SetAlpha(0) end
+	end
+	local word
+	for _, region in ipairs({ button:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("FontString") then word = region break end
+	end
+	if not word then return end
+	Stoa:SetFont(word, "sans", Stoa.typeSize.body)
+	word:ClearAllPoints()
+	word:SetPoint(side == "left" and "LEFT" or "RIGHT", button, side == "left" and "LEFT" or "RIGHT", 0, 0)
+	word:SetText(side == "left" and ("‹ " .. (PREV or "Prev")) or ((NEXT or "Next") .. " ›"))
+	local function colour(over)
+		local enabled = button:IsEnabled()
+		word:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+		word:SetAlpha(enabled and 1 or 0.5)
+	end
+	button:HookScript("OnEnter", function() colour(true) end)
+	button:HookScript("OnLeave", function() colour(false) end)
+	button:HookScript("OnEnable", function() colour(false) end)
+	button:HookScript("OnDisable", function() colour(false) end)
+	button:HookScript("OnShow", function() colour(false) end)
+	colour(false)
+end
+
+-- The inbox a row taller: Take gold and Open All, one size, centred as a
+-- pair under the letters; Prev and Next at the bottom edge as quiet words
+-- on a row of their own. Only the inbox tab grows.
+function Mail:TwoRows(openAll, gold)
 	local frame = MailFrame
 	if not (frame and InboxFrame and openAll and frame.GetHeight) then return end
 	local base = Stoa:PlainNumber(frame:GetHeight())
@@ -131,10 +167,18 @@ function Mail:TwoRows(openAll)
 		if InCombatLockdown() then return end
 		frame:SetHeight(InboxFrame:IsShown() and (base + EXTRA_ROW) or base)
 	end
-	-- Open All keeps its place under the letters; Prev and Next stay at the
-	-- bottom edge, which is now a row of their own.
+	local row = 26 + EXTRA_ROW
+	local half = (ACTION_WIDTH + ACTION_GAP) / 2
+	openAll:SetSize(ACTION_WIDTH, ACTION_HEIGHT)
 	openAll:ClearAllPoints()
-	openAll:SetPoint("CENTER", InboxFrame, "BOTTOM", 0, 26 + EXTRA_ROW)
+	openAll:SetPoint("CENTER", InboxFrame, "BOTTOM", half, row)
+	if gold then
+		gold:SetSize(ACTION_WIDTH, ACTION_HEIGHT)
+		gold:ClearAllPoints()
+		gold:SetPoint("CENTER", InboxFrame, "BOTTOM", -half, row)
+	end
+	dressPage(InboxFrame.PrevPageButton or _G.InboxPrevPageButton, "left")
+	dressPage(InboxFrame.NextPageButton or _G.InboxNextPageButton, "right")
 	InboxFrame:HookScript("OnShow", fit)
 	InboxFrame:HookScript("OnHide", fit)
 	fit()
@@ -146,11 +190,11 @@ function Mail:Dress()
 	local openAll = InboxFrame and (InboxFrame.OpenAllMail or _G.OpenAllMail)
 	self:WatchOpenAll(openAll)
 	if self.db.takeGold and InboxFrame then
-		xpcall(self.TwoRows, Stoa.catch, self, openAll)
-		local gold = UI.button(InboxFrame, "Take gold", 96, function() self:TakeGold() end)
-		gold:SetHeight(22)
+		local gold = UI.button(InboxFrame, "Take gold", ACTION_WIDTH, function() self:TakeGold() end)
+		gold:SetHeight(ACTION_HEIGHT)
 		if openAll then
-			gold:SetPoint("RIGHT", openAll, "LEFT", -8, 0)
+			gold:SetPoint("RIGHT", openAll, "LEFT", -ACTION_GAP, 0)
+			xpcall(self.TwoRows, Stoa.catch, self, openAll, gold)
 		else
 			gold:SetPoint("BOTTOM", InboxFrame, "BOTTOM", 0, 100)
 		end
