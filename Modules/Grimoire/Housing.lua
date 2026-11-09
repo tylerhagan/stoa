@@ -463,6 +463,22 @@ local function dressMenu()
 		local slot = _G[name]
 		if slot then xpcall(quietBagSlot, Stoa.catch, slot) end
 	end
+	-- Blizzard draws a divider between neighbouring bag slots; the quiet
+	-- row has none, now and after every relayout.
+	if bags and bags.UpdateDividers then
+		bags.useDividers = false
+		local function clear()
+			for _, key in ipairs({ "HorizontalDividersPool", "VerticalDividersPool" }) do
+				local pool = bags[key]
+				if pool and pool.ReleaseAll then pool:ReleaseAll() end
+			end
+		end
+		clear()
+		if not bags.stoaNoDividers then
+			bags.stoaNoDividers = true
+			Stoa.SafeHook(bags, "UpdateDividers", clear)
+		end
+	end
 	if KeyRingButton then xpcall(quietBagSlot, Stoa.catch, KeyRingButton) end
 end
 
