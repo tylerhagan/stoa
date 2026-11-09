@@ -72,7 +72,7 @@ function Tooltip:UnitColour(unit)
 		class = known(class)
 		local colour = class and Stoa:Theme().classTint and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
 		if colour then return colour.r, colour.g, colour.b end
-		if known(UnitCanAttack("player", unit)) then return Stoa:Color("danger") end
+		if known(UnitCanAttack("player", unit)) then return Stoa:Color("hostile") end
 		return Stoa:Color("text")
 	end
 	if known(UnitIsTapDenied(unit)) and not known(UnitPlayerControlled(unit)) then return Stoa:Color("muted") end
@@ -82,7 +82,7 @@ function Tooltip:UnitColour(unit)
 		if Stoa.NeutralColour then return Stoa:NeutralColour() end
 		return Stoa:Color("accent")
 	end
-	if reaction then return Stoa:Color("danger") end
+	if reaction then return Stoa:Color("hostile") end
 	return Stoa:Color("text")
 end
 

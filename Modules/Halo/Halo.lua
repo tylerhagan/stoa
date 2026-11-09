@@ -543,11 +543,11 @@ function Halo:UpdateTarget()
 	if Stoa:IsSecret(dead) then dead = false end
 	local hostile = not dead and UnitCanAttack("player", "target")
 	if Stoa:IsSecret(hostile) then hostile = false end
-	target.hp:SetStatusBarColor(Stoa:Color(hostile and "danger" or "health"))
+	target.hp:SetStatusBarColor(Stoa:Color(hostile and "hostile" or "health"))
 	local cue = dead and "DEAD" or hostile and "HOSTILE" or ""
 	target.cue:SetText(cue)
 	target.cue:SetTextColor(Stoa:Color(dead and "muted" or Stoa:StateToken(cue)))
-	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "danger" or nil) end
+	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "hostile" or nil) end
 	target.hp:SetShown(not dead)
 	target.health:SetShown(not dead)
 	target:SetAlpha(dead and 0.6 or 1)
