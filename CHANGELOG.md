@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Moving windows: the world map joins the Shift-drag windows while it is windowed; maximised it keeps filling the screen.
 - Target card: the aura icons above or below it show their tooltip on hover.
 - Blocked actions: when the game refuses an addon a protected call ("Interface action failed because of an AddOn"), `/stoa report` now lists the addon and function it named. Every reload STOA asks for says so in chat if the game blocked it, so you can type /reload to finish.
 - Hostile red: enemies get their own red (a `hostile` colour in every theme) on nameplates, the target card and tooltip names, apart from the amber the warnings use, so a hostile reads at a glance. Colour vision modes keep their own safe pick for it.

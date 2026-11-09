@@ -22,7 +22,13 @@ local WINDOWS = {
 	"CommunitiesFrame", "AuctionHouseFrame", "BankFrame", "GuildBankFrame", "TradeFrame",
 	"PVEFrame", "LFGParentFrame", "ItemTextFrame", "TaxiFrame", "TradeSkillFrame",
 	"ProfessionsFrame", "CraftFrame", "AchievementFrame", "ContainerFrameCombinedBags",
-	"ContainerFrame1",
+	"ContainerFrame1", "WorldMapFrame",
+}
+
+-- Windows that stay put in one of their states: the map fills the screen
+-- when maximised, so only its windowed size moves.
+local HELD = {
+	WorldMapFrame = function(frame) return frame.IsMaximized and frame:IsMaximized() end,
 }
 
 WindowMover.windows = WINDOWS
@@ -35,14 +41,16 @@ local function spots()
 end
 
 -- A protected window can't move in combat.
-local function canMove(frame)
-	return not (InCombatLockdown() and frame:IsProtected())
+local function canMove(frame, name)
+	if InCombatLockdown() and frame:IsProtected() then return false end
+	local held = name and HELD[name]
+	return not (held and held(frame))
 end
 
 local function place(name, frame)
 	if Stoa:SharedBy("windows") then return end
 	local spot = spots()[name]
-	if not spot or not frame:IsShown() or not canMove(frame) then return end
+	if not spot or not frame:IsShown() or not canMove(frame, name) then return end
 	frame:ClearAllPoints()
 	frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", spot[1], spot[2])
 end
@@ -64,7 +72,7 @@ function WindowMover:Hook(name)
 	hooked[name] = true
 
 	local function down(window, button)
-		if not self:Wants() or not canMove(window) then return end
+		if not self:Wants() or not canMove(window, name) then return end
 		if button == "RightButton" then
 			spots()[name] = nil
 			Stoa:Print(("%s goes back to its usual place next time it opens."):format(name:gsub("Frame$", "")))
