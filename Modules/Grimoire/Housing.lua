@@ -291,10 +291,10 @@ local function hideBarArt()
 end
 
 -- Bags and the game menu leave the action bar row for the console's top
--- edge on the right, mirroring the chat tabs on the left: bags, a gap,
--- then the menu, a size down and quiet until the mouse is over them. They
--- ride the console's top, so they come down with it when it folds. Bag
--- slots take the action buttons' rounded sockets.
+-- edge on the right, mirroring the chat tabs on the left: the menu, a gap,
+-- then the bags in the corner, a size down and quiet until the mouse is
+-- over them. They ride the console's top, so they come down with it when
+-- it folds.
 local MENU_SCALE = 0.8
 local MENU_LIFT = 4
 local MENU_GAP = 14
@@ -316,18 +316,20 @@ local function placeMenuNow()
 	local edge = Console.frame or UIParent
 	local point = Console.frame and "TOPRIGHT" or "BOTTOMRIGHT"
 	local lift = Console.frame and MENU_LIFT or Console:OpenHeight()
-	if menu then
-		menu:ClearAllPoints()
-		menu:SetScale(MENU_SCALE)
-		menu:SetPoint("BOTTOMRIGHT", edge, point, -inset / MENU_SCALE, lift / MENU_SCALE)
-	end
+	-- Bags take the corner, where every hand already goes for the backpack;
+	-- the menu sits inward of them.
 	if bags then
 		bags:ClearAllPoints()
 		bags:SetScale(MENU_SCALE)
-		if menu then
-			bags:SetPoint("BOTTOMRIGHT", menu, "BOTTOMLEFT", -MENU_GAP, 0)
+		bags:SetPoint("BOTTOMRIGHT", edge, point, -inset / MENU_SCALE, lift / MENU_SCALE)
+	end
+	if menu then
+		menu:ClearAllPoints()
+		menu:SetScale(MENU_SCALE)
+		if bags then
+			menu:SetPoint("BOTTOMRIGHT", bags, "BOTTOMLEFT", -MENU_GAP, 0)
 		else
-			bags:SetPoint("BOTTOMRIGHT", edge, point, -inset / MENU_SCALE, lift / MENU_SCALE)
+			menu:SetPoint("BOTTOMRIGHT", edge, point, -inset / MENU_SCALE, lift / MENU_SCALE)
 		end
 	end
 	local bars = Stoa.modules.ActionBars
