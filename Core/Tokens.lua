@@ -25,6 +25,7 @@ Stoa.themes = {
 		health  = rgb("E4DCCB"),
 		mana    = rgb("6F9BFF"),
 		danger  = rgb("F0A04B"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("F2D58A", 0.9),
 		accent  = rgb("F2D58A"),
 		magic   = rgb("6F9BFF"),
@@ -39,6 +40,7 @@ Stoa.themes = {
 		health  = rgb("7FA6D6"),
 		mana    = rgb("3F6FD8"),
 		danger  = rgb("FFFFFF"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("D6E8FF", 0.85),
 		accent  = rgb("A9CBFF"),
 		magic   = rgb("A9CBFF"),
@@ -53,6 +55,7 @@ Stoa.themes = {
 		health  = rgb("D4D4D4"),
 		mana    = rgb("8A8A8A"),
 		danger  = rgb("F2A541"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("FFFFFF", 0.75),
 		accent  = rgb("F2A541"),
 		magic   = rgb("F2A541"),
@@ -70,6 +73,7 @@ Stoa.themes = {
 		health  = rgb("E2D7C4"),
 		mana    = rgb("6F9BFF"),
 		danger  = rgb("FF7A45"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("E6C9A0", 0.9),
 		accent  = rgb("C9A47C"),
 		magic   = rgb("6F9BFF"),
@@ -84,6 +88,7 @@ Stoa.themes = {
 		health  = rgb("EADFE3"),
 		mana    = rgb("6F9BFF"),
 		danger  = rgb("F0A04B"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("F7C6DC", 0.9),
 		accent  = rgb("F4A3C8"),
 		magic   = rgb("6F9BFF"),
@@ -98,6 +103,7 @@ Stoa.themes = {
 		health  = rgb("DDE3CF"),
 		mana    = rgb("6F9BFF"),
 		danger  = rgb("FFD08A"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("C9DFA5", 0.9),
 		accent  = rgb("93B85E"),
 		magic   = rgb("6F9BFF"),
@@ -112,6 +118,7 @@ Stoa.themes = {
 		health  = rgb("E4E0C8"),
 		mana    = rgb("6F9BFF"),
 		danger  = rgb("E8743A"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("FFF3A8", 0.9),
 		accent  = rgb("F2E06B"),
 		magic   = rgb("6F9BFF"),
@@ -126,6 +133,7 @@ Stoa.themes = {
 		health  = rgb("E6E4EC"),
 		mana    = rgb("6F9BFF"),
 		danger  = rgb("F0A04B"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("FFFFFF", 0.85),
 		accent  = rgb("D2CCF2"),
 		magic   = rgb("6F9BFF"),
@@ -140,6 +148,7 @@ Stoa.themes = {
 		health  = rgb("D7E0EC"),
 		mana    = rgb("5ED3E6"),
 		danger  = rgb("F0A04B"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("A8C8FF", 0.9),
 		accent  = rgb("4C94FF"),
 		magic   = rgb("5ED3E6"),
@@ -154,6 +163,7 @@ Stoa.themes = {
 		health  = rgb("D9E6EE"),
 		mana    = rgb("5B7CFF"),
 		danger  = rgb("F0A04B"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("C4ECFF", 0.9),
 		accent  = rgb("7FD3F4"),
 		magic   = rgb("5B7CFF"),
@@ -168,6 +178,7 @@ Stoa.themes = {
 		health  = rgb("E1DCEC"),
 		mana    = rgb("6F9BFF"),
 		danger  = rgb("F0A04B"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("D2C6F5", 0.9),
 		accent  = rgb("A894E6"),
 		magic   = rgb("6F9BFF"),
@@ -182,6 +193,7 @@ Stoa.themes = {
 		health  = rgb("E6DCCB"),
 		mana    = rgb("6F9BFF"),
 		danger  = rgb("FFF07A"),
+		hostile = rgb("D13A2E"),
 		shield  = rgb("FFD3A6", 0.9),
 		accent  = rgb("F28A3A"),
 		magic   = rgb("6F9BFF"),
@@ -236,15 +248,16 @@ end
 -- State words and the one colour each takes, everywhere Stoa writes them
 -- (badges, tooltips, plaques, cells). Colour never carries a state alone:
 -- the word is always there. muted = idle or out of play, text = normal,
--- accent = matched or ready, danger = threat or urgent, mana = rest and
--- resource. A word not listed reads in the text colour.
+-- accent = matched or ready, danger = threat or urgent, hostile = an enemy
+-- (its own red, so a hostile reads at a glance among the amber warnings),
+-- mana = rest and resource. A word not listed reads in the text colour.
 Stoa.states = {
 	TRIVIAL = "muted", EASY = "text", EVEN = "accent", HARD = "danger", DEADLY = "danger",
 	READY = "accent", VALUE = "text", UPGRADE = "accent", BEST = "accent",
 	RESTING = "mana", OOM = "mana", DRINKING = "mana",
 	DEAD = "muted", GHOST = "muted", OFFLINE = "muted", AFK = "muted",
 	HURT = "accent", STEADY = "muted",
-	LOW = "danger", HOSTILE = "danger", TAUNT = "danger", KICK = "danger", AGGRO = "danger",
+	LOW = "danger", HOSTILE = "hostile", TAUNT = "danger", KICK = "danger", AGGRO = "danger",
 	ELITE = "accent", RARE = "text", BOSS = "danger",
 }
 
@@ -316,6 +329,7 @@ Stoa.visions = {
 	RedGreen = {
 		accent  = rgb("FAED8D"),
 		danger  = rgb("E07E02"),
+		hostile = rgb("E07E02"),
 		mana    = rgb("4296DE"),
 		magic   = rgb("4296DE"),
 		disease = rgb("F6F7F7"),
@@ -325,6 +339,7 @@ Stoa.visions = {
 	BlueYellow = {
 		accent  = rgb("FDFDFD"),
 		danger  = rgb("FF3A51"),
+		hostile = rgb("FF3A51"),
 		mana    = rgb("269AA8"),
 		magic   = rgb("269AA8"),
 		disease = rgb("F37DB9"),
@@ -336,6 +351,7 @@ Stoa.visions = {
 		muted   = rgb("9A9A9A"),
 		accent  = rgb("CFCFCF"),
 		danger  = rgb("FFFFFF"),
+		hostile = rgb("FFFFFF"),
 		mana    = rgb("7E7E7E"),
 		magic   = rgb("CFCFCF"),
 		disease = rgb("7E7E7E"),
@@ -377,7 +393,8 @@ function Stoa:SetVision(name)
 end
 
 function Stoa:Color(token)
-	return unpack(self:Theme()[token])
+	local theme = self:Theme()
+	return unpack(theme[token] or theme.danger)
 end
 
 function Stoa:SetTheme(name)
