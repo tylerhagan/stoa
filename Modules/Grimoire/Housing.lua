@@ -342,6 +342,86 @@ local function placeMenuNow()
 	end
 end
 
+-- The quiet tray: Blizzard's icons stay, their frames go. The rows' border
+-- and background art are hidden, each micro button loses its stone
+-- backing, and the icons rest in bone with the accent under the mouse. A
+-- faint brass hairline under both rows ties them to the console. Textures
+-- and colours only, so it is safe on these buttons at load.
+local MICRO_PARTS = { "Background", "PushedBackground" }
+local ROW_ART = { "BorderArt", "BackgroundArt", "Background" }
+local RAIL_ALPHA = 0.35
+
+local function tintMicro(button)
+	local text = { Stoa:Color("text") }
+	local accent = { Stoa:Color("accent") }
+	local muted = { Stoa:Color("muted") }
+	local function set(getter, colour, alpha, desaturate)
+		local tex = button[getter] and button[getter](button)
+		if not tex then return end
+		pcall(tex.SetDesaturated, tex, desaturate)
+		tex:SetVertexColor(colour[1], colour[2], colour[3], alpha or 1)
+	end
+	set("GetNormalTexture", text, 0.9, true)
+	set("GetPushedTexture", accent, 1, true)
+	set("GetDisabledTexture", muted, 0.5, true)
+	set("GetHighlightTexture", accent, 0.9, true)
+	-- The character button is a portrait; the rest are glyphs. Blizzard
+	-- paints its own highlight as a lit copy of the glyph (FlashContent).
+	if button.FlashContent then pcall(button.FlashContent.SetVertexColor, button.FlashContent, accent[1], accent[2], accent[3]) end
+end
+
+local function dressMicro(button)
+	if not (button and button.GetObjectType) then return end
+	for _, key in ipairs(MICRO_PARTS) do
+		local art = button[key]
+		if art and art.SetAlpha then art:SetAlpha(0) end
+	end
+	tintMicro(button)
+end
+
+local menuRail
+local microHooked
+
+local function dressMenu()
+	local menu, bags = menuFrames()
+	for _, row in ipairs({ menu, bags, MicroMenuContainer, MicroButtonAndBagsBar }) do
+		if row then
+			for _, key in ipairs(ROW_ART) do
+				local art = row[key]
+				if art and art.SetAlpha then art:SetAlpha(0) end
+			end
+		end
+	end
+	if menu then
+		for _, child in ipairs({ menu:GetChildren() }) do
+			if child.GetNormalTexture then xpcall(dressMicro, Stoa.catch, child) end
+		end
+	end
+	-- Blizzard reloads the button art on some events (guild colour, pushed
+	-- state); the tint goes back on after it.
+	if not microHooked and LoadMicroButtonTextures then
+		microHooked = true
+		Stoa.SafeHook("LoadMicroButtonTextures", function(button) xpcall(tintMicro, Stoa.catch, button) end)
+	end
+	-- The brass hairline under both rows.
+	local left, right = bags or menu, menu or bags
+	if left and right and not menuRail then
+		menuRail = CreateFrame("Frame", nil, UIParent)
+		menuRail:SetFrameStrata("LOW")
+		menuRail:SetHeight(1)
+		menuRail.line = UI.line(menuRail, "accent", RAIL_ALPHA)
+		menuRail.line:SetPoint("LEFT")
+		menuRail.line:SetPoint("RIGHT")
+	end
+	if menuRail then
+		menuRail:ClearAllPoints()
+		menuRail:SetPoint("TOPLEFT", left, "BOTTOMLEFT", 2, -3)
+		menuRail:SetPoint("TOPRIGHT", right, "BOTTOMRIGHT", -2, -3)
+		menuRail:SetAlpha(MENU_REST_ALPHA)
+	end
+	Console.menuRail = menuRail
+end
+
 -- Stoa's own moves are marked so the watch below lets them through.
 local function placeMenu()
 	menuPlacing = true
@@ -424,6 +504,7 @@ local function watchMenu()
 		local alpha = over and 1 or MENU_REST_ALPHA
 		if menu then menu:SetAlpha(alpha) end
 		if bags then bags:SetAlpha(alpha) end
+		if Console.menuRail then Console.menuRail:SetAlpha(alpha) end
 	end
 	update()
 	Stoa:NewTicker(0.15, update)
@@ -447,7 +528,10 @@ function Console:House()
 			if artOn() then safely(buildTabs) end
 		end
 		if db.hideBarArt then safely(hideBarArt) end
-		if db.houseMenu then safely(placeMenu) end
+		if db.houseMenu then
+			safely(placeMenu)
+			safely(dressMenu)
+		end
 	end
 
 	if db.houseChat then
@@ -468,6 +552,7 @@ function Console:House()
 	end
 	Stoa:On("PLAYER_ENTERING_WORLD", apply)
 	Stoa:On("UI_SCALE_CHANGED", apply)
+	if db.houseMenu then Stoa:On("STOA_THEME_CHANGED", function() safely(dressMenu) end) end
 	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", apply)
 	if EventRegistry then
 		EventRegistry:RegisterCallback("EditMode.Exit", apply, self)
