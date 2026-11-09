@@ -39,7 +39,7 @@ GROUPS = [
         "Reminders", "Mana play", "Swing timer", "Threat meter", "Timers", "Cooldown Manager"]),
     ("Groups", "Party and raid frames, healing and the people you play with.", [
         "Party cards", "Raid frames", "Click-casting", "Tank watch", "Target", "Pet", "Group buffs",
-        "Raid markers", "Dungeon kit", "Social", "Auto-invite", "Company"]),
+        "Dungeon kit", "Social", "Auto-invite", "Company"]),
     ("Around the screen", "Everything else the game draws, in STOA's dress.", [
         "Action bars", "At a glance", "Minimap", "Icon tray", "Top of screen", "Nameplates", "Chat", "Map",
         "Damage meters"]),
