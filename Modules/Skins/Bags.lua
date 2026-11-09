@@ -355,6 +355,8 @@ function Bags:Dress(frame)
 	local windows = Stoa.modules.Windows
 	if windows and windows.Dress then guarded(windows.Dress, windows, frame) end
 	-- Bags are small windows: their name is a label, not a window title.
+	-- Windows seats the title on every show, so the size lives on the frame.
+	frame.stoaTitleSize = Stoa.typeSize.label
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	if title and title.SetTextColor then Stoa:SetFont(title, "serif", Stoa.typeSize.label) end
 
