@@ -368,9 +368,9 @@ local function tintMicro(button)
 		pcall(tex.SetDesaturated, tex, desaturate)
 		tex:SetVertexColor(colour[1], colour[2], colour[3], alpha or 1)
 	end
-	set("GetNormalTexture", text, 0.9, true)
+	set("GetNormalTexture", text, 1, true)
 	set("GetPushedTexture", accent, 1, true)
-	set("GetDisabledTexture", muted, 0.5, true)
+	set("GetDisabledTexture", muted, 0.6, true)
 	set("GetHighlightTexture", accent, 0.9, true)
 	-- Blizzard's own hover is a lit copy of the glyph (FlashContent).
 	if button.FlashContent then pcall(button.FlashContent.SetVertexColor, button.FlashContent, accent[1], accent[2], accent[3]) end
@@ -381,6 +381,20 @@ local function dressMicro(button)
 	for _, key in ipairs(MICRO_PARTS) do
 		local art = button[key]
 		if art and art.SetAlpha then art:SetAlpha(0) end
+	end
+	-- The same dark rounded socket as the bag slots, so both rows read as
+	-- one tray; the glyph sits a little inside it.
+	if not button.stoaSocket then
+		button.stoaSocket = true
+		UI.roundPanel(button, 0.9)
+		for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetDisabledTexture", "GetHighlightTexture" }) do
+			local tex = button[getter] and button[getter](button)
+			if tex then
+				tex:ClearAllPoints()
+				tex:SetPoint("TOPLEFT", 3, -3)
+				tex:SetPoint("BOTTOMRIGHT", -3, 3)
+			end
+		end
 	end
 	tintMicro(button)
 end
