@@ -197,6 +197,21 @@ end
 function UI.settleText(fs, words, tries)
 	fs:SetText("")
 	fs:SetText(words)
+	-- A face can also come out blank while measuring fine (the page was
+	-- hidden when it was drawn), so the words are set again each time the
+	-- parent shows.
+	fs.stoaSettled = words
+	local parent = fs.GetParent and fs:GetParent()
+	if parent and parent.HookScript and not fs.stoaSettleHooked then
+		fs.stoaSettleHooked = true
+		parent:HookScript("OnShow", function()
+			local again = fs.stoaSettled
+			if again and fs:GetText() == again then
+				fs:SetText("")
+				fs:SetText(again)
+			end
+		end)
+	end
 	if words == "" or (fs:GetStringWidth() or 0) > 0 then return end
 	tries = (tries or 0) + 1
 	if tries > 10 then return end
