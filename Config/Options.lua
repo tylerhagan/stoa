@@ -211,7 +211,7 @@ local function build()
 	toggle(console, "enabled", "Show the console", "The leather console along the bottom of the screen.", true, { id = "consoleOn", reload = true })
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
-	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
+	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner without their stone frames, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
 	toggle(of("ActionBars"), "hoverTray", "Extra rows on mouseover", "Out of combat only your main bar shows in the console; the other rows come up while you mouse over the bars. Off shows every row out of combat.", false, {
 		words = "action bars hide", change = function(_, v) Stoa.modules.ActionBars:SetOption("hoverTray", v) end,
 	})
