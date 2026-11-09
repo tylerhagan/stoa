@@ -78,7 +78,7 @@ end
 -- Neutral is not the theme's accent: in some themes the accent sits right
 -- next to the danger colour (Graphite uses the same amber for both), so a
 -- neutral mob looked hostile. The first of these that is clearly apart from
--- both danger and the friendly blue is used.
+-- the hostile red, danger and the friendly blue is used.
 local NEUTRAL_CANDIDATES = {
 	{ 0.91, 0.86, 0.60 }, -- pale straw
 	{ 0.80, 0.80, 0.80 }, -- light grey
@@ -91,9 +91,9 @@ local function apart(a, b)
 end
 
 local function neutralColour()
-	local danger, mana = { Stoa:Color("danger") }, { Stoa:Color("mana") }
+	local hostile, danger, mana = { Stoa:Color("hostile") }, { Stoa:Color("danger") }, { Stoa:Color("mana") }
 	for _, colour in ipairs(NEUTRAL_CANDIDATES) do
-		if apart(colour, danger) and apart(colour, mana) then return colour end
+		if apart(colour, hostile) and apart(colour, danger) and apart(colour, mana) then return colour end
 	end
 	return NEUTRAL_CANDIDATES[1]
 end
@@ -116,7 +116,7 @@ local function healthToken(frame)
 		local c = neutralColour()
 		return { r = c[1], g = c[2], b = c[3] }
 	end
-	return "danger"
+	return "hostile"
 end
 
 local function colourHealth(frame)

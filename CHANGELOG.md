@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Hostile red: enemies get their own red (a `hostile` colour in every theme) on nameplates, the target card and tooltip names, apart from the amber the warnings use, so a hostile reads at a glance. Colour vision modes keep their own safe pick for it.
 - Mailbox: the inbox is a row taller with Take gold on, so Take gold and Open All share one row and the Prev and Next page buttons have their own below (Take gold used to sit on Prev).
 - Welcome: Finish reloads even when one of its settling steps fails (another addon's switch, a layout the game won't take); the failure is kept for /stoa report instead of leaving a chat line and no reload.
 - Console corner: the bag slots and game menu are a quiet tray now. Their stone frames, backings and sockets are gone; the menu glyphs and the bags themselves rest in bone and warm to the accent under the mouse, sitting on the console's brass edge. Bag windows name themselves in label size and long names end in an ellipsis before the close cross.
