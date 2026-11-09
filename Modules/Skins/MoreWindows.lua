@@ -33,7 +33,7 @@ local TARGETS = {
 	{ name = "FriendsFrame", parts = { "FriendsFrameInset", "WhoFrameListInset", "WhoFrameEditBoxInset" } },
 	-- A slimmer band: the channel dropdown and online count start just
 	-- under the title, and the usual band reached halfway down them.
-	{ name = "CommunitiesFrame", band = 30 },
+	{ name = "CommunitiesFrame", band = 30, after = "communities" },
 	-- The game menu and the settings panel are left alone: addons touching
 	-- them are a known cause of blocked-action errors (Edit Mode, logout).
 	-- The map canvas, pins and quest panel are never touched.
@@ -129,9 +129,63 @@ local function dressTarget(target, frame)
 	end
 end
 
+-- Guild & Communities: the channel row, the chat and the member list
+-- start a little lower, so the dropdowns sit clear of the header band with
+-- room to breathe. Only top anchors move (the bottoms stay), and each is
+-- moved once per placing: the game puts them back whenever it lays the
+-- window out again (tab, maximise, minimise), and they follow.
+local COMMUNITIES_DROP = 10
+local COMMUNITIES_PARTS = {
+	"StreamDropdown", "CommunitiesListDropdown", "GuildMemberListDropdown", "CommunityMemberListDropdown",
+	"VoiceChatHeadset", "Chat", "MemberList",
+}
+
+local function dropTops(part)
+	if not (part and part.GetNumPoints) or forbidden(part) then return end
+	part.stoaDropped = part.stoaDropped or {}
+	local points = {}
+	for i = 1, part:GetNumPoints() do points[i] = { part:GetPoint(i) } end
+	local moved = false
+	for _, p in ipairs(points) do
+		local point, y = p[1], p[5] or 0
+		if type(point) == "string" and point:find("^TOP") and part.stoaDropped[point] ~= y then
+			p[5] = y - COMMUNITIES_DROP
+			part.stoaDropped[point] = p[5]
+			moved = true
+		end
+	end
+	if not moved then return end
+	part:ClearAllPoints()
+	for _, p in ipairs(points) do part:SetPoint(p[1], p[2], p[3], p[4] or 0, p[5] or 0) end
+end
+
+local AFTER = {}
+function AFTER.communities(frame)
+	if InCombatLockdown() or not frame:IsShown() then return end
+	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key]) end
+end
+
+local afterHooked = false
+local function runAfter(target, frame)
+	local step = target.after and AFTER[target.after]
+	if not step then return end
+	step(frame)
+	-- The game lays panels out again through UpdateUIPanelPositions.
+	if not afterHooked and UpdateUIPanelPositions then
+		afterHooked = true
+		hooksecurefunc("UpdateUIPanelPositions", function()
+			for _, t in ipairs(TARGETS) do
+				local f = t.after and _G[t.name]
+				if type(f) == "table" and f.IsShown and f:IsShown() then xpcall(AFTER[t.after], Stoa.catch, f) end
+			end
+		end)
+	end
+end
+
 local function dressLater(target, frame)
 	Stoa:AfterCombat(function()
 		xpcall(dressTarget, Stoa.catch, target, frame)
+		xpcall(runAfter, Stoa.catch, target, frame)
 	end)
 end
 
