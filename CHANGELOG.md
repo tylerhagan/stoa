@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Console: section headings such as READY are set again each time the console shows, so one that came out blank at login fills in.
 - Moving windows: the world map joins the Shift-drag windows while it is windowed; maximised it keeps filling the screen.
 - Target card: the aura icons above or below it show their tooltip on hover.
 - Blocked actions: when the game refuses an addon a protected call ("Interface action failed because of an AddOn"), `/stoa report` now lists the addon and function it named. Every reload STOA asks for says so in chat if the game blocked it, so you can type /reload to finish.
