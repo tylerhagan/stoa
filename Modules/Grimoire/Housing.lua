@@ -345,8 +345,7 @@ end
 -- The quiet tray: Blizzard's icons stay, their frames go. The rows' border
 -- and background art are hidden, each micro button loses its stone
 -- backing, and the glyphs rest in bone with the accent under the mouse.
--- Bag slots sit in the action buttons' sockets, with the square frame
--- Blizzard redraws on every bag change kept off. The console's own brass
+-- Bag slots match them: no frame, no socket, the bag drawn in bone. The console's own brass
 -- edge runs under the rows, so they need no line of their own. Textures
 -- and colours only, so it is safe on these buttons at load.
 local MICRO_PARTS = { "Background", "PushedBackground" }
@@ -385,7 +384,9 @@ local function dressMicro(button)
 	tintMicro(button)
 end
 
--- The square frame off a bag slot, now and after Blizzard's redraws.
+-- A bag slot matched to the menu glyphs: no frame and no socket, the bag
+-- itself drawn in the same bone tone, a little inside its slot. Kept that
+-- way through Blizzard's redraws.
 local function quietBagSlot(slot)
 	local function hide()
 		for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture" }) do
@@ -394,6 +395,24 @@ local function quietBagSlot(slot)
 		end
 		if slot.IconBorder then slot.IconBorder:SetAlpha(0) end
 		if slot.SlotHighlightTexture then slot.SlotHighlightTexture:SetAlpha(0) end
+		if slot.stoaPanelBg then slot.stoaPanelBg:SetAlpha(0) end
+		if slot.stoaPanelEdge and slot.stoaPanelEdge.edges then
+			for _, tex in ipairs(slot.stoaPanelEdge.edges) do tex:SetAlpha(0) end
+		end
+		local icon = slot.icon or slot.Icon
+		if icon then
+			pcall(icon.SetDesaturated, icon, true)
+			local r, g, b = Stoa:Color("text")
+			icon:SetVertexColor(r, g, b, 1)
+			icon:ClearAllPoints()
+			icon:SetPoint("TOPLEFT", 4, -4)
+			icon:SetPoint("BOTTOMRIGHT", -4, 4)
+		end
+		local highlight = slot.GetHighlightTexture and slot:GetHighlightTexture()
+		if highlight then
+			local r, g, b = Stoa:Color("accent")
+			highlight:SetVertexColor(r, g, b)
+		end
 	end
 	hide()
 	if not slot.stoaQuiet then
