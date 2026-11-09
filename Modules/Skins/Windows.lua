@@ -250,15 +250,22 @@ Windows.RAISE = RAISE
 local function seatTitle(frame, title, close)
 	local header = frame.stoaHeader
 	if not header or InCombatLockdown() then return end
-	if title and frame.stoaPlainHeader and not frame.stoaOwnTitle then
-		Stoa:SetFont(title, "serif", Stoa.typeSize.title)
+	-- A skin may ask for a smaller title (bags name themselves in label
+	-- size); the size is applied here so a settle never grows it back.
+	if title and (frame.stoaPlainHeader or frame.stoaTitleSize) and not frame.stoaOwnTitle then
+		Stoa:SetFont(title, "serif", frame.stoaTitleSize or Stoa.typeSize.title)
 		title:SetShadowColor(0, 0, 0, 0.9)
 		title:SetShadowOffset(1, -1)
 	end
 	if title and not frame.stoaOwnTitle then
 		title:ClearAllPoints()
 		title:SetPoint("LEFT", header, "LEFT", TITLE_INSET, 0)
+		-- Long names (a narrow bag's "Shipwright's Satchel") stop short of
+		-- the close cross with an ellipsis instead of running off the panel.
+		title:SetPoint("RIGHT", close or header, close and "LEFT" or "RIGHT", -6, 0)
 		title:SetJustifyH("LEFT")
+		title:SetWordWrap(false)
+		if title.SetMaxLines then title:SetMaxLines(1) end
 	end
 	if close then
 		close:ClearAllPoints()
