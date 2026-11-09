@@ -31,7 +31,9 @@ local TARGETS = {
 	{ name = "PVEFrame" },
 	{ name = "LFDParentFrame" },
 	{ name = "FriendsFrame", parts = { "FriendsFrameInset", "WhoFrameListInset", "WhoFrameEditBoxInset" } },
-	{ name = "CommunitiesFrame" },
+	-- A slimmer band: the channel dropdown and online count start just
+	-- under the title, and the usual band reached halfway down them.
+	{ name = "CommunitiesFrame", band = 30 },
 	-- The game menu and the settings panel are left alone: addons touching
 	-- them are a known cause of blocked-action errors (Edit Mode, logout).
 	-- The map canvas, pins and quest panel are never touched.
