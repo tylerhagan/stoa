@@ -6,6 +6,10 @@
 --   Marker: the health bar's last stretch, as much as your DoTs will still
 --   take off, in bone, ending at the health's edge.
 --   Skull: slides over the portrait coin when they will kill it.
+-- And on STOA's nameplates, the same bone stretch on each enemy's bar and a
+-- small skull over its right end, while DoesItDie's own nameplate marker is
+-- off (its "Show on nameplates"): with it on, the plates are left to it
+-- (Core/Companions.lua), so the two never draw on the same bar.
 -- The target's health is secret in combat, so Lua never compares the two:
 -- StatusBars do. The marker is a reversed bar scaled to the target's maximum
 -- and pinned to the health fill's edge. The skull rides the fill edge of a
@@ -16,7 +20,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Lethal = Stoa:NewModule("Lethal", { marker = true, skull = true })
+local Lethal = Stoa:NewModule("Lethal", { marker = true, skull = true, plates = true })
 
 local UPDATE = 0.1
 -- How long the skull's bar is; the skull starts sliding in at its own width
@@ -123,14 +127,147 @@ function Lethal:Update()
 	self.window:SetShown(self.db.skull)
 end
 
+-- Nameplates -------------------------------------------------------------------
+
+local PLATE_SKULL = 14
+local plateMarks = {} -- health bar -> its marks
+
+local function platesWanted()
+	return Lethal.db.plates and Stoa:IsModuleEnabled("Plates") and not Stoa:SharedBy("dotPlates")
+end
+
+local function buildPlateMarks(bar)
+	local marks = {}
+	local clip = CreateFrame("Frame", nil, bar)
+	clip:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+	clip:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
+	clip:SetClipsChildren(true)
+	clip:SetFrameLevel(bar:GetFrameLevel() + 1)
+	local marker = CreateFrame("StatusBar", nil, clip)
+	marker:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	marker:SetReverseFill(true)
+	marker:SetPoint("TOP", clip, "TOP")
+	marker:SetPoint("BOTTOM", clip, "BOTTOM")
+	marker:SetPoint("RIGHT", bar:GetStatusBarTexture(), "RIGHT")
+	local edge = marker:CreateTexture(nil, "OVERLAY")
+	UI.pixel(edge, "width")
+	edge:SetPoint("TOPLEFT", marker:GetStatusBarTexture(), "TOPLEFT")
+	edge:SetPoint("BOTTOMLEFT", marker:GetStatusBarTexture(), "BOTTOMLEFT")
+	-- The skull just above the bar's right end, in a clipped window.
+	local window = CreateFrame("Frame", nil, bar)
+	window:SetSize(PLATE_SKULL, PLATE_SKULL)
+	window:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", 0, 3)
+	window:SetClipsChildren(true)
+	window:SetFrameLevel(bar:GetFrameLevel() + 4)
+	local slide = CreateFrame("StatusBar", nil, window)
+	slide:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	slide:SetStatusBarColor(0, 0, 0, 0)
+	slide:SetSize(SLIDE, PLATE_SKULL)
+	slide:SetPoint("RIGHT", window, "RIGHT")
+	local skull = slide:CreateTexture(nil, "OVERLAY")
+	skull:SetSize(PLATE_SKULL, PLATE_SKULL)
+	skull:SetPoint("RIGHT", slide:GetStatusBarTexture(), "RIGHT")
+	skull:SetTexture(SKULL)
+	skull:SetDesaturated(true)
+	marks.clip, marks.marker, marks.edge, marks.window, marks.slide, marks.skull = clip, marker, edge, window, slide, skull
+	return marks
+end
+
+local function paintPlateMarks(marks)
+	marks.marker:SetStatusBarColor(Stoa:Color("text"))
+	marks.marker:GetStatusBarTexture():SetAlpha(0.7)
+	marks.edge:SetColorTexture(0, 0, 0, 0.8)
+	marks.skull:SetVertexColor(Stoa:Color("danger"))
+end
+
+local function hidePlateMarks(marks)
+	marks.clip:Hide()
+	marks.window:Hide()
+	marks.unit = nil
+end
+
+function Lethal:UpdatePlate(unit)
+	if type(unit) ~= "string" or not unit:find("^nameplate") then return end
+	local plates = Stoa.modules.Plates
+	local bar = plates and plates.HealthBar and plates:HealthBar(unit)
+	if not bar then return end
+	local marks = plateMarks[bar]
+	local did = api()
+	local damage, count
+	if did and platesWanted() then
+		local ok, d, c = pcall(did.GetRemainingDamage, unit)
+		if ok then damage, count = d, c end
+	end
+	local dead = UnitIsDead(unit)
+	if Stoa:IsSecret(dead) then dead = false end
+	if dead or not count or count == 0 or not damage or damage <= 0 then
+		if marks then hidePlateMarks(marks) end
+		return
+	end
+	if not marks then
+		marks = buildPlateMarks(bar)
+		paintPlateMarks(marks)
+		plateMarks[bar] = marks
+	end
+	local drawn = pcall(function()
+		marks.marker:SetWidth(bar:GetWidth())
+		marks.marker:SetMinMaxValues(0, UnitHealthMax(unit))
+		marks.marker:SetValue(damage)
+		marks.slide:SetMinMaxValues(0, UnitHealth(unit))
+		marks.slide:SetValue(damage)
+	end)
+	if not drawn then return hidePlateMarks(marks) end
+	marks.unit = unit
+	marks.clip:Show()
+	marks.window:SetShown(self.db.skull)
+end
+
+-- Every plate on screen: after a setting changes, and on a light tick while
+-- marks are up (health moves on its own).
+function Lethal:UpdatePlates()
+	for bar, marks in pairs(plateMarks) do
+		if marks.unit and not bar:IsVisible() then hidePlateMarks(marks) end
+	end
+	if not (C_NamePlate and C_NamePlate.GetNamePlates) then return end
+	for _, plate in ipairs(C_NamePlate.GetNamePlates() or {}) do
+		local unit = plate.UnitFrame and plate.UnitFrame.unit
+		if unit then self:UpdatePlate(unit) end
+	end
+end
+
+function Lethal:EnablePlates()
+	Stoa:On("STOA_PLATE_ADDED", function(unit) self:UpdatePlate(unit) end)
+	Stoa:On("NAME_PLATE_UNIT_REMOVED", function()
+		for bar, marks in pairs(plateMarks) do
+			if marks.unit and not bar:IsVisible() then hidePlateMarks(marks) end
+		end
+	end)
+	Stoa:On("STOA_THEME_CHANGED", function()
+		for _, marks in pairs(plateMarks) do paintPlateMarks(marks) end
+	end)
+	Stoa:NewTicker(0.2, function()
+		for _, marks in pairs(plateMarks) do
+			if marks.unit then return self:UpdatePlates() end
+		end
+	end)
+	self:UpdatePlates()
+end
+
+function Lethal:Refresh()
+	self:Update()
+	self:UpdatePlates()
+end
+
 function Lethal:OnEnable()
 	if not self:Available() then return end
-	if not Stoa:IsModuleEnabled("Halo") or not self:Build() then return end
-	-- The API says when its numbers change; health moves on its own, so a
-	-- light tick keeps the bars' scale current while DoTs are up.
+	-- The API says when its numbers change, for the target and each plate.
 	pcall(DoesItDie.RegisterCallback, "Stoa", function(_, unit)
-		if unit == "target" then self:Update() end
+		if unit == "target" then self:Update() else self:UpdatePlate(unit) end
 	end)
+	self:EnablePlates()
+	if not Stoa:IsModuleEnabled("Halo") or not self:Build() then return end
+	-- Health moves on its own, so a light tick keeps the bars' scale
+	-- current while DoTs are up.
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:Update() end)
 	local elapsed = 0
 	self.clip:GetParent():HookScript("OnUpdate", function(_, delta)

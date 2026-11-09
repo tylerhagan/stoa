@@ -14,7 +14,8 @@
 -- see Modules/Grimoire/Minimap.lua), the chat's column of buttons (a
 -- companion's chat button joins it) and the welcome page, which waits until
 -- the companion's own has closed.
--- DoesItDie shares no jobs: Stoa draws its DoT estimate on the target plaque.
+-- DoesItDie: Stoa draws its DoT estimate on the target plaque, and on Stoa's
+-- nameplates while DoesItDie's own nameplate marker is off.
 -- /stoa addons says which jobs each companion has right now.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -44,11 +45,12 @@ local JOBS = {
 	skipGossip = "skipping one-option gossip",
 	releaseInPvP = "releasing in battlegrounds",
 	acceptRes = "accepting resurrections",
+	dotPlates = "DoT marks on nameplates",
 }
 local JOB_ORDER = {
 	"fastLoot", "sellJunk", "repair", "lootFeed", "acceptQuests", "turnInQuests", "camera",
 	"windows", "chatCopy", "tooltipTarget", "gearUpgrade", "bagUpgrade", "rewardUpgrade", "invites", "keywordInvites", "duels",
-	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes",
+	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates",
 }
 
 -- Each companion: its folder, the name players know, and how to read its
@@ -112,11 +114,16 @@ local COMPANIONS = {
 	},
 	{
 		folder = "DoesItDie", name = "DoesItDie",
-		-- Shares no jobs: it tracks your DoTs, and Stoa draws its estimate on
-		-- the target plaque through its public API (Modules/Halo/Lethal.lua).
-		keys = {},
-		get = function() return false end,
-		note = "Tracks your DoTs; STOA shows their damage left and a kill skull on the target plaque.",
+		-- It tracks your DoTs, and Stoa draws its estimate through its public
+		-- API (Modules/Halo/Lethal.lua). Its own nameplate marker is on until
+		-- its "Show on nameplates" is set to Off (DoesItDieDB.nameplateMode).
+		keys = { dotPlates = "nameplateMode" },
+		get = function(key)
+			local db = _G.DoesItDieDB
+			local mode = type(db) == "table" and db[key] or "markerIcon"
+			return mode ~= "off"
+		end,
+		note = "Tracks your DoTs; STOA shows their damage left and a kill skull on the target plaque, and on its nameplates once Does It Die's own \"Show on nameplates\" is Off.",
 	},
 }
 

@@ -599,6 +599,8 @@ end
 -- can dress. A look for an addon that also shares a job joins that row
 -- ("Bagnon, in Stoa's look").
 
+local DOT_CLASSES = { PRIEST = true, WARLOCK = true, DRUID = true, HUNTER = true }
+
 local function lookFor(folder)
 	if not Stoa.Looks then return nil end
 	for _, look in ipairs(Stoa.Looks.list) do
@@ -643,6 +645,15 @@ function Welcome:GatherAddons()
 				choice = "look",
 			}
 		end
+	end
+	-- A suggestion, not a choice: classes that lean on DoTs hear about
+	-- Does It Die, which STOA draws on the target card and nameplates.
+	local _, class = UnitClass("player")
+	if DOT_CLASSES[class] and not (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("DoesItDie")) then
+		rows[#rows + 1] = {
+			name = "Does It Die",
+			note = "Worth installing: it works out whether your DoTs will finish a target, and STOA shows it on the target card and nameplates.",
+		}
 	end
 	return rows
 end

@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Does It Die on nameplates: STOA's nameplates show your DoTs' damage left as a bone stretch and a small skull when they'll kill, once Does It Die's own "Show on nameplates" is Off. The Welcome suggests Does It Die to DoT classes that don't have it.
 - Raid markers: the marker strip for group leaders is gone, as its buttons did not mark in game.
 - Target card: the name is set again a moment after each new target, so it no longer comes out blank; stack counts on its aura icons sit inside the corner with an outline, and clear when an aura has none.
 - Guild & Communities: a slimmer header band, and the channel dropdown, chat, member list and online count start a little lower, so they sit clear of the header.
