@@ -388,6 +388,20 @@ function Halo:BuildTarget(frame)
 		local count = UI.text(icon, "sans", Stoa.typeSize.caption, "text", "RIGHT")
 		count:SetPoint("BOTTOMRIGHT", 2, -2)
 		icon.count = count
+		-- Hover for the aura's tooltip, as on the game's own buff icons.
+		icon:EnableMouse(true)
+		icon:SetScript("OnEnter", function(self)
+			if not (self.auraFilter and self.auraIndex) then return end
+			GameTooltip_SetDefaultAnchor(GameTooltip, self)
+			local shown = false
+			if self.auraInstanceID and GameTooltip.SetUnitBuffByAuraInstanceID then
+				local by = self.auraFilter:find("HARMFUL") and GameTooltip.SetUnitDebuffByAuraInstanceID or GameTooltip.SetUnitBuffByAuraInstanceID
+				shown = pcall(by, GameTooltip, "target", self.auraInstanceID)
+			end
+			if not shown then pcall(GameTooltip.SetUnitAura, GameTooltip, "target", self.auraIndex, self.auraFilter) end
+			GameTooltip:Show()
+		end)
+		icon:SetScript("OnLeave", GameTooltip_Hide)
 		icon:Hide()
 		target.auras[i] = icon
 	end
@@ -580,7 +594,7 @@ function Halo:UpdateTargetAuras()
 			local key = id or (filter .. i)
 			if not seen[key] then
 				seen[key] = true
-				found[#found + 1] = aura
+				found[#found + 1] = { aura = aura, filter = filter, index = i, id = id }
 			end
 		end
 	end
@@ -595,8 +609,11 @@ function Halo:UpdateTargetAuras()
 	-- From the card's inner edge, under it or above it (PlaceTargetAuras).
 	if not icons.placed then self:PlaceTargetAuras() end
 	for i, icon in ipairs(icons) do
-		local aura = found[i]
+		local slot = found[i]
+		local aura = slot and slot.aura
 		if aura then
+			icon.auraFilter, icon.auraIndex, icon.auraInstanceID = slot.filter, slot.index, slot.id
+			if GameTooltip.IsOwned and GameTooltip:IsOwned(icon) then icon:GetScript("OnEnter")(icon) end
 			icon.texture:SetTexture(aura.icon)
 			pcall(function()
 				local n = aura.applications
@@ -610,6 +627,8 @@ function Halo:UpdateTargetAuras()
 			end)
 			icon:Show()
 		else
+			icon.auraFilter, icon.auraIndex, icon.auraInstanceID = nil, nil, nil
+			if GameTooltip.IsOwned and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
 			icon:Hide()
 		end
 	end
