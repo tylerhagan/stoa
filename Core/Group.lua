@@ -1,6 +1,6 @@
 -- Stoa: your group, as a list of units.
--- Buff reminders, the threat meter and the marker strip all walk the same
--- group. Stoa:GroupUnits() gives the units in order (you first), and
+-- Buff reminders and the threat meter walk the same group.
+-- Stoa:GroupUnits() gives the units in order (you first), and
 -- STOA_GROUP_CHANGED fires once when the group's make-up settles.
 local _, ns = ...
 local Stoa = ns.Stoa
