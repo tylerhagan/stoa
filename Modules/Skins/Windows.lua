@@ -596,6 +596,13 @@ local function dressTrainer()
 		if dropdown and close and dropdown.ClearAllPoints then
 			dropdown:ClearAllPoints()
 			dropdown:SetPoint("RIGHT", close, "LEFT", -8, 0)
+			-- The title strip is Blizzard's TitleContainer, a mouse-taking
+			-- frame at level 510; moved under it, the dropdown never saw a
+			-- click. It sits above the strip now, like the close button.
+			local strip = frame.TitleContainer
+			local above = (strip and strip.GetFrameLevel and strip:GetFrameLevel() or 0) + 1
+			if close.GetFrameLevel then above = math.max(above, close:GetFrameLevel()) end
+			if dropdown.GetFrameLevel and dropdown:GetFrameLevel() < above then dropdown:SetFrameLevel(above) end
 		end
 		-- Your money sits at the left of the footer, level with Train.
 		local money, train = frame.money, frame.TrainButton
