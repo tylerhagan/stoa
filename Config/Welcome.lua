@@ -740,16 +740,26 @@ end
 
 -- Finish always reloads, so every choice, the preset's settings and its
 -- Edit Mode layout take hold together.
+-- Each settling step is guarded on its own: one failing (another addon's
+-- switch, a layout the game won't take) is recorded for /stoa report,
+-- and the reload still happens, so the page never leaves the player with
+-- a chat line and no reload.
+local function step(fn, ...)
+	return select(2, xpcall(fn, Stoa.catch, ...))
+end
+
 function Welcome:Finish()
-	self:SettleAddons()
+	step(self.SettleAddons, self)
 	self.finished = true
 	Stoa.char.welcomed = true
 	if self.start == "ships" then
-		for slot = 1, 2 do Stoa:SetRoleForSlot(slot, "AUTO") end
-		if (Stoa.db.preset or "full") ~= "full" then self:ApplyPreset("full") end
+		step(function()
+			for slot = 1, 2 do Stoa:SetRoleForSlot(slot, "AUTO") end
+			if (Stoa.db.preset or "full") ~= "full" then self:ApplyPreset("full") end
+		end)
 	end
-	if self.start == "saved" and self.setup and Stoa.Setups:Load(self.setup) then return end
-	if self.applied then self:FollowLayout() end
+	if self.start == "saved" and self.setup and step(Stoa.Setups.Load, Stoa.Setups, self.setup) then return end
+	if self.applied then step(self.FollowLayout, self) end
 	self.page:Hide()
 	ReloadUI()
 end
@@ -764,7 +774,7 @@ function Welcome:Closed()
 			Stoa:Print("Some of your choices take effect after /reload.")
 		else
 			-- Closed without Finish: the choices made still need a reload.
-			if self.applied then self:FollowLayout() end
+			if self.applied then step(self.FollowLayout, self) end
 			self.finished = true
 			ReloadUI()
 			return
