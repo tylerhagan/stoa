@@ -523,12 +523,63 @@ end
 -- line doesn't run over the edge.
 local MIN_WIDTH = 210
 
+-- Room around the quest box: the lines inside step in from its accent
+-- rule, and the box keeps a gap from the lines above and below it.
+local QUEST_GAP = 9
+local QUEST_INDENT = 8
+local QUEST_PAD = 5
+
+local function questRange(tip)
+	local first, last
+	for i in pairs(tip.stoaQuest or {}) do
+		if not first or i < first then first = i end
+		if not last or i > last then last = i end
+	end
+	return first, last
+end
+
+-- Where the first quest line and the line after the box should sit, and
+-- how much height that adds to the card.
+local function questSpacing(tip, check)
+	local first, last = questRange(tip)
+	if not first then return 0, true end
+	local top, prev = line(tip, first), line(tip, first - 1)
+	local bottom, after = line(tip, last), line(tip, last + 1)
+	if not (top and prev and bottom) then return 0, true end
+	local gap = first == 2 and LINE_GAP or QUEST_GAP
+	local hasAfter = after and after:IsShown()
+	if check then
+		local _, rel, _, x, y = top:GetPoint(1)
+		if Stoa:IsSecret(y) or Stoa:IsSecret(x) then return 0, true end
+		if rel ~= prev or math.abs((x or 0) - QUEST_INDENT) > 0.5 or math.abs((y or 0) + gap) > 0.5 then return 0, false end
+		if hasAfter then
+			local _, arel, _, ax, ay = after:GetPoint(1)
+			if Stoa:IsSecret(ay) or Stoa:IsSecret(ax) then return 0, true end
+			if arel ~= bottom or math.abs((ax or 0) + QUEST_INDENT) > 0.5 or math.abs((ay or 0) + QUEST_GAP) > 0.5 then return 0, false end
+		end
+		return 0, true
+	end
+	top:ClearAllPoints()
+	top:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", QUEST_INDENT, -gap)
+	local extra = (first == 2 and 0 or (QUEST_GAP - 2))
+	if hasAfter then
+		after:ClearAllPoints()
+		after:SetPoint("TOPLEFT", bottom, "BOTTOMLEFT", -QUEST_INDENT, -QUEST_GAP)
+		extra = extra + QUEST_GAP - 2
+	else
+		extra = extra + QUEST_PAD
+	end
+	return extra, true
+end
+
 local function settle(tip)
 	placeLines(tip)
+	local questRoom = questSpacing(tip)
 	if not (tip.SetPadding and tip.GetPadding) then return end
 	-- A one-line card (a minimap blip, a name) only needs the name's drop.
 	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
-	local room = (second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)
+	local room = ((second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)) + questRoom
+	tip.stoaRoom = room
 	-- Cards with more than a name keep a minimum width, so a short card
 	-- (a level and a word or two) doesn't look squeezed.
 	local wide = second and second:IsShown()
@@ -554,7 +605,10 @@ local function keepHeader(tip)
 	if relative ~= first or math.abs((y or 0) + LINE_GAP) > 0.5 then settle(tip) end
 	local padded = tip.GetPadding and select(2, tip:GetPadding())
 	if Stoa:IsSecret(padded) then return end
-	if tip.stoaPad ~= HEADER_ROOM and padded == tip.stoaPad then settle(tip) end
+	if tip.stoaPad ~= tip.stoaRoom and padded == tip.stoaPad then return settle(tip) end
+	-- The game lays lines out again as quest objectives arrive.
+	local _, placed = questSpacing(tip, true)
+	if not placed then settle(tip) end
 end
 
 local function header(tip)
@@ -616,7 +670,6 @@ end
 -- rule down its left side: the quest name in the accent, the count picked
 -- out, and finished objectives quiet behind the game's tick.
 
-local QUEST_PAD = 3
 
 local function questBox(tip)
 	local box = tip.stoaQuestBox
@@ -645,8 +698,8 @@ function Tooltip:PlaceQuestBox(tip)
 	if not (top and bottom) then return end
 	local box = questBox(tip)
 	box.fill:ClearAllPoints()
-	box.fill:SetPoint("LEFT", tip, "LEFT", 6, 0)
-	box.fill:SetPoint("RIGHT", tip, "RIGHT", -6, 0)
+	box.fill:SetPoint("LEFT", tip, "LEFT", 8, 0)
+	box.fill:SetPoint("RIGHT", tip, "RIGHT", -8, 0)
 	box.fill:SetPoint("TOP", top, "TOP", 0, QUEST_PAD)
 	box.fill:SetPoint("BOTTOM", bottom, "BOTTOM", 0, -QUEST_PAD)
 	box.rule:ClearAllPoints()
