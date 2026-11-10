@@ -515,10 +515,18 @@ function Bags:DockReagents()
 		local combined = ContainerFrameCombinedBags
 		local frame = reagentFrame()
 		if not dockWanted() then
-			if frame and frame.stoaDocked then
+			local wasDocked = frame and frame.stoaDocked
+			if wasDocked then
 				frame.stoaDocked = nil
 				sectionLook(frame, false)
-				if UpdateContainerFrameAnchors then UpdateContainerFrameAnchors() end
+				frame:SetFrameStrata(frame.stoaStrata or "MEDIUM")
+			end
+			-- A reagent bag STOA opened goes with the combined bag.
+			if Bags.openedReagents and not (combined and combined:IsShown()) then
+				Bags.openedReagents = nil
+				if frame and CloseBag then CloseBag(REAGENT_BAG) end
+			elseif wasDocked and UpdateContainerFrameAnchors then
+				UpdateContainerFrameAnchors()
 			end
 			return
 		end
@@ -526,42 +534,45 @@ function Bags:DockReagents()
 			if OpenBag then OpenBag(REAGENT_BAG) end
 			frame = reagentFrame()
 			if not frame then return end
+			Bags.openedReagents = true
 		end
 		local buttons = items(frame)
 		table.sort(buttons, function(a, b) return (a:GetID() or 0) < (b:GetID() or 0) end)
 		local first = buttons[1]
 		local size = first and first:GetWidth() or 37
 		if size <= 0 then size = 37 end
-		local extra = sectionHeight(#buttons, size)
+		local section = sectionHeight(#buttons, size)
+		local money = combined.MoneyFrame
+		if not money then return end
+		local moneyHeight = money:GetHeight() or 13
+		-- The section sits between the items and the footer: the footer
+		-- keeps its row at the bottom, the items move up by the section.
+		local extra = section + moneyHeight + 4
 
-		-- The combined bag, taller by the section; its items ride up with
-		-- the money frame they hang off.
 		if combined.CalculateHeight then
 			combined:SetHeight(combined:CalculateHeight() + extra)
 		end
-		local money = combined.MoneyFrame
-		if not money then return end
 		local tracker = ContainerFrameSettingsManager and ContainerFrameSettingsManager.GetTokenTrackerIfShown
 			and ContainerFrameSettingsManager:GetTokenTrackerIfShown(combined)
+		local base = 8
+		if tracker then base = 8 + (tracker:GetHeight() or 0) + 3 end
 		money:ClearAllPoints()
-		if tracker then
-			money:SetPoint("BOTTOMRIGHT", tracker, "TOPRIGHT", 0, 3 + extra)
-			money:SetPoint("BOTTOMLEFT", tracker, "TOPLEFT", 0, 3 + extra)
-		else
-			money:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 8, 8 + extra)
-			money:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", -8, 8 + extra)
-		end
+		money:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 8, base + extra)
+		money:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", -8, base + extra)
 
-		-- The reagent window in the room under the items.
+		-- The reagent window in the room above the footer. Bag windows raise
+		-- themselves when shown, so it sits a strata above the combined bag
+		-- to stay in front of it.
 		frame.stoaDocked = true
 		sectionLook(frame, true)
 		frame:SetScale(combined:GetScale())
 		frame:ClearAllPoints()
-		frame:SetPoint("TOPLEFT", money, "BOTTOMLEFT", -8, 0)
-		frame:SetPoint("TOPRIGHT", money, "BOTTOMRIGHT", 8, 0)
-		frame:SetHeight(extra)
-		frame:SetFrameStrata(combined:GetFrameStrata())
-		frame:SetFrameLevel(combined:GetFrameLevel() + 30)
+		frame:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 0, base + moneyHeight + 4)
+		frame:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", 0, base + moneyHeight + 4)
+		frame:SetHeight(section)
+		frame.stoaStrata = frame.stoaStrata or frame:GetFrameStrata()
+		local above = { BACKGROUND = "LOW", LOW = "MEDIUM", MEDIUM = "HIGH", HIGH = "DIALOG", DIALOG = "FULLSCREEN" }
+		frame:SetFrameStrata(above[combined:GetFrameStrata()] or "HIGH")
 		for i, button in ipairs(buttons) do
 			local col, row = (i - 1) % COLUMNS, math.floor((i - 1) / COLUMNS)
 			button:ClearAllPoints()
@@ -606,10 +617,7 @@ function Bags:OnEnable()
 			if combined[method] then hooksecurefunc(combined, method, dock) end
 		end
 		combined:HookScript("OnShow", dock)
-		combined:HookScript("OnHide", function()
-			local frame = reagentFrame()
-			if frame and frame.stoaDocked and CloseBag then CloseBag(REAGENT_BAG) end
-		end)
+		combined:HookScript("OnHide", dock)
 	end
 	for i = 1, 13 do
 		local frame = _G["ContainerFrame" .. i]
