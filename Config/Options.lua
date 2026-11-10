@@ -249,7 +249,7 @@ local function build()
 	toggle(of("CombatBar"), "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before.", true, { id = "combatBar", reload = true, words = "action bar" })
 	local rowChoices = { { "1", "1" }, { "2", "2" }, { "3", "3" } }
 	local function relayout() Stoa:AfterCombat(function() Stoa.modules.CombatBar:Layout() end) end
-	choice(of("CombatBar"), "rows", "Combat rows", "How many rows show under the Halo when you tank or deal damage: your main bar, then bottom-left, then bottom-right. Extra rows line up under the first and show only the buttons you've filled.", "2", rowChoices, { scope = "Per spec", words = "action bar buttons", change = relayout })
+	choice(of("CombatBar"), "rows", "Combat rows", "How many rows show under the Halo when you tank or deal damage: your main bar (Action Bar 1), then Action Bar 3, then Action Bar 2. Extra rows line up under the first and show only the buttons you've filled.", "2", rowChoices, { scope = "Per spec", words = "action bar buttons", change = relayout })
 	choice(of("CombatBar"), "healerRows", "Combat rows when healing", "The same, for healing. One keeps the group frames close under your spells.", "1", rowChoices, { scope = "Per spec", change = relayout })
 	toggle(of("ActionBars"), "combatHide", "Hand the bars to the Halo in combat", "With the combat bar on, the console's action bars step aside in combat and only the compact bar under the Halo shows. Your keybinds keep working.", true, {
 		change = function(_, v) Stoa.modules.ActionBars:SetOption("combatHide", v) end,
