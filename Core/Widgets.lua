@@ -1156,10 +1156,29 @@ end
 -- for a solid chip (dark text on it), or nil for a quiet chip.
 function UI.setPips(card, list)
 	if card.style and card.style.cell then return end
+	-- The tags share the health bar's width. One that would run past it
+	-- loses its timer first ("WS 10" to "WS"), then steps out altogether.
+	local room = card.hp and card.hp.GetWidth and card.hp:GetWidth()
+	if type(room) ~= "number" or room <= 0 then room = nil end
+	local used, full = 0, false
 	for i, pip in ipairs(card.pips) do
 		local entry = list and list[i]
-		if entry then
+		if full then entry = nil end
+		if entry and room then
+			local gap = i > 1 and 4 or 0
 			pip.text:SetText(entry[1])
+			if used + gap + math.ceil(pip.text:GetStringWidth()) + 10 > room then
+				local short = tostring(entry[1]):match("^(.-)%s+%d+$")
+				if short then pip.text:SetText(short) end
+				if not short or used + gap + math.ceil(pip.text:GetStringWidth()) + 10 > room then
+					entry, full = nil, true
+				end
+			end
+			if entry then used = used + gap + math.ceil(pip.text:GetStringWidth()) + 10 end
+		elseif entry then
+			pip.text:SetText(entry[1])
+		end
+		if entry then
 			if entry[2] then
 				local r, g, b = Stoa:Color(entry[2])
 				pip.bg:SetVertexColor(r, g, b, 1)
