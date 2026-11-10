@@ -294,15 +294,19 @@ local LOOKS = {
 		apply = function(before)
 			local profile = restedxpProfile()
 			registerRestedXP()
-			if before.theme == nil then before.theme = profile.activeTheme or false end
-			if profile.activeTheme ~= RXP_THEME then
-				profile.activeTheme = RXP_THEME
-				restedxpRefresh()
+			if before.theme == nil or before.theme == RXP_THEME then
+				before.theme = profile.activeTheme ~= RXP_THEME and profile.activeTheme or false
 			end
+			-- Always redrawn: RestedXP loads before STOA, so at login it can't
+			-- find the STOA theme its settings name and draws its default,
+			-- though activeTheme already reads STOA.
+			profile.activeTheme = RXP_THEME
+			restedxpRefresh()
 		end,
 		restore = function(before)
 			local profile = restedxpProfile()
-			if before.theme then profile.activeTheme = before.theme end
+			-- No theme noted: RestedXP falls back to its own default.
+			profile.activeTheme = before.theme or nil
 			restedxpRefresh()
 		end,
 	},

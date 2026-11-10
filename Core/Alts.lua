@@ -134,6 +134,17 @@ function Alts.names(sameRealm)
 	return out
 end
 
+-- Every character noted, richest first.
+function Alts.all()
+	local out = {}
+	for _, entry in pairs(store()) do out[#out + 1] = entry end
+	table.sort(out, function(a, b)
+		if (a.money or 0) ~= (b.money or 0) then return (a.money or 0) > (b.money or 0) end
+		return (a.name or "") < (b.name or "")
+	end)
+	return out
+end
+
 function Alts.totalMoney()
 	local total = 0
 	for _, entry in pairs(store()) do total = total + (entry.money or 0) end

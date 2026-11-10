@@ -17,7 +17,7 @@ local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
-local Bags = Stoa:NewModule("Bags", { bagMode = "combined" })
+local Bags = Stoa:NewModule("Bags", { bagMode = "combined", reagentsInBag = true })
 
 local guarded = Stoa.safe.guarded
 
@@ -321,6 +321,44 @@ local function updateFooter(frame)
 	end
 end
 
+-- Hovering the money lists every character's gold (Core/Alts.lua) and the
+-- total, richest first.
+local function moneyTooltip(owner)
+	local alts = Stoa.Alts
+	if not (alts and alts.all) then return end
+	if alts.Note then pcall(alts.Note, alts) end
+	local list = alts.all()
+	GameTooltip:SetOwner(owner, "ANCHOR_TOP")
+	GameTooltip:AddLine("Money")
+	local me = alts.me and alts.me()
+	local realm = me and select(3, alts.me())
+	for _, entry in ipairs(list) do
+		local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class or ""]
+		local name = entry.name or "?"
+		if entry.realm and realm and entry.realm ~= realm then name = name .. " - " .. entry.realm end
+		local r, g, b = 1, 1, 1
+		if color then r, g, b = color.r, color.g, color.b end
+		GameTooltip:AddDoubleLine(name, Stoa:Money(entry.money or 0), r, g, b, 1, 1, 1)
+	end
+	if #list > 1 then
+		GameTooltip:AddLine(" ")
+		local r, g, b = Stoa:Color("muted")
+		GameTooltip:AddDoubleLine("Total", Stoa:Money(alts.totalMoney()), r, g, b, 1, 1, 1)
+	end
+	GameTooltip:Show()
+end
+
+local function moneyHover(frame, text)
+	local hover = CreateFrame("Frame", nil, frame)
+	hover:SetPoint("TOPRIGHT", text, "TOPRIGHT", 4, 4)
+	hover:SetPoint("BOTTOMLEFT", text, "BOTTOMLEFT", -4, -4)
+	hover:SetFrameLevel(frame:GetFrameLevel() + 20)
+	hover:EnableMouse(true)
+	hover:SetScript("OnEnter", function(self) guarded(moneyTooltip, self) end)
+	hover:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	return hover
+end
+
 -- The Sort button, only where Blizzard has something to call.
 local function addSort(frame, parts)
 	if not (C_Container and C_Container.SortBags) then return end
@@ -366,6 +404,7 @@ function Bags:Dress(frame)
 	parts.money:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 10)
 	-- Blizzard's coin display steps aside only now that ours exists.
 	if frame.MoneyFrame and frame.MoneyFrame.SetAlpha then frame.MoneyFrame:SetAlpha(0) end
+	parts.moneyHover = moneyHover(frame, parts.money)
 	addSort(frame, parts)
 	addJunk(frame, parts)
 
@@ -390,6 +429,152 @@ local function refreshShown()
 	end
 end
 
+-- Reagents in the combined bag ---------------------------------------------
+-- The game keeps the reagent bag (bag 5) out of the combined bag, in a
+-- window of its own. With the combined bag open, Stoa opens the reagent bag
+-- too and seats it as the combined bag's bottom section: the combined bag
+-- grows by the section's height, its items move up (they hang off its
+-- hidden money frame, which moves up with them), and the reagent window,
+-- its own panel, title and buttons hidden, sits in the room left above the
+-- footer with its slots in the same ten columns. Blizzard's own windows and
+-- item buttons do all the work; only places and sizes change.
+local REAGENT_BAG = 5
+local COLUMNS, GAP = 10, 5
+local SECTION_TOP, SECTION_BOTTOM = 22, 8
+
+local function reagentSlots()
+	if not (C_Container and C_Container.GetContainerNumSlots) then return 0 end
+	local ok, n = pcall(C_Container.GetContainerNumSlots, REAGENT_BAG)
+	return ok and type(n) == "number" and n or 0
+end
+
+local function reagentFrame()
+	for i = 1, 13 do
+		local frame = _G["ContainerFrame" .. i]
+		if frame and frame.IsShown and frame:IsShown() and frame.GetBagID and frame:GetBagID() == REAGENT_BAG then
+			return frame
+		end
+	end
+end
+
+local function dockWanted()
+	local combined = ContainerFrameCombinedBags
+	return Bags.db.reagentsInBag ~= false and combined and combined:IsShown() and reagentSlots() > 0
+end
+
+-- The reagent window's own dress (panel, header, title, close, footer and
+-- buttons) steps aside while it is a section, leaving only its item buttons
+-- and the section's label and rule; all of it comes back when it stands
+-- alone again.
+local function sectionLook(frame, docked)
+	if docked and not frame.stoaSection then
+		local section = {}
+		section.label = UI.text(frame, "sans", Stoa.typeSize.caption, "muted")
+		section.label:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -4)
+		section.rule = UI.fadeRule(frame, "text", 0.2)
+		section.rule:SetPoint("LEFT", frame, "TOPLEFT", 7, -(SECTION_TOP - 5))
+		section.rule:SetPoint("RIGHT", frame, "TOPRIGHT", -7, -(SECTION_TOP - 5))
+		frame.stoaSection = section
+	end
+	local section = frame.stoaSection
+	if not section then return end
+	local keep = { [section.label] = true, [section.rule] = true }
+	for _, button in ipairs(items(frame)) do keep[button] = true end
+	frame.stoaHidden = frame.stoaHidden or {}
+	local hidden = frame.stoaHidden
+	local function each(region)
+		if keep[region] or not region.IsShown then return end
+		if docked then
+			if region:IsShown() then
+				hidden[region] = true
+				region:Hide()
+			end
+		elseif hidden[region] then
+			hidden[region] = nil
+			region:Show()
+		end
+	end
+	for _, region in ipairs({ frame:GetRegions() }) do each(region) end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		-- Item buttons, and the pooled ones not in use, keep their own state.
+		if not (child.GetBagID or child.isBag ~= nil) then each(child) end
+	end
+	section.label:SetShown(docked)
+	section.rule:SetShown(docked)
+end
+
+local function sectionHeight(slots, size)
+	local rows = math.ceil(slots / COLUMNS)
+	return SECTION_TOP + rows * size + (rows - 1) * GAP + SECTION_BOTTOM
+end
+
+function Bags:DockReagents()
+	if self.docking then return end
+	self.docking = true
+	guarded(function()
+		local combined = ContainerFrameCombinedBags
+		local frame = reagentFrame()
+		if not dockWanted() then
+			if frame and frame.stoaDocked then
+				frame.stoaDocked = nil
+				sectionLook(frame, false)
+				if UpdateContainerFrameAnchors then UpdateContainerFrameAnchors() end
+			end
+			return
+		end
+		if not frame then
+			if OpenBag then OpenBag(REAGENT_BAG) end
+			frame = reagentFrame()
+			if not frame then return end
+		end
+		local buttons = items(frame)
+		table.sort(buttons, function(a, b) return (a:GetID() or 0) < (b:GetID() or 0) end)
+		local first = buttons[1]
+		local size = first and first:GetWidth() or 37
+		if size <= 0 then size = 37 end
+		local extra = sectionHeight(#buttons, size)
+
+		-- The combined bag, taller by the section; its items ride up with
+		-- the money frame they hang off.
+		if combined.CalculateHeight then
+			combined:SetHeight(combined:CalculateHeight() + extra)
+		end
+		local money = combined.MoneyFrame
+		if not money then return end
+		local tracker = ContainerFrameSettingsManager and ContainerFrameSettingsManager.GetTokenTrackerIfShown
+			and ContainerFrameSettingsManager:GetTokenTrackerIfShown(combined)
+		money:ClearAllPoints()
+		if tracker then
+			money:SetPoint("BOTTOMRIGHT", tracker, "TOPRIGHT", 0, 3 + extra)
+			money:SetPoint("BOTTOMLEFT", tracker, "TOPLEFT", 0, 3 + extra)
+		else
+			money:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 8, 8 + extra)
+			money:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", -8, 8 + extra)
+		end
+
+		-- The reagent window in the room under the items.
+		frame.stoaDocked = true
+		sectionLook(frame, true)
+		frame:SetScale(combined:GetScale())
+		frame:ClearAllPoints()
+		frame:SetPoint("TOPLEFT", money, "BOTTOMLEFT", -8, 0)
+		frame:SetPoint("TOPRIGHT", money, "BOTTOMRIGHT", 8, 0)
+		frame:SetHeight(extra)
+		frame:SetFrameStrata(combined:GetFrameStrata())
+		frame:SetFrameLevel(combined:GetFrameLevel() + 30)
+		for i, button in ipairs(buttons) do
+			local col, row = (i - 1) % COLUMNS, math.floor((i - 1) / COLUMNS)
+			button:ClearAllPoints()
+			button:SetPoint("TOPLEFT", frame, "TOPLEFT", 7 + col * (size + GAP), -(SECTION_TOP + row * (size + GAP)))
+		end
+		local free = C_Container.GetContainerNumFreeSlots and C_Container.GetContainerNumFreeSlots(REAGENT_BAG)
+		local name = C_Container.GetBagName and C_Container.GetBagName(REAGENT_BAG)
+		frame.stoaSection.label:SetText(((name and name ~= "") and name or "Reagents"):upper()
+			.. (free and ("  ·  " .. free .. " free") or ""))
+	end)
+	self.docking = false
+end
+
 -- Combined or separate bags is Blizzard's "combinedBags" setting. It is set
 -- once when the choice changes, so the bag menu's own toggle still works
 -- afterwards.
@@ -411,6 +596,32 @@ function Bags:OnEnable()
 		if frame then guarded(self.Dress, self, frame) end
 	end
 	Stoa:On("BAG_UPDATE_DELAYED", refreshShown)
+	-- The reagent section is seated again whenever the game re-places,
+	-- re-sizes or re-lays the bags.
+	local function dock() Bags:DockReagents() end
+	if UpdateContainerFrameAnchors then hooksecurefunc("UpdateContainerFrameAnchors", dock) end
+	local combined = ContainerFrameCombinedBags
+	if combined then
+		for _, method in ipairs({ "UpdateFrameSize", "UpdateItemLayout", "UpdateCurrencyFrames" }) do
+			if combined[method] then hooksecurefunc(combined, method, dock) end
+		end
+		combined:HookScript("OnShow", dock)
+		combined:HookScript("OnHide", function()
+			local frame = reagentFrame()
+			if frame and frame.stoaDocked and CloseBag then CloseBag(REAGENT_BAG) end
+		end)
+	end
+	for i = 1, 13 do
+		local frame = _G["ContainerFrame" .. i]
+		if frame then
+			for _, method in ipairs({ "UpdateFrameSize", "UpdateItemLayout" }) do
+				if frame[method] then hooksecurefunc(frame, method, function(f)
+					if f.GetBagID and f:GetBagID() == REAGENT_BAG then dock() end
+				end) end
+			end
+		end
+	end
+	Stoa:On("BAG_UPDATE_DELAYED", function() if dockWanted() then dock() end end)
 	Stoa:On("STOA_JUNK_CHANGED", refreshShown)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Bags:SetJunkMode(false) end)
 	Stoa:On("PLAYER_MONEY", refreshShown)

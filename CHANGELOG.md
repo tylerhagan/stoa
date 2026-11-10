@@ -4,6 +4,12 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.0.1
+
+- Bags: the reagent bag opens with the combined bag as its bottom section, under a quiet label with its free slots, in the same ten columns (Settings: Reagents in the bag).
+- Bags: hover your money for every character's gold, richest first, and the total.
+- RestedXP: the STOA look comes back after a relog. RestedXP loads before STOA, so it drew its own theme until something changed it.
+
 ## 1.0.0
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
