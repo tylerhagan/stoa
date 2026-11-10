@@ -7,6 +7,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 1.0.1
 
 - Bags: the reagent bag opens with the combined bag as its bottom section, under a quiet label with its free slots, in the same ten columns, above the footer (Settings: Reagents in the bag). It opens and closes with the combined bag.
+- Bags: currencies you tick "Show on Backpack" in the Currency tab sit in the footer beside the free count, in place of the game's own row.
+- Bags: the search box runs the bag's full width.
 - Bags: hover your money for every character's gold, richest first, and the total.
 - RestedXP: the STOA look comes back after a relog. RestedXP loads before STOA, so it drew its own theme until something changed it.
 
