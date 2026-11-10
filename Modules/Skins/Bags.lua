@@ -703,6 +703,12 @@ function Bags:OnEnable()
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Bags:SetJunkMode(false) end)
 	Stoa:On("PLAYER_MONEY", refreshShown)
 	Stoa:On("CURRENCY_DISPLAY_UPDATE", refreshShown)
+	-- Ticking "Show on Backpack" fires no event, so follow the call itself.
+	for _, name in ipairs({ "SetCurrencyBackpack", "SetCurrencyBackpackByID" }) do
+		if C_CurrencyInfo and C_CurrencyInfo[name] then
+			hooksecurefunc(C_CurrencyInfo, name, function() C_Timer.After(0, refreshShown) end)
+		end
+	end
 	-- What counts as an upgrade moves with your gear and your role.
 	local function rescore()
 		for _, frame in ipairs(allFrames()) do
