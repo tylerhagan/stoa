@@ -11,9 +11,9 @@
 -- Which buttons rest in the row is worked out out of combat; the game
 -- shows the row only in combat.
 --
--- One or two more rows can follow from the bottom-left and bottom-right
--- bars, the same size and on the same columns as the first, so the rows
--- read as one grid. Long cooldowns sit dim until they're ready.
+-- One or two more rows can follow: Action Bar 3 (bottom-right) first, then
+-- Action Bar 2 (bottom-left), the same size and on the same columns as the
+-- first, so the rows read as one grid. Long cooldowns sit dim until they're ready.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -25,11 +25,12 @@ Stoa:SpecSettings(Bar, { "rows", "healerRows" })
 local SIZE = 38
 local GAP = 8
 local TOP = -74
--- Rows after the main bar: the bar each one mirrors (as its page of action
+-- Rows after the main bar, in the order they're added (Action Bar 3, then
+-- Action Bar 2): the bar each one mirrors (as its page of action
 -- slots and its key bindings) and its button size.
 local EXTRA_ROWS = {
-	{ page = 6, binding = "MULTIACTIONBAR1BUTTON", size = SIZE, gap = GAP },
 	{ page = 5, binding = "MULTIACTIONBAR2BUTTON", size = SIZE, gap = GAP },
+	{ page = 6, binding = "MULTIACTIONBAR1BUTTON", size = SIZE, gap = GAP },
 }
 -- The space between rows (the keys sit inside the buttons).
 local KEY_ROOM = GAP

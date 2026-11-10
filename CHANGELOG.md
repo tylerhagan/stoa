@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Combat rows: two rows now show Action Bars 1 and 3; three rows add Action Bar 2.
 - Cast bar: pressing another spell mid-cast no longer hides the bar; a fail or stop only ends it once nothing is casting.
 - Does It Die on nameplates: STOA's nameplates show your DoTs' damage left as a bone stretch and a small skull when they'll kill, once Does It Die's own "Show on nameplates" is Off. The Welcome suggests Does It Die to DoT classes that don't have it.
 - Raid markers: the marker strip for group leaders is gone, as its buttons did not mark in game.
