@@ -25,11 +25,11 @@ local W = {
 	PALADIN = {
 		MELEE = { str = 2.0, agi = 1.2, int = 0.4, sta = 0.4, ap = 1.0, sp = 0.5, hit = 16, crit = 14, dps = 6 },
 		TANK = { sta = 1.5, str = 0.8, agi = 0.8, int = 0.3, sp = 0.6, def = 1.5, dodge = 10, parry = 10, block = 4, armor = 0.08, hit = 6 },
-		HEALER = { int = 1.0, heal = 0.9, sp = 0.3, mp5 = 2.0, spi = 0.3, scrit = 10, sta = 0.2 },
+		HEALER = { int = 1.0, heal = 0.9, sp = 0.9, mp5 = 2.0, spi = 0.3, scrit = 10, sta = 0.2 },
 	},
 	PRIEST = {
 		RANGED = { sp = 1.0, int = 0.4, spi = 0.3, sta = 0.3, shit = 12, scrit = 8, mp5 = 1.0 },
-		HEALER = { heal = 1.0, int = 0.8, spi = 0.8, mp5 = 2.0, scrit = 8, sta = 0.2 },
+		HEALER = { heal = 1.0, sp = 1.0, int = 0.8, spi = 0.8, mp5 = 2.0, scrit = 8, sta = 0.2 },
 	},
 	MAGE = {
 		RANGED = { sp = 1.0, int = 0.6, spi = 0.2, sta = 0.3, shit = 14, scrit = 10, mp5 = 0.8 },
@@ -46,12 +46,12 @@ local W = {
 	DRUID = {
 		MELEE = { str = 2.4, agi = 1.8, sta = 0.6, ap = 1.0, int = 0.3, hit = 14, crit = 14 },
 		TANK = { sta = 1.5, agi = 1.2, str = 1.0, armor = 0.1, def = 1.2, dodge = 10, hit = 6 },
-		HEALER = { heal = 1.0, int = 0.8, spi = 0.9, mp5 = 2.0, scrit = 6, sta = 0.2 },
+		HEALER = { heal = 1.0, sp = 1.0, int = 0.8, spi = 0.9, mp5 = 2.0, scrit = 6, sta = 0.2 },
 		RANGED = { sp = 1.0, int = 0.5, spi = 0.4, shit = 12, scrit = 8, mp5 = 1.0 },
 	},
 	SHAMAN = {
 		MELEE = { str = 1.8, agi = 1.3, int = 0.4, ap = 1.0, hit = 15, crit = 13, dps = 7, sp = 0.4 },
-		HEALER = { heal = 1.0, int = 0.9, mp5 = 2.4, spi = 0.3, scrit = 8 },
+		HEALER = { heal = 1.0, sp = 1.0, int = 0.9, mp5 = 2.4, spi = 0.3, scrit = 8 },
 		RANGED = { sp = 1.0, int = 0.6, mp5 = 1.0, shit = 12, scrit = 9 },
 	},
 }
