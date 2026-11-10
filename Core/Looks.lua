@@ -215,11 +215,34 @@ local function registerRestedXP()
 	})
 end
 
+-- RestedXP's waypoint arrow: its dark-mode arrow vanishes on dark ground,
+-- so the STOA theme swaps in a matte arrow with a pale edge and soft glow.
+local GUIDE_ARROW = UI.MEDIA .. "Textures\\GuideArrow"
+
+local function stoaArrow(arrow)
+	local profile = restedxpProfile()
+	if profile and profile.activeTheme == RXP_THEME and arrow and arrow.texture then
+		arrow.texture:SetTexture(GUIDE_ARROW)
+	end
+end
+
+local function hookArrow(addon)
+	local arrow = addon.arrowFrame
+	if type(arrow) ~= "table" or arrow.stoaHooked or type(arrow.UpdateVisuals) ~= "function" then return end
+	arrow.stoaHooked = true
+	hooksecurefunc(arrow, "UpdateVisuals", stoaArrow)
+end
+
 -- Redraws RestedXP in whichever theme it has selected.
 local function restedxpRefresh()
 	local addon = restedxp()
 	local profile = restedxpProfile()
 	if not (addon and profile) then return end
+	hookArrow(addon)
+	local arrow = addon.arrowFrame
+	if type(arrow) == "table" and type(arrow.UpdateVisuals) == "function" then
+		C_Timer.After(0, function() pcall(arrow.UpdateVisuals, arrow) end)
+	end
 	if profile.enableThemeLiveReload and type(addon.ReloadTheme) == "function" then
 		pcall(addon.ReloadTheme, addon)
 	elseif type(addon.LoadActiveTheme) == "function" then
