@@ -268,7 +268,7 @@ local function decorateButton(button)
 	Item.markUpgrade(button, parts, button.stoaUpgrade and not Stoa:SharedBy("bagUpgrade"))
 end
 
--- Gold, silver and copper as letters, so nothing rests on coin colour.
+-- Gold, silver and copper with the game's coin icons, as the hover shows them.
 local function moneyWords(copper)
 	copper = Stoa:PlainNumber(copper) or 0
 	local gold = math.floor(copper / 10000)
