@@ -278,7 +278,7 @@ local function moneyWords(copper)
 	if gold > 0 then out[#out + 1] = (BreakUpLargeNumbers and BreakUpLargeNumbers(gold) or gold) .. "g" end
 	if silver > 0 or gold > 0 then out[#out + 1] = silver .. "s" end
 	out[#out + 1] = rest .. "c"
-	return table.concat(out, " ")
+	return Stoa:TintMoney(table.concat(out, " "))
 end
 
 local function freeSlots(frame)

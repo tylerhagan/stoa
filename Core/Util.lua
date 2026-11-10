@@ -22,6 +22,19 @@ function Stoa:Money(copper)
 	return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
 end
 
+-- The g, s and c after each amount in their coin's colour, so a money line
+-- isn't flat. The letters stay, so nothing rests on the colour alone.
+local COIN = {
+	g = "|cffe6c35c", -- gold
+	s = "|cffc4c8ce", -- silver
+	c = "|cffc8794a", -- copper
+}
+
+function Stoa:TintMoney(text)
+	if type(text) ~= "string" then return text end
+	return (text:gsub("(%d)([gsc])%f[%A]", function(digit, letter) return digit .. COIN[letter] .. letter .. "|r" end))
+end
+
 -- Colour escapes ---------------------------------------------------------------
 
 -- The chat colour code for a colour, from numbers or a token name.

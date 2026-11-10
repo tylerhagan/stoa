@@ -273,7 +273,7 @@ function Items.money(copper)
 	else
 		text = rest .. "c"
 	end
-	return negative and ("-" .. text) or text
+	return Stoa:TintMoney(negative and ("-" .. text) or text)
 end
 
 -- Every bag slot: fn(bag, slot, info) where info is the container item
