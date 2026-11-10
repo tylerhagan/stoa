@@ -159,7 +159,13 @@ function Items.compare(link)
 	for _, slot in ipairs(slots) do
 		local worn = call(GetInventoryItemLink, "player", slot)
 		if worn == link then return nil end
-		local wornLevel = worn and Items.level(worn) or 0
+		-- Something worn whose level the game won't give: no fair comparison,
+		-- and certainly not an empty slot.
+		local wornLevel = 0
+		if worn then
+			wornLevel = Items.level(worn)
+			if not wornLevel then return nil end
+		end
 		if not worst or wornLevel < worst then worstSlot, worst = slot, wornLevel end
 	end
 	return level - worst, Items.SLOT_NAMES[worstSlot] or "slot", worst == 0
@@ -213,16 +219,21 @@ function Items.upgrade(link)
 	local _, _, equipLoc = Items.info(link)
 	local slots = Items.slotsFor(equipLoc)
 	if not slots then return nil end
-	local worstSlot, worst
+	local worstSlot, worst, empty
 	for _, slot in ipairs(slots) do
 		local worn = call(GetInventoryItemLink, "player", slot)
 		if worn == link then return nil end
-		local wornScore = worn and Stoa.Weights.score(worn) or 0
-		if not wornScore then return nil end
-		if not worst or wornScore < worst then worstSlot, worst = slot, wornScore end
+		local wornScore = 0
+		if worn then
+			wornScore = Stoa.Weights.score(worn)
+			if not wornScore then return nil end
+		end
+		if not worst or wornScore < worst then worstSlot, worst, empty = slot, wornScore, not worn end
 	end
 	local name = Items.SLOT_NAMES[worstSlot] or "slot"
-	if worst <= 0 then return 100, name, true end
+	-- Only a slot with nothing in it is empty; worn gear with nothing your
+	-- role counts loses to anything that has some.
+	if worst <= 0 then return 100, name, empty and true or false end
 	return math.floor((score - worst) / worst * 100 + 0.5), name, false
 end
 
