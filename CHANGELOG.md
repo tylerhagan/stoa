@@ -10,7 +10,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Bags: currencies you tick "Show on Backpack" in the Currency tab sit in the footer beside the free count, in place of the game's own row.
 - Bags: the search box runs the bag's full width.
 - Bags: hover your money for every character's gold, richest first, and the total.
-- Money reads in its coin colours: the g, s and c after each amount are gold, silver and copper (bags, trainer, loot tally, console).
+- Money shows the game's gold, silver and copper coin icons after each amount, as the money hover does (bags, trainer, loot tally, console).
 - RestedXP: the STOA look comes back after a relog. RestedXP loads before STOA, so it drew its own theme until something changed it.
 - RestedXP: the waypoint arrow in the STOA look is matte black with a pale edge and soft glow, so it still shows in caves and at night.
 
