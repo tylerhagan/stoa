@@ -73,9 +73,8 @@ SHOTS = {
     "party-healer": "Healing a group: party cards under the combat bar and a watch card for the tank.",
     "tooltip-compare": "Tooltips: a calm card with an upgrade line against what you wear.",
     "training": "Training: what you can learn now and what comes next, with prices.",
-    "character": "The character sheet.",
-    "bags": "Bags in one window.",
-    "minimap": "The minimap, its header and the sun.",
+    "settings": "Settings: every option on one searchable page, with a note on what each does.",
+    "mail": "The mailbox, with Take gold and Open All.",
 }
 
 
@@ -277,7 +276,7 @@ def home(readme, ver):
     cards = "".join(
         '<article class="state"><h3>%s</h3><p>%s</p></article>' % (html.escape(n), inline(t[:1].upper() + t[1:])) for n, t in states)
     nots_html = "".join('<li><strong>%s</strong> %s</li>' % (html.escape(n), inline(t)) for n, t in not_items)
-    gallery = "".join(shot(n) for n in ["tooltip-compare", "training", "character", "bags", "minimap"])
+    gallery = "".join(shot(n) for n in ["tooltip-compare", "training", "settings", "mail"])
     return """
 <section class="hero">
   <div class="bar">
