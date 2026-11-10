@@ -515,14 +515,22 @@ function Bags:DockReagents()
 		local combined = ContainerFrameCombinedBags
 		local frame = reagentFrame()
 		if not dockWanted() then
+			-- reagentFrame() only finds a shown window; a docked one hides
+			-- with the combined bag, so look for it by its mark too.
+			if not frame then
+				for i = 1, 13 do
+					local each = _G["ContainerFrame" .. i]
+					if each and each.stoaDocked then frame = each end
+				end
+			end
 			local wasDocked = frame and frame.stoaDocked
 			if wasDocked then
 				frame.stoaDocked = nil
 				sectionLook(frame, false)
-				frame:SetFrameStrata(frame.stoaStrata or "MEDIUM")
+				frame:SetParent(frame.stoaParent or UIParent)
 			end
-			-- A reagent bag STOA opened goes with the combined bag.
-			if Bags.openedReagents and not (combined and combined:IsShown()) then
+			-- A docked reagent bag goes with the combined bag.
+			if (wasDocked or Bags.openedReagents) and not (combined and combined:IsShown()) then
 				Bags.openedReagents = nil
 				if frame and CloseBag then CloseBag(REAGENT_BAG) end
 			elseif wasDocked and UpdateContainerFrameAnchors then
@@ -560,19 +568,21 @@ function Bags:DockReagents()
 		money:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 8, base + extra)
 		money:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", -8, base + extra)
 
-		-- The reagent window in the room above the footer. Bag windows raise
-		-- themselves when shown, so it sits a strata above the combined bag
-		-- to stay in front of it.
+		-- The reagent window in the room above the footer, as a child of
+		-- the combined bag: drawn over its panel whichever window the game
+		-- raised last, and hidden with it.
 		frame.stoaDocked = true
 		sectionLook(frame, true)
-		frame:SetScale(combined:GetScale())
+		if frame:GetParent() ~= combined then
+			frame.stoaParent = frame:GetParent()
+			frame:SetParent(combined)
+		end
+		frame:SetScale(1)
+		frame:SetFrameLevel(combined:GetFrameLevel() + 5)
 		frame:ClearAllPoints()
 		frame:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 0, base + moneyHeight + 4)
 		frame:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", 0, base + moneyHeight + 4)
 		frame:SetHeight(section)
-		frame.stoaStrata = frame.stoaStrata or frame:GetFrameStrata()
-		local above = { BACKGROUND = "LOW", LOW = "MEDIUM", MEDIUM = "HIGH", HIGH = "DIALOG", DIALOG = "FULLSCREEN" }
-		frame:SetFrameStrata(above[combined:GetFrameStrata()] or "HIGH")
 		for i, button in ipairs(buttons) do
 			local col, row = (i - 1) % COLUMNS, math.floor((i - 1) / COLUMNS)
 			button:ClearAllPoints()
@@ -607,6 +617,25 @@ function Bags:OnEnable()
 		if frame then guarded(self.Dress, self, frame) end
 	end
 	Stoa:On("BAG_UPDATE_DELAYED", refreshShown)
+	-- The search box runs the bag's full width, up to the clean-up button.
+	local function placeSearch(frame)
+		local box = BagItemSearchBox
+		if not (box and box.anchorBag == frame) then return end
+		box:ClearAllPoints()
+		box:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -37)
+		local clean = BagItemAutoSortButton
+		if clean and clean:IsShown() and clean:GetParent() == frame then
+			box:SetPoint("TOPRIGHT", clean, "TOPLEFT", -8, -3)
+		else
+			box:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -37)
+		end
+	end
+	for _, frame in ipairs(allFrames()) do
+		if frame and frame.UpdateSearchBox then
+			hooksecurefunc(frame, "UpdateSearchBox", function(f) guarded(placeSearch, f) end)
+		end
+	end
+
 	-- The reagent section is seated again whenever the game re-places,
 	-- re-sizes or re-lays the bags.
 	local function dock() Bags:DockReagents() end
