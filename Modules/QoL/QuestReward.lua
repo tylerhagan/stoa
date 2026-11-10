@@ -49,6 +49,7 @@ function Reward:Pick()
 	local count = Stoa:PlainNumber(call(GetNumQuestChoices)) or 0
 	if count < 2 or not GetQuestItemLink then return nil end
 	local bestGain, gainIndex, bestValue, valueIndex = 0, nil, 0, nil
+	local bestWorth = 0
 	-- Item level only decides when no choice can be scored by stats: the
 	-- two measure different things (percent against item levels).
 	local bestLevel, levelIndex, anyScored = 0, nil, false
@@ -58,7 +59,12 @@ function Reward:Pick()
 			local gain = Stoa.Items.upgrade(link)
 			if gain then
 				anyScored = true
-				if gain > bestGain then bestGain, gainIndex = gain, i end
+				-- Against a weapon with no stats every choice reads +100%,
+				-- so a tie goes to the one worth most on its own.
+				local worth = Stoa.Weights and Stoa.Weights.score(link) or 0
+				if gain > bestGain or (gain == bestGain and gainIndex and worth > bestWorth) then
+					bestGain, gainIndex, bestWorth = gain, i, worth
+				end
 			else
 				local delta = Stoa.Items.compare(link)
 				if delta and delta > bestLevel then bestLevel, levelIndex = delta, i end
