@@ -70,6 +70,26 @@ local function readyAt(key)
 	return start + duration, duration, true
 end
 
+-- Whether the unit carries your Shield and your Renew. Walked by index, the
+-- way the party cards read their pips, matching the spell ID where the game
+-- gives it and the name otherwise (a lookup by name missed Renew in a fight).
+local function ownAuras(unit)
+	local shield, renew = false, false
+	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return shield, renew end
+	local shieldName, renewName = nameOf("shield"), nameOf("renew")
+	for i = 1, 40 do
+		local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, "HELPFUL|PLAYER")
+		if not ok or type(aura) ~= "table" then break end
+		local id = Stoa:PlainNumber(aura.spellId)
+		local name = aura.name
+		if Stoa:IsSecret(name) then name = nil end
+		if (id and id == SPELLS.shield) or (name and name == shieldName) then shield = true end
+		if (id and id == SPELLS.renew) or (name and name == renewName) then renew = true end
+		if shield and renew then break end
+	end
+	return shield, renew
+end
+
 -- Everyone in your group, yourself included.
 local function groupUnits()
 	local units = { "player" }
@@ -201,11 +221,18 @@ function Disc:UpdateCount()
 		count:SetText("")
 		return
 	end
+	-- When the game hides auras in this fight a count would only ever read
+	-- 0, so the line steps back rather than say something untrue.
+	if Stoa:AurasHidden() then
+		count:SetText("")
+		return
+	end
 	local shields, renews = 0, 0
 	for _, unit in ipairs(groupUnits()) do
 		if UnitExists(unit) then
-			if auraByName(unit, nameOf("shield"), "HELPFUL|PLAYER") then shields = shields + 1 end
-			if auraByName(unit, nameOf("renew"), "HELPFUL|PLAYER") then renews = renews + 1 end
+			local shield, renew = ownAuras(unit)
+			if shield then shields = shields + 1 end
+			if renew then renews = renews + 1 end
 		end
 	end
 	local parts = {}
