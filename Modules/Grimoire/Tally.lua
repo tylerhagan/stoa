@@ -82,8 +82,8 @@ local function money()
 	local copper = plain(call(GetMoney))
 	if not copper then return nil end
 	local gold, silver = math.floor(copper / 10000), math.floor(copper / 100) % 100
-	if gold > 0 then return ("%dg %02ds"):format(gold, silver) end
-	return ("%ds %02dc"):format(silver, copper % 100)
+	if gold > 0 then return Stoa:TintMoney(("%dg %02ds"):format(gold, silver)) end
+	return Stoa:TintMoney(("%ds %02dc"):format(silver, copper % 100))
 end
 
 -- Hover and click ------------------------------------------------------------------
@@ -162,8 +162,8 @@ local function moneyText(copper)
 	local sign = copper < 0 and "-" or "+"
 	copper = math.abs(copper)
 	local gold, silver = math.floor(copper / 10000), math.floor(copper / 100) % 100
-	if gold > 0 then return ("%s%dg %02ds"):format(sign, gold, silver) end
-	return ("%s%ds %02dc"):format(sign, silver, copper % 100)
+	if gold > 0 then return Stoa:TintMoney(("%s%dg %02ds"):format(sign, gold, silver)) end
+	return Stoa:TintMoney(("%s%ds %02dc"):format(sign, silver, copper % 100))
 end
 
 -- Professions -------------------------------------------------------------------
