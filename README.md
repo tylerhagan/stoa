@@ -17,7 +17,7 @@ Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a sma
 
 ![STOA in the world](docs/screenshots/world.jpg)
 
-**In combat:** the console folds away and the Halo rises: health and mana arcs, the target card, the signature slot and the combat bar.
+**In combat:** the console folds away and the Halo rises: health and mana arcs, the target card, the combat bar and party cards, with the click-cast grid beside them for a healer.
 
 ![STOA in combat](docs/screenshots/combat.jpg)
 
@@ -30,13 +30,12 @@ Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a sma
 ![Party cards for a healer](docs/screenshots/party-healer.jpg)
 
 <p>
-<img src="docs/screenshots/tooltip-compare.jpg" alt="Item tooltip with upgrade line" width="49%">
-<img src="docs/screenshots/training.jpg" alt="The Training page" width="40%">
+<img src="docs/screenshots/tooltip-compare.jpg" alt="Item tooltip with upgrade line" width="66%">
+<img src="docs/screenshots/training.jpg" alt="The Training page" width="30%">
 </p>
 <p>
-<img src="docs/screenshots/character.jpg" alt="Character window" width="49%">
-<img src="docs/screenshots/bags.jpg" alt="Bags" width="30%">
-<img src="docs/screenshots/minimap.jpg" alt="Minimap" width="19%">
+<img src="docs/screenshots/settings.jpg" alt="STOA settings" width="66%">
+<img src="docs/screenshots/mail.jpg" alt="The mailbox" width="30%">
 </p>
 
 ## What STOA is not
