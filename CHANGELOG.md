@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- RestedXP in STOA's look: a STOA theme for its guide window in your theme's colours and type, offered like Bagnon's and Details' (/stoa looks).
 - Tooltips: quest lines sit in their own box with an accent rule, the quest name in the accent and your count picked out; finished objectives go quiet.
 - Upgrades for healers: "Increases damage and healing" now counts in full, so a healer's wand or staff with it no longer scores as nothing.
 - Upgrades: a slot only counts as empty when nothing is in it, so a worn wand or weapon the game reads oddly is no longer "empty".

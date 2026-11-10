@@ -605,7 +605,7 @@ local function build()
 	button("restore", "Put the game's settings back", "Puts back the game settings STOA changed (far camera, map fade, target nameplate size, combined bags, proc art), as they were before STOA. One you've changed yourself since stays as you set it.", "Put back", command("restore"), { cmd = "/stoa restore", words = "cvar ledger reset camera" })
 	group = "Other addons"
 	button("addons", "Other addons", "Choose again which of STOA's parts step aside for other addons you run, such as bags or nameplates.", "Choose again", command("addons"), { cmd = "/stoa addons", words = "conflicts elvui bagnon companion" })
-	button("looks", "STOA's look for other addons", "Questie's tracker, Bagnon's bags, Details' meters and others in STOA's dress.", "Choose", command("looks"), { cmd = "/stoa looks", words = "questie bagnon details skin" })
+	button("looks", "STOA's look for other addons", "Questie's tracker, Bagnon's bags, Details' meters and RestedXP's guide in STOA's dress.", "Choose", command("looks"), { cmd = "/stoa looks", words = "questie bagnon details restedxp rxp guide skin" })
 	group = "Help"
 	button("report", "Report a problem", "Your setup and any errors STOA caught this session, ready to copy and send.", "Open", function() Stoa.Report:Show() end, { cmd = "/stoa report", words = "bug error lua" })
 	button("gallery", "Gallery", "Every surface, size and state word STOA uses, side by side, to check that the look holds together.", "Open", function() Stoa.Gallery:Show() end, { cmd = "/stoa gallery", words = "design look style rulebook" })
