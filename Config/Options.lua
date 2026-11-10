@@ -387,6 +387,7 @@ local function build()
 	choice(of("Bags"), "bagMode", "Bag layout", "One combined bag, or a window for each bag. You can still switch from the bag's own menu.", "combined", {
 		{ "combined", "One bag" }, { "separate", "Separate" },
 	}, { game = true, words = "combined bags inventory", change = function() Stoa.modules.Bags.db.appliedMode = nil; Stoa.modules.Bags:ApplyMode() end })
+	toggle(of("Bags"), "reagentsInBag", "Reagents in the bag", "The reagent bag opens with the combined bag as its bottom section, its slots in the same ten columns, instead of a window of its own.", true, { words = "reagent bag herb pouch profession", change = function() Stoa.modules.Bags:DockReagents() end })
 	toggle(of("Character"), "enabled", "Restyle the character sheet", "Item level and quality edges on every slot, WORN and BROKEN on gear that needs repair, an average item level line. The inspect window gets item levels too.", true, { id = "character", reload = true, words = "paper doll gear durability" })
 	toggle(of("Top"), "enabled", "Restyle the top of the screen", "Buffs as cropped icons with quiet timers, the quest tracker in STOA's type, and the minimap's zone header on a dark panel.", true, { id = "top", reload = true, words = "buffs auras objective tracker" })
 	toggle(of("Top"), "buffList", "Buffs as a list", "Each buff's name and time left beside its icon, easy to scan before a pull. Works best with the buff frame set to one column in Edit Mode.", false, { words = "auras", change = refresh("Top", "RefreshBuffList") })
