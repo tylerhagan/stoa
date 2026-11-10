@@ -106,7 +106,9 @@ local OPEN = {
 		return run("ToggleAllBags")
 	end },
 	professions = { "Professions", function()
-		if _G.ProfessionsBookFrame and run("ToggleProfessionsBook") then return true end
+		-- Forever has no professions book: its toggle opens ProfessionsFrame.
+		if run("ToggleProfessionsBook") then return true end
+		if run("ShowProfessionsFrame") then return true end
 		if _G.SkillFrame and run("ToggleCharacter", "SkillFrame") then return true end
 		return run("ToggleSpellBook", "professions")
 	end },
@@ -181,8 +183,8 @@ local function readProfessions()
 		local one, two, _, fishing, cooking, firstAid = call(GetProfessions)
 		for key, index in pairs({ prof1 = one, prof2 = two, fishing = fishing, cooking = cooking, firstAid = firstAid }) do
 			if index then
-				local name, _, rank, max = call(GetProfessionInfo, index)
-				if name then found[key] = { name, rank, max } end
+				local name, _, rank, max, _, _, skillLine = call(GetProfessionInfo, index)
+				if name then found[key] = { name, rank, max, plain(skillLine) } end
 			end
 		end
 		return found
@@ -227,7 +229,14 @@ local function profession(key, fallback)
 			add("Skill", ("%d of %d"):format(rank, max))
 			if rank >= max then add("Next", "Visit a trainer") else add("To go", tostring(max - rank)) end
 		end,
-		open = "professions",
+		-- Opens this profession's own window where the game can, else the list.
+		action = "Open",
+		open = function()
+			local p = professions[key]
+			local line = p and p[4]
+			if line and run("OpenProfessionUIToSkillLine", line) then return end
+			OPEN.professions[2]()
+		end,
 	}
 end
 
@@ -688,6 +697,57 @@ end
 
 -- Building ----------------------------------------------------------------------
 
+-- The character sheet reads your health as a secret number, and opening it
+-- from Stoa's own code taints that read into an error. So lines that open it
+-- get a secure button laid over them while the mouse is there, which clicks
+-- the game's own Character button: the sheet opens as if from the menu.
+local SHEET = { character = true, reputation = true, money = true }
+
+function Tally:SheetProxy()
+	if self.proxy ~= nil then return self.proxy or nil end
+	if not (_G.CharacterMicroButton and CreateFrame) then self.proxy = false return nil end
+	local ok, proxy = pcall(CreateFrame, "Button", "StoaTallyOpen", UIParent, "SecureActionButtonTemplate")
+	if not ok or not proxy then self.proxy = false return nil end
+	proxy:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	proxy:SetAttribute("type1", "click")
+	proxy:SetAttribute("clickbutton1", _G.CharacterMicroButton)
+	proxy:HookScript("OnClick", function(button, mouse)
+		if mouse == "RightButton" and button.row then self:OpenPicker(button.row) end
+	end)
+	-- The mouse moves from the line onto the cover: the tooltip stays the line's.
+	proxy:SetScript("OnEnter", function(button)
+		local row = button.row
+		if not (row and row.key) then return end
+		row.glow:Show()
+		self:ShowDetail(row)
+	end)
+	proxy:SetScript("OnLeave", function(button)
+		local row = button.row
+		if row then row.glow:Hide() end
+		GameTooltip:Hide()
+		if not InCombatLockdown() then button:Hide() end
+	end)
+	proxy:RegisterEvent("PLAYER_REGEN_DISABLED")
+	proxy:SetScript("OnEvent", function(button) button:Hide() end)
+	proxy:Hide()
+	self.proxy = proxy
+	return proxy
+end
+
+-- Lays the secure button over a line that opens the character sheet.
+function Tally:CoverRow(row)
+	local entry = row.key and ENTRIES[row.key]
+	if not (entry and SHEET[entry.open or ""]) or InCombatLockdown() then return end
+	local proxy = self:SheetProxy()
+	if not proxy then return end
+	proxy.row = row
+	proxy:ClearAllPoints()
+	proxy:SetAllPoints(row)
+	proxy:SetFrameStrata(row:GetFrameStrata())
+	proxy:SetFrameLevel(row:GetFrameLevel() + 5)
+	proxy:Show()
+end
+
 function Tally:BuildRow(page, index)
 	local column = math.floor((index - 1) / ROWS_PER_COLUMN)
 	local slot = (index - 1) % ROWS_PER_COLUMN
@@ -729,6 +789,7 @@ function Tally:BuildRow(page, index)
 		local object = button.key and feed(button.key)
 		if button.key and not object and ENTRIES[button.key] then
 			self:ShowDetail(button)
+			self:CoverRow(button)
 		elseif object and object.OnTooltipShow then
 			GameTooltip:SetOwner(button, "ANCHOR_TOP")
 			call(object.OnTooltipShow, GameTooltip)

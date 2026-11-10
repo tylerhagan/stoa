@@ -121,10 +121,12 @@ function Disc:BuildCoins(halo)
 		coin:Hide()
 		self.coins[i] = coin
 	end
-	-- Shields and Renews out on the group, under the coins.
+	-- Shields and Renews out on the group, beside the lowest coin. Under it,
+	-- the words ran into the mana number.
 	local count = UI.caption(halo, "")
+	count:SetJustifyH("LEFT")
 	local angle = math.rad(COIN_ANGLES[#COIN_ANGLES])
-	count:SetPoint("TOP", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle) - COIN / 2 - 4)
+	count:SetPoint("LEFT", halo, "CENTER", RADIUS * math.cos(angle) + COIN / 2 + 8, RADIUS * math.sin(angle))
 	UI.legible(count)
 	self.count = count
 end
