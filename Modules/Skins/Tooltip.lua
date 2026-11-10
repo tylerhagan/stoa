@@ -228,7 +228,7 @@ function Tooltip:DressUnit(tip)
 	local guild = known(UnitIsPlayer(unit)) and GetGuildInfo and known((GetGuildInfo(unit)))
 	for i = 2, tip:NumLines() do
 		local text = line(tip, i)
-		if text then
+		if text and not (tip.stoaQuest and tip.stoaQuest[i]) then
 			if i == 2 and guild then
 				text:SetTextColor(Stoa:Color("accent"))
 			else
@@ -493,6 +493,8 @@ function Tooltip:Rank(tip, classification)
 end
 
 local function clear(tip)
+	tip.stoaQuest = nil
+	if tip.stoaQuestBox then tip.stoaQuestBox.fill:Hide() tip.stoaQuestBox.rule:Hide() end
 	tip.stoaEdge:Clear()
 	for _, outline in ipairs(tip.stoaRank or {}) do outline:Clear() end
 	if tip.stoaFade then tip.stoaFade:Hide() end
@@ -608,6 +610,82 @@ local function fonts()
 	face(GameTooltipTextSmall, "sans", Stoa.typeSize.caption)
 end
 
+-- Quests ------------------------------------------------------------------------------
+-- The quest lines on a card (the quest's name, your progress, a party
+-- member's name) sit together in a slightly lighter box with a thin accent
+-- rule down its left side: the quest name in the accent, the count picked
+-- out, and finished objectives quiet behind the game's tick.
+
+local QUEST_PAD = 3
+
+local function questBox(tip)
+	local box = tip.stoaQuestBox
+	if box then return box end
+	box = {}
+	box.fill = tip:CreateTexture(nil, "BACKGROUND", nil, -4)
+	box.fill:SetTexture("Interface\\Buttons\\WHITE8x8")
+	UI.tint(box.fill, "text", 0.06)
+	box.rule = tip:CreateTexture(nil, "BACKGROUND", nil, -3)
+	box.rule:SetTexture("Interface\\Buttons\\WHITE8x8")
+	box.rule:SetWidth(2)
+	UI.tint(box.rule, "accent", 0.9)
+	tip.stoaQuestBox = box
+	UI.applyTheme()
+	return box
+end
+
+-- Lays the box over the first to the last quest line seen so far.
+function Tooltip:PlaceQuestBox(tip)
+	local first, last
+	for i in pairs(tip.stoaQuest or {}) do
+		if not first or i < first then first = i end
+		if not last or i > last then last = i end
+	end
+	local top, bottom = first and line(tip, first), last and line(tip, last)
+	if not (top and bottom) then return end
+	local box = questBox(tip)
+	box.fill:ClearAllPoints()
+	box.fill:SetPoint("LEFT", tip, "LEFT", 6, 0)
+	box.fill:SetPoint("RIGHT", tip, "RIGHT", -6, 0)
+	box.fill:SetPoint("TOP", top, "TOP", 0, QUEST_PAD)
+	box.fill:SetPoint("BOTTOM", bottom, "BOTTOM", 0, -QUEST_PAD)
+	box.rule:ClearAllPoints()
+	box.rule:SetPoint("TOPLEFT", box.fill, "TOPLEFT")
+	box.rule:SetPoint("BOTTOMLEFT", box.fill, "BOTTOMLEFT")
+	box.fill:Show()
+	box.rule:Show()
+end
+
+function Tooltip:QuestLine(tip, data)
+	local index = data and known(data.lineIndex)
+	local text = index and line(tip, index)
+	if not text then return end
+	tip.stoaQuest = tip.stoaQuest or {}
+	tip.stoaQuest[index] = data.type
+	local types = Enum.TooltipDataLineType
+	if data.type == types.QuestTitle then
+		text:SetTextColor(Stoa:Color("accent"))
+	elseif data.type == types.QuestObjective then
+		if known(data.completed) then
+			text:SetTextColor(Stoa:Color("muted"))
+		else
+			text:SetTextColor(Stoa:Color("text"))
+			-- "8/20 Rabid Thistle Bear slain": the count in the accent.
+			local words = known(text:GetText())
+			if type(words) == "string" and not words:find("|c", 1, true) then
+				local count = words:match("%d+%s*/%s*%d+")
+				if count then
+					local start, stop = words:find(count, 1, true)
+					text:SetText(words:sub(1, start - 1) .. Stoa:Hex("accent") .. count .. "|r" .. words:sub(stop + 1))
+				end
+			end
+		end
+	else
+		text:SetTextColor(Stoa:Color("text"))
+	end
+	self:PlaceQuestBox(tip)
+end
+
 -- Unit cards hidden in combat unless you hold Shift.
 function Tooltip:HideInCombat(tip)
 	if not self.db.combatHide or not InCombatLockdown() or IsShiftKeyDown() then return end
@@ -645,6 +723,15 @@ function Tooltip:OnEnable()
 			if not usable(tip) or tip ~= GameTooltip then return end
 			self:Gathering(tip)
 		end, "Tooltip"))
+	end
+	local types = Enum.TooltipDataLineType
+	if TooltipDataProcessor.AddLinePostCall and types then
+		for _, kind in ipairs({ types.QuestTitle, types.QuestObjective, types.QuestPlayer }) do
+			TooltipDataProcessor.AddLinePostCall(kind, Stoa:Guard(function(tip, data)
+				if not usable(tip) then return end
+				self:QuestLine(tip, data)
+			end, "Tooltip"))
+		end
 	end
 	Stoa:On("INSPECT_READY", function(guid)
 		xpcall(self.InspectReady, Stoa.catch, self, guid)
