@@ -548,9 +548,8 @@ seatCombined = function(combined, extra)
 			if child.EnableMouse then child:EnableMouse(false) end
 		end
 	end
-	if combined.CalculateHeight then
-		combined:SetHeight(combined:CalculateHeight() - trackerRoom + extra)
-	end
+	local height = combined.CalculateHeight and combined:CalculateHeight()
+	if type(height) == "number" then combined:SetHeight(height - trackerRoom + extra) end
 	money:ClearAllPoints()
 	money:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 8, 8 + extra)
 	money:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", -8, 8 + extra)
