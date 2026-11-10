@@ -1,6 +1,6 @@
 -- Stoa: other addons in Stoa's look.
 -- Some addons people keep beside Stoa have their own windows: Questie's quest
--- tracker, Bagnon's bags, Details' meters. Where an addon lets others dress
+-- tracker, Bagnon's bags, Details' meters, RestedXP's guide window. Where an addon lets others dress
 -- it (a skin list, or fonts and colours in its own settings), Stoa offers its
 -- look once, after the "two addons, one job" questions are settled:
 --   Use Stoa's look: the addon keeps working exactly as before, in Stoa's
@@ -162,6 +162,72 @@ local function detailsInstances()
 	return list
 end
 
+-- RestedXP -------------------------------------------------------------------------
+-- RestedXP's guide window takes themes: colour tables it registers and lets
+-- you pick in its own settings. Stoa adds one built from the current Stoa
+-- theme (its panel, text and accent, the Inter type, RestedXP's neutral
+-- DarkMode art for borders and banner), and the look selects it.
+
+local RXP_THEME = "STOA"
+
+local function restedxp()
+	local ace = LibStub and LibStub("AceAddon-3.0", true)
+	local ok, addon = pcall(function() return ace and ace:GetAddon("RXPGuides", true) end)
+	if ok and type(addon) == "table" and type(addon.RegisterTheme) == "function" then return addon end
+end
+
+local function restedxpProfile()
+	local addon = restedxp()
+	local settings = addon and addon.settings
+	return type(settings) == "table" and type(settings.profile) == "table" and settings.profile or nil
+end
+
+local function rgba(token, alpha)
+	local r, g, b = Stoa:Color(token)
+	return { r, g, b, alpha or 1 }
+end
+
+local function mixed(token, over, amount, alpha)
+	local r, g, b = Stoa:Color(token)
+	local r2, g2, b2 = Stoa:Color(over)
+	return { r + (r2 - r) * amount, g + (g2 - g) * amount, b + (b2 - b) * amount, alpha or 1 }
+end
+
+local function registerRestedXP()
+	local addon = restedxp()
+	if not addon then return end
+	local art = "Interface/AddOns/RXPGuides/Textures/DarkMode/"
+	local accent = Stoa:Hex("accent")
+	pcall(addon.RegisterTheme, addon, {
+		name = RXP_THEME, displayName = RXP_THEME, author = "STOA",
+		applicable = true,
+		background = mixed("panel", "text", 0, 0.95),
+		bottomFrameBG = mixed("panel", "text", 0.05, 0.95),
+		bottomFrameHighlight = rgba("accent", 0.3),
+		mapPins = rgba("accent", 1),
+		tooltip = accent,
+		textColor = { Stoa:Color("text") },
+		font = FONT_UI_FILE,
+		texturePath = art,
+		headerTexture = "rxp-banner",
+		bgTextures = { edge = BAR_FILE, bottom = BAR_FILE, guideName = BAR_FILE },
+		edges = { edge = art .. "rxp-borders", guideName = art .. "rxp-borders" },
+	})
+end
+
+-- Redraws RestedXP in whichever theme it has selected.
+local function restedxpRefresh()
+	local addon = restedxp()
+	local profile = restedxpProfile()
+	if not (addon and profile) then return end
+	if profile.enableThemeLiveReload and type(addon.ReloadTheme) == "function" then
+		pcall(addon.ReloadTheme, addon)
+	elseif type(addon.LoadActiveTheme) == "function" then
+		pcall(addon.LoadActiveTheme, addon)
+		if type(addon.RenderFrame) == "function" then pcall(addon.RenderFrame, "themeReload") end
+	end
+end
+
 -- The looks -------------------------------------------------------------------------
 
 local LOOKS = {
@@ -220,6 +286,24 @@ local LOOKS = {
 				local skin = before[tostring(each.id)]
 				if skin then pcall(each.instance.ChangeSkin, each.instance, skin) end
 			end
+		end,
+	},
+	{
+		key = "restedxp", folder = "RXPGuides", name = "RestedXP", what = "its guide window",
+		available = function() return restedxpProfile() ~= nil end,
+		apply = function(before)
+			local profile = restedxpProfile()
+			registerRestedXP()
+			if before.theme == nil then before.theme = profile.activeTheme or false end
+			if profile.activeTheme ~= RXP_THEME then
+				profile.activeTheme = RXP_THEME
+				restedxpRefresh()
+			end
+		end,
+		restore = function(before)
+			local profile = restedxpProfile()
+			if before.theme then profile.activeTheme = before.theme end
+			restedxpRefresh()
 		end,
 	},
 }
@@ -334,6 +418,16 @@ Stoa:On("PLAYER_LOGIN", function()
 	if Stoa:MediaMissing() then Stoa:Print(Stoa.RESTART_NOTE) end
 	xpcall(registerBagnon, Stoa.catch)
 	xpcall(registerDetails, Stoa.catch)
+	xpcall(registerRestedXP, Stoa.catch)
+end)
+
+-- RestedXP's colours are copied into its theme, so a new Stoa theme is
+-- copied again and redrawn when RestedXP wears it.
+Stoa:On("STOA_THEME_CHANGED", function()
+	if not restedxp() then return end
+	xpcall(registerRestedXP, Stoa.catch)
+	local profile = restedxpProfile()
+	if profile and profile.activeTheme == RXP_THEME then xpcall(restedxpRefresh, Stoa.catch) end
 end)
 
 Stoa:On("STOA_READY", function()
@@ -358,7 +452,7 @@ Stoa.commands.looks = function()
 		end
 	end
 	if not any then
-		Stoa:Print("None of the addons STOA can dress are here (Questie, Bagnon, Details).")
+		Stoa:Print("None of the addons STOA can dress are here (Questie, Bagnon, Details, RestedXP).")
 		return
 	end
 	-- Asks about each one again, starting with those in Stoa's look.
