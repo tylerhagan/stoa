@@ -66,8 +66,14 @@ local function gatherFriends()
 			local game = account and account.gameAccountInfo
 			if game and game.isOnline and game.clientProgram == BNET_CLIENT_WOW
 				and (not game.wowProjectID or game.wowProjectID == WOW_PROJECT_ID) and game.characterName then
+				-- The realm Battle.net gives can be the server's inner name
+				-- (not one /invite knows), so same-realm friends go by name
+				-- alone, and invites go through Battle.net (Roster:Invite).
 				local name = game.characterName
-				if game.realmName and game.realmName ~= GetRealmName() then name = name .. "-" .. game.realmName end
+				local sameRealm = (game.realmID and GetRealmID and game.realmID == GetRealmID())
+					or game.realmName == GetRealmName() or game.realmDisplayName == GetRealmName()
+				local realm = game.realmDisplayName or game.realmName
+				if realm and not sameRealm then name = name .. "-" .. realm:gsub("%s", "") end
 				if not seen[name] then
 					seen[name] = true
 					list[#list + 1] = {
@@ -117,10 +123,13 @@ function Roster:Invite(entry)
 		Stoa:Print("Only the group leader can invite.")
 		return
 	end
-	if C_PartyInfo and C_PartyInfo.InviteUnit then
+	-- A Battle.net friend is asked through Battle.net, which finds them
+	-- whatever their realm is called.
+	local bnInvite = (C_BattleNet and C_BattleNet.InviteFriend) or BNInviteFriend
+	if entry.gameAccountID and bnInvite then
+		bnInvite(entry.gameAccountID)
+	elseif C_PartyInfo and C_PartyInfo.InviteUnit then
 		C_PartyInfo.InviteUnit(entry.name)
-	elseif entry.gameAccountID and BNInviteFriend then
-		BNInviteFriend(entry.gameAccountID)
 	end
 	Stoa:Note("social", ("Invited %s."):format(entry.label))
 end
