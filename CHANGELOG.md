@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.0.1
 
+- Combat rows are back in their first order: your main bar, then the bottom-left bar (Action Bar 2), then the bottom-right bar (Action Bar 3).
 - Bags: the reagent bag opens with the combined bag as its bottom section, under a quiet label with its free slots, in the same ten columns, above the footer (Settings: Reagents in the bag). It opens and closes with the combined bag.
 - Bags: currencies you tick "Show on Backpack" in the Currency tab sit in the footer beside the free count, in place of the game's own row.
 - Bags: the search box runs the bag's full width.
