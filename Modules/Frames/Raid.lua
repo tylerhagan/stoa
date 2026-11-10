@@ -73,6 +73,7 @@ local function onLoad(cell, styleName)
 		if not self.unit then return end
 		GameTooltip_SetDefaultAnchor(GameTooltip, self)
 		GameTooltip:SetUnit(self.unit)
+		Stoa:AddZoneLine(GameTooltip, self.unit)
 		Stoa.modules.Party:Peek("card", true)
 	end)
 	cell:SetScript("OnLeave", function()

@@ -184,3 +184,34 @@ Stoa:On("PLAYER_REGEN_ENABLED", function()
 end)
 Stoa:On("PLAYER_REGEN_DISABLED", learnNames)
 Stoa:On("STOA_GROUP_CHANGED", learnNames)
+
+-- Where a group member is: the zone the raid roster gives, else the map the
+-- game places them on. nil when the game won't say.
+function Stoa:UnitZone(unit)
+	local function plainText(value)
+		if type(value) ~= "string" or Stoa:IsSecret(value) or value == "" then return nil end
+		return value
+	end
+	local index = type(unit) == "string" and tonumber(unit:match("^raid(%d+)$"))
+	if index and GetRaidRosterInfo then
+		local ok, _, _, _, _, _, _, zone = pcall(GetRaidRosterInfo, index)
+		zone = ok and plainText(zone)
+		if zone then return zone end
+	end
+	if C_Map and C_Map.GetBestMapForUnit and C_Map.GetMapInfo then
+		local ok, mapID = pcall(C_Map.GetBestMapForUnit, unit)
+		mapID = ok and Stoa:PlainNumber(mapID)
+		local info = mapID and C_Map.GetMapInfo(mapID)
+		local name = type(info) == "table" and plainText(info.name)
+		if name then return name end
+	end
+end
+
+-- Adds a group member's zone under their tooltip.
+function Stoa:AddZoneLine(tooltip, unit)
+	local zone = unit and self:UnitZone(unit)
+	if not zone then return end
+	local r, g, b = self:Color("muted")
+	tooltip:AddLine(zone, r, g, b)
+	tooltip:Show()
+end

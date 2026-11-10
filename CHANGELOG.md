@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.0.1
 
+- Party cards, raid cells and the tank watch: hovering shows where that player is (their zone) under the usual tooltip.
 - Company: inviting a Battle.net friend goes through Battle.net, so it finds them (it asked for their server's inner realm name and got "Cannot find player").
 - Combat rows are back in their first order: your main bar, then the bottom-left bar (Action Bar 2), then the bottom-right bar (Action Bar 3).
 - Bags: the reagent bag opens with the combined bag as its bottom section, under a quiet label with its free slots, in the same ten columns, above the footer (Settings: Reagents in the bag). It opens and closes with the combined bag.
