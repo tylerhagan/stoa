@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.0.1
 
+- Combat rows are back in their first order: your main bar, then the bottom-left bar (Action Bar 2), then the bottom-right bar (Action Bar 3).
 - Bags: the reagent bag opens with the combined bag as its bottom section, under a quiet label with its free slots, in the same ten columns, above the footer (Settings: Reagents in the bag). It opens and closes with the combined bag.
 - Bags: currencies you tick "Show on Backpack" in the Currency tab sit in the footer beside the free count, in place of the game's own row.
 - Bags: the search box runs the bag's full width.
@@ -14,6 +15,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - RestedXP: the STOA look comes back after a relog. RestedXP loads before STOA, so it drew its own theme until something changed it.
 - In a fight Forever hides everyone's auras from addons, so your Shield, Renew and Weakened Soul on the party cards, the tank watch and the Discipline SHIELDS / RENEW count now come from your own casts (who you cast on and how long it lasts). A shield that breaks early still shows until its time is up.
 - Party cards: tags stay inside the card. One that would run past the edge drops its timer first, then steps out.
+- Party cards: buff tags drop their vowels to fit more on a card (SHLD, RNW, RJV, MNDNG, FRDM...).
 - RestedXP: the waypoint arrow in the STOA look is matte black with a pale edge and soft glow, so it still shows in caves and at night.
 
 ## 1.0.0
