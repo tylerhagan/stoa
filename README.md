@@ -223,9 +223,9 @@ Installers download the latest `Stoa-<version>.zip` from the repository's Releas
 
 To cut a release:
 
-1. Set `## Version:` in `Stoa.toc` (for example `0.9.1`).
-2. Add a `## 0.9.1` section to `CHANGELOG.md`; it becomes the release notes.
-3. Commit, then `git tag v0.9.1 && git push origin v0.9.1`.
+1. Set `## Version:` in `Stoa.toc` (for example `1.0.1`).
+2. Add a `## 1.0.1` section to `CHANGELOG.md`; it becomes the release notes.
+3. Commit, then `git tag v1.0.1 && git push origin v1.0.1`.
 
 The workflow in `.github/workflows/release.yml` fails if the tag and the TOC version differ or the changelog section is missing. To build the same zip without CI, run `Tools/package.sh`; it writes `dist/Stoa-<version>.zip`. The same run uploads the zip to CurseForge when the `CF_API_KEY` secret is set.
 
