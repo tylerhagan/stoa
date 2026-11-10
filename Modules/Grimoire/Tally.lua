@@ -740,9 +740,15 @@ function Tally:CoverRow(row)
 	if not (entry and SHEET[entry.open or ""]) or InCombatLockdown() then return end
 	local proxy = self:SheetProxy()
 	if not proxy then return end
+	-- A secure frame can't hang from Stoa's own frames, so it goes over the
+	-- line by screen position instead.
+	local left, bottom, width, height = row:GetRect()
+	if not left then return end
+	local ratio = row:GetEffectiveScale() / UIParent:GetEffectiveScale()
 	proxy.row = row
 	proxy:ClearAllPoints()
-	proxy:SetAllPoints(row)
+	proxy:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * ratio, bottom * ratio)
+	proxy:SetSize(width * ratio, height * ratio)
 	proxy:SetFrameStrata(row:GetFrameStrata())
 	proxy:SetFrameLevel(row:GetFrameLevel() + 5)
 	proxy:Show()
