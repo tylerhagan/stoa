@@ -2,3 +2,4 @@
 *.zip
 dist/
 Tools/sim/.cache/
+__pycache__/
