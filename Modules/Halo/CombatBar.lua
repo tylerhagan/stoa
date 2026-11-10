@@ -92,7 +92,10 @@ function Bar:MakeButton(name, parent, size)
 	button:SetFrameStrata("LOW")
 	button:SetSize(size, size)
 	button.size = size
-	button:RegisterForClicks("AnyUp")
+	-- Both: the game acts on the press or the release depending on the
+	-- "cast on key down" setting and ignores the other, so a click casts
+	-- once either way. Up alone did nothing with that setting on.
+	button:RegisterForClicks("AnyUp", "AnyDown")
 	button:Hide()
 
 	-- An outline behind the button for the suggested next press.
