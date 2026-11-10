@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 The first release for WoW Forever's launch: every class has a signature, and every part of the screen is in STOA's dress. Settings from 0.9 carry over. Below is everything that changed since 0.9.0.
 
+- Upgrades: a slot only counts as empty when nothing is in it, so a worn wand or weapon the game reads oddly is no longer "empty".
 - Discipline: SHIELDS and RENEW sit beside the lowest coin, clear of the mana number.
 - At a glance: clicking a profession opens that profession, and clicking a stat opens the character sheet without an error.
 - Quest rewards: when your weapon has no stats, UPGRADE now goes to the choice worth most, not the first one listed.
