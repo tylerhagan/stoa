@@ -298,16 +298,36 @@ local function freeSlots(frame)
 	return free, size
 end
 
+-- Currencies ticked "Show on Backpack" in the Currency tab, as icon and
+-- count after the free count.
+local function currencyWords()
+	local get = C_CurrencyInfo and C_CurrencyInfo.GetBackpackCurrencyInfo
+	if not get then return "" end
+	local out = {}
+	for i = 1, 8 do
+		local ok, info = pcall(get, i)
+		if not (ok and type(info) == "table") then break end
+		local count = Stoa:PlainNumber(info.quantity) or 0
+		local amount = BreakUpLargeNumbers and BreakUpLargeNumbers(count) or tostring(count)
+		out[#out + 1] = ("|T%s:0:0:0:0:64:64:5:59:5:59|t %s"):format(info.iconFileID or 134400, amount)
+	end
+	if #out == 0 then return "" end
+	return "   " .. table.concat(out, "   ")
+end
+
 local function updateFooter(frame)
 	local parts = frame.stoaBag
 	if not parts then return end
 	local free, size = freeSlots(frame)
 	if free then
 		local text = size and (free .. " of " .. size .. " free") or (free .. " free")
+		if frame.IsCombinedBagContainer and frame:IsCombinedBagContainer() then
+			text = text .. currencyWords()
+		end
 		parts.free:SetText(text)
 		-- Full is said in words as well as the warm colour.
 		if free == 0 then
-			parts.free:SetText("FULL")
+			parts.free:SetText("FULL" .. ((frame.IsCombinedBagContainer and frame:IsCombinedBagContainer()) and currencyWords() or ""))
 			parts.free:SetTextColor(Stoa:Color("danger"))
 		else
 			parts.free:SetTextColor(Stoa:Color("muted"))
@@ -503,9 +523,37 @@ local function sectionLook(frame, docked)
 	section.rule:SetShown(docked)
 end
 
+local seatCombined
+
 local function sectionHeight(slots, size)
 	local rows = math.ceil(slots / COLUMNS)
 	return SECTION_TOP + rows * size + (rows - 1) * GAP + SECTION_BOTTOM
+end
+
+-- The game's currency row (Currency > Show on Backpack) steps aside: the
+-- footer names those currencies beside the free count instead, so the row's
+-- height comes off the bag. `extra` is room added above the footer for the
+-- reagent section. Returns the footer row's bottom offset.
+seatCombined = function(combined, extra)
+	local money = combined.MoneyFrame
+	if not money then return 8 end
+	local tracker = ContainerFrameSettingsManager and ContainerFrameSettingsManager.GetTokenTrackerIfShown
+		and ContainerFrameSettingsManager:GetTokenTrackerIfShown(combined)
+	local trackerRoom = 0
+	if type(tracker) == "table" and tracker.GetHeight then
+		trackerRoom = (tracker:GetHeight() or 0) + 3
+		tracker:SetAlpha(0)
+		if tracker.EnableMouse then tracker:EnableMouse(false) end
+		for _, child in ipairs({ tracker:GetChildren() }) do
+			if child.EnableMouse then child:EnableMouse(false) end
+		end
+	end
+	local height = combined.CalculateHeight and combined:CalculateHeight()
+	if type(height) == "number" then combined:SetHeight(height - trackerRoom + extra) end
+	money:ClearAllPoints()
+	money:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 8, 8 + extra)
+	money:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", -8, 8 + extra)
+	return 8
 end
 
 function Bags:DockReagents()
@@ -515,19 +563,28 @@ function Bags:DockReagents()
 		local combined = ContainerFrameCombinedBags
 		local frame = reagentFrame()
 		if not dockWanted() then
+			-- reagentFrame() only finds a shown window; a docked one hides
+			-- with the combined bag, so look for it by its mark too.
+			if not frame then
+				for i = 1, 13 do
+					local each = _G["ContainerFrame" .. i]
+					if each and each.stoaDocked then frame = each end
+				end
+			end
 			local wasDocked = frame and frame.stoaDocked
 			if wasDocked then
 				frame.stoaDocked = nil
 				sectionLook(frame, false)
-				frame:SetFrameStrata(frame.stoaStrata or "MEDIUM")
+				frame:SetParent(frame.stoaParent or UIParent)
 			end
-			-- A reagent bag STOA opened goes with the combined bag.
-			if Bags.openedReagents and not (combined and combined:IsShown()) then
+			-- A docked reagent bag goes with the combined bag.
+			if (wasDocked or Bags.openedReagents) and not (combined and combined:IsShown()) then
 				Bags.openedReagents = nil
 				if frame and CloseBag then CloseBag(REAGENT_BAG) end
 			elseif wasDocked and UpdateContainerFrameAnchors then
 				UpdateContainerFrameAnchors()
 			end
+			if combined and combined:IsShown() then seatCombined(combined, 0) end
 			return
 		end
 		if not frame then
@@ -549,30 +606,23 @@ function Bags:DockReagents()
 		-- keeps its row at the bottom, the items move up by the section.
 		local extra = section + moneyHeight + 4
 
-		if combined.CalculateHeight then
-			combined:SetHeight(combined:CalculateHeight() + extra)
-		end
-		local tracker = ContainerFrameSettingsManager and ContainerFrameSettingsManager.GetTokenTrackerIfShown
-			and ContainerFrameSettingsManager:GetTokenTrackerIfShown(combined)
-		local base = 8
-		if tracker then base = 8 + (tracker:GetHeight() or 0) + 3 end
-		money:ClearAllPoints()
-		money:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 8, base + extra)
-		money:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", -8, base + extra)
+		local base = seatCombined(combined, extra)
 
-		-- The reagent window in the room above the footer. Bag windows raise
-		-- themselves when shown, so it sits a strata above the combined bag
-		-- to stay in front of it.
+		-- The reagent window in the room above the footer, as a child of
+		-- the combined bag: drawn over its panel whichever window the game
+		-- raised last, and hidden with it.
 		frame.stoaDocked = true
 		sectionLook(frame, true)
-		frame:SetScale(combined:GetScale())
+		if frame:GetParent() ~= combined then
+			frame.stoaParent = frame:GetParent()
+			frame:SetParent(combined)
+		end
+		frame:SetScale(1)
+		frame:SetFrameLevel(combined:GetFrameLevel() + 5)
 		frame:ClearAllPoints()
 		frame:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 0, base + moneyHeight + 4)
 		frame:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", 0, base + moneyHeight + 4)
 		frame:SetHeight(section)
-		frame.stoaStrata = frame.stoaStrata or frame:GetFrameStrata()
-		local above = { BACKGROUND = "LOW", LOW = "MEDIUM", MEDIUM = "HIGH", HIGH = "DIALOG", DIALOG = "FULLSCREEN" }
-		frame:SetFrameStrata(above[combined:GetFrameStrata()] or "HIGH")
 		for i, button in ipairs(buttons) do
 			local col, row = (i - 1) % COLUMNS, math.floor((i - 1) / COLUMNS)
 			button:ClearAllPoints()
@@ -607,6 +657,25 @@ function Bags:OnEnable()
 		if frame then guarded(self.Dress, self, frame) end
 	end
 	Stoa:On("BAG_UPDATE_DELAYED", refreshShown)
+	-- The search box runs the bag's full width, up to the clean-up button.
+	local function placeSearch(frame)
+		local box = BagItemSearchBox
+		if not (box and box.anchorBag == frame) then return end
+		box:ClearAllPoints()
+		box:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -37)
+		local clean = BagItemAutoSortButton
+		if clean and clean:IsShown() and clean:GetParent() == frame then
+			box:SetPoint("TOPRIGHT", clean, "TOPLEFT", -8, -3)
+		else
+			box:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -37)
+		end
+	end
+	for _, frame in ipairs(allFrames()) do
+		if frame and frame.UpdateSearchBox then
+			hooksecurefunc(frame, "UpdateSearchBox", function(f) guarded(placeSearch, f) end)
+		end
+	end
+
 	-- The reagent section is seated again whenever the game re-places,
 	-- re-sizes or re-lays the bags.
 	local function dock() Bags:DockReagents() end
@@ -633,6 +702,7 @@ function Bags:OnEnable()
 	Stoa:On("STOA_JUNK_CHANGED", refreshShown)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Bags:SetJunkMode(false) end)
 	Stoa:On("PLAYER_MONEY", refreshShown)
+	Stoa:On("CURRENCY_DISPLAY_UPDATE", refreshShown)
 	-- What counts as an upgrade moves with your gear and your role.
 	local function rescore()
 		for _, frame in ipairs(allFrames()) do
