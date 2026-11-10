@@ -461,24 +461,24 @@ end
 -- matched by that spell's name in the game's language (every rank shares
 -- it); the English name stands in if the game doesn't know the ID.
 local OWN_BUFF_IDS = {
-	{ 17, "Power Word: Shield", { "SHIELD", "shield" } },
-	{ 139, "Renew", { "RENEW" } },
-	{ 33076, "Prayer of Mending", { "MENDING" } },
-	{ 6346, "Fear Ward", { "WARD" } },
-	{ 10060, "Power Infusion", { "INFUSION" } },
-	{ 588, "Inner Fire", { "INNER FIRE" } },
-	{ 1022, "Blessing of Protection", { "PROTECTION" } },
-	{ 1044, "Blessing of Freedom", { "FREEDOM" } },
-	{ 6940, "Blessing of Sacrifice", { "SACRIFICE" } },
-	{ 774, "Rejuvenation", { "REJUV" } },
-	{ 8936, "Regrowth", { "REGROWTH" } },
-	{ 1238215, "Wild Growth", { "GROWTH" } },
-	{ 29166, "Innervate", { "INNERVATE" } },
+	{ 17, "Power Word: Shield", { "SHLD", "shield" } },
+	{ 139, "Renew", { "RNW" } },
+	{ 33076, "Prayer of Mending", { "MNDNG" } },
+	{ 6346, "Fear Ward", { "WRD" } },
+	{ 10060, "Power Infusion", { "INFSN" } },
+	{ 588, "Inner Fire", { "INNR FR" } },
+	{ 1022, "Blessing of Protection", { "PRTCTN" } },
+	{ 1044, "Blessing of Freedom", { "FRDM" } },
+	{ 6940, "Blessing of Sacrifice", { "SCRFC" } },
+	{ 774, "Rejuvenation", { "RJV" } },
+	{ 8936, "Regrowth", { "RGRWTH" } },
+	{ 1238215, "Wild Growth", { "GRWTH" } },
+	{ 29166, "Innervate", { "INNRVT" } },
 }
 -- Debuffs from anyone that change what you can cast on them.
 local LOCKOUT_IDS = {
 	{ 6788, "Weakened Soul", "WS" },
-	{ 25771, "Forbearance", "FORB" },
+	{ 25771, "Forbearance", "FRB" },
 }
 
 local function byName(list)
@@ -511,8 +511,8 @@ end
 -- In a fight the game hides auras, so your Shield and Renew (and the
 -- Weakened Soul your shield leaves) come from your own casts instead.
 local CAST_PIPS = {
-	{ "shield", "SHIELD", "shield" },
-	{ "renew", "RENEW" },
+	{ "shield", "SHLD", "shield" },
+	{ "renew", "RNW" },
 	{ "ws", "WS" },
 }
 
@@ -740,7 +740,7 @@ function Party:PreviewWatch()
 	watch.hp:SetStatusBarColor(Stoa:Color("health"))
 	watch.absorb:SetMinMaxValues(0, 100)
 	watch.absorb:SetValue(14)
-	watch.buffs:SetText("SHIELD 12 · RENEW")
+	watch.buffs:SetText("SHLD 12 · RNW")
 end
 
 function Party:UpdateWatch()

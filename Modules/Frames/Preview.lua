@@ -6,8 +6,8 @@ local _, ns = ...
 local Stoa = ns.Stoa
 
 local SAMPLE = {
-	{ name = "Brunhok", class = "WARRIOR", health = 0.62, absorb = 0.18, pips = { { "SHIELD", "shield" }, { "WS 11" }, { "RENEW 9" } } },
-	{ name = "Thalindra", class = "PRIEST", health = 0.95, pips = { { "INNER FIRE" } } },
+	{ name = "Brunhok", class = "WARRIOR", health = 0.62, absorb = 0.18, pips = { { "SHLD", "shield" }, { "WS 11" }, { "RNW 9" } } },
+	{ name = "Thalindra", class = "PRIEST", health = 0.95, pips = { { "INNR FR" } } },
 	{ name = "Seren", class = "ROGUE", health = 0.71, dispel = "magic", pips = { { "MAGIC", "magic" } } },
 	{ name = "Velaris", class = "MAGE", health = 0.78, absorb = 0.1, target = true, pips = { { "WS 4" } } },
 	{ name = "Orsun", class = "HUNTER", health = 0.28, far = true },
@@ -19,7 +19,7 @@ local SAMPLE = {
 	{ name = "Harrow", class = "WARRIOR", health = 1 },
 	{ name = "Fennick", class = "ROGUE", health = 0.56, dispel = "magic", pips = { { "MAGIC", "magic" } } },
 	{ name = "Brisa", class = "DRUID", health = 1 },
-	{ name = "Doran", class = "PALADIN", health = 0.88, absorb = 0.12, pips = { { "SHIELD", "shield" } } },
+	{ name = "Doran", class = "PALADIN", health = 0.88, absorb = 0.12, pips = { { "SHLD", "shield" } } },
 	{ name = "Ilsa", class = "PRIEST", health = 1 },
 	{ name = "Quill", class = "HUNTER", health = 1 },
 	{ name = "Marrow", class = "WARLOCK", health = 0.39 },
