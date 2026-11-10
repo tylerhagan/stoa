@@ -221,16 +221,18 @@ function Disc:UpdateCount()
 		count:SetText("")
 		return
 	end
-	-- When the game hides auras in this fight a count would only ever read
-	-- 0, so the line steps back rather than say something untrue.
-	if Stoa:AurasHidden() then
-		count:SetText("")
-		return
-	end
+	-- When the game hides auras in a fight, your own casts say who carries
+	-- them (Core/Group.lua).
+	local hidden = Stoa:AurasHidden()
 	local shields, renews = 0, 0
 	for _, unit in ipairs(groupUnits()) do
 		if UnitExists(unit) then
-			local shield, renew = ownAuras(unit)
+			local shield, renew
+			if hidden then
+				shield, renew = Stoa:OwnHealLeft(unit, "shield"), Stoa:OwnHealLeft(unit, "renew")
+			else
+				shield, renew = ownAuras(unit)
+			end
 			if shield then shields = shields + 1 end
 			if renew then renews = renews + 1 end
 		end

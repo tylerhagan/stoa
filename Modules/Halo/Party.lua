@@ -508,7 +508,27 @@ local function scan(unit, filter, fn)
 	end
 end
 
+-- In a fight the game hides auras, so your Shield and Renew (and the
+-- Weakened Soul your shield leaves) come from your own casts instead.
+local CAST_PIPS = {
+	{ "shield", "SHIELD", "shield" },
+	{ "renew", "RENEW" },
+	{ "ws", "WS" },
+}
+
+local function castPips(unit, pips)
+	for _, cue in ipairs(CAST_PIPS) do
+		local left = Stoa:OwnHealLeft(unit, cue[1])
+		if left then
+			left = math.floor(left + 0.5)
+			pips[#pips + 1] = { left < 30 and (cue[2] .. " " .. left) or cue[2], cue[3] }
+			if #pips >= MAX_PIPS then return end
+		end
+	end
+end
+
 function Party:AuraPips(unit, pips)
+	if Stoa:AurasHidden() then return castPips(unit, pips) end
 	if not OWN_BUFFS then OWN_BUFFS, LOCKOUTS = byName(OWN_BUFF_IDS), byName(LOCKOUT_IDS) end
 	scan(unit, "HELPFUL|PLAYER", function(name, aura)
 		local cue = OWN_BUFFS[name]
@@ -848,6 +868,10 @@ function Party:OnEnable()
 		if self.grid and self.grid:IsShown() then self:Peek("shift", IsShiftKeyDown()) end
 	end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function() self:UpdateAll() end)
+	Stoa:On("STOA_OWN_HEALS", function()
+		self:UpdateAll()
+		self:UpdateWatch()
+	end)
 	Stoa:On("UNIT_CONNECTION", function(unit)
 		local card = cardFor(self, unit)
 		if card then self:UpdateCard(card) end

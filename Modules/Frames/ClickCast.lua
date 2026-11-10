@@ -145,6 +145,11 @@ end
 function Stoa:RegisterClickFrame(frame)
 	Stoa:AfterCombat(function()
 		frame:RegisterForClicks("AnyUp")
+		-- Before the click casts, so your heals know who they went on.
+		if not frame.stoaNotesClicks then
+			frame.stoaNotesClicks = true
+			frame:HookScript("PreClick", function(f) Stoa:NoteClickUnit(f) end)
+		end
 		frames[frame] = true
 		if Stoa:IsModuleEnabled("ClickCast") then
 			ClickCast:Apply()
