@@ -13,6 +13,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Money shows the game's gold, silver and copper coin icons after each amount, as the money hover does (bags, trainer, loot tally, console).
 - RestedXP: the STOA look comes back after a relog. RestedXP loads before STOA, so it drew its own theme until something changed it.
 - In a fight Forever hides everyone's auras from addons, so your Shield, Renew and Weakened Soul on the party cards, the tank watch and the Discipline SHIELDS / RENEW count now come from your own casts (who you cast on and how long it lasts). A shield that breaks early still shows until its time is up.
+- Party cards: tags stay inside the card. One that would run past the edge drops its timer first, then steps out.
 - RestedXP: the waypoint arrow in the STOA look is matte black with a pale edge and soft glow, so it still shows in caves and at night.
 
 ## 1.0.0
