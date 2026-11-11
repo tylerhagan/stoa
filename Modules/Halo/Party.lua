@@ -188,8 +188,12 @@ function Party:Layout()
 				local clear = 0
 				if console and console.enabled and console.OpenHeight then clear = console:OpenHeight() + 14 end
 				local wide = count * layout.width + (count - 1) * layout.gap
-				local barsTop = barsUnder(haloBottom * k, wide)
-				if barsTop then clear = math.max(clear, barsTop + 12) end
+				-- Only once the calm has ended: until then the combat bar
+				-- still stands in that room and the row would land on it.
+				if Stoa:GetState() ~= Stoa.STATE_COMBAT then
+					local barsTop = barsUnder(haloBottom * k, wide)
+					if barsTop then clear = math.max(clear, barsTop + 12) end
+				end
 				if bottom < clear then offset = offset + (clear - bottom) end
 			end
 			frame:SetPoint("TOP", halo, "BOTTOM", 0, offset)
@@ -922,8 +926,13 @@ function Party:OnEnable()
 		if not InCombatLockdown() then self:Layout() end
 	end)
 	Stoa:On("STOA_STATE_CHANGED", function()
-		self:UpdateAll()
-		self:UpdateGrid()
+		-- The row's resting spot depends on whether the combat bar is up.
+		if not InCombatLockdown() then
+			self:Layout()
+		else
+			self:UpdateAll()
+			self:UpdateGrid()
+		end
 		self:UpdateWatch()
 	end)
 	Stoa:On("STOA_PREVIEW_CHANGED", function()
