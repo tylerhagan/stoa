@@ -131,8 +131,9 @@ function Party:VisibleCount()
 	return math.max(1, math.min(#UNITS, GetNumGroupMembers and GetNumGroupMembers() or 1))
 end
 
--- The healer row hangs this far under the Halo.
-local ROW_TOP = 52
+-- The healer row hangs this far under the Halo: clear of the cast bar and
+-- the reminder words, where the combat bar otherwise starts.
+local ROW_TOP = 74
 
 -- How far under the Halo the healer row reaches, party pets included, while
 -- it stands there (a healer in a party, the row not moved by hand); nil
@@ -142,8 +143,7 @@ function Party:RowBottom()
 	if Stoa:HasSavedPosition("party") then return nil end
 	local layout = layoutFor(Stoa:GetRole())
 	if not layout.row then return nil end
-	local preview = self.cards and self.cards[1] and self.cards[1].preview
-	if not preview and (not IsInGroup() or IsInRaid()) then return nil end
+	if Stoa.previewing ~= "party" and (not IsInGroup() or IsInRaid()) then return nil end
 	local pets = (Stoa.Pet and Stoa.Pet.enabled and Stoa.Pet.db.partyPets and layout.grid) and 30 or 0
 	return ROW_TOP + layout.height + pets
 end
@@ -333,7 +333,9 @@ function Party:UpdateGrid()
 		fs:SetText("")
 		fs:SetText(shortName(bindings[key]))
 		fs.spell = bindings[key]
-		if (fs:GetStringWidth() or 0) == 0 then blank = true end
+		-- A width the game hides in a fight can't be judged; it isn't blank.
+		local wide = fs:GetStringWidth()
+		if not Stoa:IsSecret(wide) and (wide or 0) == 0 then blank = true end
 	end
 	self.gridTries = blank and (self.gridTries or 0) + 1 or 0
 	if blank and not self.gridRetry and self.gridTries <= 10 then
@@ -890,10 +892,14 @@ function Party:OnEnable()
 		Stoa:AfterCombat(function()
 			self:Layout()
 			local bar = Stoa.modules.CombatBar
-			if bar and bar.enabled and bar.Reanchor then bar:Reanchor() end
+			if bar and bar.enabled and bar.Reanchor then
+				bar:Reanchor()
+			elseif Stoa.Pet and Stoa.Pet.PlaceRow then
+				-- No combat bar: the pet row hangs under the party row itself.
+				Stoa.Pet:PlaceRow()
+			end
 		end)
 	end
-	self.RowChanged = rowChanged
 	Stoa:On("STOA_ROLE_CHANGED", rowChanged)
 	rowChanged()
 	Stoa:On("STOA_COMBAT_LAYOUT", function()

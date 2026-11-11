@@ -155,10 +155,6 @@ function Welcome:ApplyPreset(name)
 	return true
 end
 
-function Welcome:PresetNames()
-	return PRESET_ORDER
-end
-
 -- The wizard ------------------------------------------------------------------
 -- One window, a step at a time: where to start, what each spec plays, the
 -- look, what happens in a fight, how much of Stoa, the other addons Stoa

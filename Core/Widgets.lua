@@ -212,7 +212,8 @@ function UI.settleText(fs, words, tries)
 			end
 		end)
 	end
-	if words == "" or (fs:GetStringWidth() or 0) > 0 then return end
+	local wide = fs:GetStringWidth()
+	if words == "" or Stoa:IsSecret(wide) or (wide or 0) > 0 then return end
 	tries = (tries or 0) + 1
 	if tries > 10 then return end
 	C_Timer.After(0.5, function()

@@ -34,14 +34,6 @@ function Stoa:GroupKind()
 	return "solo"
 end
 
--- True when you lead the group or are an assistant in a raid, so raid
--- markers and countdowns are yours to use.
-function Stoa:CanLead()
-	if not IsInGroup() then return true end
-	if UnitIsGroupLeader("player") then return true end
-	return IsInRaid() and UnitIsGroupAssistant and UnitIsGroupAssistant("player") or false
-end
-
 local pending
 local function changed()
 	if pending then return end

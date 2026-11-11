@@ -7,6 +7,9 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 1.1.2
 
 - What's new: after an update that brings something worth knowing, your first login shows a short note once per account (this time: Slim, Minimal and the quest list folding in combat). New installs don't see it, small fixes don't bring it back, and `/stoa news` shows it again.
+- The healer's party row hangs a little lower under the Halo, clear of the cast bar and the reminder words, and the sample party (`/stoa test`) moves the combat bar below it as a real one does. Without the combat bar, the pet row sits under the party row instead of on it.
+- Two more hidden widths from the game in a fight (the click grid's names, words set before their face loaded) can no longer raise an error.
+- Housekeeping: six functions nothing called any more are gone.
 
 ## 1.1.1
 

@@ -25,7 +25,7 @@ Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a sma
 
 ![The console](docs/screenshots/console.jpg)
 
-**Healing a group:** party cards under the combat bar, with shields, buffs and dispellable debuffs as words, and a watch card for the tank.
+**Healing a group:** party cards right under the Halo with the combat bar below them, with shields, buffs and dispellable debuffs as words, and a watch card for the tank.
 
 ![Party cards for a healer](docs/screenshots/party-healer.jpg)
 

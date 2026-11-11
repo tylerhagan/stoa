@@ -70,7 +70,7 @@ SHOTS = {
     "world": "In the world: the console along the bottom, with At a glance, Ready, Journey and Company.",
     "combat": "In combat: the console folds away and the Halo rises around your character.",
     "console": "The console up close.",
-    "party-healer": "Healing a group: party cards under the combat bar and a watch card for the tank.",
+    "party-healer": "Healing a group: party cards under the Halo and a watch card for the tank.",
     "tooltip-compare": "Tooltips: a calm card with an upgrade line against what you wear.",
     "training": "Training: what you can learn now and what comes next, with prices.",
     "settings": "Settings: every option on one searchable page, with a note on what each does.",
