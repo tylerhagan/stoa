@@ -31,25 +31,21 @@ local SKULL = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8"
 -- bar, with a fine line where the health will land.
 local HATCH = "Interface\\AddOns\\Stoa\\Media\\Textures\\Hatch"
 
--- Gives a marker bar its stripes (tiled, never stretched) and the shade
--- under them, which keeps the stripes readable on a bar of any colour.
+-- Gives a marker bar its stripes (tiled, never stretched). The texture's
+-- gaps are dark, which keeps the stripes readable on a bar of any colour.
 local function hatch(marker)
 	local stripes = marker:CreateTexture(nil, "ARTWORK")
 	stripes:SetTexture(HATCH, "REPEAT", "REPEAT")
 	if stripes.SetHorizTile then stripes:SetHorizTile(true) end
 	if stripes.SetVertTile then stripes:SetVertTile(true) end
 	marker:SetStatusBarTexture(stripes)
-	local shade = marker:CreateTexture(nil, "BORDER")
-	shade:SetAllPoints(marker:GetStatusBarTexture())
-	shade:SetColorTexture(0, 0, 0, 0.5)
-	return shade
 end
 
 local function paintHatch(marker, edge)
 	local r, g, b = Stoa:Color("text")
 	marker:SetStatusBarColor(r, g, b)
-	marker:GetStatusBarTexture():SetAlpha(0.9)
-	edge:SetColorTexture(r, g, b, 1)
+	marker:GetStatusBarTexture():SetAlpha(1)
+	edge:SetColorTexture(r, g, b, 0.9)
 end
 
 local function api()
