@@ -215,15 +215,15 @@ function Conflicts:Page(name, onLeft, onRight)
 	note:SetWordWrap(true)
 	page.note = note
 
-	page.left = UI.button(page, "", 200, onLeft)
+	page.left = UI.button(page, "", 200, onLeft, true)
 	page.left:SetPoint("BOTTOMLEFT", PAD, PAD - 10)
-	page.right = UI.button(page, "", 200, onRight)
+	page.right = UI.button(page, "", 200, onRight, true)
 	page.right:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
 	return page
 end
 
 function Conflicts:Build()
-	local page = self:Page("StoaAddonsPage", function() self:Answer("theirs") end, function() self:Answer("ours") end)
+	local page = self:Page("StoaAddonsPage", function(button) self:Answer("theirs", button) end, function(button) self:Answer("ours", button) end)
 	page.theirs, page.ours = page.left, page.right
 	self.page = page
 end
@@ -250,22 +250,27 @@ function Conflicts:Ask(entry)
 		page.ours.text:SetText("Use STOA's")
 		page.note:SetText(("STOA's part waits until you choose. Using STOA's turns %s off and reloads; /stoa addons asks again."):format(them))
 	end
+	page.ours:SetReloads(true)
+	page.theirs:SetReloads(rule.suite)
 	page:Show()
 end
 
-function Conflicts:Answer(choice)
+function Conflicts:Answer(choice, button)
 	local entry = self.asking
 	if not entry then return end
 	self.asking = nil
-	self.page:Hide()
+	-- A button that reloads with its own click (UI.button) needs the page
+	-- left up for it.
+	local own = button and button.reloads
+	if not own then self.page:Hide() end
 	local rule = entry.rule
 	if choice == "ours" then
 		for _, addon in ipairs(entry.loaded) do disable(addon[1]) end
 		choices()[rule.key] = nil
-		Stoa:Reload()
+		if not own then Stoa:Reload() end
 	elseif rule.suite then
 		disable("Stoa")
-		Stoa:Reload()
+		if not own then Stoa:Reload() end
 	else
 		choices()[rule.key] = "theirs"
 		Stoa:Print(("Leaving %s to %s. /stoa addons to change."):format(rule.job, names(entry.loaded)))

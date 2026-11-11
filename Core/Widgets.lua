@@ -813,8 +813,14 @@ end
 
 -- A Stoa button: a dark rounded panel with a word in the sans, warming to
 -- the accent under the mouse. SetSelected marks the chosen one of a row.
-function UI.button(parent, label, width, onClick)
-	local button = CreateFrame("Button", nil, parent)
+--
+-- A button whose click ends in a reload is made with reloads = true and
+-- switched with SetReloads. The game refuses a reload asked for by addon
+-- code often enough (the Welcome page's Finish, "Use STOA's") that those
+-- buttons run /reload themselves, as a secure click: onClick settles things
+-- first and leaves the page up, and the same click then reloads.
+function UI.button(parent, label, width, onClick, reloads)
+	local button = CreateFrame("Button", nil, parent, reloads and "SecureActionButtonTemplate" or nil)
 	button:SetSize(width or 110, 26)
 	UI.roundPanel(button, 0.95)
 	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
@@ -847,7 +853,40 @@ function UI.button(parent, label, width, onClick)
 	button:SetScript("OnMouseUp", function() text:SetPoint("CENTER", 0, 0) end)
 	button:SetScript("OnEnable", colour)
 	button:SetScript("OnDisable", colour)
-	if onClick then button:SetScript("OnClick", onClick) end
+	if reloads then
+		-- Both halves of the click are heard, since which one the game acts
+		-- on depends on the player's key-down setting. onClick runs once, on
+		-- the first half when the click will reload, else on the release.
+		button:RegisterForClicks("AnyUp", "AnyDown")
+		button:SetAttribute("macrotext", "/reload")
+		local settled
+		button:SetScript("PreClick", function(self, mouse, down)
+			if self.reloads then
+				if settled then return end
+				settled = true
+			elseif down then
+				return
+			end
+			if onClick then onClick(self, mouse) end
+		end)
+		button:SetScript("PostClick", function(self, _, down)
+			if down or not settled then return end
+			settled = nil
+			-- Still here a moment after the release: the click didn't
+			-- reload, so ask the old way, which says what to type if refused.
+			C_Timer.After(0.5, function()
+				parent:Hide()
+				Stoa:Reload()
+			end)
+		end)
+		function button:SetReloads(on)
+			if InCombatLockdown() then return end
+			self.reloads = on and true or false
+			self:SetAttribute("type", on and "macro" or nil)
+		end
+	elseif onClick then
+		button:SetScript("OnClick", onClick)
+	end
 	Stoa:On("STOA_THEME_CHANGED", colour)
 	colour()
 	return button

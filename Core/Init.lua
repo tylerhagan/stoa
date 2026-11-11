@@ -146,6 +146,11 @@ local function enableModules()
 		if module.OnEnable and Stoa:IsModuleEnabled(name) then
 			Stoa.loading = name
 			module.enabled = xpcall(module.OnEnable, function(err) Stoa:Fail(err, name) end, module)
+		elseif module.OnOff and not Stoa:IsModuleEnabled(name) then
+			-- What a module still tidies while switched off (the console
+			-- keeps Blizzard's bar art, menu and chat in hand).
+			Stoa.loading = name
+			xpcall(module.OnOff, function(err) Stoa:Fail(err, name) end, module)
 		end
 	end
 	Stoa.loading = nil

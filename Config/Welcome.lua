@@ -37,7 +37,7 @@ local PRESET_WORDS = {
 	full = { "Full", "Everything on, as STOA ships: tooltip details, the quest line, At a glance, every bar row out of combat, and STOA's look on windows, bags, tooltips, the top of the screen and nameplates." },
 	slim = { "Slim", "The console as one plain line: level, health and mana, and a word each for Ready, Journey and Company (their pages open on a card as you mouse over). Chat and the bars stand above it; no At a glance." },
 	minimal = { "Minimal", "No console. Health and mana rest as two faint arcs around your character and the Halo rises in a fight; the target plaque and party cards rest faint out of combat. STOA's look and comforts stay." },
-	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; extra bar rows only on mouseover; the click grid folded for healers, hidden otherwise. STOA's look stays." },
+	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; the Cooldown Manager's rows hidden; the click grid folded for healers, hidden otherwise. STOA's look stays." },
 	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of STOA's. The console, Halo, frames and words stay as in Full." },
 	taer = { "Same as Designer", "Full as its designer plays it: painted frames, three bar rows, a longer calm, the loot feed in the world, faded nameplates, quests accepted for you and the designer's Edit Mode layout." },
 }
@@ -90,7 +90,6 @@ local function changesFor(name)
 		-- The grid only matters to healers, who keep it folded.
 		list[#list + 1] = { "Party", "clickGrid", playsHealer() and "fold" or "hidden" }
 		list[#list + 1] = { "Tally", "enabled", false }
-		list[#list + 1] = { "ActionBars", "hoverTray", true }
 	elseif name == "classic" then
 		for _, module in ipairs(SKINS) do list[#list + 1] = { module, "enabled", false } end
 	elseif name == "taer" then
@@ -573,7 +572,7 @@ function Welcome:Build()
 	local counter = UI.text(page, "sans", Stoa.typeSize.caption, "muted")
 	counter:SetPoint("LEFT", back, "RIGHT", 14, 0)
 	self.counter = counter
-	local nextButton = UI.button(page, "Next", 150, function() self:Move(1) end)
+	local nextButton = UI.button(page, "Next", 150, function() self:Move(1) end, true)
 	nextButton:SetHeight(30)
 	nextButton:SetPoint("RIGHT", page, "BOTTOMRIGHT", -PAD, FOOTER / 2)
 	self.next = nextButton
@@ -778,6 +777,7 @@ local function step(fn, ...)
 end
 
 function Welcome:Finish()
+	if self.finished then return end
 	step(self.SettleAddons, self)
 	self.finished = true
 	Stoa.char.welcomed = true
@@ -789,6 +789,9 @@ function Welcome:Finish()
 	end
 	if self.start == "saved" and self.setup and step(Stoa.Setups.Load, Stoa.Setups, self.setup) then return end
 	if self.applied then step(self.FollowLayout, self) end
+	-- The Finish button reloads with its own click (UI.button); the page
+	-- stays up for it.
+	if self.next.reloads then return end
 	self.page:Hide()
 	Stoa:Reload()
 end
@@ -1003,6 +1006,7 @@ function Welcome:Refresh()
 	elseif current == "start" and self.start ~= "guided" then
 		word = "Continue"
 	end
+	self.next:SetReloads(current == "ready")
 	self.next.text:SetText(word)
 	self.next:SetWidth(math.max(120, math.ceil(self.next.text:GetStringWidth()) + 36))
 	self.next:SetSelected(true)
@@ -1092,6 +1096,6 @@ Stoa.commands.preset = function(rest)
 		if Welcome.page then Welcome:Refresh() end
 	else
 		local now = Stoa.db.preset and PRESET_WORDS[Stoa.db.preset] and PRESET_WORDS[Stoa.db.preset][1] or "none"
-		Stoa:Print("Presets: full, quiet, classic or designer. Now: " .. now .. ".")
+		Stoa:Print("Presets: full, slim, minimal, quiet, classic or designer. Now: " .. now .. ".")
 	end
 end
