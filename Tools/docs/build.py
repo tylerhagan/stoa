@@ -17,7 +17,7 @@ OUT = os.path.join(ROOT, "docs")
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 REPO = "https://github.com/tylerhagan/stoa"
-CURSEFORGE = "https://www.curseforge.com/projects/1772375"
+CURSEFORGE = "https://www.curseforge.com/wow/addons/stoa"
 
 # Status rows (by Area) for the Classes page, in the order they appear there.
 CLASSES = [
