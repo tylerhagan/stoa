@@ -65,7 +65,11 @@ function Alts:Note()
 	local entry = record()
 	if not entry then return end
 	entry.level = plain(UnitLevel("player"))
-	entry.money = GetMoney and GetMoney() or entry.money
+	-- While the character is loading in or logging out the game answers 0
+	-- for money; a 0 then must not replace what was written down. In the
+	-- world a 0 is real (everything spent).
+	local money = GetMoney and Stoa:PlainNumber(GetMoney())
+	if money and (money > 0 or self.inWorld) then entry.money = money end
 	entry.xp, entry.xpMax = plain(UnitXP("player")), plain(UnitXPMax("player"))
 	entry.rested = GetXPExhaustion and GetXPExhaustion() or 0
 	entry.zone = GetRealZoneText and GetRealZoneText() or entry.zone
@@ -166,6 +170,13 @@ function Alts:OnEnable()
 	end
 	Stoa:On("BAG_UPDATE_DELAYED", bagsLater)
 	Stoa:On("PLAYER_REGEN_ENABLED", bagsLater)
+	Stoa:On("PLAYER_ENTERING_WORLD", function()
+		C_Timer.After(1, function()
+			self.inWorld = true
+			self:Note()
+		end)
+	end)
+	Stoa:On("PLAYER_LEAVING_WORLD", function() self.inWorld = false end)
 	Stoa:On("PLAYER_MONEY", function() self:Note() end)
 	Stoa:On("PLAYER_XP_UPDATE", function() self:Note() end)
 	Stoa:On("UPDATE_EXHAUSTION", function() self:Note() end)
