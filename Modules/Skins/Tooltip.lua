@@ -493,6 +493,15 @@ function Tooltip:Rank(tip, classification)
 end
 
 local function clear(tip)
+	-- Lines the quest box stepped in go back under the line above them, or
+	-- the next card (the bags' money list, an item) shows a stray indent.
+	if tip.stoaMoved then
+		for text, above in pairs(tip.stoaMoved) do
+			text:ClearAllPoints()
+			text:SetPoint("TOPLEFT", above, "BOTTOMLEFT", 0, -2)
+		end
+		tip.stoaMoved = nil
+	end
 	tip.stoaQuest = nil
 	if tip.stoaQuestBox then tip.stoaQuestBox.fill:Hide() tip.stoaQuestBox.rule:Hide() end
 	tip.stoaEdge:Clear()
@@ -561,10 +570,15 @@ local function questSpacing(tip, check)
 	end
 	top:ClearAllPoints()
 	top:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", QUEST_INDENT, -gap)
+	-- Remembered so the next card gets these lines back where the game
+	-- keeps them (clear, above); it does not always lay them out again.
+	tip.stoaMoved = tip.stoaMoved or {}
+	tip.stoaMoved[top] = prev
 	local extra = (first == 2 and 0 or (QUEST_GAP - 2))
 	if hasAfter then
 		after:ClearAllPoints()
 		after:SetPoint("TOPLEFT", bottom, "BOTTOMLEFT", -QUEST_INDENT, -QUEST_GAP)
+		tip.stoaMoved[after] = bottom
 		extra = extra + QUEST_GAP - 2
 	else
 		extra = extra + QUEST_PAD

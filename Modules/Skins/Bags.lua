@@ -352,13 +352,19 @@ local function moneyTooltip(owner)
 	GameTooltip:AddLine("Money")
 	local me = alts.me and alts.me()
 	local realm = me and select(3, alts.me())
+	local myName = me and select(2, alts.me())
 	for _, entry in ipairs(list) do
 		local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class or ""]
 		local name = entry.name or "?"
 		if entry.realm and realm and entry.realm ~= realm then name = name .. " - " .. entry.realm end
 		local r, g, b = 1, 1, 1
 		if color then r, g, b = color.r, color.g, color.b end
-		GameTooltip:AddDoubleLine(name, Stoa:Money(entry.money or 0), r, g, b, 1, 1, 1)
+		-- The character you are on: its sum in the accent, the rest quieter.
+		local mr, mg, mb = Stoa:Color("muted")
+		if myName and entry.name == myName and (not entry.realm or entry.realm == realm) then
+			mr, mg, mb = Stoa:Color("text")
+		end
+		GameTooltip:AddDoubleLine(name, Stoa:Money(entry.money or 0), r, g, b, mr, mg, mb)
 	end
 	if #list > 1 then
 		GameTooltip:AddLine(" ")

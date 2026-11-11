@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.2
 
+- Fixed a stray indent on one line of the bags' money list and other tooltips, left over from a quest box on the tooltip before. In the money list, the character you are on now has its sum in bright text and the others are quieter.
 - The kill skull on nameplates is smaller, in plain bone, and sits at the left end of the bar instead of above its right end.
 - With Does It Die installed, the welcome's Other addons step now asks who marks the nameplates (STOA's marks or Does It Die's), so the question after login is not needed.
 - The DoT stretch on the target bar and on nameplates is now a darkened stretch with thin diagonal bone stripes, with a fine bone line where the health will land, so it reads as damage on its way on a bar of any colour.
