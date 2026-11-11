@@ -793,6 +793,7 @@ function Party:PreviewWatch()
 	watch.hp:SetStatusBarColor(Stoa:Color("health"))
 	watch.absorb:SetMinMaxValues(0, 100)
 	watch.absorb:SetValue(14)
+	watch.buffs.sample = true
 	UI.setPips(watch.buffs, { { "SHLD 12", "shield" }, { "RNW" } })
 end
 
@@ -854,6 +855,7 @@ function Party:UpdateWatch()
 
 	local pips = {}
 	self:AuraPips(unit, pips)
+	watch.buffs.unit, watch.buffs.sample = unit, nil
 	UI.setPips(watch.buffs, pips)
 end
 
