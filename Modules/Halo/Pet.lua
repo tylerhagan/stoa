@@ -29,7 +29,6 @@ local PLAQUE_WIDTH, PLAQUE_HEIGHT = 294, 112
 local PAD = 12
 local COIN_SPACE = UI.PLAQUE_COIN_SPACE
 local ROW_SIZE, ROW_GAP, ROW_BREAK = 26, 5, 8
-local ROW_ROOM = ROW_SIZE + 12
 local COIN = 46
 local LOW = 0.35
 
@@ -385,20 +384,12 @@ function Pet:PlaceRow()
 	local bar = Stoa.modules.CombatBar
 	local offset = bar and bar.enabled and bar.groupOffset and (bar.groupOffset - (bar.shift or 0))
 	if not offset then
-		-- No combat bar: under the healer's party row when it stands there.
-		local party = Stoa.modules.Party
-		local under = party and party.RowBottom and party:RowBottom()
+		-- No combat bar: under the healer's group when it stands there.
+		local under = Stoa.HealerRowBottom and Stoa:HealerRowBottom()
 		offset = under and -(under + 8) or -52
 	end
 	row:ClearAllPoints()
 	row:SetPoint("TOP", halo, "BOTTOM", 0, offset - 4)
-end
-
--- Room the pet row takes under the combat bar, for the party row below it.
-function Pet:RowRoom()
-	if not (self.enabled and self.db.row and self.row) then return 0 end
-	if Stoa:HasSavedPosition("petrow") then return 0 end
-	return (HasPetUI and plain(HasPetUI())) and ROW_ROOM or 0
 end
 
 function Pet:UpdateRow()
