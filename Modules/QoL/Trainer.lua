@@ -87,16 +87,19 @@ function Trainer:Spells(first, last)
 	local myRace, faction = race(), UnitFactionGroup("player")
 	local Spells = Stoa.Spells
 	local list, seen = {}, {}
+	-- What your class trainer has offered this character is on the list
+	-- whatever race STOA's own data ties it to (Forever opened a few up).
+	local offered = Stoa.char.trainerOffered or {}
 	for at, ids in pairs(byLevel) do
 		if at >= first and at <= last then
 			for _, id in ipairs(ids) do
 				local races = Stoa.TRAINER_RACE[id]
 				local side = Stoa.TRAINER_FACTION[id]
-				local fits = (not races or races[myRace]) and (not side or side == faction)
+				local fits = offered[id] or ((not races or races[myRace]) and (not side or side == faction))
 				-- A spell this client doesn't know by ID isn't on Forever.
 				if fits and not seen[id] and Spells.name(id) and not Spells.covered(id) then
 					seen[id] = true
-					if not Stoa.TRAINER_RANKED[id] or Spells.best(id) then
+					if not Stoa.TRAINER_RANKED[id] or Spells.first(id) or Spells.best(id) then
 						list[#list + 1] = { id = id, level = at, skipped = self:Skipped(id) }
 					end
 				end
@@ -239,6 +242,8 @@ function Trainer:Learn()
 	-- profession trainer (Smelt Heavy Thorium) or another class's (Fear)
 	-- would otherwise land on your list. Prices are kept by spell either way.
 	local mine = self:IsMyClassTrainer(class)
+	Stoa.char.trainerOffered = Stoa.char.trainerOffered or {}
+	local offered = Stoa.char.trainerOffered
 	Stoa.db.trainerGroups = Stoa.db.trainerGroups or {}
 	Stoa.db.trainerGroups[class] = Stoa.db.trainerGroups[class] or {}
 	local groups, group = Stoa.db.trainerGroups[class], nil
@@ -254,6 +259,10 @@ function Trainer:Learn()
 		local ok, data = pcall(C_TooltipInfo.GetTrainerService, i)
 		local id = ok and type(data) == "table" and Stoa:PlainNumber(data.id)
 		local cost = id and Stoa:PlainNumber((GetTrainerServiceCost(i)))
+		if mine and id and not offered[id] then
+			offered[id] = true
+			learned = true
+		end
 		if mine and id and group and groups[id] ~= group then
 			groups[id] = group
 			learned = true
