@@ -4,6 +4,14 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.1.0
+
+- Slim console (How much STOA: Slim, or Settings: Slim console): the console as one plain line a quarter of the height. Level and experience on the left, health and mana either side of a small portrait, and a word each for Ready, Journey and Company on the right; mouse over those and their pages open on a card. Chat and the action bars stand above the line, on STOA's own Edit Mode layout for it ("Stoa Slim"), and At a glance is left out. It still folds in a fight.
+- Minimal (How much STOA: Minimal): no console at all. Out of combat your health and mana rest as two faint arcs around your character and the Halo rises in a fight; the target plaque and party cards rest faint until a fight starts or the mouse is over them. STOA's look and comforts stay. Each part is its own setting too: Faint health and mana out of combat, Fade frames out of combat.
+- Action bars: Hide the bars until mouseover (off by default) rests every bar along the bottom, the main bar too, out of combat.
+- With the console off, changing the In combat setting no longer raises an error.
+- STOA describes itself as a focused UI, not a calm one.
+
 ## 1.0.1
 
 - Combat rows: clicking a button with the mouse casts it again (it did nothing with the game's "cast on key down" setting on).

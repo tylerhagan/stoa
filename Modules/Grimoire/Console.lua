@@ -12,6 +12,9 @@ local Stoa = ns.Stoa
 
 local Console = Stoa:NewModule("Grimoire", {
 	height = 150,
+	-- The slim console: one plain line, with the pages on a card that
+	-- opens over the readouts.
+	slim = false,
 	houseChat = true,
 	hideBarArt = true,
 	houseMenu = true,
@@ -23,6 +26,8 @@ local Console = Stoa:NewModule("Grimoire", {
 })
 
 local SPINE_HEIGHT = 22
+local SLIM_HEIGHT = 44
+local SLIM_SEAL = 36
 local ARCH_SIZE = 220
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 110
@@ -58,9 +63,17 @@ local setUnitBar, classColor = UI.setUnitBar, UI.classColor
 
 -- Build ---------------------------------------------------------------------
 
+-- The slim console is always plain: the leather is cut for the full height.
+function Console:Art()
+	return self.db.art and not self.db.slim
+end
+
 function Console:Build()
 	local db = self.db
 	local space = Stoa.space
+	local slim = db.slim
+	-- The slim console has no arch, so its top line runs straight across.
+	local archGap = slim and 0 or ARCH_SIZE / 2
 
 	local frame = CreateFrame("Frame", "StoaConsole", UIParent)
 	frame:SetFrameStrata("BACKGROUND")
@@ -77,10 +90,10 @@ function Console:Build()
 
 	local leftEdge = line(frame)
 	leftEdge:SetPoint("TOPLEFT")
-	leftEdge:SetPoint("TOPRIGHT", frame, "TOP", -ARCH_SIZE / 2, 0)
+	leftEdge:SetPoint("TOPRIGHT", frame, "TOP", -archGap, 0)
 	local rightEdge = line(frame)
 	rightEdge:SetPoint("TOPRIGHT")
-	rightEdge:SetPoint("TOPLEFT", frame, "TOP", ARCH_SIZE / 2, 0)
+	rightEdge:SetPoint("TOPLEFT", frame, "TOP", archGap, 0)
 	local inner = line(frame, "hairline", 0.1)
 	inner:SetPoint("TOPLEFT", 0, -5)
 	inner:SetPoint("TOPRIGHT", 0, -5)
@@ -103,7 +116,14 @@ function Console:Build()
 	-- Parts drawn only while the console is folded, when the art is on.
 	self.flatParts = {}
 
-	if db.art then
+	if slim then
+		archRing:Hide()
+		arch:Hide()
+		inner:Hide()
+		self.archParts = {}
+	end
+
+	if self:Art() then
 		-- The leather panel replaces the drawn panel, lines and arch while
 		-- open; folded, the drawn spine takes over again.
 		archRing:Hide()
@@ -115,6 +135,7 @@ function Console:Build()
 	self:BuildSeal(frame)
 	self:BuildNotes(frame, space)
 	self:BuildFellowship(frame, space)
+	if slim then self:BuildSlim(frame) end
 
 	UI.applyTheme()
 	Stoa:On("STOA_THEME_CHANGED", function()
@@ -125,13 +146,14 @@ end
 
 -- Where the pages start: below the leather's gold top border when it's on.
 function Console:PageInset()
-	if self.db.art then return Stoa.space.xxl, -26, 20 end
+	if self:Art() then return Stoa.space.xxl, -26, 20 end
 	return Stoa.space.xxl, -Stoa.space.xl, 20
 end
 
 -- The console's height when open.
 function Console:OpenHeight()
-	return self.db.art and ART_HEIGHT or self.db.height
+	if self.db.slim then return SLIM_HEIGHT end
+	return self:Art() and ART_HEIGHT or self.db.height
 end
 
 -- Lays the leather along the console: the tile repeating edge to edge
@@ -186,11 +208,12 @@ end
 function Console:BuildSeal(frame)
 	-- With the leather art the seal sits in the art's arch, a size larger,
 	-- and the arch's own gold ring stands in for the seal's outer rings.
-	local art = self.db.art
-	local size = art and ART_SEAL_SIZE or SEAL_SIZE
+	local art, slim = self:Art(), self.db.slim
+	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or SEAL_SIZE
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
-	local sealY = art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or 6
+	-- Slim: the seal sits in the line, its head just over the top edge.
+	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or 6
 	seal:SetPoint("CENTER", frame, "TOP", 0, sealY)
 	self.seal = seal
 
@@ -242,8 +265,16 @@ function Console:BuildSeal(frame)
 	-- nothing floats over the world.
 	local role = text(seal, "italic", Stoa.typeSize.label, "accent", "CENTER")
 	role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
-	role:SetShown(not art)
+	role:SetShown(not art and not slim)
 	self.roleText = role
+
+	if slim then
+		-- The level reads on the line's left, so the plate (which would hang
+		-- under the line) steps aside.
+		self.levelPlate:Hide()
+		self:BuildSlimResources(frame, seal)
+		return
+	end
 
 	if art then
 		self:BuildResources(frame)
@@ -302,6 +333,226 @@ function Console:BuildResources(frame)
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
 	self:BuildManaPlay(mana, manaCap)
+end
+
+-- Slim: health and mana in the line either side of the seal. Reading out
+-- from the seal: the number, the bar (filling towards the seal), the word.
+local SLIM_BAR = 170
+local SLIM_NUMBER = 52
+
+function Console:BuildSlimResources(frame, seal)
+	local function resource(side, token, label)
+		local inner = side == "left" and "RIGHT" or "LEFT"
+		local outer = side == "left" and "LEFT" or "RIGHT"
+		local sign = side == "left" and -1 or 1
+		local number = text(frame, "serif", Stoa.typeSize.title, token == "health" and "text" or "mana", inner)
+		number:SetWidth(SLIM_NUMBER)
+		number:SetPoint(inner, seal, outer, sign * 14, -8)
+		local barFrame = bar(frame, SLIM_BAR, 3, token)
+		barFrame:SetPoint(inner, number, outer, sign * 10, 0)
+		if side == "left" then barFrame:SetReverseFill(true) end
+		local cap = caption(frame, label)
+		cap:SetPoint(inner, barFrame, outer, sign * 12, 0)
+		return barFrame, number, cap
+	end
+	local health, healthText, healthCap = resource("left", "health", "Health")
+	local mana, manaText, manaCap = resource("right", "mana", "Mana")
+	self.health, self.healthText = health, healthText
+	self.mana, self.manaText = mana, manaText
+	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
+	self:BuildManaPlay(mana, manaCap)
+end
+
+-- Slim: the line's two ends. On the left your level and experience; on the
+-- right one short readout each for Ready, Journey and Company. The three
+-- full columns live on a card that opens above the readouts while the
+-- mouse is over them (or the card), and closes when it leaves.
+local SLIM_READ_GAP = 34
+local CARD_PAD = 16
+local CARD_LIFT = 40
+
+function Console:BuildSlim(frame)
+	local inset = self:PageInset()
+	local Figures = Stoa.Figures
+
+	-- Left: level, the experience bar, your share of the level.
+	local left = CreateFrame("Frame", nil, frame)
+	left:SetPoint("LEFT", frame, "TOPLEFT", inset, -SLIM_HEIGHT / 2)
+	left:SetSize(360, SLIM_HEIGHT - 8)
+	local level = text(left, "serif", Stoa.typeSize.title, "text")
+	level:SetPoint("LEFT")
+	local xp = Figures.xp(left, 180, 4)
+	xp:SetPoint("LEFT", level, "RIGHT", 14, 0)
+	local share = caption(left, "")
+	share:SetPoint("LEFT", xp, "RIGHT", 12, 0)
+	left:EnableMouse(true)
+	left:SetScript("OnEnter", function(own)
+		local keys = self.xpKeyWords
+		if not keys then return end
+		GameTooltip:SetOwner(own, "ANCHOR_TOP")
+		GameTooltip:AddLine("Experience")
+		for _, key in ipairs(keys) do
+			local r, g, b = Stoa:Color(key[1])
+			GameTooltip:AddLine(key[2], r, g, b)
+		end
+		GameTooltip:Show()
+	end)
+	left:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	self.slimLevel, self.slimXP, self.slimShare = level, xp, share
+
+	-- Right: the readouts, laid right to left so Company keeps the corner.
+	local right = CreateFrame("Frame", nil, frame)
+	right:SetPoint("RIGHT", frame, "TOPRIGHT", -inset, -SLIM_HEIGHT / 2)
+	right:SetSize(10, SLIM_HEIGHT - 8)
+	local reads = {}
+	local function readout(key, label)
+		local button = CreateFrame("Button", nil, right)
+		button:SetHeight(SLIM_HEIGHT - 8)
+		local cap = caption(button, label)
+		cap:SetPoint("LEFT")
+		local value = text(button, "serif", Stoa.typeSize.name, "text")
+		value:SetPoint("LEFT", cap, "RIGHT", 8, 0)
+		local note = text(button, "sans", Stoa.typeSize.body, "muted")
+		note:SetPoint("LEFT", value, "RIGHT", 8, 0)
+		button.cap, button.value, button.note = cap, value, note
+		reads[key] = button
+		return button
+	end
+	readout("ready", "Ready")
+	readout("journey", "Journey")
+	local company = readout("company", "Company")
+	company:SetScript("OnClick", function()
+		if Stoa.modules.Roster then Stoa.modules.Roster:Toggle() end
+	end)
+	self.slimReads, self.slimRight = reads, right
+
+	-- The card: the right page as it is on the full console, on a panel.
+	local card = CreateFrame("Frame", "StoaConsoleCard", UIParent)
+	card:SetFrameStrata("MEDIUM")
+	card:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -inset + CARD_PAD, CARD_LIFT)
+	card:EnableMouse(true)
+	local fill = card:CreateTexture(nil, "BACKGROUND")
+	fill:SetAllPoints()
+	paint(fill, "panel")
+	for _, edge in ipairs({ { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" } }) do
+		local rule = line(card)
+		rule:SetPoint(edge[1])
+		rule:SetPoint(edge[2])
+	end
+	card:Hide()
+	self.slimCard = card
+	local page = self.rightPage
+	page:SetParent(card)
+	page:ClearAllPoints()
+	page:SetPoint("TOPLEFT", card, "TOPLEFT", CARD_PAD, -CARD_PAD)
+
+	-- Open while the mouse is on a readout or the card; a short grace so
+	-- the mouse can cross the gap between them.
+	local leftAt
+	local function over()
+		if card:IsShown() and card:IsMouseOver() then return true end
+		return right:IsVisible() and right:IsMouseOver()
+	end
+	card:SetScript("OnUpdate", Stoa:GuardUpdate(function()
+		if over() then leftAt = nil return end
+		leftAt = leftAt or GetTime()
+		if GetTime() - leftAt > 0.35 then card:Hide() end
+	end))
+	for _, button in pairs(reads) do
+		button:SetScript("OnEnter", function()
+			if frame:GetHeight() < SLIM_HEIGHT - 1 then return end
+			leftAt = nil
+			card:Show()
+		end)
+	end
+
+	self.resourceParts[#self.resourceParts + 1] = left
+	self.resourceParts[#self.resourceParts + 1] = right
+	self:UpdateSlim()
+end
+
+-- Sizes each readout to its words and lays them out from the right.
+function Console:LayoutSlim()
+	local reads, right = self.slimReads, self.slimRight
+	if not reads then return end
+	-- What each side has between the screen edge and health or mana.
+	local width = Stoa:PlainNumber(self.frame:GetWidth()) or 0
+	local room = width / 2 - self:PageInset() - (SLIM_SEAL / 2 + 14 + SLIM_NUMBER + 10 + SLIM_BAR + 12 + 70)
+	local x = 0
+	for _, key in ipairs({ "company", "ready", "journey" }) do
+		local button = reads[key]
+		local note = button.note:GetText()
+		local wide = button.cap:GetStringWidth() + 8 + button.value:GetStringWidth()
+			+ ((note and note ~= "") and (8 + button.note:GetStringWidth()) or 0)
+		wide = math.max(20, wide)
+		-- On a narrow screen the readouts drop out from the inside.
+		local fits = x == 0 or x + wide <= room
+		button:SetShown(fits)
+		if fits then
+			button:SetWidth(wide)
+			button:ClearAllPoints()
+			button:SetPoint("RIGHT", right, "RIGHT", -x, 0)
+			x = x + wide + SLIM_READ_GAP
+		end
+	end
+	right:SetWidth(math.max(10, x - SLIM_READ_GAP))
+	local levelWide = self.slimLevel:GetStringWidth()
+	self.slimXP:SetShown(self.slimXPWanted and levelWide + 14 + 180 + 12 + 40 <= room)
+	self.slimShare:SetShown(self.slimXP:IsShown())
+end
+
+-- The readouts say in a few words what the card's columns say in full.
+function Console:UpdateSlim()
+	local reads = self.slimReads
+	if not reads then return end
+	-- Ready: bag room, and gear wear once it matters.
+	local free = self.bags and self.bags.free:GetText() or ""
+	reads.ready.value:SetText(free)
+	reads.ready.value:SetTextColor(self.bags.free:GetTextColor())
+	local wear = self.gear and self.gear.value:GetText() or ""
+	reads.ready.note:SetText(wear ~= "" and ("Gear " .. wear) or "")
+	reads.ready.note:SetTextColor(self.gear.value:GetTextColor())
+	-- Journey: what's next at the trainer, else the pace.
+	local training = self.trainerShort or self.trainerFull or ""
+	local pace = self.pace and self.pace:IsShown() and self.pace.toLevel:GetText() or ""
+	local cap = self.pace and self.pace.toLevelCap:GetText() or ""
+	if training ~= "" then
+		reads.journey.value:SetText(training)
+		reads.journey.note:SetText("")
+	elseif pace ~= "" then
+		reads.journey.value:SetText(pace)
+		reads.journey.note:SetText(cap)
+	else
+		reads.journey.value:SetText(self.levelText and self.levelText:GetText() or "")
+		reads.journey.note:SetText("")
+	end
+	-- Company: your party, or who's online.
+	local party = GetNumSubgroupMembers and Stoa:PlainNumber(GetNumSubgroupMembers()) or 0
+	if party > 0 then
+		reads.company.value:SetText((party + 1) .. " in party")
+		reads.company.note:SetText("")
+	else
+		local online = self.onlineCount and self.onlineCount:GetText() or ""
+		reads.company.value:SetText((online:gsub(" friends? online", " online")))
+		reads.company.note:SetText("")
+	end
+	-- Left: level and experience.
+	local level = UnitLevel("player")
+	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel()
+	local atMax = maxLevel and level >= maxLevel
+	self.slimLevel:SetText("Level " .. level)
+	self.slimXPWanted = not atMax
+	if not atMax then
+		local xp, xpMax = Stoa:PlainNumber(UnitXP("player")), Stoa:PlainNumber(UnitXPMax("player"))
+		if xp and xpMax and xpMax > 0 then
+			local rested = Stoa:PlainNumber(GetXPExhaustion and GetXPExhaustion()) or 0
+			local kit = Stoa.modules.Kit
+			local rate = kit and kit.enabled and kit.Rate and kit:Rate()
+			self.slimXP:Set(xp / xpMax, math.min(xp + rested, xpMax) / xpMax, rate and (xp + rate) / xpMax or nil)
+			self.slimShare:SetText(math.floor(xp / xpMax * 100) .. "%")
+		end
+	end
+	self:LayoutSlim()
 end
 
 -- Mana play on the mana bar (shared with the Halo, see Power.dress): a
@@ -749,6 +1000,7 @@ function Console:UpdateFellowship()
 	self.alone:SetShown(not any)
 	self.onlineCount:SetShown(not any)
 	if self.onlineNames then self.onlineNames:SetShown(not any) end
+	self:UpdateSlim()
 end
 
 function Console:UpdateOnline()
@@ -773,6 +1025,7 @@ function Console:UpdateOnline()
 		end
 		self.onlineNames:SetText(table.concat(names, ", "))
 	end
+	self:UpdateSlim()
 end
 
 -- Gear wear (the most worn piece) and free bag slots.
@@ -813,6 +1066,7 @@ function Console:UpdateKit()
 	self.bags.free:SetText(free .. " free")
 	self.bags.free:SetTextColor(Stoa:Color(free <= 2 and "danger" or "text"))
 	self.bags.of:SetText("of " .. total)
+	self:UpdateSlim()
 end
 
 function Console:UpdateJourney()
@@ -886,6 +1140,7 @@ function Console:SettleNext()
 	end
 	questNote:SetShown(quest)
 	note:SetShown(training)
+	self:UpdateSlim()
 end
 
 function Console:AddNote(_, message)
@@ -920,7 +1175,9 @@ function Console:SetOpen(open, instant)
 	local start = GetTime()
 
 	local pagesAlpha = open and 1 or 0
-	local sealScale = open and 1 or 0.4
+	-- The slim seal is small already, so it shrinks less into the spine.
+	local sealScale = open and 1 or (self.db.slim and 0.6 or 0.4)
+	if self.slimCard and not open then self.slimCard:Hide() end
 
 	local function step(progress)
 		frame:SetHeight(from + (target - from) * progress)
@@ -983,6 +1240,8 @@ local function shouldBeOpen()
 end
 
 function Console:Refold()
+	-- Nothing to fold with the console off (Settings, or the Minimal preset).
+	if not self.frame then return end
 	self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant)
 end
 
@@ -1043,6 +1302,8 @@ function Console:FitPages()
 	local inset = self:PageInset()
 	local _, rightClear = self:CentreClear()
 	local room = width / 2 - rightClear - inset
+	-- On the slim console's card the columns have the room they need.
+	if self.slimCard then room = COLUMN_WIDTH * 3 + COLUMN_GAP * 2 end
 
 	local capped = (GetMaxPlayerLevel and UnitLevel("player") >= GetMaxPlayerLevel())
 	local orders = {
@@ -1069,6 +1330,7 @@ function Console:FitPages()
 	end
 	for key, col in pairs(cols) do col:SetShown(shown[key] == true) end
 	page:SetWidth(math.max(1, #chosen * COLUMN_WIDTH + math.max(0, #chosen - 1) * gap))
+	if self.slimCard then self.slimCard:SetSize(page:GetWidth() + CARD_PAD * 2, page:GetHeight() + CARD_PAD * 2) end
 	if Stoa.modules.Tally and Stoa.modules.Tally.Fit then Stoa.modules.Tally:Fit() end
 	if self.ReplaceChat then self:ReplaceChat() end
 end

@@ -16,6 +16,8 @@ local Party = Stoa:NewModule("Party", {
 	-- When not healing, cards show health, and words only for what you can
 	-- act on: a debuff you can dispel, dead or offline.
 	quietCards = true,
+	-- Out of combat the cards rest faint until the mouse is over them.
+	restFade = false,
 	-- The click grid: "open" always shows it, "fold" keeps just its title
 	-- until you hover a card or hold Shift, "hidden" never shows it.
 	clickGrid = "fold",
@@ -831,6 +833,17 @@ function Party:OnEnable()
 	self:BuildWatch()
 	self:UpdateAll()
 	self:UpdateWatch()
+	if self.db.restFade then
+		local REST = 0.45
+		local shown
+		Stoa:NewTicker(0.15, function()
+			local full = Stoa:GetState() == Stoa.STATE_COMBAT or InCombatLockdown()
+				or (self.frame:IsVisible() and self.frame:IsMouseOver())
+			if full == shown then return end
+			shown = full
+			UI.fade(self.frame, full and 1 or REST, full and 0.12 or 0.4)
+		end)
+	end
 
 	if self.db.hideBlizzardParty then
 		Stoa:AfterCombat(function() xpcall(hideBlizzardParty, Stoa.catch) end)

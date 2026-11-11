@@ -11,7 +11,7 @@ local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
-local Bars = Stoa:NewModule("ActionBars", { hoverTray = false, combatHide = true })
+local Bars = Stoa:NewModule("ActionBars", { hoverTray = false, combatHide = true, fadeAll = false })
 Stoa:SpecSettings(Bars, { "hoverTray" })
 
 local PREFIXES = {
@@ -116,6 +116,8 @@ local TRAY_FADE_IN, TRAY_FADE_OUT = 0.12, 0.4
 local function consoleTop()
 	local console = Stoa.modules.Grimoire
 	if console and console.enabled and console.OpenHeight then
+		-- On the slim console the bars stand above the line, not on it.
+		if console.db.slim then return console:OpenHeight() + 150 end
 		return console:OpenHeight() + 8
 	end
 	return UIParent:GetHeight() * 0.22
@@ -180,8 +182,9 @@ local function handedToHalo(self)
 	return combatBar and combatBar.enabled and combatBar.shown and #combatBar.shown > 0
 end
 
-local function trayWanted(self)
-	if not self.db.hoverTray then return true end
+-- True while something calls the bars up: a fight, something on the cursor,
+-- Edit Mode, the spellbook, or the mouse over the bar area.
+local function calledUp(self)
 	if inCombat() then return true end
 	if GetCursorInfo() then return true end
 	if EditModeManagerFrame and EditModeManagerFrame:IsShown() then return true end
@@ -194,11 +197,19 @@ local function trayWanted(self)
 	return false
 end
 
+local function trayWanted(self, called)
+	if not self.db.hoverTray and not self.db.fadeAll then return true end
+	return called
+end
+
 function Bars:UpdateTray()
 	if not self.tray then return end
 	local halo = handedToHalo(self)
-	local lit = not halo and trayWanted(self)
-	local state = halo and "halo" or lit and "lit" or "rest"
+	local called = not halo and calledUp(self)
+	local lit = not halo and trayWanted(self, called)
+	-- Fade every bar (Settings): the main bar rests unseen too.
+	local mainLit = not halo and (called or not self.db.fadeAll)
+	local state = halo and "halo" or (lit and "lit" or "rest") .. (mainLit and "+" or "-")
 	if state == self.trayLit then return end
 	self.trayLit = state
 	local bars, targets = {}, {}
@@ -208,7 +219,7 @@ function Bars:UpdateTray()
 	end
 	if self.main then
 		table.insert(bars, self.main)
-		table.insert(targets, halo and 0 or 1)
+		table.insert(targets, mainLit and 1 or 0)
 	end
 	-- Combat shows the rows straight away rather than fading them in.
 	if lit and InCombatLockdown() then
