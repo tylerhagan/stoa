@@ -15,6 +15,9 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Slim: the "Stoa Slim" Edit Mode layout hides the Cooldown Manager's rows and moves the swing timers up clear of the bars. A saved one updates at the next login while it is the active layout.
 - Changing Combat rows during practice combat no longer hides the combat bar until practice ends.
 - Slim: the hover card sits above the quest list, which was reading through it.
+- Party, when you tank or deal damage: thin strips beside the Halo in place of the cards. A name, health and a hairline bar each, with a word when you can act; they rest faint while everyone is fine, turn amber below half health and brighten under the mouse or as your target. Healers keep the cards. A spot saved for the old cards is let go once. (Settings: Party as strips when not healing.)
+- Target: words and a bar over the world with a small portrait, level with the Halo, in place of the solid plaque. (Settings: Target without a panel.)
+- STOA's Edit Mode layouts hang the quest tracker a little lower, so "All Objectives" no longer runs into the coordinates under the minimap. Saved layouts update at the next login while active.
 - Quiet: no longer hides the extra bar rows until mouseover, and has its own Edit Mode layout, "Stoa Quiet", with the Cooldown Manager's rows hidden.
 - STOA describes itself as a focused UI, not a calm one.
 
