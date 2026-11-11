@@ -10,13 +10,18 @@ import sys
 import numpy as np
 from PIL import Image
 
-SIZE, PERIOD, WIDTH = 16, 8, 2
+SIZE, SCALE = 16, 8
+PERIOD, WIDTH = 8, 2
 
-# Two texels wide, on whole texels, with no smoothing of our own: the game
-# smooths once as it scales the tile, and twice reads as blur. Rising to the right, and whole
-# periods across the tile so it repeats.
-x, y = np.meshgrid(np.arange(SIZE), np.arange(SIZE))
-alpha = (((x + y) % PERIOD) < WIDTH).astype(float)
+# Drawn large and averaged down, so the stripes' edges are smooth. Rising
+# to the right, and whole periods across the tile so it repeats.
+n = SIZE * SCALE
+c = (np.arange(n) + 0.5) / SCALE
+x, y = np.meshgrid(c, c)
+# x + y runs along the diagonal at root two to the texel, so the band is
+# widened to keep the stripe two texels across.
+on = ((x + y) % PERIOD) < WIDTH * 2 ** 0.5
+alpha = on.reshape(SIZE, SCALE, SIZE, SCALE).mean(axis=(1, 3))
 img = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
 # A faint black wash between the stripes dims the stretch as a whole.
 WASH, LINE = 0.15, 0.72
