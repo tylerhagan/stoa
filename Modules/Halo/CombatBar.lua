@@ -160,11 +160,25 @@ function Bar:PlaceAnchor()
 	local anchor, halo = self.anchor, _G.StoaHalo
 	anchor:ClearAllPoints()
 	if halo then
-		anchor:SetPoint("TOP", halo, "BOTTOM", 0, TOP)
+		-- Under the healer's party row when it stands under the Halo.
+		local party = Stoa.modules.Party
+		local under = party and party.RowBottom and party:RowBottom()
+		local top = under and math.min(TOP, -(under + 12)) or TOP
+		self.shift = TOP - top
+		anchor:SetPoint("TOP", halo, "BOTTOM", 0, top)
 	else
 		anchor:SetPoint("TOP", UIParent, "CENTER", 0, -60 + TOP)
 	end
 	self.anchored = halo ~= nil
+end
+
+-- The healer row came, went or changed height: out of combat the bar takes
+-- its place under it again, and what hangs under the bar follows.
+function Bar:Reanchor()
+	if InCombatLockdown() or not self.anchor or Stoa:HasSavedPosition("combatbar") then return end
+	local before = self.shift or 0
+	self:PlaceAnchor()
+	if (self.shift or 0) ~= before then Stoa:Fire("STOA_COMBAT_LAYOUT", Stoa:CombatLayout()) end
 end
 
 function Bar:Build()
@@ -224,7 +238,7 @@ end
 function Bar:GroupOffset()
 	-- The pet row (Pet.lua) sits right under the bar; the group goes below it.
 	local pet = Stoa.Pet and Stoa.Pet.RowRoom and Stoa.Pet:RowRoom() or 0
-	return (self.groupOffset or -136) - pet
+	return (self.groupOffset or -136) - pet - (self.shift or 0)
 end
 
 -- Out of combat only: lays out the buttons the current page fills, centred
