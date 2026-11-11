@@ -4,6 +4,14 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.1.1
+
+- Full keeps the party cards and the solid target plaque. The party strips and the target without a panel that 1.1.0 gave everyone now come with Slim and Minimal only; each still has its own setting (Party as strips when not healing, Target without a panel). Each character is set once from the console it uses.
+- Party: a hidden width from the game in a fight no longer switches the party frames off (their health then stopped updating). Tags judge their width from the letters instead.
+- The tank watch shows your Shield, Renew and Weakened Soul as the same tags the party cards carry, in place of a line of words, and a friendly target carries them too.
+- Slim and Minimal: the healer's party row stops above the action bars out of combat instead of sitting on them, moving there once the calm ends and the combat bar has gone.
+- The emergency item steps under the party or raid frames when they share its spot beside the Halo.
+
 ## 1.1.0
 
 - Slim console (How much STOA: Slim, or Settings: Slim console): the console as one plain line a quarter of the height. Level and experience on the left, health and mana either side of a small portrait, and a word each for Ready, Journey and Company on the right; mouse over those and their pages open on a card. Chat and the action bars stand above the line, on STOA's own Edit Mode layout for it ("Stoa Slim"), and At a glance is left out. It still folds in a fight.
@@ -16,17 +24,12 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Changing Combat rows during practice combat no longer hides the combat bar until practice ends.
 - Slim: the portrait seal fades out with the line in a fight instead of peeking over it.
 - Slim: the hover card sits above the quest list, which was reading through it.
-- Slim and Minimal: the party, when you tank or deal damage, shows as thin strips beside the Halo in place of the cards. A name, health and a hairline bar each, with a word when you can act; they rest faint while everyone is fine, turn amber below half health and brighten under the mouse or as your target. Healers keep the cards. A spot saved for the old cards is let go once. (Settings: Party as strips when not healing.)
-- Slim and Minimal: the target is words and a bar over the world with a small portrait, level with the Halo, in place of the solid plaque. (Settings: Target without a panel.)
+- Party, when you tank or deal damage: thin strips beside the Halo in place of the cards. A name, health and a hairline bar each, with a word when you can act; they rest faint while everyone is fine, turn amber below half health and brighten under the mouse or as your target. Healers keep the cards. A spot saved for the old cards is let go once. (Settings: Party as strips when not healing.)
+- Target: words and a bar over the world with a small portrait, level with the Halo, in place of the solid plaque. (Settings: Target without a panel.)
 - STOA's Edit Mode layouts hang the quest tracker a little lower, so "All Objectives" no longer runs into the coordinates under the minimap. Saved layouts update at the next login while active.
 - Minimal has its own Edit Mode layout, "Stoa Minimal", with the Cooldown Manager's rows hidden.
 - The quest list folds to its header in combat (it used to dim) and comes back after; hover the header to open it. Practice combat folds it too. Settings: Fold quest list in combat.
 - Welcome page: Slim's description fits its card again (it ran a third line into the next card).
-- Party: a hidden width from the game in a fight no longer switches the party frames off (their health then stopped updating). Tags judge their width from the letters instead.
-- Slim and Minimal: the healer's party row stops above the action bars out of combat instead of sitting on them, moving there once the calm ends and the combat bar has gone.
-- The emergency item steps under the party or raid frames when they share its spot beside the Halo.
-- Full keeps the party cards and the solid target plaque; the strips and the target without a panel come with Slim and Minimal (each has its own setting).
-- The tank watch shows your Shield, Renew and Weakened Soul as the same tags the party cards carry, in place of a line of words, and a friendly target carries them too.
 - Quiet: no longer hides the extra bar rows until mouseover, and has its own Edit Mode layout, "Stoa Quiet", with the Cooldown Manager's rows hidden.
 - STOA describes itself as a focused UI, not a calm one.
 
