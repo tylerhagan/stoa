@@ -41,6 +41,7 @@ local CHAT_RIGHT = 440 + 44
 local CENTRE_CLEAR = 340
 local REFRESH_SECONDS = 2
 local LOW_WEAR, LOW_BAGS = 0.25, 2
+local BASE_SPEED = BASE_MOVEMENT_SPEED or 7
 
 local call = Stoa.safe.call
 
@@ -461,6 +462,20 @@ local ENTRIES = {
 		if home then add("Home", home .. " ms") end
 		if world then add("World", world .. " ms") end
 	end },
+	-- Speed as the character sheet words it: a share of plain running
+	-- (7 yards a second). Moving shows how fast you are going now, standing
+	-- shows how fast you would run or ride.
+	speed = { label = "Speed", group = "Stats", value = function()
+		local now, run = call(GetUnitSpeed, "player")
+		now, run = plain(now), plain(run)
+		local speed = (now and now > 0) and now or run
+		return speed and ("%d%%"):format(speed / BASE_SPEED * 100 + 0.5)
+	end, detail = function(add)
+		local _, run, _, swim = call(GetUnitSpeed, "player")
+		run, swim = plain(run), plain(swim)
+		if run then add("On foot or mounted", ("%d%%"):format(run / BASE_SPEED * 100 + 0.5)) end
+		if swim then add("Swimming", ("%d%%"):format(swim / BASE_SPEED * 100 + 0.5)) end
+	end, open = "character" },
 	framerate = { label = "Framerate", group = "World", value = function()
 		local fps = plain(call(GetFramerate))
 		return fps and (math.floor(fps + 0.5) .. " fps")
@@ -471,7 +486,7 @@ for _, key in ipairs({ "prof1", "prof2", "cooking", "fishing", "firstAid" }) do 
 
 -- The picker's order.
 local GROUPS = {
-	{ "Stats", { "strength", "agility", "stamina", "intellect", "spirit", "attackPower", "rangedPower", "spellPower", "healing", "crit", "spellCrit", "hit", "regen", "armor", "defense", "dodge", "parry", "block" } },
+	{ "Stats", { "strength", "agility", "stamina", "intellect", "spirit", "attackPower", "rangedPower", "spellPower", "healing", "crit", "spellCrit", "hit", "regen", "armor", "defense", "dodge", "parry", "block", "speed" } },
 	{ "Kit", { "durability", "bags", "gold" } },
 	{ "Professions", { "prof1", "prof2", "cooking", "fishing", "firstAid" } },
 	{ "World", { "zone", "reputation", "clock", "latency", "framerate" } },
