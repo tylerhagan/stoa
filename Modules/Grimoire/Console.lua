@@ -428,7 +428,8 @@ function Console:BuildSlim(frame)
 
 	-- The card: the right page as it is on the full console, on a panel.
 	local card = CreateFrame("Frame", "StoaConsoleCard", UIParent)
-	card:SetFrameStrata("MEDIUM")
+	-- Above the quest tracker, which otherwise reads through the card.
+	card:SetFrameStrata("HIGH")
 	card:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -inset + CARD_PAD, CARD_LIFT)
 	card:EnableMouse(true)
 	local fill = card:CreateTexture(nil, "BACKGROUND")
