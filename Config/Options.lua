@@ -283,7 +283,13 @@ local function build()
 	actions("cdmProbe", "Check it", "Lists the spells the Cooldown Manager tracks, and what STOA can read of each, in chat.", { { "What it tracks", command("cdm") } }, { cmd = "/stoa cdm" })
 	group = "DoT kill marks"
 	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in bone, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", words = "dot damage execute", change = refresh("Lethal", "Update") })
-	toggle(of("Lethal"), "plates", "DoT damage on nameplates", "The same bone stretch on each enemy's nameplate, and a small skull above it once your DoTs will kill it. Turn off Does It Die's own \"Show on nameplates\" (type /did, Nameplates tab) so the two don't both draw.", true, { id = "lethalPlates", needs = "Needs the DoesItDie addon", words = "dot damage nameplate execute", change = refresh("Lethal", "Refresh") })
+	choice(nil, "dotPlates", "DoT marks on nameplates", "Who marks each enemy's nameplate with the damage your DoTs still have to deal. STOA draws a bone stretch on the health bar and a small skull once they will kill. Does It Die draws its own marker. Choosing here sets Does It Die's \"Show on nameplates\" for you, so the two never both draw.", "stoa", {
+		{ "stoa", "STOA" }, { "theirs", "Does It Die" }, { "off", "Neither" },
+	}, {
+		id = "lethalPlates", needs = "Needs the DoesItDie addon", words = "dot damage nameplate execute doesitdie",
+		get = function() local m = Stoa.modules.Lethal; return m and m.db and m:PlateOwner() or "stoa" end,
+		set = function(v) local m = Stoa.modules.Lethal; if m and m.db then m:SetPlateOwner(v) end end,
+	})
 	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", change = refresh("Lethal", "Update") })
 	group = "Shadow priest"
 	toggle(of("Shadow"), "followSequence", "Follow a cast sequence macro", "With a /castsequence macro on your bars, the next-press outline follows it: the macro lights up, and so does the spell button its next step will cast. Off goes back to STOA's own order (DoTs, Mind Blast, Death, Mind Flay).", true, { id = "shadowSequence", words = "castsequence macro rotation priority", change = refresh("Shadow", "UpdateNext") })
