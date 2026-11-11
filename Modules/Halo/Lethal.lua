@@ -40,6 +40,18 @@ local function hatch(marker)
 	if stripes.SetHorizTile then stripes:SetHorizTile(true) end
 	if stripes.SetVertTile then stripes:SetVertTile(true) end
 	marker:SetStatusBarTexture(stripes)
+	-- A soft shadow falling in from the stretch's left edge, so it sits a
+	-- little below the health beside it.
+	local shadow = marker:CreateTexture(nil, "ARTWORK", nil, 1)
+	shadow:SetPoint("TOPLEFT", stripes, "TOPLEFT")
+	shadow:SetPoint("BOTTOMLEFT", stripes, "BOTTOMLEFT")
+	shadow:SetWidth(7)
+	shadow:SetColorTexture(1, 1, 1, 1)
+	if shadow.SetGradient and CreateColor then
+		shadow:SetGradient("HORIZONTAL", CreateColor(0, 0, 0, 0.5), CreateColor(0, 0, 0, 0))
+	else
+		shadow:Hide()
+	end
 end
 
 local function paintHatch(marker, edge)
