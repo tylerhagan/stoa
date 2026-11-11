@@ -761,12 +761,10 @@ function Welcome:FollowLayout()
 	if kind == "designer" or layout:OnStoa("designer") then
 		xpcall(layout.Apply, Stoa.catch, layout, true, kind)
 	end
-	-- The slim console has its own layout (the bars above the line); on one
-	-- of STOA's layouts, follow it there and back.
-	local wanted = layout.Wanted and layout:Wanted()
-	if wanted and wanted ~= kind and layout:OnStoa() and not layout:OnStoa(wanted) then
-		xpcall(layout.Apply, Stoa.catch, layout, true, wanted)
-	end
+	-- The slim console's own layout (the bars above the line) is not applied
+	-- here: switching Edit Mode layouts in the same click made the game
+	-- refuse the reload that follows. Layout.lua switches to it, and back,
+	-- at the next login or reload instead.
 end
 
 -- Finish always reloads, so every choice, the preset's settings and its
