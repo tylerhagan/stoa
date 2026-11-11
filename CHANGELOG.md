@@ -11,6 +11,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - The tank watch shows your Shield, Renew and Weakened Soul as the same tags the party cards carry, in place of a line of words, and a friendly target carries them too.
 - Slim and Minimal: the healer's party row stops above the action bars out of combat instead of sitting on them, moving there once the calm ends and the combat bar has gone.
 - The emergency item steps under the party or raid frames when they share its spot beside the Halo.
+- Money across your characters (the bag's money hover, `/stoa alts`): a character's gold is no longer written down as 0 while it loads in or logs out. Characters already showing 0 correct themselves the next time you log in on them.
 
 ## 1.1.0
 
