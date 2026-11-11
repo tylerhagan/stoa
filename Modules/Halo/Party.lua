@@ -747,8 +747,8 @@ function Party:BuildWatch()
 	absorb:SetSize(WATCH_WIDTH, 7)
 	absorb:SetStatusBarColor(Stoa:Color("shield"))
 	UI.engrave(hp, WATCH_WIDTH)
-	local buffs = UI.caption(watch, "")
-	buffs:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -6)
+	-- Your buffs on them as the same tags the party cards carry.
+	local buffs = UI.pipRow(watch, hp, 5)
 	watch.label = label
 
 	watch.name, watch.percent, watch.word, watch.hp = name, percent, word, hp
@@ -814,7 +814,7 @@ function Party:PreviewWatch()
 	watch.hp:SetStatusBarColor(Stoa:Color("health"))
 	watch.absorb:SetMinMaxValues(0, 100)
 	watch.absorb:SetValue(14)
-	watch.buffs:SetText("SHLD 12 · RNW")
+	UI.setPips(watch.buffs, { { "SHLD 12", "shield" }, { "RNW" } })
 end
 
 function Party:UpdateWatch()
@@ -875,9 +875,7 @@ function Party:UpdateWatch()
 
 	local pips = {}
 	self:AuraPips(unit, pips)
-	local words = {}
-	for i, pip in ipairs(pips) do words[i] = pip[1] end
-	watch.buffs:SetText(table.concat(words, " · "))
+	UI.setPips(watch.buffs, pips)
 end
 
 local function cardFor(self, unit)
@@ -958,9 +956,15 @@ function Party:OnEnable()
 		if self.grid and self.grid:IsShown() then self:Peek("shift", IsShiftKeyDown()) end
 	end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function() self:UpdateAll() end)
+	-- The target carries the same tags for a friend (Halo.lua).
+	local function targetPips()
+		local halo = Stoa.modules.Halo
+		if halo and halo.enabled and halo.UpdateTargetPips then halo:UpdateTargetPips() end
+	end
 	Stoa:On("STOA_OWN_HEALS", function()
 		self:UpdateAll()
 		self:UpdateWatch()
+		targetPips()
 	end)
 	Stoa:On("UNIT_CONNECTION", function(unit)
 		local card = cardFor(self, unit)
@@ -987,6 +991,7 @@ function Party:OnEnable()
 	Stoa:NewTicker(1, function()
 		if self.frame:IsVisible() then self:UpdateAll() end
 		self:UpdateWatch()
+		targetPips()
 	end)
 end
 

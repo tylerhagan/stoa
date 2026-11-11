@@ -383,6 +383,8 @@ function Halo:BuildTarget(frame)
 	kick:Hide()
 	target.kick = kick
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
+	-- On a friend: your buffs on them as the party cards' tags.
+	target.pips = UI.pipRow(target, hp, 5)
 	target.threat, target.caption = threat, caption
 	if self.db.targetStrip then
 		plaque:SetBare(true)
@@ -609,10 +611,27 @@ function Halo:UpdateTarget()
 	end
 end
 
+-- Your Shield, Renew and the like on a friendly target, as the same tags
+-- the party cards carry. Nothing on an enemy or the dead.
+function Halo:UpdateTargetPips()
+	local row = self.target and self.target.pips
+	if not row then return end
+	local pips = {}
+	local party = Stoa.modules.Party
+	if party and party.enabled and party.AuraPips and UnitExists("target") then
+		local hostile, dead = UnitCanAttack("player", "target"), UnitIsDead("target")
+		if Stoa:IsSecret(hostile) then hostile = true end
+		if Stoa:IsSecret(dead) then dead = false end
+		if not hostile and not dead then party:AuraPips("target", pips) end
+	end
+	UI.setPips(row, pips)
+end
+
 -- Fills the target's aura icons. Values can be secret in combat; textures
 -- and counts still take them, and the sweep is skipped if the times can't
 -- be read.
 function Halo:UpdateTargetAuras()
+	self:UpdateTargetPips()
 	local icons = self.target.auras
 	if not icons then return end
 	local hostile = UnitCanAttack("player", "target")
