@@ -20,7 +20,7 @@ local Party = Stoa:NewModule("Party", {
 	restFade = false,
 	-- Tanks and damage dealers see the party as thin strips beside the
 	-- Halo instead of cards.
-	strips = true,
+	strips = false,
 	-- The click grid: "open" always shows it, "fold" keeps just its title
 	-- until you hover a card or hold Shift, "hidden" never shows it.
 	clickGrid = "fold",
@@ -54,7 +54,7 @@ local STRIP_LOW = 0.5
 
 local function layoutFor(role)
 	if LAYOUTS[role] then return LAYOUTS[role] end
-	return Party.db.strips ~= false and LAYOUTS.STRIP or LAYOUTS.OTHER
+	return Party.db.strips and LAYOUTS.STRIP or LAYOUTS.OTHER
 end
 
 -- Build ---------------------------------------------------------------------
@@ -113,7 +113,7 @@ function Party:Build()
 	-- The first time the strips show, a spot saved for the old cards is
 	-- let go for tanks and damage dealers: it was chosen for a column of
 	-- cards at the screen's edge, and the strips belong beside the Halo.
-	if self.db.strips ~= false and not Stoa.char.stripsPlaced then
+	if self.db.strips and not Stoa.char.stripsPlaced then
 		Stoa.char.stripsPlaced = true
 		Stoa.char.layouts = Stoa.char.layouts or {}
 		for _, role in ipairs({ "TANK", "MELEE", "RANGED" }) do

@@ -65,6 +65,7 @@ local TOUCHED = {
 	{ "Tally", "enabled" }, { "ActionBars", "hoverTray" },
 	{ "Grimoire", "slim" }, { "Grimoire", "enabled" },
 	{ "Halo", "restArcs" }, { "Halo", "restFade" }, { "Party", "restFade" },
+	{ "Party", "strips" }, { "Halo", "targetStrip" },
 }
 
 local function playsHealer()
@@ -79,11 +80,15 @@ local function changesFor(name)
 	local list = {}
 	if name == "slim" then
 		list[#list + 1] = { "Grimoire", "slim", true }
+		list[#list + 1] = { "Party", "strips", true }
+		list[#list + 1] = { "Halo", "targetStrip", true }
 	elseif name == "minimal" then
 		list[#list + 1] = { "Grimoire", "enabled", false }
 		list[#list + 1] = { "Halo", "restArcs", true }
 		list[#list + 1] = { "Halo", "restFade", true }
 		list[#list + 1] = { "Party", "restFade", true }
+		list[#list + 1] = { "Party", "strips", true }
+		list[#list + 1] = { "Halo", "targetStrip", true }
 	elseif name == "quiet" then
 		list[#list + 1] = { "Tooltip", "unitDetails", false }
 		list[#list + 1] = { "Kit", "questLine", false }
