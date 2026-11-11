@@ -520,7 +520,9 @@ local function placeLines(tip)
 	local first, second = name and _G[name .. "TextLeft1"], name and _G[name .. "TextLeft2"]
 	if not first then return end
 	first:ClearAllPoints()
-	first:SetPoint("TOPLEFT", tip, "TOPLEFT", 12, -HEADER_TOP)
+	-- 10 in, the game's own margin: the lines it places itself sit there,
+	-- and a name further in leaves the line under it out of step with them.
+	first:SetPoint("TOPLEFT", tip, "TOPLEFT", 10, -HEADER_TOP)
 	if second then
 		second:ClearAllPoints()
 		second:SetPoint("TOPLEFT", first, "BOTTOMLEFT", 0, -LINE_GAP)
