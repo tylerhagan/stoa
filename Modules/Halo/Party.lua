@@ -18,6 +18,9 @@ local Party = Stoa:NewModule("Party", {
 	quietCards = true,
 	-- Out of combat the cards rest faint until the mouse is over them.
 	restFade = false,
+	-- Tanks and damage dealers see the party as thin strips beside the
+	-- Halo instead of cards.
+	strips = true,
 	-- The click grid: "open" always shows it, "fold" keeps just its title
 	-- until you hover a card or hold Shift, "hidden" never shows it.
 	clickGrid = "fold",
@@ -40,10 +43,17 @@ local GONE_ALPHA = 0.42
 local LAYOUTS = {
 	HEALER = { width = 176, height = 70, gap = 8, style = "party", row = true, grid = true },
 	OTHER = { width = 184, height = 58, gap = 6, style = "compact", point = { "TOPLEFT", UIParent, "LEFT", 36, 180 } },
+	-- Strips hang to the left of the Halo, mirroring the target on its
+	-- right, a little low so the tank watch keeps the spot above them.
+	STRIP = { width = 150, height = 24, gap = 7, style = "strip", strip = true, point = { "TOPLEFT", UIParent, "LEFT", 36, 180 } },
 }
+local STRIP_GAP, STRIP_TOP = 52, 30
+-- A strip turns amber below half health, sooner than a card's LOW.
+local STRIP_LOW = 0.5
 
 local function layoutFor(role)
-	return LAYOUTS[role] or LAYOUTS.OTHER
+	if LAYOUTS[role] then return LAYOUTS[role] end
+	return Party.db.strips ~= false and LAYOUTS.STRIP or LAYOUTS.OTHER
 end
 
 -- Build ---------------------------------------------------------------------
@@ -64,10 +74,14 @@ function Party:BuildCard(index, unit)
 		GameTooltip:SetUnit(button.unit)
 		Stoa:AddZoneLine(GameTooltip, button.unit)
 		self:Peek("card", true)
+		button.hover = true
+		self:UpdateCard(button)
 	end)
-	card:SetScript("OnLeave", function()
+	card:SetScript("OnLeave", function(button)
 		GameTooltip_Hide()
 		self:Peek("card", false)
+		button.hover = nil
+		self:UpdateCard(button)
 	end)
 
 	if unit == "player" then
@@ -95,6 +109,17 @@ function Party:Build()
 	self:BuildGrid()
 
 	UI.applyTheme()
+	-- The first time the strips show, a spot saved for the old cards is
+	-- let go for tanks and damage dealers: it was chosen for a column of
+	-- cards at the screen's edge, and the strips belong beside the Halo.
+	if self.db.strips ~= false and not Stoa.char.stripsPlaced then
+		Stoa.char.stripsPlaced = true
+		Stoa.char.layouts = Stoa.char.layouts or {}
+		for _, role in ipairs({ "TANK", "MELEE", "RANGED" }) do
+			Stoa.char.layouts[role] = Stoa.char.layouts[role] or {}
+			Stoa.char.layouts[role].party = false
+		end
+	end
 	self:Layout()
 	Stoa:RegisterMover("party", frame, "Party", { default = function() self:Layout() end })
 end
@@ -138,6 +163,8 @@ function Party:Layout()
 			frame:SetPoint("TOP", halo, "BOTTOM", 0, offset)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
+		elseif layout.strip and halo then
+			frame:SetPoint("TOPRIGHT", halo, "LEFT", -STRIP_GAP, STRIP_TOP)
 		else
 			frame:SetPoint(unpack(layout.point))
 		end
@@ -403,7 +430,8 @@ function Party:UpdateCard(card)
 
 	local pips = {}
 	local fraction = healthFraction(unit)
-	local low = not gone and fraction and fraction < LOW_HEALTH
+	local strip = card.style and card.style.strip
+	local low = not gone and fraction and fraction < (strip and STRIP_LOW or LOW_HEALTH)
 	local dispel = not gone and self:DispelFor(unit)
 
 	if gone then
@@ -442,7 +470,12 @@ function Party:UpdateCard(card)
 	end
 
 	card.glow:Clear()
-	if dispel then
+	local isTarget = flag(UnitIsUnit(unit, "target"))
+	-- A strip rests faint while its player is fine. Health the game keeps
+	-- secret in a fight can't be judged, so the strip stays at full strength.
+	if UI.stripRest(card, fraction and not (gone or dispel or low or ready or isTarget or card.hover)) then
+		if low then card.name:SetTextColor(Stoa:Color("danger")) end
+	elseif dispel then
 		local dr, dg, db = Stoa:Color(dispel.token)
 		card.state:Set(dr, dg, db)
 		card.glow:Set(dr, dg, db, 0.22)

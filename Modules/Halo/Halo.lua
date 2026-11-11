@@ -10,6 +10,9 @@ local Stoa = ns.Stoa
 local UI = Stoa.UI
 
 local Halo = Stoa:NewModule("Halo", {
+	-- The target as a strip: no panel, a small portrait, words over the
+	-- world, level with the Halo. Off brings back the solid plaque.
+	targetStrip = true,
 	hidePlayerFrame = true,
 	hideTargetFrame = true,
 	scale = 1,
@@ -300,6 +303,10 @@ function Halo:PlaceTarget()
 		local gap = 150 * (console.ART_SCALE or 0.556) + 22
 		target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
 		self.targetResting = true
+	elseif self.db.targetStrip then
+		-- Level with the Halo, mirroring the party strips on its left.
+		target:SetPoint("LEFT", frame, "RIGHT", 52 - UI.PLAQUE_BARE_INSET, -6)
+		self.targetResting = false
 	else
 		target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 		self.targetResting = false
@@ -373,6 +380,10 @@ function Halo:BuildTarget(frame)
 	target.kick = kick
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
 	target.threat, target.caption = threat, caption
+	if self.db.targetStrip then
+		plaque:SetBare(true)
+		for _, fs in ipairs({ caption, cue, name, health, threat, kick }) do UI.legible(fs) end
+	end
 
 	-- Auras: on a friend, their buffs, yours first; on an enemy, the
 	-- debuffs you put there. Rounded icons with a sweep for time left.

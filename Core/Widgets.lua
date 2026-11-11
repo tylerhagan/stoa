@@ -350,7 +350,13 @@ UI.CARD_STYLES = {
 	cell = { pad = 5, name = 11, cell = true },
 	-- The same, a size down, for forty players.
 	tiny = { pad = 4, name = 10, cell = true },
+	-- A strip: no panel at all. A name, the health number and a hairline of
+	-- health over the world, with one word after the name when it matters.
+	-- Tanks and damage dealers see their party this way beside the Halo.
+	strip = { pad = 0, name = 13, bar = 3, pip = 14, pipFont = 10, gap = 0, strip = true },
 }
+-- A strip rests this faint while its player is fine.
+local STRIP_REST = 0.5
 
 local MAX_PIPS = 3
 
@@ -995,6 +1001,8 @@ end
 local SILVER = Stoa.silver
 local PORTRAIT = 46
 local PORTRAIT_INSET = 10
+local BARE_PORTRAIT = 34
+UI.PLAQUE_BARE_INSET = PORTRAIT_INSET + PORTRAIT - BARE_PORTRAIT
 -- Room the portrait takes from the side it sits on: callers keep their
 -- words clear of it.
 UI.PLAQUE_COIN_SPACE = PORTRAIT_INSET + PORTRAIT + 10
@@ -1071,13 +1079,31 @@ function UI.plaque(frame, coinSide)
 	-- The strip: a colour token, or nil to hide it.
 	function plaque:SetReaction(token)
 		plaque.reaction = token
-		if token then
+		if token and not plaque.bare then
 			local r, g, b = Stoa:Color(token)
 			strip:SetVertexColor(r, g, b, 0.9)
 			strip:Show()
 		else
 			strip:Hide()
 		end
+	end
+	-- Bare: no panel, edge or reaction strip, and a smaller portrait, so
+	-- the words stand over the world like the party strips. Callers make
+	-- their words legible (UI.legible).
+	function plaque:SetBare(on)
+		plaque.bare = on and true or false
+		fill:SetShown(not on)
+		if edge then edge:SetShown(not on) end
+		local scale = on and BARE_PORTRAIT / PORTRAIT or 1
+		coin:SetScale(scale)
+		coin:ClearAllPoints()
+		local inset = (PORTRAIT_INSET + (on and PORTRAIT - BARE_PORTRAIT or 0)) / scale
+		if coinSide == "LEFT" then
+			coin:SetPoint("LEFT", frame, "LEFT", inset, 0)
+		else
+			coin:SetPoint("RIGHT", frame, "RIGHT", -inset, 0)
+		end
+		plaque:SetReaction(plaque.reaction)
 	end
 	plaque:SetRank(nil)
 	-- The colours follow the theme, so repaint on a change.
@@ -1128,6 +1154,36 @@ function UI.styleCard(card, styleName)
 	local style = UI.CARD_STYLES[styleName] or UI.CARD_STYLES.party
 	card.style = style
 	local pad = style.pad
+	-- A strip has no panel or edge; every other style gets them back.
+	if card.stoaSurface then card.stoaSurface:SetShown(not style.strip) end
+	if card.stoaPanelEdge then
+		for _, tex in ipairs(card.stoaPanelEdge.edges or {}) do tex:SetShown(not style.strip) end
+	end
+	if not style.strip then
+		for _, part in ipairs({ card.name, card.percent, card.hp }) do part:SetAlpha(1) end
+	end
+	if style.strip then
+		Stoa:SetFont(card.name, "sans", style.name, "OUTLINE")
+		card.name:ClearAllPoints()
+		card.name:SetPoint("TOPLEFT", 0, 0)
+		Stoa:SetFont(card.percent, "sans", style.name - 1, "OUTLINE")
+		card.percent:ClearAllPoints()
+		card.percent:SetPoint("TOPRIGHT", 0, -1)
+		card.hp:ClearAllPoints()
+		card.hp:SetPoint("BOTTOMLEFT", 0, 2)
+		card.hp:SetPoint("BOTTOMRIGHT", 0, 2)
+		card.hp:SetHeight(style.bar)
+		card.hp.track:Show()
+		card.absorb:SetWidth(math.max(1, card:GetWidth() or 100))
+		for i, pip in ipairs(card.pips) do
+			pip:ClearAllPoints()
+			pip:SetPoint("LEFT", card.name, "RIGHT", 6, 0)
+			pip:SetHeight(style.pip)
+			Stoa:SetFont(pip.text, "sans", style.pipFont)
+			if i > 1 then pip:Hide() end
+		end
+		return
+	end
 	if style.cell then
 		Stoa:SetFont(card.name, "sans", style.name, "")
 		card.name:ClearAllPoints()
@@ -1175,6 +1231,18 @@ function UI.styleCard(card, styleName)
 	end
 end
 
+-- A strip shows its state in its own ink rather than a border: faint while
+-- its player is fine (calm), full strength otherwise. Returns true for a
+-- strip, so callers skip the card borders.
+function UI.stripRest(card, calm)
+	if not (card.style and card.style.strip) then return false end
+	card.state:Clear()
+	card.glow:Clear()
+	local alpha = calm and STRIP_REST or 1
+	for _, part in ipairs({ card.name, card.percent, card.hp }) do part:SetAlpha(alpha) end
+	return true
+end
+
 -- A compact cell has no pip row: the most urgent word takes the percent's
 -- place, in its colour. Returns true when it did.
 local CELL_WORDS = {
@@ -1202,7 +1270,7 @@ function UI.setPips(card, list)
 	local used, full = 0, false
 	for i, pip in ipairs(card.pips) do
 		local entry = list and list[i]
-		if full then entry = nil end
+		if full or (i > 1 and card.style and card.style.strip) then entry = nil end
 		if entry and room then
 			local gap = i > 1 and 4 or 0
 			pip.text:SetText(entry[1])
