@@ -435,6 +435,23 @@ local PRESET_CARD = 60
 function builders.preset(self, step)
 	local words = lede(step, "How much STOA does. Full is how it ships; the others say exactly what they take away.")
 	words:SetPoint("TOPLEFT")
+	-- The presets set the layout's parts together; the settings change them
+	-- one by one. The page stays up behind the settings window.
+	local MIX_W = 150
+	words:SetWidth(BODY_W - MIX_W - 24)
+	local mix = UI.button(step, "Mix your own", MIX_W, function()
+		Stoa:OpenSettings("setup")
+		local window = Stoa.SettingsWindow and Stoa.SettingsWindow.page
+		if window and window:IsShown() then window:Raise() end
+	end)
+	mix:SetPoint("TOPRIGHT", 0, 2)
+	mix:HookScript("OnEnter", function(button)
+		GameTooltip:SetOwner(button, "ANCHOR_BOTTOMRIGHT")
+		GameTooltip:SetText("Mix your own")
+		GameTooltip:AddLine("Opens Settings, Setup, where Your own mix sets the console, party, target and resting look one by one. Pick a card here first as a starting point, or go straight there.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	mix:HookScript("OnLeave", GameTooltip_Hide)
 	self.presetCards = {}
 	for i, name in ipairs(PRESET_ORDER) do
 		local button = card(step, BODY_W, PRESET_CARD, PRESET_WORDS[name][1], function()
