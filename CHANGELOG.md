@@ -4,6 +4,10 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.1.2
+
+- What's new: after an update that brings something worth knowing, your first login shows a short note once per account (this time: Slim, Minimal and the quest list folding in combat). New installs don't see it, small fixes don't bring it back, and `/stoa news` shows it again.
+
 ## 1.1.1
 
 - Full keeps the party cards and the solid target plaque. The party strips and the target without a panel that 1.1.0 gave everyone now come with Slim and Minimal only; each still has its own setting (Party as strips when not healing, Target without a panel). Each character is set once from the console it uses.

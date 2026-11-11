@@ -79,6 +79,8 @@ function Stoa:SaveSettings()
 end
 
 function Stoa:InitializeDatabase()
+	-- No account save yet: STOA's first login here (Config/WhatsNew.lua).
+	self.freshInstall = StoaDB == nil
 	StoaDB = StoaDB or {}
 	StoaCharDB = self:ApplyDefaults(StoaCharDB or {}, characterDefaults)
 	loadSettings()
