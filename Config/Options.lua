@@ -208,8 +208,6 @@ local function build()
 	-- Console
 	page = "console"
 	group = "The console"
-	toggle(console, "enabled", "Show the console", "The leather console along the bottom of the screen.", true, { id = "consoleOn", reload = true })
-	toggle(console, "slim", "Slim console", "The console as one plain line a quarter of the height: level, health and mana, and a word each for Ready, Journey and Company, whose pages open on a card as you mouse over. Chat and the bars stand above it (STOA switches to its Edit Mode layout for this), and At a glance is left out.", false, { id = "consoleSlim", reload = true, words = "small thin minimal compact one line bar" })
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner without their stone frames, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
@@ -249,11 +247,6 @@ local function build()
 	}, { words = "animation motion instant reduce" })
 	toggle(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar.", true, { reload = true, words = "unit frame" })
 	toggle(halo, "hideTargetFrame", "Hide Blizzard's target frame", "STOA shows your target beside the Halo.", true, { reload = true, words = "unit frame" })
-	toggle(halo, "restArcs", "Faint health and mana out of combat", "While the Halo rests, your health and mana stay around your character as two faint arcs. For playing without the console, which shows them otherwise.", false, { id = "haloRestArcs", reload = true, words = "minimal arcs rest out of combat" })
-	toggle(halo, "restFade", "Fade frames out of combat", "Out of a fight the target plaque and the party cards rest faint, and come back while the mouse is over them or a fight starts.", false, {
-		id = "haloRestFade", reload = true, words = "minimal target party dim transparent",
-		change = function(_, v) local cards = party(); if cards then cards.restFade = v end end,
-	})
 	group = "Combat bar"
 	toggle(of("CombatBar"), "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before.", true, { id = "combatBar", reload = true, words = "action bar" })
 	local rowChoices = { { "1", "1" }, { "2", "2" }, { "3", "3" } }
@@ -317,10 +310,6 @@ local function build()
 	toggle(party, "quietCards", "Quiet group frames when not healing", "Tanking or dealing damage, party and raid cards show health and only the words you can act on: a debuff you can dispel, dead or offline. No buff words.", true, {
 		words = "party raid frames unit", change = function() if Stoa.modules.Party.cards then Stoa.modules.Party:UpdateAll() end end,
 	})
-	toggle(party, "strips", "Party as strips when not healing", "Tanking or dealing damage, your party shows as thin lines beside the Halo: a name, health, and a word when you can act. They rest faint while everyone is fine. Slim and Minimal turn this on; Full keeps the cards.", false, {
-		words = "party frames cards slim", change = function() local m = Stoa.modules.Party; if m.cards then Stoa:AfterCombat(function() m:Layout() end) end end,
-	})
-	toggle(halo, "targetStrip", "Target without a panel", "Your target shows as words and a bar over the world with a small portrait, level with the Halo. Slim and Minimal turn this on; Full keeps the solid plaque.", false, { id = "targetStrip", reload = true, words = "target plaque frame" })
 	actions("preview", "Show sample frames", "Fills the screen with sample cards so you can see and move them without a group. A fight ends the preview.", {
 		{ "Party", function() Options.preview("party") end },
 		{ "Raid of 10", function() Options.preview("raid10") end },
@@ -600,12 +589,66 @@ local function build()
 	page = "setup"
 	group = "Start"
 	button("welcome", "Welcome page", "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of STOA, and other addons.", "Open", function() Stoa.Welcome:Show() end, { cmd = "/stoa welcome", words = "wizard first time" })
-	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps Blizzard's layout with STOA's look. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once.", "full", {
+	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps Blizzard's layout with STOA's look. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
 		{ "full", "Full" }, { "slim", "Slim" }, { "minimal", "Minimal" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Same as Designer" },
 	}, {
 		reload = true, cmd = "/stoa preset", words = "preset minimal",
 		set = function(v) if Stoa.Welcome:ApplyPreset(v) then Stoa.Welcome:FollowLayout() end end,
 	})
+	-- One place to mix the parts the presets above set together.
+	group = "Your own mix"
+	local function grimoire() return module("Grimoire") end
+	choice(nil, "consoleShape", "Console", "Full is the leather console along the bottom of the screen. Slim is one plain line a quarter of the height, with chat and the bars standing above it. None takes it away: turn on the faint arcs below to keep your health and mana in view.", "full", {
+		{ "full", "Full" }, { "slim", "Slim line" }, { "none", "None" },
+	}, {
+		id = "consoleShape", reload = true, words = "console slim minimal hide bottom bar layout",
+		get = function()
+			local c = grimoire()
+			if not c or c.enabled == false then return "none" end
+			return c.slim and "slim" or "full"
+		end,
+		set = function(v)
+			local c = grimoire()
+			if not c then return end
+			c.enabled = v ~= "none"
+			c.slim = v == "slim"
+		end,
+	})
+	choice(nil, "partyShape", "Party when not healing", "Cards are solid panels in a column at the left of the screen. Strips are thin lines beside the Halo: a name, health, and a word when you can act, resting faint while everyone is fine. Healers always get cards under the Halo.", "cards", {
+		{ "cards", "Cards" }, { "strips", "Strips" },
+	}, {
+		id = "partyShape", words = "party frames cards strips slim minimal layout",
+		get = function() local m = module("Party"); return m and m.strips and "strips" or "cards" end,
+		set = function(v) local m = module("Party"); if m then m.strips = v == "strips" end end,
+		change = function() local m = Stoa.modules.Party; if m.cards then Stoa:AfterCombat(function() m:Layout() end) end end,
+	})
+	choice(nil, "targetShape", "Target", "Plaque is a solid panel with a portrait beside the Halo. Words only drops the panel: a name, a bar and a small portrait over the world, level with the Halo.", "plaque", {
+		{ "plaque", "Plaque" }, { "words", "Words only" },
+	}, {
+		id = "targetShape", reload = true, words = "target frame plaque strip panel slim minimal layout",
+		get = function() local m = module("Halo"); return m and m.targetStrip and "words" or "plaque" end,
+		set = function(v) local m = module("Halo"); if m then m.targetStrip = v == "words" end end,
+	})
+	choice(nil, "restFrames", "Target and party out of combat", "Faint rests them at half strength until a fight starts or the mouse is over them.", "full", {
+		{ "full", "Full strength" }, { "faint", "Faint" },
+	}, {
+		id = "restFrames", reload = true, words = "fade dim transparent minimal target party rest layout",
+		get = function() local m = module("Halo"); return m and m.restFade and "faint" or "full" end,
+		set = function(v)
+			local on = v == "faint"
+			local h, p = module("Halo"), module("Party")
+			if h then h.restFade = on end
+			if p then p.restFade = on end
+		end,
+	})
+	choice(nil, "restArcs", "Health and mana out of combat", "Faint arcs keeps your health and mana around your character as two faint arcs while the Halo rests. For playing without the console, which shows them otherwise.", "console", {
+		{ "console", "On the console" }, { "arcs", "Faint arcs" },
+	}, {
+		id = "restArcsShape", reload = true, words = "health mana arcs minimal rest layout",
+		get = function() local m = module("Halo"); return m and m.restArcs and "arcs" or "console" end,
+		set = function(v) local m = module("Halo"); if m then m.restArcs = v == "arcs" end end,
+	})
+	group = "Keep and share"
 	button("setups", "Saved setups", "Load the setup from another of your characters.", "Choose", function(owner) Stoa.Setups:Menu(owner) end, { cmd = "/stoa setups", words = "profile alt" })
 	button("backup", "Backup", "All of STOA's settings as one line of text to keep safe, and a place to paste one back.", "Open", function() Stoa.Backup:Show() end, { cmd = "/stoa backup", words = "profile export import string" })
 	button("shareLayout", "Share layout", "A shorter line with where your frames sit and the look, to post for others. Paste one on the backup page to use it.", "Copy", function() Stoa.Backup:ShowLayout() end, { cmd = "/stoa layout", words = "export import string profile" })

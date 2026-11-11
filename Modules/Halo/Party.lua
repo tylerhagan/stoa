@@ -134,6 +134,16 @@ end
 -- The healer row hangs this far under the Halo: clear of the cast bar and
 -- the reminder words, where the combat bar otherwise starts.
 local ROW_TOP = 74
+Stoa.HEALER_ROW_TOP = ROW_TOP
+
+-- How far under the Halo a healer's group reaches while it stands there:
+-- the party row or the raid grid, whichever is up. nil when neither is.
+-- The combat bar and the pet row hang below it.
+function Stoa:HealerRowBottom()
+	local party, raid = self.modules.Party, self.modules.Raid
+	return (party and party.RowBottom and party:RowBottom())
+		or (raid and raid.RowBottom and raid:RowBottom()) or nil
+end
 
 -- How far under the Halo the healer row reaches, party pets included, while
 -- it stands there (a healer in a party, the row not moved by hand); nil
