@@ -517,6 +517,11 @@ function Top:OnEnable()
 	end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Top.inFight = true; guarded(Top.FocusTracker, Top) end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() Top.inFight = false; guarded(Top.FocusTracker, Top) end)
+	-- Practice combat folds it too, so the fight's look can be judged whole.
+	Stoa:On("STOA_PRACTICE", function(on)
+		Top.inFight = (on or InCombatLockdown()) and true or false
+		guarded(Top.FocusTracker, Top)
+	end)
 	-- Hovering the header in a fight opens the list; leaving folds it again.
 	Stoa:On("STOA_TICK", function()
 		local tracker = _G.ObjectiveTrackerFrame
