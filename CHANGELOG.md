@@ -11,7 +11,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Fixed a stray indent on one line of the bags' money list and other tooltips, left over from a quest box on the tooltip before. In the money list, the character you are on now has its sum in bright text and the others are quieter.
 - The kill skull on nameplates is smaller, in plain bone, and sits at the left end of the bar instead of above its right end.
 - With Does It Die installed, the welcome's Other addons step now asks who marks the nameplates (STOA's marks or Does It Die's), so the question after login is not needed.
-- The DoT stretch on the target bar and on nameplates is now thin dark diagonal stripes over the bar's own colour, with a fine dark line where the health will land, so it reads as damage on its way on a bar of any colour.
+- The DoT stretch on the target bar and on nameplates is now thin dark diagonal stripes and a faint dark wash over the bar's own colour, with a fine dark line where the health will land, so it reads as damage on its way on a bar of any colour.
 - What's new: after an update that brings something worth knowing, your first login shows a short note once per account (this time: Slim, Minimal and the quest list folding in combat). New installs don't see it, small fixes don't bring it back, and `/stoa news` shows it again.
 - The healer's party row hangs a little lower under the Halo, clear of the cast bar and the reminder words, and the sample party (`/stoa test`) moves the combat bar below it as a real one does. Without the combat bar, the pet row sits under the party row instead of on it.
 - Two more hidden widths from the game in a fight (the click grid's names, words set before their face loaded) can no longer raise an error.
