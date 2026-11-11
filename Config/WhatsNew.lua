@@ -11,16 +11,19 @@ local UI = Stoa.UI
 local WhatsNew = {}
 Stoa.WhatsNew = WhatsNew
 
--- Change `edition` only when the lines below change.
+-- Read this before every release: the lines must still be true of the
+-- version going out. Change `edition` only to show the note again to
+-- players who have already seen it.
 local NOTE = {
 	edition = "1.1",
 	title = "New in STOA 1.1",
 	lines = {
 		{ "Slim", "The console as one plain line, a quarter of the height." },
 		{ "Minimal", "No console at all. Health and mana rest as two faint arcs around your character." },
+		{ "Your own mix", "Pick the console, party cards, target and resting look one by one." },
 		{ "Quest list", "It folds away in a fight and comes back after." },
 	},
-	foot = "Slim and Minimal are under How much STOA in the settings. /stoa news shows this again.",
+	foot = "All of it is in the settings under Setup. /stoa news shows this again.",
 }
 
 local WIDTH = 460
