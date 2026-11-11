@@ -258,6 +258,69 @@ function Lethal:Refresh()
 	self:UpdatePlates()
 end
 
+-- Who marks the nameplates ---------------------------------------------------------
+-- Does It Die draws its own marker on nameplates until its "Show on
+-- nameplates" is Off, and STOA's marks wait for that. So the player needn't
+-- hunt for the switch, STOA's setting (and a question asked once) turns it
+-- for them: the one value DoesItDieDB.nameplateMode, which Does It Die reads
+-- afresh on every update. What it held before is kept, to hand back.
+local function theirSettings()
+	local db = rawget(_G, "DoesItDieDB")
+	return type(db) == "table" and db or nil
+end
+
+-- "theirs" while Does It Die draws on nameplates, else "stoa" or "off".
+function Lethal:PlateOwner()
+	local theirs = theirSettings()
+	if theirs and (theirs.nameplateMode or "markerIcon") ~= "off" then return "theirs" end
+	return self.db.plates and "stoa" or "off"
+end
+
+function Lethal:SetPlateOwner(owner)
+	local theirs = theirSettings()
+	if not theirs then return end
+	local mode = theirs.nameplateMode or "markerIcon"
+	if owner == "theirs" then
+		if mode == "off" then theirs.nameplateMode = self.db.theirPlateMode or "markerIcon" end
+	else
+		if mode ~= "off" then self.db.theirPlateMode = mode end
+		theirs.nameplateMode = "off"
+		self.db.plates = owner == "stoa"
+	end
+	if self.enabled then self:Refresh() end
+end
+
+-- Asked once per account, after the welcome page and the other questions
+-- about addons, while both would otherwise wait on each other.
+function Lethal:AskPlates()
+	if Stoa.db.askedDotPlates or not self:Available() or not self.db.plates then return end
+	if not Stoa:IsModuleEnabled("Plates") or self:PlateOwner() ~= "theirs" then return end
+	if Stoa.Welcome and Stoa.Welcome:Pending() then return end
+	local busy = (Stoa.Conflicts and Stoa.Conflicts.asking) or (Stoa.Looks and Stoa.Looks.asking)
+	if busy or InCombatLockdown() then
+		C_Timer.After(15, function() self:AskPlates() end)
+		return
+	end
+	if not self.askPage then
+		local function answer(owner)
+			Stoa.db.askedDotPlates = true
+			self.askPage:Hide()
+			if owner == "stoa" then
+				self:SetPlateOwner("stoa")
+				Stoa:Print("STOA now marks your DoTs on nameplates. Settings, Combat, DoT marks on nameplates changes it back.")
+			end
+		end
+		self.askPage = Stoa.Conflicts:Page("StoaDotPlatesPage", function() answer("stoa") end, function() answer("theirs") end)
+	end
+	local page = self.askPage
+	page.title:SetText("DoT marks on nameplates")
+	page.body:SetText("Does It Die is drawing its own marker on your nameplates. STOA can draw it instead, in its own look: a bone stretch on the health bar for the damage your DoTs still have to deal, and a small skull once they will kill.")
+	page.note:SetText("Using STOA's turns off Does It Die's \"Show on nameplates\" for you. Nothing else of it changes, and Settings, Combat can hand it back.")
+	page.left.text:SetText("Use STOA's marks")
+	page.right.text:SetText("Leave it")
+	page:Show()
+end
+
 function Lethal:OnEnable()
 	if not self:Available() then return end
 	-- The API says when its numbers change, for the target and each plate.
@@ -265,6 +328,7 @@ function Lethal:OnEnable()
 		if unit == "target" then self:Update() else self:UpdatePlate(unit) end
 	end)
 	self:EnablePlates()
+	C_Timer.After(12, function() self:AskPlates() end)
 	if not Stoa:IsModuleEnabled("Halo") or not self:Build() then return end
 	-- Health moves on its own, so a light tick keeps the bars' scale
 	-- current while DoTs are up.
