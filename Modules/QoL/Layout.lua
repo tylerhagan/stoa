@@ -24,6 +24,7 @@ local KINDS = {
 	stoa = { name = "Stoa", text = "EDIT_MODE_LAYOUT", version = "EDIT_MODE_VERSION", saved = "editModeVersion" },
 	designer = { name = "Stoa Designer", text = "DESIGNER_LAYOUT", version = "DESIGNER_LAYOUT_VERSION", saved = "designerLayoutVersion" },
 	compact = { name = "Stoa Compact", text = "COMPACT_LAYOUT", version = "COMPACT_LAYOUT_VERSION", saved = "compactLayoutVersion" },
+	minimal = { name = "Stoa Minimal", text = "MINIMAL_LAYOUT", version = "MINIMAL_LAYOUT_VERSION", saved = "minimalLayoutVersion" },
 	quiet = { name = "Stoa Quiet", text = "QUIET_LAYOUT", version = "QUIET_LAYOUT_VERSION", saved = "quietLayoutVersion" },
 	-- The slim console's own pair: the bars stand above the line.
 	slim = { name = "Stoa Slim", text = "SLIM_LAYOUT", version = "SLIM_LAYOUT_VERSION", saved = "slimLayoutVersion" },
@@ -39,6 +40,7 @@ local COMPACT_BELOW = 2000
 -- while that preset is on.
 function Layout:Kind()
 	if Stoa.db and Stoa.db.preset == "quiet" and type(Stoa.QUIET_LAYOUT) == "string" then return "quiet" end
+	if Stoa.db and Stoa.db.preset == "minimal" and type(Stoa.MINIMAL_LAYOUT) == "string" then return "minimal" end
 	return Stoa.db and Stoa.db.preset == "taer" and type(Stoa.DESIGNER_LAYOUT) == "string" and "designer" or "stoa"
 end
 
