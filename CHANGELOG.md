@@ -11,6 +11,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Two more hidden widths from the game in a fight (the click grid's names, words set before their face loaded) can no longer raise an error.
 - Settings, Setup: a new group, Your own mix, puts the parts of the layout in one place to mix as you like: Console (Full, Slim line or None), Party when not healing (Cards or Strips), Target (Plaque or Words only), Target and party out of combat (Full strength or Faint) and Health and mana out of combat (On the console or Faint arcs). They replace six switches that were spread over three pages. How much STOA still sets them all at once, and the welcome page's How much STOA step has a Mix your own button that opens the group.
 - Healing a raid: the grid sits right under the Halo like the party row, with the combat bar's rows below it, so it stays clear of the action bars out of combat.
+- Action bars: the "Extra rows on mouseover" setting is gone. It hid your second and third bars out of combat until the mouse was over them, which left players unable to find the bars the combat rows mirror; the old Quiet preset turned it on. Every row now shows out of combat for everyone. "Hide the bars until mouseover" stays for those who want the bars away, and is off unless you turn it on.
 - Housekeeping: six functions nothing called any more are gone.
 
 ## 1.1.1
