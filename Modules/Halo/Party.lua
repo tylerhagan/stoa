@@ -131,28 +131,21 @@ function Party:VisibleCount()
 	return math.max(1, math.min(#UNITS, GetNumGroupMembers and GetNumGroupMembers() or 1))
 end
 
--- The top of the highest action bar standing under the Halo where a row
--- `wide` across would sit, in UIParent's units; nil when none is in the way.
-local ROW_BARS = { "MainActionBar", "MainMenuBar", "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBar5", "MultiBar6", "MultiBar7", "PetActionBar", "StanceBar" }
-local function barsUnder(ceiling, wide)
-	local scale = UIParent:GetEffectiveScale() or 1
-	local middle = UIParent:GetWidth() / 2
-	local best
-	for _, name in ipairs(ROW_BARS) do
-		local bar = _G[name]
-		if bar and bar.IsShown and bar:IsShown() and not (bar.IsForbidden and bar:IsForbidden()) then
-			local ok, left, bottom, width, height = pcall(bar.GetRect, bar)
-			left, bottom = ok and Stoa:PlainNumber(left), ok and Stoa:PlainNumber(bottom)
-			width, height = ok and Stoa:PlainNumber(width), ok and Stoa:PlainNumber(height)
-			if left and bottom and width and height and width > 1 then
-				local k = (bar:GetEffectiveScale() or 1) / scale
-				local l, r, top = left * k, (left + width) * k, (bottom + height) * k
-				local across = l < middle + wide / 2 and r > middle - wide / 2
-				if across and top < ceiling and (not best or top > best) then best = top end
-			end
-		end
-	end
-	return best
+-- The healer row hangs this far under the Halo.
+local ROW_TOP = 52
+
+-- How far under the Halo the healer row reaches, party pets included, while
+-- it stands there (a healer in a party, the row not moved by hand); nil
+-- otherwise. The combat bar starts below it.
+function Party:RowBottom()
+	if not (self.enabled and self.frame and self.db) then return nil end
+	if Stoa:HasSavedPosition("party") then return nil end
+	local layout = layoutFor(Stoa:GetRole())
+	if not layout.row then return nil end
+	local preview = self.cards and self.cards[1] and self.cards[1].preview
+	if not preview and (not IsInGroup() or IsInRaid()) then return nil end
+	local pets = (Stoa.Pet and Stoa.Pet.enabled and Stoa.Pet.db.partyPets and layout.grid) and 30 or 0
+	return ROW_TOP + layout.height + pets
 end
 
 -- Sizes and places the cards for the current role. Out of combat only.
@@ -166,37 +159,11 @@ function Party:Layout()
 	if not Stoa:HasSavedPosition("party") then
 		frame:ClearAllPoints()
 		if layout.row and halo then
-			-- Under the combat bar when there is one, in and out of combat:
-			-- the row stays put when a fight starts or ends instead of
-			-- jumping. In a group the target plaque keeps its
-			-- Halo spot out of combat too, so nothing needs the room.
-			local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa.modules.CombatBar
-			local offset = combatBar and combatBar:GroupOffset() or -52
-			-- A tall combat bar can push the row down onto the open
-			-- console. Out of combat it then stops just above the console
-			-- (it moves only in that case); in a fight the console folds
-			-- and the row keeps its place under the bar.
-			-- The same goes for action bars that stay up out of combat under
-			-- the Halo (Slim and Minimal stand them above the console's line):
-			-- the row stops just above the highest of them.
-			local console = Stoa.modules.Grimoire
-			local haloBottom = halo:GetBottom()
-			if not Stoa:CombatLayout() and haloBottom then
-				local k = (halo:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
-				local pets = (Stoa.Pet and Stoa.Pet.enabled and Stoa.Pet.db.partyPets and layout.grid) and 30 or 0
-				local bottom = haloBottom * k + offset - layout.height - pets
-				local clear = 0
-				if console and console.enabled and console.OpenHeight then clear = console:OpenHeight() + 14 end
-				local wide = count * layout.width + (count - 1) * layout.gap
-				-- Only once the calm has ended: until then the combat bar
-				-- still stands in that room and the row would land on it.
-				if Stoa:GetState() ~= Stoa.STATE_COMBAT then
-					local barsTop = barsUnder(haloBottom * k, wide)
-					if barsTop then clear = math.max(clear, barsTop + 12) end
-				end
-				if bottom < clear then offset = offset + (clear - bottom) end
-			end
-			frame:SetPoint("TOP", halo, "BOTTOM", 0, offset)
+			-- Right under the Halo, in and out of combat. The row never moves
+			-- when a fight starts or ends (secure frames can't move in one, so
+			-- a row caught in its resting spot stayed there all fight); the
+			-- combat bar's rows stand below it instead (Party:RowBottom).
+			frame:SetPoint("TOP", halo, "BOTTOM", 0, -ROW_TOP)
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 		elseif layout.strip and halo then
@@ -917,23 +884,28 @@ function Party:OnEnable()
 		Stoa:AfterCombat(function() xpcall(hideBlizzardParty, Stoa.catch) end)
 	end
 
-	Stoa:On("STOA_ROLE_CHANGED", function()
-		Stoa:AfterCombat(function() self:Layout() end)
-	end)
+	-- The combat bar stands under the healer row, so it is placed again
+	-- whenever the row comes, goes or changes height.
+	local function rowChanged()
+		Stoa:AfterCombat(function()
+			self:Layout()
+			local bar = Stoa.modules.CombatBar
+			if bar and bar.enabled and bar.Reanchor then bar:Reanchor() end
+		end)
+	end
+	self.RowChanged = rowChanged
+	Stoa:On("STOA_ROLE_CHANGED", rowChanged)
+	rowChanged()
 	Stoa:On("STOA_COMBAT_LAYOUT", function()
 		if not InCombatLockdown() then self:Layout() end
 	end)
 	Stoa:On("STOA_STATE_CHANGED", function()
-		-- The row's resting spot depends on whether the combat bar is up.
-		if not InCombatLockdown() then
-			self:Layout()
-		else
-			self:UpdateAll()
-			self:UpdateGrid()
-		end
+		self:UpdateAll()
+		self:UpdateGrid()
 		self:UpdateWatch()
 	end)
 	Stoa:On("STOA_PREVIEW_CHANGED", function()
+		rowChanged()
 		self:UpdateGrid()
 		self:UpdateWatch()
 	end)
@@ -947,7 +919,7 @@ function Party:OnEnable()
 		self:UpdateWatch()
 		self:UpdateGrid()
 		-- The healer row re-centres on the cards in it.
-		Stoa:AfterCombat(function() self:Layout() end)
+		rowChanged()
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateAll() end)
 	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateAll() end)
