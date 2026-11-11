@@ -908,15 +908,15 @@ end
 function Halo:OnEnable()
 	addTicks(15407, 3) -- Mind Flay
 	-- The party strips and the target without a panel belong to Slim and
-	-- Minimal; Full keeps the cards and the plaque. A character already on
-	-- one of those two gets them once without picking the preset again.
-	if not Stoa.char.stripsChosen then
-		Stoa.char.stripsChosen = true
+	-- Minimal; Full keeps the cards and the plaque. Both were on for
+	-- everyone for a while and saved that way, so once per character they
+	-- are set from the console in use: on for Slim or no console, else off.
+	if not Stoa.char.stripsByConsole then
+		Stoa.char.stripsByConsole = true
 		local console, party = Stoa.modules.Grimoire, Stoa.modules.Party
-		if console and (not Stoa:IsModuleEnabled("Grimoire") or (console.db and console.db.slim)) then
-			self.db.targetStrip = true
-			if party and party.db then party.db.strips = true end
-		end
+		local small = console and (not Stoa:IsModuleEnabled("Grimoire") or (console.db and console.db.slim)) and true or false
+		self.db.targetStrip = small
+		if party and party.db then party.db.strips = small end
 	end
 	self:Build()
 	if self.db.restArcs then self:BuildRest() end
