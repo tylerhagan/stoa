@@ -29,7 +29,7 @@ local LOOK = {
 	{ "Minimap", "shape", "string" }, { "Plates", "style", "string" }, { "Plates", "marker", "string" },
 	{ "CombatBar", "rows", "string" }, { "CombatBar", "healerRows", "string" },
 	{ "Grimoire", "art", "boolean" }, { "Grimoire", "houseChat", "boolean" }, { "Grimoire", "houseMenu", "boolean" },
-	{ "ActionBars", "hoverTray", "boolean" }, { "Party", "clickGrid", "string" },
+	{ "Party", "clickGrid", "string" },
 }
 
 local function lookTable(module)

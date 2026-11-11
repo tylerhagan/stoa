@@ -11,8 +11,7 @@ local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
-local Bars = Stoa:NewModule("ActionBars", { hoverTray = false, combatHide = true, fadeAll = false })
-Stoa:SpecSettings(Bars, { "hoverTray" })
+local Bars = Stoa:NewModule("ActionBars", { combatHide = true, fadeAll = false })
 
 local PREFIXES = {
 	"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
@@ -96,9 +95,9 @@ function Bars:SkinAll()
 end
 
 -- Tray ----------------------------------------------------------------------
--- Out of combat every console row shows. Optionally (hoverTray) only your
--- main bar shows and the other rows rest hidden, coming up while the mouse
--- is over the bar area, a spell or item is on the cursor, or in Edit Mode. In combat the Halo's combat bar takes over and the console's rows,
+-- Out of combat every console row shows. Optionally (fadeAll) every bar,
+-- the main one too, rests unseen and comes up while the mouse is over the
+-- bar area, a spell or item is on the cursor, or in Edit Mode. In combat the Halo's combat bar takes over and the console's rows,
 -- main bar included, step aside; your keys still reach them. Without the
 -- combat bar, combat brings every row up at once.
 --
@@ -198,7 +197,7 @@ local function calledUp(self)
 end
 
 local function trayWanted(self, called)
-	if not self.db.hoverTray and not self.db.fadeAll then return true end
+	if not self.db.fadeAll then return true end
 	return called
 end
 
@@ -286,7 +285,3 @@ function Bars:OnEnable()
 		end
 	end)
 end
-
-Stoa:On("STOA_SPEC_SETTINGS", function()
-	if Bars.enabled then Bars:SetOption("hoverTray", Bars.db.hoverTray) end
-end)

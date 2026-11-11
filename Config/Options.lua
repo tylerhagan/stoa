@@ -214,9 +214,6 @@ local function build()
 	toggle(of("ActionBars"), "fadeAll", "Hide the bars until mouseover", "Out of combat every bar along the bottom, the main bar too, rests unseen and comes up while the mouse is over the bar area, something is on your cursor or the spellbook is open. In a fight they show as usual.", false, {
 		words = "action bars fade hide minimal", change = function(_, v) Stoa.modules.ActionBars:SetOption("fadeAll", v) end,
 	})
-	toggle(of("ActionBars"), "hoverTray", "Extra rows on mouseover", "Out of combat only your main bar shows in the console; the other rows come up while you mouse over the bars. Off shows every row out of combat.", false, {
-		words = "action bars hide", change = function(_, v) Stoa.modules.ActionBars:SetOption("hoverTray", v) end,
-	})
 	group = "At a glance"
 	toggle(of("Tally"), "enabled", "At a glance, beside the chat", "Up to eight numbers you choose (stats, gear, gold, professions, other addons' feeds) to the right of chat on the console.", true, { id = "glanceOn", reload = true, words = "tally numbers data text broker titan" })
 	toggle(of("Tally"), "follow", "At a glance follows where you are", "One set of lines out in the world, one in a dungeon and one in a raid (your role's stats first). Off keeps one set everywhere.", true, {
