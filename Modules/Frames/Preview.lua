@@ -44,7 +44,8 @@ local function fill(card, sample)
 	else
 		card.name:SetTextColor(Stoa:Color("text"))
 	end
-	local low = not sample.status and sample.health < LOW_HEALTH
+	local strip = card.style and card.style.strip
+	local low = not sample.status and sample.health < (strip and 0.5 or LOW_HEALTH)
 	card.hp:SetMinMaxValues(0, 1)
 	card.hp:SetValue(sample.status and 0 or sample.health)
 	card.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
@@ -73,7 +74,9 @@ local function fill(card, sample)
 	end
 
 	card.glow:Clear()
-	if sample.dispel then
+	if UI.stripRest(card, not (sample.status or sample.dispel or low or sample.target)) then
+		if low then card.name:SetTextColor(Stoa:Color("danger")) end
+	elseif sample.dispel then
 		local r, g, b = Stoa:Color(sample.dispel)
 		card.state:Set(r, g, b)
 		card.glow:Set(r, g, b, 0.22)
