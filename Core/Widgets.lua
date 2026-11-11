@@ -373,6 +373,25 @@ local function makePip(card)
 	return pip
 end
 
+-- A row of the cards' word tags under any health bar (the tank watch, the
+-- target), so your buffs read the same there as on a party card. Fill it
+-- with UI.setPips.
+function UI.pipRow(parent, hp, gap)
+	local row = { pips = {}, hp = hp, style = {} }
+	for i = 1, MAX_PIPS do
+		local pip = makePip(parent)
+		if i == 1 then
+			pip:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -(gap or 5))
+		else
+			pip:SetPoint("LEFT", row.pips[i - 1], "RIGHT", 4, 0)
+		end
+		pip:SetHeight(14)
+		Stoa:SetFont(pip.text, "sans", 10)
+		row.pips[i] = pip
+	end
+	return row
+end
+
 -- Rounded card pieces: one small image each, nine-sliced so the corners
 -- keep their shape at any size. Clients without slicing get square ones.
 local CARD_SLICE = 12
