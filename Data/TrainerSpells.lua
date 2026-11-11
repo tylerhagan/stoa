@@ -292,7 +292,7 @@ Stoa.TRAINER_SPELLS = {
 
 -- Ranks 2 and up: counted only when you know an earlier rank.
 Stoa.TRAINER_RANKED = {
-	[143] = true, [145] = true, [205] = true, [284] = true, [285] = true, [325] = true, [332] = true, [453] = true, [529] = true, [547] = true, [548] = true, [591] = true,
+	[143] = true, [145] = true, [205] = true, [284] = true, [285] = true, [325] = true, [332] = true, [529] = true, [547] = true, [548] = true, [591] = true,
 	[592] = true, [594] = true, [597] = true, [598] = true, [600] = true, [602] = true, [639] = true, [643] = true, [647] = true, [695] = true, [696] = true, [699] = true,
 	[703] = true, [705] = true, [707] = true, [709] = true, [778] = true, [781] = true, [782] = true, [824] = true, [905] = true, [913] = true, [915] = true, [930] = true,
 	[939] = true, [943] = true, [945] = true, [959] = true, [970] = true, [984] = true, [988] = true, [990] = true, [992] = true, [1004] = true, [1006] = true, [1014] = true,
@@ -313,7 +313,7 @@ Stoa.TRAINER_RANKED = {
 	[8409] = true, [8412] = true, [8413] = true, [8422] = true, [8423] = true, [8427] = true, [8437] = true, [8438] = true, [8439] = true, [8444] = true, [8445] = true, [8446] = true,
 	[8450] = true, [8451] = true, [8492] = true, [8494] = true, [8495] = true, [8498] = true, [8499] = true, [8621] = true, [8623] = true, [8624] = true, [8631] = true, [8633] = true,
 	[8640] = true, [8643] = true, [8696] = true, [8903] = true, [8907] = true, [8910] = true, [8914] = true, [8924] = true, [8925] = true, [8939] = true, [8940] = true, [8941] = true,
-	[8983] = true, [9472] = true, [9473] = true, [9474] = true, [9484] = true, [9485] = true, [9492] = true, [9749] = true, [9750] = true, [9752] = true, [9756] = true, [9758] = true,
+	[8983] = true, [9472] = true, [9473] = true, [9474] = true, [9485] = true, [9492] = true, [9749] = true, [9750] = true, [9752] = true, [9756] = true, [9758] = true,
 	[9821] = true, [9823] = true, [9827] = true, [9839] = true, [9840] = true, [9841] = true, [9845] = true, [9846] = true, [9849] = true, [9852] = true, [9853] = true, [9856] = true,
 	[9857] = true, [9858] = true, [9866] = true, [9868] = true, [9884] = true, [9885] = true, [9888] = true, [9889] = true, [9894] = true, [9910] = true, [9913] = true, [10138] = true,
 	[10139] = true, [10140] = true, [10144] = true, [10148] = true, [10149] = true, [10150] = true, [10151] = true, [10156] = true, [10157] = true, [10159] = true, [10160] = true, [10161] = true,

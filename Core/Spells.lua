@@ -100,6 +100,13 @@ function Spells.rank(spellID)
 	return rankOf(C_Spell and C_Spell.GetSpellSubtext and call(C_Spell.GetSpellSubtext, spellID))
 end
 
+-- True when the game names this spell ID as rank 1, so it needs no earlier
+-- rank whatever a list says.
+function Spells.first(spellID)
+	local sub = C_Spell and C_Spell.GetSpellSubtext and call(C_Spell.GetSpellSubtext, spellID)
+	return type(sub) == "string" and rankOf(sub) == 1
+end
+
 -- True when the spell ID is a lower rank than the best one you know.
 function Spells.outranked(spellID)
 	local name = ids[spellID] or Spells.name(spellID)

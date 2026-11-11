@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.3
 
+- Training page: Mind Soothe, Shackle Undead and spells Forever opened to every race (Devouring Plague, Fear Ward) are no longer left out. Visit your class trainer once so STOA sees what it offers.
 - The shield tag on party cards and the tank watch card is now a small shield that empties as the shield absorbs damage, with its timer beside it, in place of the word SHLD.
 - New, off by default: Highlight quest objects (Settings, Everyday) turns on the game's own outline around things you can use in the world and the icon over the nearest one. Switching it off puts the game's settings back.
 
