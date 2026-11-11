@@ -7,7 +7,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 1.1.1
 
 - Full keeps the party cards and the solid target plaque. The party strips and the target without a panel that 1.1.0 gave everyone now come with Slim and Minimal only; each still has its own setting (Party as strips when not healing, Target without a panel). Each character is set once from the console it uses.
-- Party: a hidden width from the game in a fight no longer switches the party frames off (their health then stopped updating). Tags judge their width from the letters instead.
+- Party: a hidden width from the game in a fight no longer switches the party frames off (their health then stopped updating). Tags judge their width from the letters instead. The same goes for a hidden bar width under the tags, which raised an error on targeting in a fight.
 - The tank watch shows your Shield, Renew and Weakened Soul as the same tags the party cards carry, in place of a line of words, and a friendly target carries them too.
 - The healer's party row sits right under the Halo and stays there: it no longer moves when a fight starts or ends, so it can't be caught on top of the combat bar or the action bars. The combat bar's rows (and your pet's row) stand below it while you heal a party.
 - The emergency item steps under the party or raid frames when they share its spot beside the Halo.

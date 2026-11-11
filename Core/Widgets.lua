@@ -1296,8 +1296,10 @@ function UI.setPips(card, list)
 	if card.style and card.style.cell then return end
 	-- The tags share the health bar's width. One that would run past it
 	-- loses its timer first ("WS 10" to "WS"), then steps out altogether.
-	local room = card.hp and card.hp.GetWidth and card.hp:GetWidth()
-	if type(room) ~= "number" or room <= 0 then room = nil end
+	-- The bar's width can come back hidden in a fight too; the last width
+	-- read in the open stands in for it.
+	local room = card.hp and card.hp.GetWidth and Stoa:PlainNumber(card.hp:GetWidth())
+	if room and room > 0 then card.pipRoom = room else room = card.pipRoom end
 	local used, full = 0, false
 	for i, pip in ipairs(card.pips) do
 		local entry = list and list[i]
