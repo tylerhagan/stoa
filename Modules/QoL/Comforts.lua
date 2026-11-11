@@ -4,7 +4,7 @@
 --   straight past it, and the tracking you last chose (Find Minerals, Find
 --   Herbs...) comes back on after you log in or come back from the dead.
 --   Also on: other people's duel results and drunken lines stay out of chat.
---   Off by default: accepting and handing in quests (a quest with a choice
+--   Off by default: the game's highlights on quest objects, accepting and handing in quests (a quest with a choice
 --   of reward always waits for you), skipping cinematics, quieting the
 --   red error text in combat, declining duels, releasing your spirit in
 --   battlegrounds and accepting a resurrection.
@@ -26,6 +26,7 @@ local Comforts = Stoa:NewModule("Comforts", {
 	releaseInPvP = false,
 	acceptRes = false,
 	keepTracking = true,
+	questGlow = false,
 })
 
 local FAR_CAMERA = 2.6
@@ -61,6 +62,30 @@ function Comforts:Camera()
 		Stoa.GameSettings:Set("Comforts", "cameraDistanceMaxZoomFactor", FAR_CAMERA)
 	else
 		Stoa.GameSettings:Restore("cameraDistanceMaxZoomFactor")
+	end
+end
+
+-- Quest objects ---------------------------------------------------------------
+-- An addon cannot draw on the world, so this turns on the game's own
+-- highlights: the outline around things you can use, and the small icon
+-- over the nearest one. Each is set only where this client has it, and
+-- goes back when the setting is switched off (Core/GameSettings.lua).
+
+local QUEST_GLOW = {
+	{ "graphicsOutlineMode", "2" },
+	{ "Outline", "3" },
+	{ "SoftTargetInteract", "3" },
+	{ "SoftTargetIconInteract", "1" },
+	{ "SoftTargetIconGameObject", "1" },
+}
+
+function Comforts:QuestGlow()
+	for _, pair in ipairs(QUEST_GLOW) do
+		if self.db.questGlow then
+			Stoa.GameSettings:Set("Comforts", pair[1], pair[2])
+		else
+			Stoa.GameSettings:Restore(pair[1])
+		end
 	end
 end
 
@@ -341,6 +366,7 @@ function Comforts:OnEnable()
 	on("PLAYER_REGEN_DISABLED", "Errors", true)
 	on("PLAYER_REGEN_ENABLED", "Errors", false)
 	on("PLAYER_ENTERING_WORLD", "Camera")
+	on("PLAYER_ENTERING_WORLD", "QuestGlow")
 	on("DUEL_REQUESTED", "Duel")
 	on("PLAYER_DEAD", "Dead")
 	Stoa:On("RESURRECT_REQUEST", function(from) xpcall(self.Resurrect, Stoa.catch, self, from) end)
