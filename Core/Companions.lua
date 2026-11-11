@@ -123,7 +123,7 @@ local COMPANIONS = {
 			local mode = type(db) == "table" and db[key] or "markerIcon"
 			return mode ~= "off"
 		end,
-		note = "Tracks your DoTs; STOA shows their damage left and a kill skull on the target plaque, and on its nameplates once Does It Die's own \"Show on nameplates\" is Off.",
+		note = "Tracks your DoTs; STOA shows their damage left and a kill skull on the target plaque, and on its nameplates once Does It Die's own \"Show on nameplates\" is Off (type /did, Nameplates tab).",
 	},
 }
 
