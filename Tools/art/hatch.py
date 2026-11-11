@@ -10,7 +10,7 @@ import numpy as np
 from PIL import Image
 
 SIZE, SCALE = 16, 8
-PERIOD, STRIPE = 8, 3.5
+PERIOD, STRIPE = 8, 1.75
 
 n = SIZE * SCALE
 c = (np.arange(n) + 0.5) / SCALE

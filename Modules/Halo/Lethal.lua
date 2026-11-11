@@ -48,7 +48,7 @@ end
 local function paintHatch(marker, edge)
 	local r, g, b = Stoa:Color("text")
 	marker:SetStatusBarColor(r, g, b)
-	marker:GetStatusBarTexture():SetAlpha(0.9)
+	marker:GetStatusBarTexture():SetAlpha(0.8)
 	edge:SetColorTexture(r, g, b, 1)
 end
 
