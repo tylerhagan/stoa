@@ -70,12 +70,8 @@ function Emergency:Build()
 	if self.button then return end
 	local button = UI.itemButton(UIParent, "StoaEmergency", SIZE)
 	button:SetFrameStrata("MEDIUM")
-	local halo = _G.StoaHalo
-	if halo then
-		button:SetPoint("RIGHT", halo, "LEFT", -60, -40)
-	else
-		button:SetPoint("CENTER", UIParent, "CENTER", -260, -80)
-	end
+	self.button = button
+	self:Place()
 	local word = UI.text(button, "sans", Stoa.typeSize.caption, "danger", "CENTER")
 	word:SetPoint("TOP", button, "BOTTOM", 0, -3)
 	word:SetText("LOW")
@@ -83,8 +79,52 @@ function Emergency:Build()
 	word:Hide()
 	button.word = word
 	button:Hide()
-	self.button = button
-	Stoa:RegisterMover("emergency", button, "Emergency item")
+	Stoa:RegisterMover("emergency", button, "Emergency item", { default = function() self:Place() end })
+end
+
+-- Left of the Halo. When the party or raid frames sit there (the strips
+-- beside the Halo, a moved group), the button steps to just under them so
+-- it never covers a name or a health bar. Out of combat only: the button is
+-- secure. A spot you set with /stoa move wins.
+local function box(frame)
+	if not (frame and frame.IsShown and frame:IsShown() and frame.GetRect) then return end
+	local left, bottom, width, height = frame:GetRect()
+	left, bottom = Stoa:PlainNumber(left), Stoa:PlainNumber(bottom)
+	width, height = Stoa:PlainNumber(width), Stoa:PlainNumber(height)
+	if not (left and bottom and width and height and width > 1) then return end
+	local k = (frame:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+	return left * k, bottom * k, (left + width) * k, (bottom + height) * k
+end
+
+function Emergency:Place()
+	local button = self.button
+	if not button or InCombatLockdown() or Stoa:HasSavedPosition("emergency") then return end
+	local halo = _G.StoaHalo
+	button:ClearAllPoints()
+	if halo then
+		button:SetPoint("RIGHT", halo, "LEFT", -60, -40)
+	else
+		button:SetPoint("CENTER", UIParent, "CENTER", -260, -80)
+	end
+	local group = IsInRaid() and _G.StoaRaid or IsInGroup() and _G.StoaParty or nil
+	local al, ab, ar, at = box(button)
+	local bl, bb, br, bt = box(group)
+	-- Hidden, the button has no box of its own; its spot is known, so it is
+	-- judged from the Halo's edge instead.
+	if not al and halo and bl then
+		local hl, hb, _, ht = box(halo)
+		if hl then
+			local size = button:GetWidth()
+			ar = hl - 60
+			al = ar - size
+			ab = (hb + ht) / 2 - 40 - size / 2
+			at = ab + size
+		end
+	end
+	if al and bl and al < br and ar > bl and ab < bt and at > bb then
+		button:ClearAllPoints()
+		button:SetPoint("TOPRIGHT", group, "BOTTOMRIGHT", 0, -14)
+	end
 end
 
 -- Item and showing rules: out of combat only, as they touch the secure
@@ -105,6 +145,7 @@ function Emergency:Update()
 	else
 		RegisterStateDriver(button, "visibility", "[combat] show; hide")
 	end
+	self:Place()
 	self:Nudge()
 end
 
@@ -128,6 +169,8 @@ function Emergency:OnEnable()
 	local function update() if self.button then self:Update() end end
 	Stoa:On("BAG_UPDATE_DELAYED", update)
 	Stoa:On("PLAYER_REGEN_ENABLED", update)
+	Stoa:On("GROUP_ROSTER_UPDATE", function() C_Timer.After(0.5, update) end)
+	Stoa:On("STOA_ROLE_CHANGED", function() C_Timer.After(0.5, update) end)
 	Stoa:OnUnit("UNIT_HEALTH", { "player" }, function()
 		if not self.button then return end
 		if InCombatLockdown() then self:Nudge() else self:Update() end
