@@ -2,8 +2,8 @@
 -- Built on Blizzard's secure group header so they fill and sort
 -- themselves, even in combat, with the party cards' click-cast bindings.
 --
--- Healers keep one rule at every size: your group reads as a row under
--- your spells. Ten players are two rows of full party cards; twenty are
+-- Healers keep one rule at every size: your group reads as rows right
+-- under the Halo, with the combat bar below them. Ten players are two rows of full party cards; twenty are
 -- compact rows of small cells, health filling the cell behind the name;
 -- forty are two blocks of smaller cells side by side, groups 1-4 on the
 -- left and 5-8 on the right, so the raid stays above the console.
@@ -119,7 +119,26 @@ function Raid:Build()
 	Stoa:RegisterMover("raid", holder, "Raid", { default = function() self:Place() end })
 end
 
--- Healers: rows centred under the combat bar, like the party row. Everyone
+-- How far under the Halo the healer's grid reaches while it stands there (a
+-- healer in a raid, the grid not moved by hand); nil otherwise. Judged from
+-- the raid's size, as Place's visibility rules are: two rows of cards up to
+-- ten players, four rows of cells up to twenty, four of the smaller beyond.
+function Raid:RowBottom()
+	if not (self.enabled and self.holder) or Stoa:HasSavedPosition("raid") then return nil end
+	if Stoa:GetRole() ~= "HEALER" or not _G.StoaHalo then return nil end
+	local sample = Stoa.previewing == "raid"
+	if not sample and not IsInRaid() then return nil end
+	local count = sample and 10 or (GetNumGroupMembers and GetNumGroupMembers() or 10)
+	local size, rows = RAID_STYLES.card, 2
+	if count > 20 then
+		size, rows = RAID_STYLES.tinyLeft, 4
+	elseif count > 10 then
+		size, rows = RAID_STYLES.cell, 4
+	end
+	return (Stoa.HEALER_ROW_TOP or 74) + rows * size.height + (rows - 1) * size.gap
+end
+
+-- Healers: rows centred under the Halo, like the party row. Everyone
 -- else: a column per group on the left, a size smaller. Out of combat only.
 function Raid:Place()
 	local healer = Stoa:GetRole() == "HEALER"
@@ -162,9 +181,10 @@ function Raid:Place()
 	self.holder:ClearAllPoints()
 	local halo = _G.StoaHalo
 	if healer and halo then
-		-- Under the combat bar in and out of combat, so it never jumps.
-		local combatBar = Stoa:IsModuleEnabled("CombatBar") and Stoa.modules.CombatBar
-		self.holder:SetPoint("TOP", halo, "BOTTOM", 0, combatBar and combatBar:GroupOffset() or -52)
+		-- Right under the Halo in and out of combat, like the party row, so
+		-- it never jumps and stays clear of the action bars at rest. The
+		-- combat bar stands below it (Raid:RowBottom).
+		self.holder:SetPoint("TOP", halo, "BOTTOM", 0, -(Stoa.HEALER_ROW_TOP or 74))
 	elseif healer then
 		self.holder:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 	else

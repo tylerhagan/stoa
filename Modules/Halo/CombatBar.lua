@@ -160,9 +160,9 @@ function Bar:PlaceAnchor()
 	local anchor, halo = self.anchor, _G.StoaHalo
 	anchor:ClearAllPoints()
 	if halo then
-		-- Under the healer's party row when it stands under the Halo.
-		local party = Stoa.modules.Party
-		local under = party and party.RowBottom and party:RowBottom()
+		-- Under the healer's party row or raid grid when it stands under
+		-- the Halo.
+		local under = Stoa.HealerRowBottom and Stoa:HealerRowBottom()
 		local top = under and math.min(TOP, -(under + 12)) or TOP
 		self.shift = TOP - top
 		anchor:SetPoint("TOP", halo, "BOTTOM", 0, top)
@@ -232,13 +232,6 @@ end
 function Bar:RowCount()
 	local wanted = Stoa:GetRole() == "HEALER" and self.db.healerRows or self.db.rows
 	return math.max(1, math.min(#EXTRA_ROWS + 1, tonumber(wanted) or 1))
-end
-
--- Where the group frames sit under the Halo while the combat rows show.
-function Bar:GroupOffset()
-	-- The pet row (Pet.lua) sits right under the bar; the group goes below it.
-	local pet = Stoa.Pet and Stoa.Pet.RowRoom and Stoa.Pet:RowRoom() or 0
-	return (self.groupOffset or -136) - pet - (self.shift or 0)
 end
 
 -- Out of combat only: lays out the buttons the current page fills, centred
