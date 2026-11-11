@@ -22,6 +22,9 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Minimal has its own Edit Mode layout, "Stoa Minimal", with the Cooldown Manager's rows hidden.
 - The quest list folds to its header in combat (it used to dim) and comes back after; hover the header to open it. Practice combat folds it too. Settings: Fold quest list in combat.
 - Welcome page: Slim's description fits its card again (it ran a third line into the next card).
+- Party: a hidden width from the game in a fight no longer switches the party frames off (their health then stopped updating). Tags judge their width from the letters instead.
+- Slim and Minimal: the healer's party row stops above the action bars out of combat instead of sitting on them.
+- The emergency item steps under the party or raid frames when they share its spot beside the Halo.
 - Quiet: no longer hides the extra bar rows until mouseover, and has its own Edit Mode layout, "Stoa Quiet", with the Cooldown Manager's rows hidden.
 - STOA describes itself as a focused UI, not a calm one.
 

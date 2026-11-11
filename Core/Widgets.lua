@@ -1259,6 +1259,18 @@ function UI.cellWord(card, word, token)
 	return true
 end
 
+-- A tag's width for its words. In a fight the game can hand back a hidden
+-- number for a string's width, which can't be rounded or compared; the
+-- width is then judged from the letter count instead.
+local function pipWidth(pip, words)
+	local wide = Stoa:PlainNumber(pip.text:GetStringWidth())
+	if not wide then
+		local letters = (type(words) == "string" and not Stoa:IsSecret(words)) and #words or 5
+		wide = letters * 7
+	end
+	return math.ceil(wide) + 10
+end
+
 -- Fills the pip row. Each pip is { text, fill } where fill is a theme token
 -- for a solid chip (dark text on it), or nil for a quiet chip.
 function UI.setPips(card, list)
@@ -1271,19 +1283,26 @@ function UI.setPips(card, list)
 	for i, pip in ipairs(card.pips) do
 		local entry = list and list[i]
 		if full or (i > 1 and card.style and card.style.strip) then entry = nil end
+		local shown
 		if entry and room then
 			local gap = i > 1 and 4 or 0
 			pip.text:SetText(entry[1])
-			if used + gap + math.ceil(pip.text:GetStringWidth()) + 10 > room then
-				local short = tostring(entry[1]):match("^(.-)%s+%d+$")
-				if short then pip.text:SetText(short) end
-				if not short or used + gap + math.ceil(pip.text:GetStringWidth()) + 10 > room then
+			shown = entry[1]
+			if used + gap + pipWidth(pip, shown) > room then
+				local plain = type(shown) == "string" and not Stoa:IsSecret(shown)
+				local short = plain and shown:match("^(.-)%s+%d+$")
+				if short then
+					pip.text:SetText(short)
+					shown = short
+				end
+				if not short or used + gap + pipWidth(pip, shown) > room then
 					entry, full = nil, true
 				end
 			end
-			if entry then used = used + gap + math.ceil(pip.text:GetStringWidth()) + 10 end
+			if entry then used = used + gap + pipWidth(pip, shown) end
 		elseif entry then
 			pip.text:SetText(entry[1])
+			shown = entry[1]
 		end
 		if entry then
 			if entry[2] then
@@ -1295,7 +1314,7 @@ function UI.setPips(card, list)
 				pip.bg:SetVertexColor(r, g, b, 0.14)
 				pip.text:SetTextColor(Stoa:Color(entry[3] or "text"))
 			end
-			pip:SetWidth(math.ceil(pip.text:GetStringWidth()) + 10)
+			pip:SetWidth(pipWidth(pip, shown))
 			pip:Show()
 		else
 			pip:Hide()

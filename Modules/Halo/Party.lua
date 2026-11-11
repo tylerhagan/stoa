@@ -131,6 +131,30 @@ function Party:VisibleCount()
 	return math.max(1, math.min(#UNITS, GetNumGroupMembers and GetNumGroupMembers() or 1))
 end
 
+-- The top of the highest action bar standing under the Halo where a row
+-- `wide` across would sit, in UIParent's units; nil when none is in the way.
+local ROW_BARS = { "MainActionBar", "MainMenuBar", "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBar5", "MultiBar6", "MultiBar7", "PetActionBar", "StanceBar" }
+local function barsUnder(ceiling, wide)
+	local scale = UIParent:GetEffectiveScale() or 1
+	local middle = UIParent:GetWidth() / 2
+	local best
+	for _, name in ipairs(ROW_BARS) do
+		local bar = _G[name]
+		if bar and bar.IsShown and bar:IsShown() and not (bar.IsForbidden and bar:IsForbidden()) then
+			local ok, left, bottom, width, height = pcall(bar.GetRect, bar)
+			left, bottom = ok and Stoa:PlainNumber(left), ok and Stoa:PlainNumber(bottom)
+			width, height = ok and Stoa:PlainNumber(width), ok and Stoa:PlainNumber(height)
+			if left and bottom and width and height and width > 1 then
+				local k = (bar:GetEffectiveScale() or 1) / scale
+				local l, r, top = left * k, (left + width) * k, (bottom + height) * k
+				local across = l < middle + wide / 2 and r > middle - wide / 2
+				if across and top < ceiling and (not best or top > best) then best = top end
+			end
+		end
+	end
+	return best
+end
+
 -- Sizes and places the cards for the current role. Out of combat only.
 function Party:Layout()
 	-- Secure frames can't move in a fight; the caller comes back after it.
@@ -152,13 +176,20 @@ function Party:Layout()
 			-- console. Out of combat it then stops just above the console
 			-- (it moves only in that case); in a fight the console folds
 			-- and the row keeps its place under the bar.
+			-- The same goes for action bars that stay up out of combat under
+			-- the Halo (Slim and Minimal stand them above the console's line):
+			-- the row stops just above the highest of them.
 			local console = Stoa.modules.Grimoire
 			local haloBottom = halo:GetBottom()
-			if not Stoa:CombatLayout() and haloBottom and console and console.enabled and console.OpenHeight then
+			if not Stoa:CombatLayout() and haloBottom then
 				local k = (halo:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
 				local pets = (Stoa.Pet and Stoa.Pet.enabled and Stoa.Pet.db.partyPets and layout.grid) and 30 or 0
 				local bottom = haloBottom * k + offset - layout.height - pets
-				local clear = console:OpenHeight() + 14
+				local clear = 0
+				if console and console.enabled and console.OpenHeight then clear = console:OpenHeight() + 14 end
+				local wide = count * layout.width + (count - 1) * layout.gap
+				local barsTop = barsUnder(haloBottom * k, wide)
+				if barsTop then clear = math.max(clear, barsTop + 12) end
 				if bottom < clear then offset = offset + (clear - bottom) end
 			end
 			frame:SetPoint("TOP", halo, "BOTTOM", 0, offset)
