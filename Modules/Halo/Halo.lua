@@ -281,6 +281,10 @@ function Halo:PlaceTargetAuras()
 	icons[1]:ClearAllPoints()
 	if self.targetResting then
 		icons[1]:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", TARGET_COIN_SPACE, 6)
+	elseif self.db.targetStrip then
+		-- Without the panel the row follows the bar, leaving one line for
+		-- the threat and KICK words between them.
+		icons[1]:SetPoint("TOPLEFT", self.target.hp, "BOTTOMLEFT", 0, -20)
 	else
 		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
 	end
