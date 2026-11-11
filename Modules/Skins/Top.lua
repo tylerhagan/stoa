@@ -19,7 +19,7 @@ local UI = Stoa.UI
 local Top = Stoa:NewModule("Top", {
 	-- Buffs as a list: each with its name and time left beside the icon.
 	buffList = false,
-	-- In combat the quest list dims to the quest you're working on.
+	-- In combat the quest list folds to its header.
 	trackerFocus = true,
 })
 
@@ -208,6 +208,7 @@ local function dressHeader(header, collapsed)
 	UI.applyTheme()
 	if header.MinimizeButton then
 		local fold = UI.foldGlyph(header.MinimizeButton)
+		header.stoaFold = fold
 		if header.SetCollapsed then hooksecurefunc(header, "SetCollapsed", function(_, value) fold(value) end) end
 		fold(collapsed)
 	end
@@ -274,6 +275,12 @@ function Top:Tracker()
 	guarded(self.FitTracker, self)
 	if tracker.AddModule then
 		hooksecurefunc(tracker, "AddModule", function(_, module) guarded(dressModule, module) end)
+	end
+	-- The tracker shows its sections again whenever it lays out; keep them folded.
+	if tracker.Update then
+		hooksecurefunc(tracker, "Update", function()
+			if Top.trackerFocused then guarded(Top.FocusTracker, Top) end
+		end)
 	end
 end
 
@@ -447,71 +454,47 @@ function Top:MinimapHeader()
 end
 
 
--- Combat focus -----------------------------------------------------------------
--- In a fight the long quest list is noise. While you're in combat every quest
--- dims except the one you're working on: the last one whose objectives moved,
--- or the one you've chosen to follow on the map. Hovering the list brings it
--- all back; after the fight it returns as it was. Only alpha changes, so
--- nothing here touches the tracker's buttons in combat.
-local DIM = 0.22
-local counts, focusQuest = {}, nil
-
-local function questProgress(questID)
-	if not (C_QuestLog and C_QuestLog.GetQuestObjectives) then return nil end
-	local ok, list = pcall(C_QuestLog.GetQuestObjectives, questID)
-	if not ok or type(list) ~= "table" then return nil end
-	local parts = {}
-	for i, objective in ipairs(list) do
-		local done = Stoa.safe.plain(objective.numFulfilled)
-		local text = Stoa.safe.plain(objective.text)
-		parts[i] = tostring(done or text or "")
-	end
-	return table.concat(parts, "|")
+-- Combat fold -------------------------------------------------------------------
+-- In a fight the quest list is noise, so it folds to its header and comes
+-- back after. Hovering the header opens it for as long as the mouse stays on
+-- the list. The tracker's own collapse is left alone: setting it from addon
+-- code would taint the list and block its quest item buttons, so the
+-- sections are hidden instead and shown again as they were. A dungeon's
+-- scenario objectives stay up.
+local function foldable(module)
+	return module ~= _G.ScenarioObjectiveTracker and not (module.IsForbidden and module:IsForbidden())
 end
 
-local function watched()
-	local out = {}
-	if not (C_QuestLog and C_QuestLog.GetNumQuestWatches and C_QuestLog.GetQuestIDForQuestWatchIndex) then return out end
-	for i = 1, (Stoa.safe.plain(C_QuestLog.GetNumQuestWatches()) or 0) do
-		local id = Stoa.safe.plain(C_QuestLog.GetQuestIDForQuestWatchIndex(i))
-		if id then out[#out + 1] = id end
-	end
-	return out
-end
-
--- Notes which watched quest just moved on.
-local function noteProgress()
-	for _, id in ipairs(watched()) do
-		local now = questProgress(id)
-		if now and counts[id] and counts[id] ~= now then focusQuest = id end
-		counts[id] = now
-	end
-end
-
-local function chosenQuest()
-	if C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID then
-		local ok, id = pcall(C_SuperTrack.GetSuperTrackedQuestID)
-		id = ok and Stoa.safe.plain(id)
-		if id and id ~= 0 then return id end
-	end
+local function watchHide(module)
+	if module.stoaHideWatched then return end
+	module.stoaHideWatched = true
+	-- The tracker hid it itself (nothing left to show): not ours to bring back.
+	hooksecurefunc(module, "Hide", function(self) self.stoaFolded = nil end)
 end
 
 function Top:FocusTracker()
 	local tracker = _G.ObjectiveTrackerFrame
 	if not tracker or (tracker.IsForbidden and tracker:IsForbidden()) then return end
-	local fighting = self.db.trackerFocus and Top.inFight and not tracker:IsMouseOver()
-	local keep = focusQuest or chosenQuest()
-	if tracker.Header then tracker.Header:SetAlpha(fighting and DIM or 1) end
+	local header = tracker.Header
+	local over = tracker:IsMouseOver() and (self.trackerPeek or (header and header:IsMouseOver()))
+	self.trackerPeek = (Top.inFight and over) or nil
+	local folded = (self.db.trackerFocus and Top.inFight and not over) or false
 	for _, module in ipairs(tracker.modules or {}) do
-		if module.Header then module.Header:SetAlpha(fighting and DIM or 1) end
-		if module.EnumerateActiveBlocks then
-			module:EnumerateActiveBlocks(function(block)
-				local id = block and Stoa.safe.plain(block.id)
-				block:SetAlpha((not fighting or (keep and id == keep)) and 1 or DIM)
-			end)
+		if foldable(module) then
+			watchHide(module)
+			if folded and module:IsShown() then
+				module:Hide()
+				module.stoaFolded = true
+			elseif not folded and module.stoaFolded then
+				module.stoaFolded = nil
+				module:Show()
+			end
 		end
 	end
-	self.trackerFocused = fighting
+	if header and header.stoaFold then
+		header.stoaFold(folded or (tracker.IsCollapsed and tracker:IsCollapsed()) or false)
+	end
+	self.trackerFocused = folded
 end
 
 function Top:OnEnable()
@@ -532,17 +515,15 @@ function Top:OnEnable()
 		-- The menu and bags settle after login; fit the tracker to where they end up.
 		C_Timer.After(2, function() if Top.trackerDressed then guarded(Top.FitTracker, Top) end end)
 	end)
-	Stoa:On("QUEST_LOG_UPDATE", function()
-		guarded(noteProgress)
-		if Top.trackerFocused then guarded(Top.FocusTracker, Top) end
-	end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Top.inFight = true; guarded(Top.FocusTracker, Top) end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() Top.inFight = false; guarded(Top.FocusTracker, Top) end)
-	-- Hovering the list in a fight shows it all; leaving dims it again.
+	-- Hovering the header in a fight opens the list; leaving folds it again.
 	Stoa:On("STOA_TICK", function()
 		local tracker = _G.ObjectiveTrackerFrame
 		if not (tracker and Top.db.trackerFocus) then return end
-		local want = Top.inFight and not tracker:IsMouseOver()
+		local header = tracker.Header
+		local over = tracker:IsMouseOver() and (Top.trackerPeek or (header and header:IsMouseOver()))
+		local want = (Top.inFight and not over) or false
 		if want ~= (Top.trackerFocused or false) then guarded(Top.FocusTracker, Top) end
 	end)
 	Stoa:On("STOA_THEME_CHANGED", function()
