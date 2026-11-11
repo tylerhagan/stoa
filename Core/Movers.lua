@@ -677,10 +677,6 @@ function Stoa:ToggleMovers()
 	self:Print(unlocked and "Frames unlocked. Drag to move, /stoa unlock to lock." or "Frames locked.")
 end
 
-function Stoa:MoversUnlocked()
-	return unlocked
-end
-
 -- Entering combat always locks, so a stray drag can't move frames mid-fight.
 Stoa:On("PLAYER_REGEN_DISABLED", function()
 	if unlocked then
