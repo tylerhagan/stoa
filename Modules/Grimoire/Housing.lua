@@ -28,7 +28,7 @@ local TAB_ART = { size = 128, x0 = 32, top = 24, foot = 70, cap = 52 }
 local TAB_TEXT_PAD = 26
 
 local function artOn()
-	return Console.db.art
+	return Console:Art()
 end
 
 local function tabRise()
@@ -51,10 +51,22 @@ function Console:ChatWidth()
 	return math.max(CHAT_MIN_WIDTH, math.min(CHAT_WIDTH, math.floor(room)))
 end
 
+-- Slim: the chat stands free above the line, on the left, with room under
+-- it for the typing box and above it for Blizzard's own tabs.
+local SLIM_CHAT_LIFT = 38
+local SLIM_CHAT_HEIGHT = 150
+
 local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
 	placing = true
+	if Console.db.slim then
+		chat:ClearAllPoints()
+		chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight() + SLIM_CHAT_LIFT)
+		chat:SetSize(CHAT_WIDTH, SLIM_CHAT_HEIGHT)
+		placing = false
+		return
+	end
 	local bottom = CHAT_BOTTOM
 	-- Stoa's typing strip sits under the messages, inside the console.
 	local look = Stoa.modules.ChatLook
@@ -595,8 +607,9 @@ function Console:House()
 		end
 	end
 
-	if db.houseChat then
-		-- Notes now arrive in chat, so the notes page steps aside.
+	if db.houseChat or db.slim then
+		-- Notes now arrive in chat, so the notes page steps aside (the slim
+		-- line has no room for it either way).
 		self.leftPage:Hide()
 		Stoa.notesInConsole = false
 	end
@@ -619,7 +632,7 @@ function Console:House()
 		EventRegistry:RegisterCallback("EditMode.Exit", apply, self)
 	end
 
-	if db.houseChat and db.art then
+	if db.houseChat and artOn() then
 		-- Read-only hooks: Stoa's tabs follow the dock, nothing is changed.
 		for _, name in ipairs({ "FCFDock_UpdateTabs", "FCFDock_SelectWindow", "FCF_SetWindowName", "FCF_OpenNewWindow", "FCF_Close", "FCF_DockFrame", "FCF_UnDockFrame" }) do
 			if _G[name] then hooksecurefunc(name, safeRefresh) end

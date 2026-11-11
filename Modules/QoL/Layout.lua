@@ -24,6 +24,9 @@ local KINDS = {
 	stoa = { name = "Stoa", text = "EDIT_MODE_LAYOUT", version = "EDIT_MODE_VERSION", saved = "editModeVersion" },
 	designer = { name = "Stoa Designer", text = "DESIGNER_LAYOUT", version = "DESIGNER_LAYOUT_VERSION", saved = "designerLayoutVersion" },
 	compact = { name = "Stoa Compact", text = "COMPACT_LAYOUT", version = "COMPACT_LAYOUT_VERSION", saved = "compactLayoutVersion" },
+	-- The slim console's own pair: the bars stand above the line.
+	slim = { name = "Stoa Slim", text = "SLIM_LAYOUT", version = "SLIM_LAYOUT_VERSION", saved = "slimLayoutVersion" },
+	slimCompact = { name = "Stoa Slim Compact", text = "SLIM_COMPACT_LAYOUT", version = "SLIM_LAYOUT_VERSION", saved = "slimCompactLayoutVersion" },
 }
 
 -- Below this many UI units wide, the wide layout's bar row crowds the
@@ -45,8 +48,19 @@ end
 -- The layout to be on right now: compact on a narrow screen, else the
 -- preset's.
 function Layout:Wanted()
-	if self.db.compact ~= false and self:Narrow() and type(Stoa.COMPACT_LAYOUT) == "string" then return "compact" end
+	local narrow = self.db.compact ~= false and self:Narrow()
+	if self:Slim() then
+		if narrow and type(Stoa.SLIM_COMPACT_LAYOUT) == "string" then return "slimCompact" end
+		if type(Stoa.SLIM_LAYOUT) == "string" then return "slim" end
+	end
+	if narrow and type(Stoa.COMPACT_LAYOUT) == "string" then return "compact" end
 	return self:Kind()
+end
+
+-- True while the slim console is the one on screen.
+function Layout:Slim()
+	local console = Stoa.modules.Grimoire
+	return console and console.db and console.db.slim and Stoa:IsModuleEnabled("Grimoire") or false
 end
 
 local function kindOf(kind)
@@ -157,7 +171,9 @@ function Layout:Apply(quiet, kind)
 	self:Bars()
 	Stoa.char.layoutApplied = true
 	if not quiet then
-		if kind == "compact" then
+		if kind == "slim" or kind == "slimCompact" then
+			Stoa:Print("Switched to STOA's Edit Mode layout for the slim console: the bars stand above the line. Edit Mode can change it or pick another.")
+		elseif kind == "compact" then
 			Stoa:Print("Switched to STOA's compact Edit Mode layout for this screen size. /stoa editmode wide keeps the wide one.")
 		else
 			local whose = kind == "designer" and "the designer's" or "STOA's"

@@ -18,7 +18,14 @@ local Halo = Stoa:NewModule("Halo", {
 	manaRule = true,
 	castCost = true,
 	formMana = true,
+	-- Out of combat: health and mana stay as two faint arcs (for players
+	-- with no console to read them from), and the target plaque rests faint.
+	restArcs = false,
+	restFade = false,
 })
+
+local REST_ARCS = 0.4
+local REST_FADE = 0.45
 
 local SIZE = 300
 local FADE_IN = 0.2
@@ -285,7 +292,8 @@ function Halo:PlaceTarget()
 	target:ClearAllPoints()
 	-- In a group the cards sit under the Halo, over the resting spot, so
 	-- the plaque keeps its Halo spot there in and out of combat.
-	if edge and Stoa:GetState() == Stoa.STATE_WORLD and not IsInGroup() then
+	-- The slim console keeps that spot for the action bars.
+	if edge and not console.db.slim and Stoa:GetState() == Stoa.STATE_WORLD and not IsInGroup() then
 		-- Pinned to the screen where the open console's top edge sits, never
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.
@@ -312,8 +320,13 @@ function Halo:BuildTarget(frame)
 	target:SetScript("OnEnter", function(button)
 		GameTooltip_SetDefaultAnchor(GameTooltip, button)
 		GameTooltip:SetUnit("target")
+		button:SetAlpha(self:TargetAlpha())
 	end)
-	target:SetScript("OnLeave", GameTooltip_Hide)
+	target:SetScript("OnLeave", function(button)
+		GameTooltip_Hide()
+		-- The mouse still counts as over the plaque during this script.
+		C_Timer.After(0, function() button:SetAlpha(self:TargetAlpha()) end)
+	end)
 	-- Any target, in or out of combat. A dead one stays, dimmed and saying
 	-- DEAD, so the plaque always matches what you have targeted.
 	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
@@ -448,6 +461,7 @@ end
 
 function Halo:UpdateHealth()
 	UI.setUnitBar(self.health, "player", "health")
+	if self.rest then UI.setUnitBar(self.rest.health, "player", "health") end
 	self.healthText:SetText(UnitHealth("player"))
 end
 
@@ -457,12 +471,14 @@ local POWER_TOKENS = { [1] = "text", [3] = "accent" }
 
 function Halo:UpdatePower()
 	UI.setUnitBar(self.mana, "player", "power")
+	if self.rest then UI.setUnitBar(self.rest.mana, "player", "power") end
 	self.manaText:SetText(UnitPower("player"))
 	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType("player")))
 	local token = kind and POWER_TOKENS[kind] or "mana"
 	if token ~= self.powerToken then
 		self.powerToken = token
 		self.mana:SetStatusBarColor(Stoa:Color(token))
+		if self.rest then self.rest.mana:SetStatusBarColor(Stoa:Color(token)) end
 		self.manaText:SetTextColor(Stoa:Color(token))
 	end
 end
@@ -569,7 +585,7 @@ function Halo:UpdateTarget()
 	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "hostile" or nil) end
 	target.hp:SetShown(not dead)
 	target.health:SetShown(not dead)
-	target:SetAlpha(dead and 0.6 or 1)
+	target:SetAlpha(self:TargetAlpha(dead))
 	self:UpdateTargetAuras()
 	if dead then
 		target.threat:SetText("")
@@ -801,7 +817,44 @@ end
 
 function Halo:SetShown(shown)
 	local t = Stoa.TRANSITION
-	UI.fade(self.frame, shown and 1 or 0, shown and (t and t.into or FADE_IN) or (t and t.out or FADE_OUT))
+	local seconds = shown and (t and t.into or FADE_IN) or (t and t.out or FADE_OUT)
+	UI.fade(self.frame, shown and 1 or 0, seconds)
+	-- The resting arcs trade places with the Halo.
+	if self.rest then UI.fade(self.rest, shown and 0 or REST_ARCS, seconds) end
+	if self.target then self.target:SetAlpha(self:TargetAlpha()) end
+end
+
+-- The plaque: dimmed for a dead target, and (Settings: Fade frames out of
+-- combat) resting faint out of a fight until the mouse is over it.
+function Halo:TargetAlpha(dead)
+	if dead == nil then
+		dead = UnitIsDead("target")
+		if Stoa:IsSecret(dead) then dead = false end
+	end
+	local alpha = dead and 0.6 or 1
+	if self.db.restFade and Stoa:GetState() ~= Stoa.STATE_COMBAT
+		and not (self.target and self.target:IsMouseOver()) then
+		alpha = alpha * REST_FADE
+	end
+	return alpha
+end
+
+-- Two faint arcs in the Halo's place while it rests: the same health and
+-- power, nothing else. On its own frame, so the Halo's fade doesn't take
+-- them with it.
+function Halo:BuildRest()
+	local rest = CreateFrame("Frame", "StoaHaloRest", UIParent)
+	rest:SetAllPoints(self.frame)
+	rest:SetScale(self.db.scale)
+	rest:SetFrameStrata("LOW")
+	rest:EnableMouse(false)
+	rest.health = arc(rest, "Left", "health")
+	rest.health:SetPoint("LEFT")
+	rest.mana = arc(rest, "Right", "mana")
+	rest.mana:SetPoint("RIGHT")
+	rest:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 0 or REST_ARCS)
+	self.rest = rest
+	UI.applyTheme()
 end
 
 -- Blizzard frames that repeat what the seal and Halo show.
@@ -840,6 +893,7 @@ end
 function Halo:OnEnable()
 	addTicks(15407, 3) -- Mind Flay
 	self:Build()
+	if self.db.restArcs then self:BuildRest() end
 
 	self:UpdateHealth()
 	self:UpdatePower()

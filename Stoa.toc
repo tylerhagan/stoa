@@ -2,7 +2,7 @@
 ## Title: STOA
 ## Notes: A focused, two-state UI suite for WoW Forever: the Console out of combat, the Halo in combat.
 ## Author: Tyler
-## Version: 1.0.1
+## Version: 1.1.0
 ## SavedVariables: StoaDB
 ## SavedVariablesPerCharacter: StoaCharDB
 ## IconTexture: Interface\AddOns\Stoa\Media\Textures\Icon
