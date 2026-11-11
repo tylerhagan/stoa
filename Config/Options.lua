@@ -211,9 +211,6 @@ local function build()
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner without their stone frames, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
-	toggle(of("ActionBars"), "fadeAll", "Hide the bars until mouseover", "Out of combat every bar along the bottom, the main bar too, rests unseen and comes up while the mouse is over the bar area, something is on your cursor or the spellbook is open. In a fight they show as usual.", false, {
-		words = "action bars fade hide minimal", change = function(_, v) Stoa.modules.ActionBars:SetOption("fadeAll", v) end,
-	})
 	group = "At a glance"
 	toggle(of("Tally"), "enabled", "At a glance, beside the chat", "Up to eight numbers you choose (stats, gear, gold, professions, other addons' feeds) to the right of chat on the console.", true, { id = "glanceOn", reload = true, words = "tally numbers data text broker titan" })
 	toggle(of("Tally"), "follow", "At a glance follows where you are", "One set of lines out in the world, one in a dungeon and one in a raid (your role's stats first). Off keeps one set everywhere.", true, {
