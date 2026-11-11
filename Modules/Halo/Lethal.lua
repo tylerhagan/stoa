@@ -35,7 +35,7 @@ local HATCH = "Interface\\AddOns\\Stoa\\Media\\Textures\\Hatch"
 -- are dark and the gaps clear, so the bar's own colour shows between them.
 local function hatch(marker)
 	local stripes = marker:CreateTexture(nil, "ARTWORK")
-	stripes:SetTexture(HATCH, "REPEAT", "REPEAT", "NEAREST")
+	stripes:SetTexture(HATCH, "REPEAT", "REPEAT")
 	if stripes.SetSnapToPixelGrid then stripes:SetSnapToPixelGrid(true) stripes:SetTexelSnappingBias(0) end
 	if stripes.SetHorizTile then stripes:SetHorizTile(true) end
 	if stripes.SetVertTile then stripes:SetVertTile(true) end
