@@ -1,6 +1,7 @@
 """Draw the hatch: thin dark diagonal stripes that tile, for damage that is
 on its way (the DoT stretch on the target bar and nameplates). The stripes
-are black and the gaps clear, so the bar's own colour shows between them.
+are black and the gaps a faint black wash, so the bar's own colour shows
+between them, a little dimmed.
 
 Usage: python hatch.py <Media/Textures>
 """
@@ -22,5 +23,7 @@ alpha = on.reshape(SIZE, SCALE, SIZE, SCALE).mean(axis=(1, 3))
 # soft edge stretched reads as blur.
 alpha = np.clip((alpha - 0.3) * 2.5, 0, 1)
 img = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
-img[..., 3] = np.round(alpha * 0.62 * 255).astype(np.uint8)
+# A faint black wash between the stripes dims the stretch as a whole.
+WASH, LINE = 0.14, 0.66
+img[..., 3] = np.round((WASH + (LINE - WASH) * alpha) * 255).astype(np.uint8)
 Image.fromarray(img, "RGBA").save(sys.argv[1].rstrip("/\\") + "/Hatch.tga")
