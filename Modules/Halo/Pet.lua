@@ -383,7 +383,13 @@ function Pet:PlaceRow()
 	local row, halo = self.row, _G.StoaHalo
 	if not row or not halo or InCombatLockdown() or Stoa:HasSavedPosition("petrow") then return end
 	local bar = Stoa.modules.CombatBar
-	local offset = bar and bar.enabled and bar.groupOffset and (bar.groupOffset - (bar.shift or 0)) or -52
+	local offset = bar and bar.enabled and bar.groupOffset and (bar.groupOffset - (bar.shift or 0))
+	if not offset then
+		-- No combat bar: under the healer's party row when it stands there.
+		local party = Stoa.modules.Party
+		local under = party and party.RowBottom and party:RowBottom()
+		offset = under and -(under + 8) or -52
+	end
 	row:ClearAllPoints()
 	row:SetPoint("TOP", halo, "BOTTOM", 0, offset - 4)
 end

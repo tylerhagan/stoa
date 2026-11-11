@@ -244,12 +244,6 @@ function Items.isMarkedJunk(item)
 	return id and Stoa.db and Stoa.db.junk and Stoa.db.junk[id] or false
 end
 
-function Items.isJunk(item)
-	if Items.isMarkedJunk(item) then return true end
-	local quality, price = Items.info(item)
-	return quality == 0 and (price or 0) > 0
-end
-
 function Items.setJunk(item, on)
 	local id = Items.id(item)
 	if not id or not Stoa.db then return end

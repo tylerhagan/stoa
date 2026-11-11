@@ -64,13 +64,6 @@ function GameSettings:Restore(name)
 	ledger()[name] = nil
 end
 
--- Every setting a module changed.
-function GameSettings:RestoreOwner(owner)
-	for name, entry in pairs(ledger()) do
-		if entry.owner == owner then self:Restore(name) end
-	end
-end
-
 function GameSettings:RestoreAll()
 	for name in pairs(ledger()) do self:Restore(name) end
 end

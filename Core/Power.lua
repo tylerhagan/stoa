@@ -18,7 +18,7 @@ local TICK_SECONDS = 2
 
 local MANA = Enum and Enum.PowerType and Enum.PowerType.Mana or 0
 
-local lastSpend, lastTick, lastMana = 0, nil, nil
+local lastSpend, lastMana = 0, nil
 
 local call = Stoa.safe.call
 
@@ -49,15 +49,6 @@ function Power.ruleLeft()
 	return math.max(0, lastSpend + RULE_SECONDS - GetTime())
 end
 
--- Seconds to the next regen tick, or nil when ticks aren't known (just
--- logged in, mana hidden) or you're still inside the rule.
-function Power.nextTick()
-	if not lastTick or Power.ruleLeft() > 0 then return nil end
-	local now = GetTime()
-	local since = (now - lastTick) % TICK_SECONDS
-	return TICK_SECONDS - since
-end
-
 -- The mana the spell you're casting will take, or nil.
 function Power.castCost()
 	local _, _, _, _, _, _, _, _, spellID = call(UnitCastingInfo, "player")
@@ -83,7 +74,6 @@ local function watch(unit, kind)
 	if unit ~= "player" or (kind and kind ~= "MANA") then return end
 	local current = Power.mana()
 	if current and lastMana and current > lastMana and Power.ruleLeft() == 0 then
-		lastTick = GetTime()
 		Stoa:Fire("STOA_POWER_TICK")
 	elseif current and lastMana and current < lastMana and Power.ruleLeft() == 0 then
 		-- Spending outside a cast we saw (a channel tick, a proc): the rule
