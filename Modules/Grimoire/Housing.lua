@@ -60,9 +60,9 @@ local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
 	placing = true
-	if Console.db.slim then
+	if Console.db.slim or Console.bare then
 		chat:ClearAllPoints()
-		chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight() + SLIM_CHAT_LIFT)
+		chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), (Console.bare and 0 or Console:OpenHeight()) + SLIM_CHAT_LIFT)
 		chat:SetSize(CHAT_WIDTH, SLIM_CHAT_HEIGHT)
 		placing = false
 		return
@@ -327,7 +327,7 @@ local function placeMenuNow()
 	local inset = Console:PageInset()
 	local edge = Console.frame or UIParent
 	local point = Console.frame and "TOPRIGHT" or "BOTTOMRIGHT"
-	local lift = Console.frame and MENU_LIFT or Console:OpenHeight()
+	local lift = (Console.frame or Console.bare) and MENU_LIFT or Console:OpenHeight()
 	-- Bags take the corner, where every hand already goes for the backpack;
 	-- the menu sits inward of them.
 	if bags then
@@ -589,6 +589,42 @@ local function safely(fn)
 	Stoa:AfterCombat(function()
 		xpcall(fn, Stoa.catch)
 	end)
+end
+
+-- With the console switched off (the Minimal preset) there is no frame to
+-- house things in, but Blizzard's bar art, menu, bags and chat still need
+-- the same care: the gryphons and stone go, the menu and bags rest in the
+-- bottom right corner, and the chat stands in the bottom left.
+function Console:OnOff()
+	self.bare = true
+	local db = self.db
+	local function apply()
+		if db.houseChat then
+			safely(placeChat)
+			safely(guardChat)
+		end
+		if db.hideBarArt then safely(hideBarArt) end
+		if db.houseMenu then
+			safely(placeMenu)
+			safely(dressMenu)
+		end
+	end
+	apply()
+	if db.houseMenu then
+		watchMenu()
+		safely(keepMenu)
+		Stoa:On("STOA_THEME_CHANGED", function() safely(dressMenu) end)
+	end
+	Stoa:On("PLAYER_ENTERING_WORLD", apply)
+	Stoa:On("UI_SCALE_CHANGED", apply)
+	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", apply)
+	if EventRegistry then EventRegistry:RegisterCallback("EditMode.Exit", apply, self) end
+	local bar = actionBar()
+	if bar and bar.UpdateEndCaps then
+		hooksecurefunc(bar, "UpdateEndCaps", function()
+			if db.hideBarArt then safely(hideBarArt) end
+		end)
+	end
 end
 
 function Console:House()

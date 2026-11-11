@@ -10,6 +10,10 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Minimal (How much STOA: Minimal): no console at all. Out of combat your health and mana rest as two faint arcs around your character and the Halo rises in a fight; the target plaque and party cards rest faint until a fight starts or the mouse is over them. STOA's look and comforts stay. Each part is its own setting too: Faint health and mana out of combat, Fade frames out of combat.
 - Action bars: Hide the bars until mouseover (off by default) rests every bar along the bottom, the main bar too, out of combat.
 - With the console off, changing the In combat setting no longer raises an error.
+- Finish and reload on the Welcome page, and "Use STOA's" when two addons do one job, now reload with the click itself. The game sometimes refused the reload STOA asked for and left you to type /reload.
+- Minimal: Blizzard's gryphons and bar art stay hidden, the game menu and bags rest as the quiet tray in the bottom right corner, and the chat stands in the bottom left. With the console off nothing was looking after them.
+- Slim: the "Stoa Slim" Edit Mode layout hides the Cooldown Manager's rows and moves the swing timers up clear of the bars. A saved one updates at the next login while it is the active layout.
+- Quiet: no longer hides the extra bar rows until mouseover, and has its own Edit Mode layout, "Stoa Quiet", with the Cooldown Manager's rows hidden.
 - STOA describes itself as a focused UI, not a calm one.
 
 ## 1.0.1
