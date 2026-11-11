@@ -302,6 +302,14 @@ function Bar:Layout()
 		self.groupOffset = offset
 		Stoa:Fire("STOA_COMBAT_LAYOUT", Stoa:CombatLayout())
 	end
+	-- Laid out again during practice combat (the rows setting changed): the
+	-- drivers above only show the row in a real fight, so show it by hand.
+	if Stoa:IsPractising() and Stoa:GetState() == Stoa.STATE_COMBAT and not InCombatLockdown() then
+		for _, button in ipairs(self.shown) do
+			UnregisterStateDriver(button, "visibility")
+			button:Show()
+		end
+	end
 	self:UpdateAll()
 end
 
