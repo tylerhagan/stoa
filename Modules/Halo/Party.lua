@@ -753,6 +753,12 @@ function Party:BuildWatch()
 
 	watch.name, watch.percent, watch.word, watch.hp = name, percent, word, hp
 	watch.absorb, watch.buffs = absorb, buffs
+	-- With the target shown without a panel, the watch matches it.
+	local haloModule = Stoa.modules.Halo
+	if haloModule and haloModule.db and haloModule.db.targetStrip then
+		plaque:SetBare(true)
+		for _, fs in ipairs({ label, word, name, percent, buffs }) do UI.legible(fs) end
+	end
 	self.watch = watch
 	Stoa:RegisterMover("tankwatch", watch, "Tank watch")
 	self:BuildWatchClicks(watch)

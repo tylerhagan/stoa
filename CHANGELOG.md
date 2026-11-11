@@ -26,6 +26,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Slim and Minimal: the healer's party row stops above the action bars out of combat instead of sitting on them, moving there once the calm ends and the combat bar has gone.
 - The emergency item steps under the party or raid frames when they share its spot beside the Halo.
 - Full keeps the party cards and the solid target plaque; the strips and the target without a panel come with Slim and Minimal (each has its own setting).
+- Slim and Minimal: the healer's tank watch drops its panel too, matching the target (it follows Target without a panel).
 - Quiet: no longer hides the extra bar rows until mouseover, and has its own Edit Mode layout, "Stoa Quiet", with the Cooldown Manager's rows hidden.
 - STOA describes itself as a focused UI, not a calm one.
 
