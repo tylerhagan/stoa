@@ -35,8 +35,8 @@ local PRESET_ORDER = { "full", "slim", "minimal", "quiet", "classic", "taer" }
 -- page says exactly what a choice takes away.
 local PRESET_WORDS = {
 	full = { "Full", "Everything on, as STOA ships: tooltip details, the quest line, At a glance, every bar row out of combat, and STOA's look on windows, bags, tooltips, the top of the screen and nameplates." },
-	slim = { "Slim", "The console as one plain line: level, health and mana, and a word each for Ready, Journey and Company (their pages open on a card as you mouse over). Chat and the bars stand above it; no At a glance." },
-	minimal = { "Minimal", "No console. Health and mana rest as two faint arcs around your character and the Halo rises in a fight; the target plaque and party cards rest faint out of combat. STOA's look and comforts stay." },
+	slim = { "Slim", "The console as one plain line: level, health and mana, and a word each for Ready, Journey and Company, whose pages open on hover. Chat and the bars stand above it; no At a glance." },
+	minimal = { "Minimal", "No console. Health and mana rest as two faint arcs around your character and the Halo rises in a fight; the target and party rest faint out of combat. STOA's look and comforts stay." },
 	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; the Cooldown Manager's rows hidden; the click grid folded for healers, hidden otherwise. STOA's look stays." },
 	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of STOA's. The console, Halo, frames and words stay as in Full." },
 	taer = { "Same as Designer", "Full as its designer plays it: painted frames, three bar rows, a longer calm, the loot feed in the world, faded nameplates, quests accepted for you and the designer's Edit Mode layout." },
