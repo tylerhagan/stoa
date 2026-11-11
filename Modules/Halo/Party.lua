@@ -43,11 +43,12 @@ local GONE_ALPHA = 0.42
 local LAYOUTS = {
 	HEALER = { width = 176, height = 70, gap = 8, style = "party", row = true, grid = true },
 	OTHER = { width = 184, height = 58, gap = 6, style = "compact", point = { "TOPLEFT", UIParent, "LEFT", 36, 180 } },
-	-- Strips hang to the left of the Halo, mirroring the target on its
-	-- right, a little low so the tank watch keeps the spot above them.
-	STRIP = { width = 150, height = 24, gap = 7, style = "strip", strip = true, point = { "TOPLEFT", UIParent, "LEFT", 36, 180 } },
+	-- Strips stand to the left of the Halo as a column centred on it,
+	-- mirroring the target on its right. (The tank watch above that spot
+	-- is a healer's, and healers have cards.)
+	STRIP = { width = 172, height = 27, gap = 7, style = "strip", strip = true, point = { "TOPLEFT", UIParent, "LEFT", 36, 180 } },
 }
-local STRIP_GAP, STRIP_TOP = 52, 30
+local STRIP_GAP = 60
 -- A strip turns amber below half health, sooner than a card's LOW.
 local STRIP_LOW = 0.5
 
@@ -164,7 +165,8 @@ function Party:Layout()
 		elseif layout.row then
 			frame:SetPoint("TOP", UIParent, "CENTER", 0, -260)
 		elseif layout.strip and halo then
-			frame:SetPoint("TOPRIGHT", halo, "LEFT", -STRIP_GAP, STRIP_TOP)
+			local tall = count * layout.height + (count - 1) * layout.gap
+			frame:SetPoint("TOPRIGHT", halo, "LEFT", -STRIP_GAP, math.floor(tall / 2))
 		else
 			frame:SetPoint(unpack(layout.point))
 		end
