@@ -27,12 +27,12 @@ local UPDATE = 0.1
 -- short of lethal (under 1% of the health).
 local SLIDE = 4000
 local SKULL = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8"
--- Damage on its way reads as diagonal stripes over a shaded stretch of the
--- bar, with a fine line where the health will land.
+-- Damage on its way reads as dark diagonal stripes over that stretch of the
+-- bar, with a fine dark line where the health will land.
 local HATCH = "Interface\\AddOns\\Stoa\\Media\\Textures\\Hatch"
 
--- Gives a marker bar its stripes (tiled, never stretched). The texture's
--- gaps are dark, which keeps the stripes readable on a bar of any colour.
+-- Gives a marker bar its stripes (tiled, never stretched). The stripes
+-- are dark and the gaps clear, so the bar's own colour shows between them.
 local function hatch(marker)
 	local stripes = marker:CreateTexture(nil, "ARTWORK")
 	stripes:SetTexture(HATCH, "REPEAT", "REPEAT")
@@ -43,10 +43,9 @@ local function hatch(marker)
 end
 
 local function paintHatch(marker, edge)
-	local r, g, b = Stoa:Color("text")
-	marker:SetStatusBarColor(r, g, b)
+	marker:SetStatusBarColor(1, 1, 1)
 	marker:GetStatusBarTexture():SetAlpha(1)
-	edge:SetColorTexture(r, g, b, 0.9)
+	edge:SetColorTexture(0, 0, 0, 0.7)
 end
 
 local function api()
