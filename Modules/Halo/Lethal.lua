@@ -7,7 +7,7 @@
 --   take off, in bone, ending at the health's edge.
 --   Skull: slides over the portrait coin when they will kill it.
 -- And on STOA's nameplates, the same bone stretch on each enemy's bar and a
--- small skull over its right end, while DoesItDie's own nameplate marker is
+-- small skull beside its left end, while DoesItDie's own nameplate marker is
 -- off (its "Show on nameplates"): with it on, the plates are left to it
 -- (Core/Companions.lua), so the two never draw on the same bar.
 -- The target's health is secret in combat, so Lua never compares the two:
@@ -147,7 +147,7 @@ end
 
 -- Nameplates -------------------------------------------------------------------
 
-local PLATE_SKULL = 14
+local PLATE_SKULL = 11
 local plateMarks = {} -- health bar -> its marks
 
 local function platesWanted()
@@ -171,10 +171,10 @@ local function buildPlateMarks(bar)
 	UI.pixel(edge, "width")
 	edge:SetPoint("TOPLEFT", marker:GetStatusBarTexture(), "TOPLEFT")
 	edge:SetPoint("BOTTOMLEFT", marker:GetStatusBarTexture(), "BOTTOMLEFT")
-	-- The skull just above the bar's right end, in a clipped window.
+	-- The skull beside the bar's left end, small and plain, in a clipped window.
 	local window = CreateFrame("Frame", nil, bar)
 	window:SetSize(PLATE_SKULL, PLATE_SKULL)
-	window:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", 0, 3)
+	window:SetPoint("RIGHT", bar, "LEFT", -3, 0)
 	window:SetClipsChildren(true)
 	window:SetFrameLevel(bar:GetFrameLevel() + 4)
 	local slide = CreateFrame("StatusBar", nil, window)
@@ -193,7 +193,7 @@ end
 
 local function paintPlateMarks(marks)
 	paintHatch(marks.marker, marks.edge)
-	marks.skull:SetVertexColor(Stoa:Color("danger"))
+	marks.skull:SetVertexColor(Stoa:Color("text"))
 end
 
 local function hidePlateMarks(marks)
