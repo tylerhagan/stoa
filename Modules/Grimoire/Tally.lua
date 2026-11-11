@@ -1025,6 +1025,8 @@ end
 function Tally:OnEnable()
 	local console = Stoa.modules.Grimoire
 	if not (console and console.frame and Stoa:IsModuleEnabled("Grimoire")) then return end
+	-- The slim console is one line: no room for At a glance.
+	if console.db.slim then return end
 	session.money = plain(call(GetMoney))
 	local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
 	if type(data) == "table" and data.name and plain(data.currentStanding) then

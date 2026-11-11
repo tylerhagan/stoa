@@ -30,11 +30,13 @@ end
 -- touches back to their defaults, then applies its own changes, so picking
 -- one after another never leaves leftovers. Skins and the like only change
 -- after /reload.
-local PRESET_ORDER = { "full", "quiet", "classic", "taer" }
+local PRESET_ORDER = { "full", "slim", "minimal", "quiet", "classic", "taer" }
 -- Full is how Stoa ships; the other two are described against it, so the
 -- page says exactly what a choice takes away.
 local PRESET_WORDS = {
 	full = { "Full", "Everything on, as STOA ships: tooltip details, the quest line, At a glance, every bar row out of combat, and STOA's look on windows, bags, tooltips, the top of the screen and nameplates." },
+	slim = { "Slim", "The console as one plain line: level, health and mana, and a word each for Ready, Journey and Company (their pages open on a card as you mouse over). Chat and the bars stand above it; no At a glance." },
+	minimal = { "Minimal", "No console. Health and mana rest as two faint arcs around your character and the Halo rises in a fight; the target plaque and party cards rest faint out of combat. STOA's look and comforts stay." },
 	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; extra bar rows only on mouseover; the click grid folded for healers, hidden otherwise. STOA's look stays." },
 	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of STOA's. The console, Halo, frames and words stay as in Full." },
 	taer = { "Same as Designer", "Full as its designer plays it: painted frames, three bar rows, a longer calm, the loot feed in the world, faded nameplates, quests accepted for you and the designer's Edit Mode layout." },
@@ -61,6 +63,8 @@ local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "Tooltip", "Top",
 local TOUCHED = {
 	{ "Tooltip", "unitDetails" }, { "Kit", "questLine" }, { "Party", "clickGrid" },
 	{ "Tally", "enabled" }, { "ActionBars", "hoverTray" },
+	{ "Grimoire", "slim" }, { "Grimoire", "enabled" },
+	{ "Halo", "restArcs" }, { "Halo", "restFade" }, { "Party", "restFade" },
 }
 
 local function playsHealer()
@@ -73,7 +77,14 @@ end
 -- What each preset changes, as { module, key, value }.
 local function changesFor(name)
 	local list = {}
-	if name == "quiet" then
+	if name == "slim" then
+		list[#list + 1] = { "Grimoire", "slim", true }
+	elseif name == "minimal" then
+		list[#list + 1] = { "Grimoire", "enabled", false }
+		list[#list + 1] = { "Halo", "restArcs", true }
+		list[#list + 1] = { "Halo", "restFade", true }
+		list[#list + 1] = { "Party", "restFade", true }
+	elseif name == "quiet" then
 		list[#list + 1] = { "Tooltip", "unitDetails", false }
 		list[#list + 1] = { "Kit", "questLine", false }
 		-- The grid only matters to healers, who keep it folded.
@@ -418,17 +429,20 @@ function builders.combat(self, step)
 	step.note = note
 end
 
+-- Six cards share the step, so each is a little shorter than the others'.
+local PRESET_CARD = 60
+
 function builders.preset(self, step)
 	local words = lede(step, "How much STOA does. Full is how it ships; the others say exactly what they take away.")
 	words:SetPoint("TOPLEFT")
 	self.presetCards = {}
 	for i, name in ipairs(PRESET_ORDER) do
-		local button = card(step, BODY_W, 70, PRESET_WORDS[name][1], function()
+		local button = card(step, BODY_W, PRESET_CARD, PRESET_WORDS[name][1], function()
 			self:ApplyPreset(name)
 			self:Refresh()
 		end)
 		button.sub:SetText(PRESET_WORDS[name][2])
-		button:SetPoint("TOPLEFT", 0, -48 - (i - 1) * (70 + GAP))
+		button:SetPoint("TOPLEFT", 0, -44 - (i - 1) * (PRESET_CARD + 6))
 		self.presetCards[name] = button
 	end
 end
@@ -747,6 +761,12 @@ function Welcome:FollowLayout()
 	if kind == "designer" or layout:OnStoa("designer") then
 		xpcall(layout.Apply, Stoa.catch, layout, true, kind)
 	end
+	-- The slim console has its own layout (the bars above the line); on one
+	-- of STOA's layouts, follow it there and back.
+	local wanted = layout.Wanted and layout:Wanted()
+	if wanted and wanted ~= kind and layout:OnStoa() and not layout:OnStoa(wanted) then
+		xpcall(layout.Apply, Stoa.catch, layout, true, wanted)
+	end
 end
 
 -- Finish always reloads, so every choice, the preset's settings and its
@@ -1063,7 +1083,7 @@ Stoa:On("STOA_THEME_CHANGED", function()
 	if Welcome.page and Welcome.page:IsShown() then Welcome:Refresh() end
 end)
 
--- /stoa preset full|quiet|classic|designer
+-- /stoa preset full|slim|minimal|quiet|classic|designer
 Stoa.commands.preset = function(rest)
 	local name = strtrim(rest or ""):lower()
 	if name == "classic feel" then name = "classic" end

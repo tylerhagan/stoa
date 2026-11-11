@@ -209,9 +209,13 @@ local function build()
 	page = "console"
 	group = "The console"
 	toggle(console, "enabled", "Show the console", "The leather console along the bottom of the screen.", true, { id = "consoleOn", reload = true })
+	toggle(console, "slim", "Slim console", "The console as one plain line a quarter of the height: level, health and mana, and a word each for Ready, Journey and Company, whose pages open on a card as you mouse over. Chat and the bars stand above it (STOA switches to its Edit Mode layout for this), and At a glance is left out.", false, { id = "consoleSlim", reload = true, words = "small thin minimal compact one line bar" })
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner without their stone frames, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
+	toggle(of("ActionBars"), "fadeAll", "Hide the bars until mouseover", "Out of combat every bar along the bottom, the main bar too, rests unseen and comes up while the mouse is over the bar area, something is on your cursor or the spellbook is open. In a fight they show as usual.", false, {
+		words = "action bars fade hide minimal", change = function(_, v) Stoa.modules.ActionBars:SetOption("fadeAll", v) end,
+	})
 	toggle(of("ActionBars"), "hoverTray", "Extra rows on mouseover", "Out of combat only your main bar shows in the console; the other rows come up while you mouse over the bars. Off shows every row out of combat.", false, {
 		words = "action bars hide", change = function(_, v) Stoa.modules.ActionBars:SetOption("hoverTray", v) end,
 	})
@@ -245,6 +249,11 @@ local function build()
 	}, { words = "animation motion instant reduce" })
 	toggle(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar.", true, { reload = true, words = "unit frame" })
 	toggle(halo, "hideTargetFrame", "Hide Blizzard's target frame", "STOA shows your target beside the Halo.", true, { reload = true, words = "unit frame" })
+	toggle(halo, "restArcs", "Faint health and mana out of combat", "While the Halo rests, your health and mana stay around your character as two faint arcs. For playing without the console, which shows them otherwise.", false, { id = "haloRestArcs", reload = true, words = "minimal arcs rest out of combat" })
+	toggle(halo, "restFade", "Fade frames out of combat", "Out of a fight the target plaque and the party cards rest faint, and come back while the mouse is over them or a fight starts.", false, {
+		id = "haloRestFade", reload = true, words = "minimal target party dim transparent",
+		change = function(_, v) local cards = party(); if cards then cards.restFade = v end end,
+	})
 	group = "Combat bar"
 	toggle(of("CombatBar"), "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before.", true, { id = "combatBar", reload = true, words = "action bar" })
 	local rowChoices = { { "1", "1" }, { "2", "2" }, { "3", "3" } }
@@ -587,8 +596,8 @@ local function build()
 	page = "setup"
 	group = "Start"
 	button("welcome", "Welcome page", "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of STOA, and other addons.", "Open", function() Stoa.Welcome:Show() end, { cmd = "/stoa welcome", words = "wizard first time" })
-	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Quiet folds more away. Classic feel keeps Blizzard's layout with STOA's look. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once.", "full", {
-		{ "full", "Full" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Same as Designer" },
+	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps Blizzard's layout with STOA's look. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once.", "full", {
+		{ "full", "Full" }, { "slim", "Slim" }, { "minimal", "Minimal" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Same as Designer" },
 	}, {
 		reload = true, cmd = "/stoa preset", words = "preset minimal",
 		set = function(v) if Stoa.Welcome:ApplyPreset(v) then Stoa.Welcome:FollowLayout() end end,
