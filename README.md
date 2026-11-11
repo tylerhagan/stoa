@@ -166,6 +166,7 @@ Fonts are the main gap: see below.
 | `/stoa friends` | Open the Company roster (`/stoa company` too) |
 | `/stoa glance` | List what At a glance can show; `/stoa glance add <name>`, `remove <name>`, `reset` (`/stoa tally` still works) |
 | `/stoa welcome` | Open the welcome wizard again |
+| `/stoa news` | Show the latest what's new note again |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames STOA relies on against this game build |
 | `/stoa report` | Your version, game build, spec, theme and screen and UI scale, language, game settings STOA holds, other addons and any errors STOA caught, ready to copy |
 | `/stoa layout` | A short line with your frame positions (every role) and look, to share; paste one on the backup page to use it |
