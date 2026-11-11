@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.2
 
+- Removed "Hide the bars until mouseover": the bars along the bottom always show out of combat. The what's new note now mentions Your own mix.
 - Tooltips: the title and the line under it sat 2 px further in than the lines below; all now share the game's left margin (seen on the bags' money list).
 - Quest lines on tooltips no longer step in from the other lines or carry a gold rule; they keep their slightly lighter box and line up with the rest of the card.
 - Fixed a stray indent on one line of the bags' money list and other tooltips, left over from a quest box on the tooltip before. In the money list, the character you are on now has its sum in bright text and the others are quieter.

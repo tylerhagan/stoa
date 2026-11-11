@@ -11,7 +11,7 @@ local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
-local Bars = Stoa:NewModule("ActionBars", { combatHide = true, fadeAll = false })
+local Bars = Stoa:NewModule("ActionBars", { combatHide = true })
 
 local PREFIXES = {
 	"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
@@ -95,9 +95,7 @@ function Bars:SkinAll()
 end
 
 -- Tray ----------------------------------------------------------------------
--- Out of combat every console row shows. Optionally (fadeAll) every bar,
--- the main one too, rests unseen and comes up while the mouse is over the
--- bar area, a spell or item is on the cursor, or in Edit Mode. In combat the Halo's combat bar takes over and the console's rows,
+-- Out of combat every console row shows. In combat the Halo's combat bar takes over and the console's rows,
 -- main bar included, step aside; your keys still reach them. Without the
 -- combat bar, combat brings every row up at once.
 --
@@ -109,7 +107,7 @@ local TRAY_BARS = {
 	"MultiBar5", "MultiBar6", "MultiBar7", "PetActionBar", "StanceBar",
 }
 local MAIN_BARS = { "MainActionBar", "MainMenuBar" }
-local TRAY_FADE_IN, TRAY_FADE_OUT = 0.12, 0.4
+local TRAY_FADE = 0.12
 
 -- The height under which a bar counts as part of the console.
 local function consoleTop()
@@ -132,13 +130,12 @@ end
 
 function Bars:FindTray()
 	local top = consoleTop()
-	local tray, area = {}, {}
+	local tray = {}
 	for _, name in ipairs(TRAY_BARS) do
 		local bar = _G[name]
 		local middle = bar and bar:IsShown() and middleOf(bar)
 		if middle and middle < top then
 			table.insert(tray, bar)
-			table.insert(area, bar)
 		elseif bar and self.tray then
 			-- No longer in the console: give it back its full alpha.
 			for _, old in ipairs(self.tray) do
@@ -150,8 +147,7 @@ function Bars:FindTray()
 	for _, name in ipairs(MAIN_BARS) do
 		if _G[name] then main = _G[name] break end
 	end
-	if main then table.insert(area, main) end
-	self.tray, self.trayArea, self.main = tray, area, main
+	self.tray, self.main = tray, main
 	self.trayLit = nil
 	self:UpdateTray()
 end
@@ -181,34 +177,12 @@ local function handedToHalo(self)
 	return combatBar and combatBar.enabled and combatBar.shown and #combatBar.shown > 0
 end
 
--- True while something calls the bars up: a fight, something on the cursor,
--- Edit Mode, the spellbook, or the mouse over the bar area.
-local function calledUp(self)
-	if inCombat() then return true end
-	if GetCursorInfo() then return true end
-	if EditModeManagerFrame and EditModeManagerFrame:IsShown() then return true end
-	for _, name in ipairs({ "SpellBookFrame", "PlayerSpellsFrame" }) do
-		if _G[name] and _G[name]:IsShown() then return true end
-	end
-	for _, bar in ipairs(self.trayArea or {}) do
-		if bar:IsVisible() and bar:IsMouseOver() then return true end
-	end
-	return false
-end
-
-local function trayWanted(self, called)
-	if not self.db.fadeAll then return true end
-	return called
-end
-
 function Bars:UpdateTray()
 	if not self.tray then return end
 	local halo = handedToHalo(self)
-	local called = not halo and calledUp(self)
-	local lit = not halo and trayWanted(self, called)
-	-- Fade every bar (Settings): the main bar rests unseen too.
-	local mainLit = not halo and (called or not self.db.fadeAll)
-	local state = halo and "halo" or (lit and "lit" or "rest") .. (mainLit and "+" or "-")
+	local lit = not halo
+	local mainLit = lit
+	local state = halo and "halo" or "lit"
 	if state == self.trayLit then return end
 	self.trayLit = state
 	local bars, targets = {}, {}
@@ -225,7 +199,7 @@ function Bars:UpdateTray()
 		trayFader:SetScript("OnUpdate", nil)
 		for i, bar in ipairs(bars) do bar:SetAlpha(targets[i]) end
 	else
-		local seconds = halo and TRAY_FADE_IN or lit and TRAY_FADE_IN or TRAY_FADE_OUT
+		local seconds = TRAY_FADE
 		-- Coming and going with the combat look, they keep its timing.
 		if self.stateChanged and Stoa.TRANSITION then
 			seconds = halo and Stoa.TRANSITION.into or Stoa.TRANSITION.out
