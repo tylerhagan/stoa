@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.2
 
+- Quest lines on tooltips no longer step in from the other lines or carry a gold rule; they keep their slightly lighter box and line up with the rest of the card.
 - Fixed a stray indent on one line of the bags' money list and other tooltips, left over from a quest box on the tooltip before. In the money list, the character you are on now has its sum in bright text and the others are quieter.
 - The kill skull on nameplates is smaller, in plain bone, and sits at the left end of the bar instead of above its right end.
 - With Does It Die installed, the welcome's Other addons step now asks who marks the nameplates (STOA's marks or Does It Die's), so the question after login is not needed.

@@ -503,7 +503,7 @@ local function clear(tip)
 		tip.stoaMoved = nil
 	end
 	tip.stoaQuest = nil
-	if tip.stoaQuestBox then tip.stoaQuestBox.fill:Hide() tip.stoaQuestBox.rule:Hide() end
+	if tip.stoaQuestBox then tip.stoaQuestBox.fill:Hide() end
 	tip.stoaEdge:Clear()
 	for _, outline in ipairs(tip.stoaRank or {}) do outline:Clear() end
 	if tip.stoaFade then tip.stoaFade:Hide() end
@@ -532,10 +532,10 @@ end
 -- line doesn't run over the edge.
 local MIN_WIDTH = 210
 
--- Room around the quest box: the lines inside step in from its accent
--- rule, and the box keeps a gap from the lines above and below it.
+-- Room around the quest box: its lines stay level with the rest of the
+-- card, and the box keeps a gap from the lines above and below it.
 local QUEST_GAP = 9
-local QUEST_INDENT = 8
+local QUEST_INDENT = 0
 local QUEST_PAD = 5
 
 local function questRange(tip)
@@ -680,8 +680,7 @@ end
 
 -- Quests ------------------------------------------------------------------------------
 -- The quest lines on a card (the quest's name, your progress, a party
--- member's name) sit together in a slightly lighter box with a thin accent
--- rule down its left side: the quest name in the accent, the count picked
+-- member's name) sit together in a slightly lighter box: the quest name in the accent, the count picked
 -- out, and finished objectives quiet behind the game's tick.
 
 
@@ -691,11 +690,7 @@ local function questBox(tip)
 	box = {}
 	box.fill = tip:CreateTexture(nil, "BACKGROUND", nil, -4)
 	box.fill:SetTexture("Interface\\Buttons\\WHITE8x8")
-	UI.tint(box.fill, "text", 0.06)
-	box.rule = tip:CreateTexture(nil, "BACKGROUND", nil, -3)
-	box.rule:SetTexture("Interface\\Buttons\\WHITE8x8")
-	box.rule:SetWidth(2)
-	UI.tint(box.rule, "accent", 0.9)
+	UI.tint(box.fill, "text", 0.08)
 	tip.stoaQuestBox = box
 	UI.applyTheme()
 	return box
@@ -716,11 +711,7 @@ function Tooltip:PlaceQuestBox(tip)
 	box.fill:SetPoint("RIGHT", tip, "RIGHT", -8, 0)
 	box.fill:SetPoint("TOP", top, "TOP", 0, QUEST_PAD)
 	box.fill:SetPoint("BOTTOM", bottom, "BOTTOM", 0, -QUEST_PAD)
-	box.rule:ClearAllPoints()
-	box.rule:SetPoint("TOPLEFT", box.fill, "TOPLEFT")
-	box.rule:SetPoint("BOTTOMLEFT", box.fill, "BOTTOMLEFT")
 	box.fill:Show()
-	box.rule:Show()
 end
 
 function Tooltip:QuestLine(tip, data)
