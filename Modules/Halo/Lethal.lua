@@ -27,6 +27,30 @@ local UPDATE = 0.1
 -- short of lethal (under 1% of the health).
 local SLIDE = 4000
 local SKULL = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8"
+-- Damage on its way reads as diagonal stripes over a shaded stretch of the
+-- bar, with a fine line where the health will land.
+local HATCH = "Interface\\AddOns\\Stoa\\Media\\Textures\\Hatch"
+
+-- Gives a marker bar its stripes (tiled, never stretched) and the shade
+-- under them, which keeps the stripes readable on a bar of any colour.
+local function hatch(marker)
+	local stripes = marker:CreateTexture(nil, "ARTWORK")
+	stripes:SetTexture(HATCH, "REPEAT", "REPEAT")
+	if stripes.SetHorizTile then stripes:SetHorizTile(true) end
+	if stripes.SetVertTile then stripes:SetVertTile(true) end
+	marker:SetStatusBarTexture(stripes)
+	local shade = marker:CreateTexture(nil, "BORDER")
+	shade:SetAllPoints(marker:GetStatusBarTexture())
+	shade:SetColorTexture(0, 0, 0, 0.5)
+	return shade
+end
+
+local function paintHatch(marker, edge)
+	local r, g, b = Stoa:Color("text")
+	marker:SetStatusBarColor(r, g, b)
+	marker:GetStatusBarTexture():SetAlpha(0.9)
+	edge:SetColorTexture(r, g, b, 1)
+end
 
 local function api()
 	local did = rawget(_G, "DoesItDie")
@@ -51,7 +75,7 @@ function Lethal:Build()
 	clip:SetClipsChildren(true)
 	clip:SetFrameLevel(hp:GetFrameLevel() + 2)
 	local marker = CreateFrame("StatusBar", nil, clip)
-	marker:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	hatch(marker)
 	marker:SetReverseFill(true)
 	marker:SetPoint("TOP", clip, "TOP")
 	marker:SetPoint("BOTTOM", clip, "BOTTOM")
@@ -95,9 +119,7 @@ function Lethal:Build()
 end
 
 function Lethal:Paint()
-	self.marker:SetStatusBarColor(Stoa:Color("text"))
-	self.marker:GetStatusBarTexture():SetAlpha(0.7)
-	self.markerEdge:SetColorTexture(0, 0, 0, 0.8)
+	paintHatch(self.marker, self.markerEdge)
 	self.skull:SetVertexColor(Stoa:Color("danger"))
 end
 
@@ -144,7 +166,7 @@ local function buildPlateMarks(bar)
 	clip:SetClipsChildren(true)
 	clip:SetFrameLevel(bar:GetFrameLevel() + 1)
 	local marker = CreateFrame("StatusBar", nil, clip)
-	marker:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	hatch(marker)
 	marker:SetReverseFill(true)
 	marker:SetPoint("TOP", clip, "TOP")
 	marker:SetPoint("BOTTOM", clip, "BOTTOM")
@@ -174,9 +196,7 @@ local function buildPlateMarks(bar)
 end
 
 local function paintPlateMarks(marks)
-	marks.marker:SetStatusBarColor(Stoa:Color("text"))
-	marks.marker:GetStatusBarTexture():SetAlpha(0.7)
-	marks.edge:SetColorTexture(0, 0, 0, 0.8)
+	paintHatch(marks.marker, marks.edge)
 	marks.skull:SetVertexColor(Stoa:Color("danger"))
 end
 

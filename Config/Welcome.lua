@@ -643,7 +643,22 @@ function Welcome:GatherAddons()
 	local rows = {}
 	local covered = {}
 	for _, companion in ipairs(Stoa.Companions and Stoa.Companions:Loaded() or {}) do
-		rows[#rows + 1] = { name = companion.name, note = companion.note or "Works beside STOA. Where both do a small job, its switch wins." }
+		local row = { name = companion.name, note = companion.note or "Works beside STOA. Where both do a small job, its switch wins." }
+		-- Does It Die: who marks the nameplates is asked here, so the
+		-- question after login (Lethal:AskPlates) need not come up.
+		local Lethal = companion.folder == "DoesItDie" and Stoa.modules.Lethal
+		if Lethal and Lethal.db and Lethal:Available() then
+			local owner = Lethal:PlateOwner()
+			row.plates = Lethal
+			row.note = "Tracks your DoTs; STOA shows their damage left and a kill skull on the target plaque. Say who marks the nameplates."
+			row.options = { { "stoa", "STOA's marks" }, { "theirs", "Does It Die's" } }
+			if not Stoa.db.askedDotPlates then
+				row.choice = "stoa"
+			elseif owner ~= "off" then
+				row.choice = owner
+			end
+		end
+		rows[#rows + 1] = row
 	end
 	local Conflicts = Stoa.Conflicts
 	for _, entry in ipairs(Conflicts and Conflicts:Found() or {}) do
@@ -745,6 +760,10 @@ function Welcome:SettleAddons()
 		if i > MAX_ADDON_ROWS then break end
 		if row.entry then
 			if Stoa.Conflicts:Settle(row.entry, row.choice == "ours" and "ours" or "theirs") then reload = true end
+		end
+		if row.plates and row.choice then
+			row.plates:SetPlateOwner(row.choice)
+			Stoa.db.askedDotPlates = true
 		end
 		if row.look then
 			Stoa.Looks:Set(row.look, row.choice == "look")

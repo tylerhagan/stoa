@@ -282,8 +282,8 @@ local function build()
 	toggle(of("Manager"), "showBlizzard", "Keep the Cooldown Manager's rows on screen", "Off keeps the game's rows running but see-through, so the Halo is the one place cooldowns show.", false, { id = "cdmShow", change = refresh("Manager", "Quiet") })
 	actions("cdmProbe", "Check it", "Lists the spells the Cooldown Manager tracks, and what STOA can read of each, in chat.", { { "What it tracks", command("cdm") } }, { cmd = "/stoa cdm" })
 	group = "DoT kill marks"
-	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in bone, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", words = "dot damage execute", change = refresh("Lethal", "Update") })
-	choice(nil, "dotPlates", "DoT marks on nameplates", "Who marks each enemy's nameplate with the damage your DoTs still have to deal. STOA draws a bone stretch on the health bar and a small skull once they will kill. Does It Die draws its own marker. Choosing here sets Does It Die's \"Show on nameplates\" for you, so the two never both draw.", "stoa", {
+	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in bone stripes, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", words = "dot damage execute", change = refresh("Lethal", "Update") })
+	choice(nil, "dotPlates", "DoT marks on nameplates", "Who marks each enemy's nameplate with the damage your DoTs still have to deal. STOA draws a striped bone stretch on the health bar and a small skull once they will kill. Does It Die draws its own marker. Choosing here sets Does It Die's \"Show on nameplates\" for you, so the two never both draw.", "stoa", {
 		{ "stoa", "STOA" }, { "theirs", "Does It Die" }, { "off", "Neither" },
 	}, {
 		id = "lethalPlates", needs = "Needs the DoesItDie addon", words = "dot damage nameplate execute doesitdie",
