@@ -14,6 +14,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Minimal: Blizzard's gryphons and bar art stay hidden, the game menu and bags rest as the quiet tray in the bottom right corner, and the chat stands in the bottom left. With the console off nothing was looking after them.
 - Slim: the "Stoa Slim" Edit Mode layout hides the Cooldown Manager's rows and moves the swing timers up clear of the bars. A saved one updates at the next login while it is the active layout.
 - Changing Combat rows during practice combat no longer hides the combat bar until practice ends.
+- Slim: the hover card sits above the quest list, which was reading through it.
 - Quiet: no longer hides the extra bar rows until mouseover, and has its own Edit Mode layout, "Stoa Quiet", with the Cooldown Manager's rows hidden.
 - STOA describes itself as a focused UI, not a calm one.
 
