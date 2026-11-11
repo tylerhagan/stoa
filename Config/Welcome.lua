@@ -62,7 +62,7 @@ local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "Tooltip", "Top",
 -- Settings every preset resets: { module, key }.
 local TOUCHED = {
 	{ "Tooltip", "unitDetails" }, { "Kit", "questLine" }, { "Party", "clickGrid" },
-	{ "Tally", "enabled" }, { "ActionBars", "hoverTray" },
+	{ "Tally", "enabled" },
 	{ "Grimoire", "slim" }, { "Grimoire", "enabled" },
 	{ "Halo", "restArcs" }, { "Halo", "restFade" }, { "Party", "restFade" },
 	{ "Party", "strips" }, { "Halo", "targetStrip" },
