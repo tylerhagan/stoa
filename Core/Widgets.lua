@@ -353,7 +353,7 @@ UI.CARD_STYLES = {
 	-- A strip: no panel at all. A name, the health number and a hairline of
 	-- health over the world, with one word after the name when it matters.
 	-- Tanks and damage dealers see their party this way beside the Halo.
-	strip = { pad = 0, name = 13, bar = 3, pip = 14, pipFont = 10, gap = 0, strip = true },
+	strip = { pad = 0, name = 15, bar = 3, pip = 14, pipFont = 10, gap = 0, strip = true },
 }
 -- A strip rests this faint while its player is fine.
 local STRIP_REST = 0.5
