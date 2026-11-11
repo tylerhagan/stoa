@@ -4,6 +4,10 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.1.3
+
+- New, off by default: Highlight quest objects (Settings, Everyday) turns on the game's own outline around things you can use in the world and the icon over the nearest one. Switching it off puts the game's settings back.
+
 ## 1.1.2
 
 - STOA Slim's Edit Mode layout no longer shows the ranged swing bar. The saved layout refreshes at your next login.
