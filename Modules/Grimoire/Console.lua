@@ -1202,6 +1202,9 @@ function Console:SetOpen(open, instant)
 		end
 		local scale = self.seal:GetScale()
 		self.seal:SetScale(scale + (sealScale - scale) * progress)
+		-- On the slim line the seal goes altogether in a fight; shrunk, it
+		-- only peeked over the folded line.
+		if self.db.slim then self.seal:SetAlpha(open and progress or 1 - progress) end
 	end
 
 	if instant then
