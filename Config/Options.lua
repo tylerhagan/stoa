@@ -317,10 +317,10 @@ local function build()
 	toggle(party, "quietCards", "Quiet group frames when not healing", "Tanking or dealing damage, party and raid cards show health and only the words you can act on: a debuff you can dispel, dead or offline. No buff words.", true, {
 		words = "party raid frames unit", change = function() if Stoa.modules.Party.cards then Stoa.modules.Party:UpdateAll() end end,
 	})
-	toggle(party, "strips", "Party as strips when not healing", "Tanking or dealing damage, your party shows as thin lines beside the Halo: a name, health, and a word when you can act. They rest faint while everyone is fine. Off brings back the cards.", true, {
+	toggle(party, "strips", "Party as strips when not healing", "Tanking or dealing damage, your party shows as thin lines beside the Halo: a name, health, and a word when you can act. They rest faint while everyone is fine. Slim and Minimal turn this on; Full keeps the cards.", false, {
 		words = "party frames cards slim", change = function() local m = Stoa.modules.Party; if m.cards then Stoa:AfterCombat(function() m:Layout() end) end end,
 	})
-	toggle(halo, "targetStrip", "Target without a panel", "Your target shows as words and a bar over the world with a small portrait, level with the Halo. Off brings back the solid plaque.", true, { id = "targetStrip", reload = true, words = "target plaque frame" })
+	toggle(halo, "targetStrip", "Target without a panel", "Your target shows as words and a bar over the world with a small portrait, level with the Halo. Slim and Minimal turn this on; Full keeps the solid plaque.", false, { id = "targetStrip", reload = true, words = "target plaque frame" })
 	actions("preview", "Show sample frames", "Fills the screen with sample cards so you can see and move them without a group. A fight ends the preview.", {
 		{ "Party", function() Options.preview("party") end },
 		{ "Raid of 10", function() Options.preview("raid10") end },

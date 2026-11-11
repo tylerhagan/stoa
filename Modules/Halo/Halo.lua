@@ -12,7 +12,7 @@ local UI = Stoa.UI
 local Halo = Stoa:NewModule("Halo", {
 	-- The target as a strip: no panel, a small portrait, words over the
 	-- world, level with the Halo. Off brings back the solid plaque.
-	targetStrip = true,
+	targetStrip = false,
 	hidePlayerFrame = true,
 	hideTargetFrame = true,
 	scale = 1,
@@ -907,6 +907,17 @@ end
 
 function Halo:OnEnable()
 	addTicks(15407, 3) -- Mind Flay
+	-- The party strips and the target without a panel belong to Slim and
+	-- Minimal; Full keeps the cards and the plaque. A character already on
+	-- one of those two gets them once without picking the preset again.
+	if not Stoa.char.stripsChosen then
+		Stoa.char.stripsChosen = true
+		local console, party = Stoa.modules.Grimoire, Stoa.modules.Party
+		if console and (not Stoa:IsModuleEnabled("Grimoire") or (console.db and console.db.slim)) then
+			self.db.targetStrip = true
+			if party and party.db then party.db.strips = true end
+		end
+	end
 	self:Build()
 	if self.db.restArcs then self:BuildRest() end
 
