@@ -20,7 +20,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Target: words and a bar over the world with a small portrait, level with the Halo, in place of the solid plaque. (Settings: Target without a panel.)
 - STOA's Edit Mode layouts hang the quest tracker a little lower, so "All Objectives" no longer runs into the coordinates under the minimap. Saved layouts update at the next login while active.
 - Minimal has its own Edit Mode layout, "Stoa Minimal", with the Cooldown Manager's rows hidden.
-- The quest list folds to its header in combat (it used to dim) and comes back after; hover the header to open it. Settings: Fold quest list in combat.
+- The quest list folds to its header in combat (it used to dim) and comes back after; hover the header to open it. Practice combat folds it too. Settings: Fold quest list in combat.
 - Welcome page: Slim's description fits its card again (it ran a third line into the next card).
 - Quiet: no longer hides the extra bar rows until mouseover, and has its own Edit Mode layout, "Stoa Quiet", with the Cooldown Manager's rows hidden.
 - STOA describes itself as a focused UI, not a calm one.
