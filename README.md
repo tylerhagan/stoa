@@ -2,7 +2,7 @@
 
 # STOA
 
-A calm, two-state UI suite for **WoW Forever** (interface 16001).
+A focused, two-state UI suite for **WoW Forever** (interface 16001).
 
 - **World state:** the Console is open along the bottom: black leather and brass, with chat, party, minimap and notes.
 - **Combat state:** the console folds down flat and the **Halo** rises around your character: health and mana arcs, your spec's signature in the top slot, core buttons in a ring.

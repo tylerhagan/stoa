@@ -451,7 +451,7 @@ def build():
     status = table(sec.get("Status", ""))
     cmds = table(sec.get("Commands", ""))
     ver = version()
-    lede = "STOA: a calm, two-state UI suite for WoW Forever. The console out of combat, the Halo in it."
+    lede = "STOA: a focused, two-state UI suite for WoW Forever. The console out of combat, the Halo in it."
     files = {
         "index.html": page("index.html", "Overview", lede, home(readme, ver), ver),
         "features.html": page("features.html", "Features", "Everything STOA does, grouped.", features(status), ver),
