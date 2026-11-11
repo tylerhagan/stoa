@@ -374,6 +374,78 @@ local function makePip(card)
 	return pip
 end
 
+-- The shield tag: a small shield that empties as the shield on that
+-- player absorbs damage. The game tells an addon what is left but never
+-- what the shield started with, and in a fight even that number is hidden
+-- (it can be handed to a bar, not read). So the amount seen a moment after
+-- the tag first shows is kept as "full", and the bar does the dividing.
+local SHIELD_ART = UI.MEDIA .. "Textures\\Shield"
+local SHIELD_ROOM = 13
+local shieldFull = {} -- unit -> what its shield held when it went up
+
+local function pipShield(pip)
+	if pip.shield then return pip.shield end
+	local holder = CreateFrame("Frame", nil, pip)
+	holder:SetPoint("TOPLEFT", 4, -2)
+	holder:SetPoint("BOTTOMLEFT", 4, 2)
+	holder:SetWidth(SHIELD_ROOM - 3)
+	local back = holder:CreateTexture(nil, "ARTWORK")
+	back:SetAllPoints()
+	back:SetTexture(SHIELD_ART)
+	local fill = CreateFrame("StatusBar", nil, holder)
+	fill:SetAllPoints()
+	fill:SetOrientation("VERTICAL")
+	fill:SetStatusBarTexture(SHIELD_ART)
+	holder.back, holder.fill = back, fill
+	pip.shield = holder
+	return holder
+end
+
+-- Whether the game answered, and its answer. The amount may be hidden, so
+-- it is only ever handed on, never tested or compared.
+local function absorbOf(unit)
+	if not (unit and UnitGetTotalAbsorbs and UnitExists(unit)) then return false end
+	local ok, amount = pcall(UnitGetTotalAbsorbs, unit)
+	return ok, amount
+end
+
+local function showShield(pip, unit, sample)
+	local holder = pipShield(pip)
+	local r, g, b = Stoa:Color("panel")
+	holder.back:SetVertexColor(r, g, b, 0.3)
+	holder.fill:SetStatusBarColor(r, g, b, 1)
+	local known, left
+	if not sample then known, left = absorbOf(unit) end
+	local full = known and shieldFull[unit]
+	if known and full == nil then
+		-- Shown full until the amount has settled; that is then the measure.
+		shieldFull[unit] = false
+		C_Timer.After(0.25, function()
+			if shieldFull[unit] ~= false then return end
+			local ok, amount = absorbOf(unit)
+			if ok then shieldFull[unit] = { amount } end
+		end)
+	end
+	if type(full) == "table" then
+		holder.fill:SetMinMaxValues(0, full[1])
+		holder.fill:SetValue(left)
+	else
+		-- A sample card, a client without the number, or not yet measured.
+		holder.fill:SetMinMaxValues(0, 1)
+		holder.fill:SetValue(sample and 0.65 or 1)
+	end
+	holder:Show()
+	pip.text:ClearAllPoints()
+	pip.text:SetPoint("CENTER", (SHIELD_ROOM - 1) / 2, 0)
+end
+
+local function hideShield(pip)
+	if not pip.shield or not pip.shield:IsShown() then return end
+	pip.shield:Hide()
+	pip.text:ClearAllPoints()
+	pip.text:SetPoint("CENTER", 0, 0)
+end
+
 -- A row of the cards' word tags under any health bar (the tank watch, the
 -- target), so your buffs read the same there as on a party card. Fill it
 -- with UI.setPips.
@@ -1302,29 +1374,37 @@ function UI.setPips(card, list)
 	local room = card.hp and card.hp.GetWidth and Stoa:PlainNumber(card.hp:GetWidth())
 	if room and room > 0 then card.pipRoom = room else room = card.pipRoom end
 	local used, full = 0, false
+	local unit, shielded = card.unit, false
 	for i, pip in ipairs(card.pips) do
 		local entry = list and list[i]
 		if full or (i > 1 and card.style and card.style.strip) then entry = nil end
+		-- The shield tag wears a shield in place of its word (see above).
+		local shield = entry and entry[2] == "shield"
+		local words = entry and entry[1]
+		if shield and type(words) == "string" and not Stoa:IsSecret(words) then
+			words = (words:gsub("^SHLD%s*", ""))
+		end
+		local extra = shield and SHIELD_ROOM or 0
 		local shown
 		if entry and room then
 			local gap = i > 1 and 4 or 0
-			pip.text:SetText(entry[1])
-			shown = entry[1]
-			if used + gap + pipWidth(pip, shown) > room then
+			pip.text:SetText(words)
+			shown = words
+			if used + gap + pipWidth(pip, shown) + extra > room then
 				local plain = type(shown) == "string" and not Stoa:IsSecret(shown)
 				local short = plain and shown:match("^(.-)%s+%d+$")
 				if short then
 					pip.text:SetText(short)
 					shown = short
 				end
-				if not short or used + gap + pipWidth(pip, shown) > room then
+				if not short or used + gap + pipWidth(pip, shown) + extra > room then
 					entry, full = nil, true
 				end
 			end
-			if entry then used = used + gap + pipWidth(pip, shown) end
+			if entry then used = used + gap + pipWidth(pip, shown) + extra end
 		elseif entry then
-			pip.text:SetText(entry[1])
-			shown = entry[1]
+			pip.text:SetText(words)
+			shown = words
 		end
 		if entry then
 			if entry[2] then
@@ -1336,10 +1416,25 @@ function UI.setPips(card, list)
 				pip.bg:SetVertexColor(r, g, b, 0.14)
 				pip.text:SetTextColor(Stoa:Color(entry[3] or "text"))
 			end
-			pip:SetWidth(pipWidth(pip, shown))
+			if shield then
+				shielded = true
+				showShield(pip, unit, card.preview or card.sample)
+			else
+				hideShield(pip)
+			end
+			-- With no timer beside it, the shield sits alone in its tag.
+			local bare = shield and shown == ""
+			pip:SetWidth(bare and (SHIELD_ROOM + 5) or (pipWidth(pip, shown) + extra))
+			if bare then
+				pip.text:ClearAllPoints()
+				pip.text:SetPoint("CENTER", 0, 0)
+			end
 			pip:Show()
 		else
+			hideShield(pip)
 			pip:Hide()
 		end
 	end
+	-- No shield tag any more: the next shield is measured afresh.
+	if unit and not shielded then shieldFull[unit] = nil end
 end
