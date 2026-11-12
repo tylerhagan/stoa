@@ -220,9 +220,30 @@ function Mail:Dress()
 	end
 	local box = SendMailNameEditBox
 	if self.db.toList and box then
-		local to = UI.button(box:GetParent() or SendMailFrame, "Mine", 52, function(b) self:ToMenu(b) end)
-		to:SetHeight(20)
-		to:SetPoint("LEFT", box, "RIGHT", 6, 0)
+		-- A small arrow inside the To box's right end (Postage sits right
+		-- beside the box, so there is no room for a button there).
+		local to = CreateFrame("Button", nil, box)
+		to:SetSize(18, 18)
+		to:SetPoint("RIGHT", box, "RIGHT", -3, 0)
+		local arrow = UI.glyph(to, "Chevron", 12, "muted")
+		arrow:SetPoint("CENTER")
+		arrow:SetRotation(-math.pi / 2)
+		to:SetScript("OnClick", function(b) self:ToMenu(b) end)
+		to:SetScript("OnEnter", function(b)
+			arrow:SetVertexColor(Stoa:Color("accent"))
+			GameTooltip:SetOwner(b, "ANCHOR_TOP")
+			GameTooltip:AddLine("Your characters and recent names")
+			GameTooltip:Show()
+		end)
+		to:SetScript("OnLeave", function()
+			arrow:SetVertexColor(Stoa:Color("muted"))
+			GameTooltip:Hide()
+		end)
+		-- Typed names stop short of the arrow.
+		if box.GetTextInsets and box.SetTextInsets then
+			local left, right, top, bottom = box:GetTextInsets()
+			box:SetTextInsets(left or 0, math.max(right or 0, 20), top or 0, bottom or 0)
+		end
 		self.toButton = to
 	end
 end
