@@ -1,5 +1,5 @@
 -- Stoa: Blizzard's experience bar in STOA's dress.
--- The bar along the bottom of the screen (and the reputation, honor and
+-- The experience bar, wherever Edit Mode puts it (and the reputation, honor and
 -- other bars that share its place) loses its frame, its segmented art and
 -- its glossy fill for a thin flat bar in the same rounded dark track as the
 -- nameplates and the swing timer. Experience fills in the accent like the
