@@ -1386,14 +1386,14 @@ end
 -- Docked (the target out of combat): the plaque stands on the console's
 -- rim, as tall as its medallion, as one shape with its portrait ring: the
 -- left end is cut round the medallion with a gold line following its ring,
--- and the gold top edge curves up into the portrait ring, which rests on the
--- rim, the way the rim flows into the medallion (Tools/art/plaque_join.py).
+-- and the right end is the portrait ring, as tall as the plaque, its gold
+-- top edge running straight on round the ring (Tools/art/plaque_join.py).
 -- Between them, a plain fill with the gold line along its top. Built the
 -- first time it docks. Sizes in UI units, matching the art.
-local JOIN_R, JOIN_H = 42, 68
--- The join art: 88x87, its left edge 4 before the curve starts, the ring's
--- centre 42.37 in and 42 up.
-local JOIN_W, JOIN_ART_H, JOIN_LEAD, JOIN_CX = 88, 87, 4, 42.37
+local JOIN_R, JOIN_H = 34, 68
+-- The join art: 74x70, its left edge 4 before the ring starts, the ring's
+-- centre 38 in and 34 up.
+local JOIN_W, JOIN_ART_H, JOIN_LEAD, JOIN_CX = 74, 70, 4, 38
 -- The socket art: 56x70, its left edge 24 right of the medallion's centre.
 local SOCKET_W, SOCKET_ART_H = 56, 70
 UI.PLAQUE_JOIN_H = JOIN_H
@@ -1544,17 +1544,16 @@ function UI.plaque(frame, coinSide, opts)
 			dock.body:ClearAllPoints()
 			dock.body:SetPoint("BOTTOMLEFT", SOCKET_W, 0)
 			dock.body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
+			-- Centred on the top edge, as the art draws its line.
 			dock.top:ClearAllPoints()
-			dock.top:SetPoint("TOPLEFT", SOCKET_W, 0)
-			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
+			dock.top:SetPoint("TOPLEFT", SOCKET_W, 1)
+			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 1)
 			dock.join:ClearAllPoints()
 			dock.join:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - JOIN_LEAD, 0)
 			-- The portrait sits in the ring.
-			-- A little larger, to fill the bigger ring.
-			local scale = 1.2
-			coin:SetScale(scale)
+			coin:SetScale(1)
 			coin:ClearAllPoints()
-			coin:SetPoint("CENTER", frame, "BOTTOMLEFT", (curve - JOIN_LEAD + JOIN_CX) / scale, JOIN_R / scale)
+			coin:SetPoint("CENTER", frame, "BOTTOMLEFT", curve - JOIN_LEAD + JOIN_CX, JOIN_R)
 		else
 			plaque.placeCoin(plaque.bare and 0.75 or 1)
 		end
