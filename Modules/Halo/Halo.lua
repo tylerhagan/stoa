@@ -22,6 +22,9 @@ local Halo = Stoa:NewModule("Halo", {
 	-- Your own shield, with the amount left, under the health number (and
 	-- on the console's medallion while it is open).
 	shield = true,
+	-- Your class's kept-up buff as a mark that empties (Mark.lua), under
+	-- the power number and on the medallion.
+	classMark = true,
 	scale = 1,
 	-- Quiet mana play: the five-second rule and regen ticks, the cost of
 	-- the spell you are casting, and a druid's mana while shapeshifted.
@@ -178,6 +181,12 @@ function Halo:Build()
 		local shield = UI.shieldGauge(frame, 22)
 		shield:SetPoint("TOPRIGHT", healthText, "BOTTOMRIGHT", 1, -3)
 		self.shield = shield
+	end
+	-- And your class mark under the power number, mirroring it.
+	if self.db.classMark and Stoa.Mark then
+		local mark = Stoa.Mark.attach(frame, 22)
+		if mark then mark:SetPoint("TOPLEFT", manaText, "BOTTOMLEFT", -1, -3) end
+		self.classMark = mark
 	end
 
 	self:BuildSignature(frame)

@@ -7,6 +7,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 1.1.4
 
 - Your shield: a gold shield with a soft drop shadow, whose fill drains smoothly as it soaks up damage, the emptied part a darker gold. It sits at the top of the medallion's ring while the full console is open, and under the Halo's health number in every layout. A switch under Combat turns it off.
+- Your class mark: the buff your class keeps up, drawn like the shield and emptying as it runs out. Warriors get Battle Shout (a horn), rogues Slice and Dice (a dagger), paladins their seal, shamans Lightning or Water Shield (an orb, by charges) and priests Inner Fire (a flame, by charges). It sits under the Halo's power number, and beside the shield at the top of the medallion (one alone stays centred). In a fight timers run from your own cast and charges hold at the last count seen. A switch under Combat turns it off.
 
 ## 1.1.3
 

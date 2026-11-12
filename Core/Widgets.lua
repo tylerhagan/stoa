@@ -477,6 +477,67 @@ local function hideShield(pip)
 	pip.text:SetPoint("CENTER", 0, 0)
 end
 
+-- A mark's drawing (the shield, the class marks): the shape in dark gold,
+-- a gold fill that empties from the top down, and a shadow cast down and
+-- to the right (a tight dark copy over a wider faint one) so it sits on
+-- the ring rather than printed on it. Returns the fill, a vertical bar;
+-- fill.SetArt swaps the drawing.
+function UI.markArt(holder, size, art)
+	local drop = math.max(2, math.floor(size * 0.1 + 0.5))
+	local back = holder:CreateTexture(nil, "ARTWORK")
+	back:SetPoint("TOPLEFT", 0, 0)
+	back:SetPoint("BOTTOMRIGHT", -drop, drop)
+	local soft = holder:CreateTexture(nil, "BORDER", nil, 0)
+	soft:SetVertexColor(0, 0, 0, 0.3)
+	soft:SetPoint("TOPLEFT", back, "TOPLEFT", drop - 1, -drop + 1)
+	soft:SetPoint("BOTTOMRIGHT", back, "BOTTOMRIGHT", drop + 1, -drop - 1)
+	local shadow = holder:CreateTexture(nil, "BORDER", nil, 1)
+	shadow:SetVertexColor(0, 0, 0, 0.65)
+	shadow:SetPoint("TOPLEFT", back, "TOPLEFT", drop / 2, -drop / 2)
+	shadow:SetPoint("BOTTOMRIGHT", back, "BOTTOMRIGHT", drop / 2, -drop / 2)
+	local fill = CreateFrame("StatusBar", nil, holder)
+	fill:SetAllPoints(back)
+	fill:SetOrientation("VERTICAL")
+	fill:SetMinMaxValues(0, 1)
+	fill:SetValue(1)
+	function fill.SetArt(_, path)
+		if fill.art == path then return end
+		fill.art = path
+		back:SetTexture(path)
+		soft:SetTexture(path)
+		shadow:SetTexture(path)
+		fill:SetStatusBarTexture(path)
+		local r, g, b = Stoa:Color("accent")
+		fill:SetStatusBarColor(r, g, b, 1)
+	end
+	local function colour()
+		local r, g, b = Stoa:Color("accent")
+		back:SetVertexColor(r * 0.3, g * 0.3, b * 0.3, 0.95)
+		fill:SetStatusBarColor(r, g, b, 1)
+	end
+	fill:SetArt(art)
+	colour()
+	Stoa:On("STOA_THEME_CHANGED", colour)
+	return fill
+end
+
+
+-- A plain mark (the class marks, Modules/Halo/Mark.lua): SetShare(0..1)
+-- empties it; `ease` glides there rather than snapping (a charge spent),
+-- while a timer is simply set often.
+function UI.markGauge(parent, size, art)
+	local gauge = CreateFrame("Frame", nil, parent)
+	gauge:SetSize(size, size)
+	local fill = UI.markArt(gauge, size, art)
+	gauge.fill = fill
+	function gauge:SetShare(share, ease)
+		if ease and EASE then fill:SetValue(share, EASE) else fill:SetValue(share) end
+	end
+	function gauge:SetArt(path) fill:SetArt(path) end
+	gauge:Hide()
+	return gauge
+end
+
 -- Your own shield as a gauge (the medallion, the Halo): a gold shield
 -- whose fill drains smoothly as it soaks up damage, the emptied part left
 -- in a dark gold. Out of a fight it shows while there is a shield. In a
@@ -487,7 +548,6 @@ end
 -- after the amount first changes from nothing, as the party tags do.
 local GAUGE_SLIDE = 4000
 local gaugeFull = {} -- unit -> { what the shield held when it went up }
-local EASE = Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut
 
 function UI.shieldGauge(parent, size)
 	local gauge = CreateFrame("Frame", nil, parent)
@@ -504,39 +564,8 @@ function UI.shieldGauge(parent, size)
 	holder:SetSize(size, size)
 	holder:SetPoint("RIGHT", slide:GetStatusBarTexture(), "RIGHT")
 
-	-- Depth: the shield casts a shadow down and to the right, a tight dark
-	-- copy of its shape over a wider faint one, so it sits on the ring
-	-- rather than printed on it. The shield leaves the room for it.
-	local drop = math.max(2, math.floor(size * 0.1 + 0.5))
-	local back = holder:CreateTexture(nil, "ARTWORK")
-	back:SetPoint("TOPLEFT", 0, 0)
-	back:SetPoint("BOTTOMRIGHT", -drop, drop)
-	back:SetTexture(SHIELD_ART)
-	local soft = holder:CreateTexture(nil, "BORDER", nil, 0)
-	soft:SetTexture(SHIELD_ART)
-	soft:SetVertexColor(0, 0, 0, 0.3)
-	soft:SetPoint("TOPLEFT", back, "TOPLEFT", drop - 1, -drop + 1)
-	soft:SetPoint("BOTTOMRIGHT", back, "BOTTOMRIGHT", drop + 1, -drop - 1)
-	local shadow = holder:CreateTexture(nil, "BORDER", nil, 1)
-	shadow:SetTexture(SHIELD_ART)
-	shadow:SetVertexColor(0, 0, 0, 0.65)
-	shadow:SetPoint("TOPLEFT", back, "TOPLEFT", drop / 2, -drop / 2)
-	shadow:SetPoint("BOTTOMRIGHT", back, "BOTTOMRIGHT", drop / 2, -drop / 2)
-	local fill = CreateFrame("StatusBar", nil, holder)
-	fill:SetAllPoints(back)
-	fill:SetOrientation("VERTICAL")
-	fill:SetStatusBarTexture(SHIELD_ART)
-	fill:SetMinMaxValues(0, 1)
-	fill:SetValue(1)
+	local fill = UI.markArt(holder, size, SHIELD_ART)
 	gauge.fill = fill
-
-	local function colour()
-		local r, g, b = Stoa:Color("accent")
-		back:SetVertexColor(r * 0.3, g * 0.3, b * 0.3, 0.95)
-		fill:SetStatusBarColor(r, g, b, 1)
-	end
-	colour()
-	Stoa:On("STOA_THEME_CHANGED", colour)
 
 	local function drain(value)
 		if EASE then fill:SetValue(value, EASE) else fill:SetValue(value) end
