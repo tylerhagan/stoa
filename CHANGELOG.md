@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Tooltips: under the sell price of a stack, an "Each" line with what one of them sells for.
 - Experience bar: quests you've finished but not handed in show as a paler gold stretch past the fill, to where turning them in takes you; hovering the bar adds the count and the experience to Blizzard's tooltip in the corner (or shows its own when you aren't rested). Waits while OneForAll's own quest XP marker is on.
 - Your buffs at hand (on by default): out of combat, small icons left of the Halo for your own long buffs when one is missing or has under a tenth of its time left (30 seconds to 2 minutes): Inner Fire, Fortitude, Divine Spirit and Shadowform for priests, an aura, a blessing and Righteous Fury for paladins, Mark of the Wild and Omen of Clarity for druids, Arcane Intellect and an armor for mages, Demon Armor for warlocks, Lightning or Water Shield for shamans, Trueshot Aura for hunters. A missing one breathes softly, an ending one shows its time left. Click to cast; a buff you choose between (aura, blessing, armor, shield) casts the one you had on last. Hidden in a fight.
 - What's new note brought up to 1.1.5.

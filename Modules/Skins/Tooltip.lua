@@ -36,6 +36,8 @@ local Tooltip = Stoa:NewModule("Tooltip", {
 	unitDetails = true,
 	itemLevel = true,
 	owned = true,
+	-- Under the sell price of a stack, what one of them sells for.
+	eachPrice = true,
 	gathering = true,
 	combatHide = false,
 })
@@ -333,6 +335,21 @@ function Tooltip:DressItem(tip, data)
 	if #others > 3 then parts[#parts + 1] = "+" .. (#others - 3) end
 	addPair(tip, "OWNED", Stoa.UI.join(parts), Stoa:Color("text"))
 	tip:Show()
+end
+
+-- A stack's sell price is the whole stack's; under it goes what one sells
+-- for, from the item's own price, when the stack holds more than one.
+function Tooltip:EachPrice(tip, data)
+	if self.db.eachPrice == false or tip.isShopping or type(data) ~= "table" then return end
+	local total = known(data.price)
+	if not total or total <= 0 or (known(data.maxPrice) or 0) > 0 then return end
+	local link = itemLink(tip)
+	if not link or Stoa:IsSecret(link) or not (C_Item and C_Item.GetItemInfo) then return end
+	local each = known(select(11, C_Item.GetItemInfo(link)))
+	if not each or each <= 0 or total <= each or total % each ~= 0 then return end
+	local money = MoneyFormatterUtil and GameTooltipMoneyFormat and MoneyFormatterUtil.FormatMoney(each, GameTooltipMoneyFormat) or Stoa:Money(each)
+	local r, g, b = Stoa:Color("muted")
+	tip:AddLine(("Each: %s"):format(money), r, g, b)
 end
 
 -- Gear against what you wear, from the weaker of the slots it goes in:
@@ -790,6 +807,12 @@ function Tooltip:OnEnable()
 			TooltipDataProcessor.AddLinePostCall(kind, Stoa:Guard(function(tip, data)
 				if not usable(tip) then return end
 				self:QuestLine(tip, data)
+			end, "Tooltip"))
+		end
+		if types.SellPrice then
+			TooltipDataProcessor.AddLinePostCall(types.SellPrice, Stoa:Guard(function(tip, data)
+				if not usable(tip) then return end
+				self:EachPrice(tip, data)
 			end, "Tooltip"))
 		end
 	end

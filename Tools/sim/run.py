@@ -691,6 +691,22 @@ do
 		container.bars = {}
 	end
 end
+-- The price of one in a stack: 6 scales selling for 4s 50c are 75c each.
+do
+	local tooltip = Stoa.modules.Tooltip
+	if tooltip and tooltip.EachPrice then
+		local added
+		local tip = { GetItem = function() return "Slimy Murloc Scale", "|Hitem:5784|h[Slimy Murloc Scale]|h" end, AddLine = function(_, text) added = text end }
+		local realInfo = C_Item.GetItemInfo
+		C_Item.GetItemInfo = function() return "Slimy Murloc Scale", nil, 1, 10, 0, "Tradeskill", "Trade Goods", 20, "", 0, 75 end
+		tooltip:EachPrice(tip, { price = 450 })
+		if not (added and added:find("Each")) then SIM_ERRORS[#SIM_ERRORS + 1] = "Each price: no line for a stack of 6" end
+		added = nil
+		tooltip:EachPrice(tip, { price = 75 })
+		if added then SIM_ERRORS[#SIM_ERRORS + 1] = "Each price: a line for a single item" end
+		C_Item.GetItemInfo = realInfo
+	end
+end
 -- Your own buffs: a priest without Inner Fire gets a button for it, and
 -- none once it's on with time to spare.
 do
