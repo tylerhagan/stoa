@@ -242,7 +242,7 @@ local function build()
 	toggle(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar.", true, { reload = true, words = "unit frame" })
 	toggle(halo, "targetOfTarget", "Target of target", "Who your target is targeting: a name and a thin health line to the right of the target plaque. Says YOU when it is you. Click it to target them.", true, { reload = true, words = "tot assist aggro" })
 	toggle(halo, "focusFrame", "Focus", "Your focus as a small block under the target of target, with or without a target. Off brings back Blizzard's focus frame. Move it with /stoa move.", true, { reload = true, words = "focus unit frame" })
-	toggle(halo, "shield", "Your shield", "A small shield with the amount it has left, emptying as it soaks up damage: under the Halo's health number, and on the medallion while the console is open.", true, { id = "haloShield", reload = true, words = "absorb power word shield bubble" })
+	toggle(halo, "shield", "Your shield", "A small gold shield that empties as it soaks up damage: under the Halo's health number, and at the top of the medallion with the share left while the console is open.", true, { id = "haloShield", reload = true, words = "absorb power word shield bubble" })
 	toggle(halo, "hideTargetFrame", "Hide Blizzard's target frame", "STOA shows your target beside the Halo.", true, { reload = true, words = "unit frame" })
 	group = "Combat bar"
 	toggle(of("CombatBar"), "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before.", true, { id = "combatBar", reload = true, words = "action bar" })

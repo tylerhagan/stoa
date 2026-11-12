@@ -6,7 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.4
 
-- Your shield: a small shield with the amount it has left, emptying as it soaks up damage. It sits under the Halo's health number in every layout, and on the medallion's ring while the full console is open. A switch under Combat turns it off.
+- Your shield: a small gold shield that empties as it soaks up damage. On the medallion it sits at the top of the ring on a dark plate with the share left (85%). Under the Halo's health number it shows in every layout, without the share, since the game hides the amount in a fight. A switch under Combat turns it off.
 
 ## 1.1.3
 
