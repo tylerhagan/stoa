@@ -721,10 +721,14 @@ do
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: docked doesn't follow resting"
 		end
 		if not plaque.bare then
-			plaque:SetDocked(true)
-			if not (plaque.dock and plaque.dock.foot:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: dock foot missing" end
+			plaque:SetDocked(true, 299)
+			if not (plaque.dock and plaque.dock.join:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: join missing when docked" end
+			halo:LayoutTarget(299)
+			if not target.laidDocked then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: not laid out docked" end
 			plaque:SetDocked(false)
-			if plaque.dock and plaque.dock.foot:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: dock foot stays undocked" end
+			halo:LayoutTarget(nil)
+			if plaque.dock and plaque.dock.join:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: join stays undocked" end
+			if target.laidDocked then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: still laid out docked" end
 			halo:PlaceTarget()
 		end
 		local realCasting, realExists = UnitCastingInfo, UnitExists

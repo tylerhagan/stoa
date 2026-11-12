@@ -5,9 +5,6 @@
   has fully round ends at its real size. The pill fills the width and sits
   centred; the texture is anchored 4.25 above and below the bar.
 - TargetBarEdge.tga (512x64): the pill's 1px outline at that size.
-- PlaqueFillet.tga / PlaqueFilletEdge.tga (32x32, shown at 16): the concave
-  corner that curves the docked plaque's side into the console rim, and its
-  gold line. Drawn for the left side; the right side flips the coordinates.
 
 Usage: python plaque_dock.py <Media/Textures>
 """
@@ -48,21 +45,10 @@ def pill(inset):
     return down((np.hypot(x - cx, y - cy) <= r).astype(float), TEX_W, TEX_H)
 
 
-def fillet(size, line):
-    x, y = grid(size, size)
-    d = np.hypot(x, y)
-    fill = down((d >= size).astype(float), size, size)
-    edge = down(((d >= size - line) & (d <= size)).astype(float), size, size)
-    return fill, edge
-
-
 def main(out):
     px = TEX_W / BAR_W
     save(pill(0), f"{out}/TargetBar.tga")
     save(np.clip(pill(0) - pill(px), 0, 1), f"{out}/TargetBarEdge.tga")
-    fill, edge = fillet(32, 2)
-    save(fill, f"{out}/PlaqueFillet.tga")
-    save(edge, f"{out}/PlaqueFilletEdge.tga")
 
 
 if __name__ == "__main__":
