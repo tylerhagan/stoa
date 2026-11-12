@@ -828,33 +828,47 @@ function Console:BuildFellowship(frame, space)
 	open:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
--- The crest: the shield and the class mark at the top of the ring. The
--- shapes leave room for their shadow down and right, so each is nudged by
--- half of it to sit centred.
--- Measured on ConsoleMedallion.tga: the dark band of ticks runs from the
--- seal's ring (2 px out from the portrait) to the art's gold ring (13 px out);
--- the feet sit a little inside its middle (Tyler's pick, 4 px under it).
+-- The crest: the shield and the class mark. With the art they sit in the
+-- open corner left of the ring, over the gold line where it sweeps down off
+-- the ring and runs flat (the right is left clear for the target); one
+-- alone takes the spot nearest the ring, both sit in a row outwards.
+-- Measured on ConsoleMedallionLines.tga, from the ring's centre: the line
+-- runs flat about 10 px up from 90 px out, and climbs to 22 px up at 83
+-- px out and 45 px up at 58 px out. Without the art they sit at the top
+-- of the ring, their feet in the band between the portrait and the ring.
+local CREST_X, CREST_Y = -106, 30
 local CREST_FOOT = 3
 
 function Console:PlaceCrest()
 	local shield, mark = self.sealShield, self.sealMark
 	if not (shield or mark) then return end
 	local size = self.crestSize
+	-- The shapes leave room for their shadow down and right, so each is
+	-- nudged by half of it to sit centred.
 	local drop = math.max(2, math.floor(size * 0.1 + 0.5))
 	local nudge = math.floor(drop / 2 + 0.5)
-	-- Raised so the shapes' feet rest halfway across the dark band between
-	-- the portrait and the ring (CREST_FOOT above the portrait's top).
+	local shown = {}
+	for _, gauge in ipairs({ shield, mark }) do
+		if gauge then
+			gauge:ClearAllPoints()
+			if gauge:IsShown() then shown[#shown + 1] = gauge end
+		end
+	end
+	-- Hidden ones still need a place for when they show.
+	for _, gauge in ipairs({ shield, mark }) do
+		if gauge and not gauge:IsShown() then shown[#shown + 1] = gauge end
+	end
+	if self:Art() then
+		local step = size + 4
+		for i, gauge in ipairs(shown) do
+			gauge:SetPoint("CENTER", self.crestPortrait, "CENTER", CREST_X - (i - 1) * step + nudge, CREST_Y + nudge)
+		end
+		return
+	end
 	local lift = math.floor(CREST_FOOT + (size - drop) / 2 - drop / 2 + 0.5)
-	local both = shield and mark and shield:IsShown() and mark:IsShown()
-	local apart = both and math.floor(size * 0.6 + 0.5) or 0
-	if shield then
-		shield:ClearAllPoints()
-		shield:SetPoint("CENTER", self.crestPortrait, "TOP", nudge - apart, lift)
-	end
-	if mark then
-		mark:ClearAllPoints()
-		mark:SetPoint("CENTER", self.crestPortrait, "TOP", nudge + apart, lift)
-	end
+	local apart = (shield and mark and shield:IsShown() and mark:IsShown()) and math.floor(size * 0.6 + 0.5) or 0
+	if shield then shield:SetPoint("CENTER", self.crestPortrait, "TOP", nudge - apart, lift) end
+	if mark then mark:SetPoint("CENTER", self.crestPortrait, "TOP", nudge + apart, lift) end
 end
 
 -- The medallion ring --------------------------------------------------------
