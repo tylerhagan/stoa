@@ -655,6 +655,42 @@ do
 		drain()
 	end
 end
+-- Finished quests on the experience bar: a stretch past the fill for the
+-- experience a finished quest gives, and none without one.
+do
+	local xpbar = Stoa.modules.XPBar
+	if xpbar and xpbar.enabled then
+		local container = CreateFrame("Frame", "MainStatusTrackingBarContainer", UIParent)
+		local bar = CreateFrame("Frame", nil, container)
+		bar:SetSize(1000, 10)
+		bar.StatusBar = CreateFrame("StatusBar", nil, bar)
+		bar.StatusBar:SetSize(1000, 6)
+		bar.StatusBar.GetWidth = function() return 1000 end
+		bar.StatusBar:SetMinMaxValues(0, 10000)
+		bar.StatusBar:SetValue(2500)
+		bar.ExhaustionLevelFillBar = bar:CreateTexture()
+		container.bars = { bar }
+		local realNum, realInfo, realComplete, realXP = C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete, GetQuestLogRewardXP
+		C_QuestLog.GetNumQuestLogEntries = function() return 2 end
+		C_QuestLog.GetInfo = function(i) return { questID = 100 + i, title = "Q" .. i } end
+		C_QuestLog.IsComplete = function(id) return id == 101 end
+		GetQuestLogRewardXP = function(id) return 1500 end
+		xpbar:UpdateQuests()
+		local stretch = bar.StatusBar.stoaQuests
+		if not (stretch and stretch:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: no stretch for a finished quest"
+		else
+			local width
+			stretch.SetWidth = function(_, w) width = w end
+			xpbar:UpdateQuests()
+			if not (width and math.abs(width - 150) < 1) then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: stretch width " .. tostring(width) end
+		end
+		C_QuestLog.IsComplete = function() return false end
+		xpbar:UpdateQuests()
+		if stretch and stretch:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: stretch shown with nothing finished" end
+		C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete, GetQuestLogRewardXP = realNum, realInfo, realComplete, realXP
+		container.bars = {}
+	end
+end
 -- Your own buffs: a priest without Inner Fire gets a button for it, and
 -- none once it's on with time to spare.
 do

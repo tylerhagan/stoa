@@ -24,6 +24,7 @@ local NOTE = {
 	lines = {
 		{ "Your buffs at hand", "Out of combat, small icons left of the Halo for the long buffs you keep on yourself when one is missing or about to run out, such as Inner Fire, a paladin's aura and blessing, a mage's armor or a shaman's shield. Click one to cast it. Every class but warriors and rogues has some." },
 		{ "Sparkle on what's up close", "The herb, ore, chest or quest object the game's interact icon marks gets a soft gold glow with a few twinkling stars. Chairs and furniture no longer get the icon, and quest items lying in the world get the game's own loot sparkle." },
+		{ "Finished quests on the experience bar", "A paler gold stretch past your experience shows where handing in your finished quests takes you. Hover the bar for the count and the experience." },
 		{ "A dot for new whispers", "A whisper arriving in a chat window you aren't looking at, such as a Whispers tab, puts a gold dot on its tab until you open it." },
 		{ "Grey quests left alone", "Accepting quests for you skips low-level quests, and holding Shift as you talk to an NPC now reliably stops the comforts for that talk." },
 		{ "OneForAll, side by side", "With OneForAll, the jobs both can do (sparkles, hiding errors, gathering minimap icons and more) go to whichever has its switch on, and STOA asks once whether to turn off OneForAll's low-rank check and info bar." },
