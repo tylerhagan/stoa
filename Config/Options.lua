@@ -548,7 +548,7 @@ local function build()
 	local mail = of("Mail")
 	toggle(mail, "takeGold", "Take gold button", "Beside the mailbox's Open All: takes the money from every letter and leaves the items. Cash on delivery and letters from game masters are always left for you.", true, { reload = true, words = "postal mailbox money collect" })
 	toggle(mail, "summary", "Say what came out", "After Open All, one line in chat with the money and items it took.", true, { words = "postal mailbox" })
-	toggle(mail, "toList", "Your characters in To", "A Mine button beside the name box lists your own characters on this realm and the people you mailed lately.", true, { reload = true, words = "postal alts send recipient" })
+	toggle(mail, "toList", "Your characters in To", "A small arrow inside the name box lists your own characters on this realm and the people you mailed lately.", true, { reload = true, words = "postal alts send recipient" })
 	group = "Away"
 	local away = of("Away")
 	toggle(away, "enabled", "Away screen", "When you go away out of a fight, the interface steps aside: your name, rest and time away on a band of leather, and any whispers that come meanwhile. Move, or press Back, to return.", true, { id = "awayOn", words = "afk idle screensaver" })
