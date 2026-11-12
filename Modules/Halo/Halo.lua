@@ -19,8 +19,8 @@ local Halo = Stoa:NewModule("Halo", {
 	targetOfTarget = true,
 	-- Your focus as a small block under the target of target.
 	focusFrame = true,
-	-- Your own shield, with the amount left, under the health number (and
-	-- on the console's medallion while it is open).
+	-- Your own shield, draining as it soaks up damage, under the health
+	-- number (and beside the console's medallion while it is open).
 	shield = true,
 	-- Your class's kept-up buff as a mark that empties (Mark.lua), under
 	-- the power number and on the medallion.
