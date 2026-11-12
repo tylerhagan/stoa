@@ -170,7 +170,7 @@ end
 function Shadow:BuildWeaving(target)
 	local holder = CreateFrame("Frame", nil, target)
 	holder:SetSize(120, 10)
-	holder:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -6)
+	holder:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -12)
 	local word = UI.caption(holder, "Weaving")
 	word:SetPoint("LEFT")
 	holder.pips = {}
