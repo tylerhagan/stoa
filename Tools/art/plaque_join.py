@@ -3,7 +3,8 @@ game). The plaque stands on the console rim as tall as the medallion.
 
 - PlaqueJoin.tga / PlaqueJoinLines.tga: the right end, the target's
   portrait ring as tall as the plaque: the gold top edge runs straight on
-  into the ring, round its top right, then straight down to the rim.
+  into the ring, round its top right, straight down, then sweeps out to
+  the right into the rim like the medallion's flourish (FLARE 16).
 - PlaqueSocket.tga / PlaqueSocketLines.tga: the left end, cut round the
   console's medallion with a gold line following its ring, so the plaque
   sits against the medallion like a socket.
@@ -24,6 +25,7 @@ from PIL import Image
 
 PX, SS = 4, 4
 H, R = 68.0, 34.0
+FLARE = 16.0
 LINE, INNER_A = 2.0, 0.45
 MED_R, MED_DROP, SOCKET_GAP, SOCKET_X, SOCKET_W = 74.0, 5.9, 4.0, 24.0, 56
 
@@ -51,16 +53,23 @@ def join(out):
     # the ring's top and round its right side down to the rim.
     lead = 4.0
     cx, cy = lead + R, R
-    w, h = int(math.ceil(cx + R + 2)), int(H + 2)
+    edge = cx + R
+    w, h = int(math.ceil(edge + FLARE + 2)), int(H + 2)
     x, y = grid(w, h)
     dc = np.hypot(x - cx, y - cy)
+    # The flare's centre: the edge sweeps out round it into the rim.
+    fx, fy = edge + FLARE, FLARE
+    dfl = np.hypot(x - fx, y - fy)
     # Round over the top right; below the ring's middle its edge drops
-    # straight down to the rim.
-    fill = ((x <= cx) & (y <= H)) | (dc <= R) | ((x <= cx + R) & (y <= cy))
+    # straight down, then sweeps out to the right into the rim, the way the
+    # medallion's flourish does.
+    fill = ((x <= cx) & (y <= H)) | (dc <= R) | ((x <= edge) & (y <= cy))
+    fill |= (x >= edge) & (x <= fx) & (y <= fy) & (dfl >= FLARE)
     half = LINE / 2
     top = (x <= cx) & (np.abs(y - H) <= half)
     ring = (np.abs(dc - R) <= half) & (x >= cx) & (y >= cy)
-    ring |= (np.abs(x - (cx + R)) <= half) & (y <= cy)
+    ring |= (np.abs(x - edge) <= half) & (y <= cy) & (y >= fy)
+    ring |= (np.abs(dfl - FLARE) <= half) & (x <= fx + half) & (y <= fy + half) & (x >= edge - half)
     inner = (np.abs(dc - (R - 4.5)) <= 0.5) * INNER_A
     lines = np.maximum((top | ring).astype(float), inner)
     save(down(fill.astype(float)), f"{out}/PlaqueJoin.tga")
