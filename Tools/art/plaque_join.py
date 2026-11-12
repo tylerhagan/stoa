@@ -3,7 +3,7 @@ game). The plaque stands on the console rim as tall as the medallion.
 
 - PlaqueJoin.tga / PlaqueJoinLines.tga: the right end, the target's
   portrait ring as tall as the plaque: the gold top edge runs straight on
-  into the ring and round its right side down to the rim.
+  into the ring, round its top right, then straight down to the rim.
 - PlaqueSocket.tga / PlaqueSocketLines.tga: the left end, cut round the
   console's medallion with a gold line following its ring, so the plaque
   sits against the medallion like a socket.
@@ -54,10 +54,13 @@ def join(out):
     w, h = int(math.ceil(cx + R + 2)), int(H + 2)
     x, y = grid(w, h)
     dc = np.hypot(x - cx, y - cy)
-    fill = ((x <= cx) & (y <= H)) | (dc <= R)
+    # Round over the top right; below the ring's middle its edge drops
+    # straight down to the rim.
+    fill = ((x <= cx) & (y <= H)) | (dc <= R) | ((x <= cx + R) & (y <= cy))
     half = LINE / 2
     top = (x <= cx) & (np.abs(y - H) <= half)
-    ring = (np.abs(dc - R) <= half) & (x >= cx)
+    ring = (np.abs(dc - R) <= half) & (x >= cx) & (y >= cy)
+    ring |= (np.abs(x - (cx + R)) <= half) & (y <= cy)
     inner = (np.abs(dc - (R - 4.5)) <= 0.5) * INNER_A
     lines = np.maximum((top | ring).astype(float), inner)
     save(down(fill.astype(float)), f"{out}/PlaqueJoin.tga")
