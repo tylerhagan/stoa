@@ -4,6 +4,10 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.1.5
+
+- Talents and spellbook window: its dark header now rises fully above the window, so the talent art no longer covers its lower half.
+
 ## 1.1.4
 
 - A short what's new note shows once after updating, for your shield and your class mark. /stoa news shows it again.
@@ -20,7 +24,6 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - The Halo's timer coins (DoTs and buffs you keep up, such as Shadow Word: Pain and Devouring Plague) fade to a faint outline when they're off instead of turning orange, like an unticked line on a checklist; they keep their place, and pale gold still marks the last seconds.
 - What's new: lines about one class or a few now carry class tags in class colour beside the headline, and the note is a little wider to fit them.
 - Character window: the close cross sits level with your name in the header instead of halfway down it.
-- Talents and spellbook window: its dark header now rises fully above the window, so the talent art no longer covers its lower half.
 - At a glance: long labels shortened so they fit beside their figure: Gold rate, and Enchant, Smithing, Engineer, Leather, Jewels and Scribe for the long profession names.
 
 ## 1.1.3
