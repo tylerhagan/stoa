@@ -25,7 +25,9 @@ local TARGETS = {
 	{ name = "SpellBookFrame", band = 24 },
 	{ name = "PlayerTalentFrame" },
 	{ name = "TalentFrame" },
-	{ name = "MailFrame", parts = { "MailFrameInset", "SendMailMoneyInset", "SendMailMoneyBg" } },
+	-- Send Mail's To row starts 30px down with the letter close beneath it,
+	-- so the strip stays short to leave the row some air.
+	{ name = "MailFrame", band = 24, parts = { "MailFrameInset", "SendMailMoneyInset", "SendMailMoneyBg" } },
 	{ name = "OpenMailFrame", parts = { "OpenMailFrameInset" } },
 	{ name = "AuctionHouseFrame" },
 	{ name = "PVEFrame" },
