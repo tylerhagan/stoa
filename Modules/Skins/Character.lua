@@ -178,7 +178,7 @@ end
 
 local LEFT_W = 684       -- the slots and model, Blizzard's 398 widened
 local SHEET_H = 560      -- Blizzard's 484, with room for the names
-local BLIZZ_LEFT_W = 398
+local BLIZZ_LEFT_W = 398 -- Blizzard's left pane, the model's width
 local SLOT, SLOT_GAP = 40, 6
 local SIDE = 20          -- from the window's edge to the slot columns
 local SLOTS_TOP = 72     -- under the header band
@@ -440,17 +440,25 @@ function Character:LayOut()
 		self.layOutAfterCombat = true
 		return
 	end
+	-- One size for every tab, so the window never jumps as you switch and
+	-- the tabs always fit in its header: Blizzard's other pages (skills,
+	-- reputation) fill the same wider left pane.
 	local left = frame.LeftPaneHost
-	if not onSheet() then
-		if left and left:GetWidth() ~= BLIZZ_LEFT_W then left:SetWidth(BLIZZ_LEFT_W) end
-		self:PlaceTabs()
-		return
-	end
 	local collapsed = frame.IsRightPaneCollapsed and frame:IsRightPaneCollapsed()
 	local right = frame.RightPaneHost
 	local rightW = (not collapsed and right and right:GetWidth()) or 0
 	frame:SetSize(LEFT_W + rightW, SHEET_H)
 	if left then left:SetWidth(LEFT_W) end
+	-- The item level line belongs to the sheet; Blizzard gives other pages
+	-- their own title, in its gold, which STOA sets light again.
+	local sheet = onSheet()
+	if frame.stoaAverage then frame.stoaAverage:SetShown(sheet and true or false) end
+	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
+	if title then title:SetTextColor(Stoa:Color("text")) end
+	if not sheet then
+		self:PlaceTabs()
+		return
+	end
 	if not laidOut then
 		laidOut = true
 		hideArt()
@@ -546,6 +554,13 @@ local function dressCharacter()
 		-- Blizzard sizes the window on every tab change; the layout follows.
 		if frame.UpdateSize then hooksecurefunc(frame, "UpdateSize", function() guarded(Character.LayOut, Character) end) end
 		if frame.UpdateTabLayout then hooksecurefunc(frame, "UpdateTabLayout", function() guarded(Character.PlaceTabs, Character) end) end
+		-- Blizzard colours each page's title gold; STOA keeps it light.
+		if frame.UpdateTitle then
+			hooksecurefunc(frame, "UpdateTitle", function()
+				local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
+				if title then title:SetTextColor(Stoa:Color("text")) end
+			end)
+		end
 		if frame.SetSelectedModeTabByFrame then hooksecurefunc(frame, "SetSelectedModeTabByFrame", function() guarded(Character.PaintTabs, Character) end) end
 		frame:HookScript("OnShow", function() guarded(Character.LayOut, Character) end)
 		Stoa:On("PLAYER_REGEN_ENABLED", function()
