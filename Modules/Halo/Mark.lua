@@ -161,6 +161,66 @@ local function wire()
 	end
 end
 
+-- The mark's tooltip on the medallion (out of a fight, so times and
+-- charges can be read): the buff, what's left of it, and what it does.
+local function clock(seconds)
+	seconds = math.max(0, math.floor(seconds + 0.5))
+	return ("%d:%02d"):format(math.floor(seconds / 60), seconds % 60)
+end
+
+function Mark.describe(tip)
+	local def = mark()
+	if not def then return end
+	local id, name, state
+	if def.kind == "seal" then
+		local paladin = Stoa.modules.Paladin
+		local ends
+		if paladin and paladin.Seal and paladin.enabled then
+			local ok, seal, at = pcall(paladin.Seal, paladin)
+			if ok then name, ends = seal, at end
+		end
+		if not name and lastSeal and GetTime() - lastSeal.at < def.length then
+			name, ends = lastSeal.name, lastSeal.at + def.length
+		end
+		if name then
+			local plainEnds = Stoa:PlainNumber(ends)
+			state = plainEnds and clock(plainEnds - GetTime()) .. " left" or "Up"
+		else
+			name, state = "Your seal", "No seal up. It only matters in a fight."
+		end
+	else
+		for _, spell in ipairs(def.spells or { def.spell }) do
+			local spellNamed = Sign.knows(spell) and spellName(spell)
+			if spellNamed then
+				id, name = id or spell, name or spellNamed
+				local aura = Sign.aura("player", spellNamed, "HELPFUL")
+				if aura then
+					id, name = spell, spellNamed
+					if def.kind == "charges" then
+						local stacks = Sign.stacks(aura)
+						state = stacks and (stacks == 1 and "1 charge left" or stacks .. " charges left") or "Up"
+					else
+						local left = Sign.left(aura)
+						state = left and clock(left) .. " left" or "Up"
+					end
+					break
+				end
+			end
+		end
+		if not name then return end
+		state = state or "Missing. Cast it before the pull."
+	end
+	tip:AddLine(name)
+	local missing = state:sub(1, 7) == "Missing" or state:sub(1, 7) == "No seal"
+	tip:AddLine(state, Stoa:Color(missing and "danger" or "accent"))
+	local words = id and C_Spell and C_Spell.GetSpellDescription and C_Spell.GetSpellDescription(id)
+	if type(words) == "string" and words ~= "" and not Stoa:IsSecret(words) then
+		local r, g, b = Stoa:Color("muted")
+		tip:AddLine(words, r, g, b, true)
+	end
+	return true
+end
+
 -- Whether this character has a mark at all.
 function Mark.has()
 	return mark() ~= nil

@@ -12,6 +12,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - The experience bar along the bottom of the screen in STOA's dress: a thin flat bar in a rounded dark track, experience in the accent like the medallion's bezel, the rested stretch in blue with a fine blue line where it ends, and Blizzard's segment dividers as fine dark notches. Reputation, honor and the other bars that share its place get the same track, reputation coloured by standing. Edit Mode still places it, and a switch under Windows turns it off.
 - The experience bar fades out in a fight and back after, like the console (a switch under Windows), and its notches show only over the filled part.
 - Missing Inner Fire, or a missing seal in a fight, shows as the class mark empty and dimmed, in place of the warning words above the bars and in the console's Ready column. Without the mark (switched off, or the Slim console out of a fight) the words stay.
+- Hovering the shield or the class mark beside the medallion says what it is: how much damage the shield still absorbs, or the buff with its time or charges left (or that it's missing) and what it does.
 - At a glance: long labels shortened so they fit beside their figure: Gold rate, and Enchant, Smithing, Engineer, Leather, Jewels and Scribe for the long profession names.
 
 ## 1.1.3
