@@ -12,18 +12,19 @@ local WhatsNew = {}
 Stoa.WhatsNew = WhatsNew
 
 -- Read this before every release: the lines must still be true of the
--- version going out. Change `edition` only to show the note again to
--- players who have already seen it.
+-- version going out. Each release with something worth telling players
+-- gets a fresh note and a new `edition` (its version), so it shows once
+-- to everyone; a fixes-only release keeps the last one.
 local NOTE = {
-	edition = "1.1",
-	title = "New in STOA 1.1",
+	edition = "1.1.3",
+	title = "New in STOA 1.1.3",
 	lines = {
-		{ "Slim", "The console as one plain line, a quarter of the height." },
-		{ "Minimal", "No console at all. Health and mana rest as two faint arcs around your character." },
-		{ "Your own mix", "Pick the console, party cards, target and resting look one by one." },
-		{ "Quest list", "It folds away in a fight and comes back after." },
+		{ "Target of target", "Who your target is targeting, beside the target. It says YOU when it is you." },
+		{ "Shield", "On party cards, a small shield that drains as it soaks up damage." },
+		{ "Druid form mana", "Your mana in cat and bear form now shows in combat too." },
+		{ "Speed", "A new line you can add to At a glance." },
 	},
-	foot = "All of it is in the settings under Setup. /stoa news shows this again.",
+	foot = "Target of target can be switched off in the settings under Combat. /stoa news shows this again.",
 }
 
 local WIDTH = 460
