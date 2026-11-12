@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.3
 
+- Target of target: who your target is targeting shows to the right of the target plaque, a name and a thin health line, and says YOU when it is you. Click it to target them. A switch under Combat turns it off.
 - Drawn glyphs replace font symbols: close crosses, fold plus and minus, the mail window's page chevrons, the Shift arrow on the combat bar and the dot between words are now STOA's own art, and several lines read with plain punctuation instead.
 - At a glance: a Speed line you can add (under Stats), your movement speed as a percentage of plain running.
 - Training page: Mind Soothe, Shackle Undead and spells Forever opened to every race (Devouring Plague, Fear Ward) are no longer left out. Visit your class trainer once so STOA sees what it offers.

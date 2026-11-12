@@ -15,6 +15,8 @@ local Halo = Stoa:NewModule("Halo", {
 	targetStrip = false,
 	hidePlayerFrame = true,
 	hideTargetFrame = true,
+	-- Who your target is targeting, as a small line at the plaque's right.
+	targetOfTarget = true,
 	scale = 1,
 	-- Quiet mana play: the five-second rule and regen ticks, the cost of
 	-- the spell you are casting, and a druid's mana while shapeshifted.
@@ -391,6 +393,8 @@ function Halo:BuildTarget(frame)
 		for _, fs in ipairs({ caption, cue, name, health, threat, kick }) do UI.legible(fs) end
 	end
 
+	if self.db.targetOfTarget then self:BuildTargetOfTarget(target) end
+
 	-- Auras: on a friend, their buffs, yours first; on an enemy, the
 	-- debuffs you put there. Rounded icons with a sweep for time left.
 	target.auras = {}
@@ -546,6 +550,59 @@ function Halo:UpdateCooldown()
 	end)
 end
 
+-- Your target's target: a caption, a name and a thin health line to the
+-- right of the plaque. Click it to target them. The game sends no events
+-- for this unit, so it is read a few times a second while it shows.
+local TOT_WIDTH = 124
+function Halo:BuildTargetOfTarget(target)
+	local chip = CreateFrame("Button", "StoaTargetTarget", target, "SecureUnitButtonTemplate")
+	chip:SetSize(TOT_WIDTH, 38)
+	chip:SetPoint("TOPLEFT", target, "TOPRIGHT", 14, -TARGET_PAD)
+	chip:SetAttribute("unit", "targettarget")
+	chip:SetAttribute("type1", "target")
+	chip:SetAttribute("type2", "togglemenu")
+	chip:RegisterForClicks("AnyUp")
+	RegisterStateDriver(chip, "visibility", "[@targettarget,exists] show; hide")
+	chip:SetScript("OnEnter", function(button)
+		GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+		pcall(GameTooltip.SetUnit, GameTooltip, "targettarget")
+		GameTooltip:Show()
+	end)
+	chip:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	local caption = UI.caption(chip, "Targeting")
+	caption:SetPoint("TOPLEFT")
+	local name = UI.text(chip, "sans", Stoa.typeSize.body, "text", "LEFT")
+	name:SetPoint("TOPLEFT", caption, "BOTTOMLEFT", 0, -4)
+	name:SetWidth(TOT_WIDTH)
+	name:SetWordWrap(false)
+	local hp = UI.bar(chip, TOT_WIDTH, 3, "health")
+	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
+	for _, fs in ipairs({ caption, name }) do UI.legible(fs) end
+	chip.name, chip.hp = name, hp
+	target.tot = chip
+	Stoa:NewTicker(0.2, function()
+		if chip:IsVisible() then self:UpdateTargetOfTarget() end
+	end)
+end
+
+function Halo:UpdateTargetOfTarget()
+	local chip = self.target and self.target.tot
+	if not chip or not UnitExists("targettarget") then return end
+	local plain = Stoa.safe.plain
+	local hostile = plain(UnitCanAttack("player", "target"))
+	-- You, said plainly: on an enemy it is the thing to know at a glance.
+	if plain(UnitIsUnit("targettarget", "player")) then
+		chip.name:SetText("YOU")
+		chip.name:SetTextColor(Stoa:Color(hostile and "danger" or "accent"))
+	else
+		chip.name:SetText(UnitName("targettarget"))
+		chip.name:SetTextColor(UI.classColor("targettarget"))
+	end
+	UI.setUnitBar(chip.hp, "targettarget", "health")
+	local foe = plain(UnitCanAttack("player", "targettarget"))
+	chip.hp:SetStatusBarColor(Stoa:Color(foe and "hostile" or "health"))
+end
+
 function Halo:ResetTargetName()
 	local fs = self.target and self.target.name
 	if not fs or not UnitExists("target") then return end
@@ -604,6 +661,7 @@ function Halo:UpdateTarget()
 	target.health:SetShown(not dead)
 	target:SetAlpha(self:TargetAlpha(dead))
 	self:UpdateTargetAuras()
+	self:UpdateTargetOfTarget()
 	if dead then
 		target.threat:SetText("")
 	else
