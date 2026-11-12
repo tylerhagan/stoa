@@ -478,87 +478,53 @@ local function hideShield(pip)
 end
 
 -- Your own shield as a gauge (the medallion, the Halo): a gold shield
--- emptying as it soaks up damage, and on the medallion how much of it is
--- left, as a share. Out of a fight it shows while there is a shield. In a
--- fight the amount can't be read, only handed on, so the share is left out
--- and the gauge rides a hidden bar of 0 to 1 that is given the amount: any
--- shield fills it and slides the gauge into its clipping window, none
--- slides it out (the lethal skull's trick). What the shield started with
--- is measured a moment after the amount first changes from nothing, as the
--- party tags do.
+-- whose fill drains smoothly as it soaks up damage, the emptied part left
+-- in a dark gold. Out of a fight it shows while there is a shield. In a
+-- fight the amount can't be read, only handed on, so the gauge rides a
+-- hidden bar of 0 to 1 that is given the amount: any shield fills it and
+-- slides the gauge into its clipping window, none slides it out (the
+-- lethal skull's trick). What the shield started with is measured a moment
+-- after the amount first changes from nothing, as the party tags do.
 local GAUGE_SLIDE = 4000
-local GAUGE_PAD = 6
 local gaugeFull = {} -- unit -> { what the shield held when it went up }
+local EASE = Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut
 
--- opts.share: show the share left beside the shield. opts.plate: sit on a
--- dark plate like the medallion's level plate.
-function UI.shieldGauge(parent, size, opts)
-	opts = opts or {}
-	local height = opts.plate and size + 4 or size
+function UI.shieldGauge(parent, size)
 	local gauge = CreateFrame("Frame", nil, parent)
-	gauge:SetSize(size, height)
+	gauge:SetSize(size, size)
 	gauge:SetClipsChildren(true)
 	local slide = CreateFrame("StatusBar", nil, gauge)
 	slide:SetStatusBarTexture(UI.WHITE)
 	slide:SetStatusBarColor(0, 0, 0, 0)
-	slide:SetSize(GAUGE_SLIDE, height)
+	slide:SetSize(GAUGE_SLIDE, size)
 	slide:SetPoint("RIGHT", gauge, "RIGHT")
 	slide:SetMinMaxValues(0, 1)
 	slide:SetValue(1)
 	local holder = CreateFrame("Frame", nil, slide)
-	holder:SetSize(size, height)
+	holder:SetSize(size, size)
 	holder:SetPoint("RIGHT", slide:GetStatusBarTexture(), "RIGHT")
 
-	local plate
-	if opts.plate then
-		plate = UI.badge(holder, nil, "accent")
-		plate:ClearAllPoints()
-		plate:SetAllPoints(holder)
-		plate.fill:SetVertexColor(0, 0, 0, 0.95)
-		plate:Show()
-	end
-	local icon = CreateFrame("Frame", nil, holder)
-	icon:SetSize(size, size)
-	icon:SetFrameLevel(holder:GetFrameLevel() + 2)
-	icon:SetPoint("LEFT", holder, "LEFT", plate and GAUGE_PAD - 2 or 0, 0)
-	local back = icon:CreateTexture(nil, "ARTWORK")
+	local back = holder:CreateTexture(nil, "ARTWORK")
 	back:SetAllPoints()
 	back:SetTexture(SHIELD_ART)
-	local fill = CreateFrame("StatusBar", nil, icon)
+	local fill = CreateFrame("StatusBar", nil, holder)
 	fill:SetAllPoints()
 	fill:SetOrientation("VERTICAL")
 	fill:SetStatusBarTexture(SHIELD_ART)
 	fill:SetMinMaxValues(0, 1)
 	fill:SetValue(1)
-	local share
-	if opts.share then
-		share = icon:CreateFontString(nil, "OVERLAY")
-		Stoa:SetFont(share, "serif", opts.fontSize or Stoa.typeSize.label)
-		share:SetPoint("LEFT", icon, "RIGHT", 3, 0)
-	end
-	gauge.icon, gauge.fill, gauge.share = icon, fill, share
+	gauge.fill = fill
 
 	local function colour()
 		local r, g, b = Stoa:Color("accent")
-		back:SetVertexColor(r * 0.35, g * 0.35, b * 0.35, 0.9)
+		back:SetVertexColor(r * 0.3, g * 0.3, b * 0.3, 0.95)
 		fill:SetStatusBarColor(r, g, b, 1)
-		if share then share:SetTextColor(r, g, b) end
 	end
 	colour()
 	Stoa:On("STOA_THEME_CHANGED", colour)
 
-	-- Fits the plate round the shield and the share.
-	local function fit(text)
-		local width = size
-		if share then
-			share:SetText(text or "")
-			local words = text and share:GetStringWidth()
-			if words and not Stoa:IsSecret(words) and words > 0 then width = width + 3 + words end
-		end
-		if plate then width = width + GAUGE_PAD * 2 - 2 end
-		width = math.floor(width + 0.5)
-		gauge:SetWidth(width)
-		holder:SetWidth(width)
+	local function drain(value)
+		if EASE then fill:SetValue(value, EASE) else fill:SetValue(value) end
 	end
 
 	-- `changed`: called for an absorb change, the moment a fresh shield
@@ -584,13 +550,12 @@ function UI.shieldGauge(parent, size, opts)
 				measure = plain
 			end
 			fill:SetMinMaxValues(0, measure)
-			fill:SetValue(plain)
+			drain(plain)
 			slide:SetValue(1)
-			fit(math.floor(plain / measure * 100 + 0.5) .. "%")
 			self:Show()
 			return
 		end
-		-- In a fight: only ever handed on, so no share.
+		-- In a fight: only ever handed on.
 		local full = gaugeFull[unit]
 		if full == nil and changed then
 			gaugeFull[unit] = false
@@ -602,17 +567,15 @@ function UI.shieldGauge(parent, size, opts)
 		end
 		if type(full) == "table" then
 			fill:SetMinMaxValues(0, full[1])
-			fill:SetValue(left)
+			drain(left)
 		else
 			fill:SetMinMaxValues(0, 1)
 			fill:SetValue(1)
 		end
 		slide:SetValue(left)
-		fit(nil)
 		self:Show()
 	end
 
-	fit(nil)
 	gauge:Hide()
 	return gauge
 end
