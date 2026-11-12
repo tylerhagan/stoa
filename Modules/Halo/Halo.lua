@@ -17,6 +17,8 @@ local Halo = Stoa:NewModule("Halo", {
 	hideTargetFrame = true,
 	-- Who your target is targeting, as a small line at the plaque's right.
 	targetOfTarget = true,
+	-- Your focus as a small block under the target of target.
+	focusFrame = true,
 	scale = 1,
 	-- Quiet mana play: the five-second rule and regen ticks, the cost of
 	-- the spell you are casting, and a druid's mana while shapeshifted.
@@ -394,6 +396,7 @@ function Halo:BuildTarget(frame)
 	end
 
 	if self.db.targetOfTarget then self:BuildTargetOfTarget(target) end
+	if self.db.focusFrame then self:BuildFocus(target) end
 
 	-- Auras: on a friend, their buffs, yours first; on an enemy, the
 	-- debuffs you put there. Rounded icons with a sweep for time left.
@@ -550,17 +553,19 @@ function Halo:UpdateCooldown()
 	end)
 end
 
--- Your target's target: a caption, a name and a thin health line to the
--- right of the plaque. Click it to target them. The game sends no events
--- for this unit, so it is read a few times a second while it shows.
+-- Small unit blocks beside the target plaque: your target's target, and
+-- your focus under it. A caption, a name and a thin health line; click to
+-- target them. The game sends no events for the target's target, so both
+-- are read a few times a second while they show.
 local TOT_WIDTH = 124
-function Halo:BuildTargetOfTarget(target)
-	local chip = CreateFrame("Button", "StoaTargetTarget", target, "SecureUnitButtonTemplate")
-	chip:SetSize(TOT_WIDTH, 38)
+local CHIP_HEIGHT = 38
+function Halo:BuildUnitChip(name, unit, caption, parent)
+	local chip = CreateFrame("Button", name, parent, "SecureUnitButtonTemplate")
+	chip:SetSize(TOT_WIDTH, CHIP_HEIGHT)
 	-- It follows the target's look: a small panel of its own beside the
 	-- solid plaque, bare words beside the strip.
 	local bare = self.db.targetStrip
-	chip:SetPoint("TOPLEFT", target, "TOPRIGHT", bare and 14 or 18, -TARGET_PAD)
+	chip.gap = bare and 14 or 18
 	if not bare then
 		local fill = UI.pillFill(chip, 10)
 		UI.tint(fill, "panel", 0.9)
@@ -568,50 +573,76 @@ function Halo:BuildTargetOfTarget(target)
 		fill:SetVertexColor(r, g, b, 0.9)
 		UI.pillEdge(chip, 10):Set(Stoa:Color("hairline"))
 	end
-	chip:SetAttribute("unit", "targettarget")
+	chip:SetAttribute("unit", unit)
 	chip:SetAttribute("type1", "target")
 	chip:SetAttribute("type2", "togglemenu")
 	chip:RegisterForClicks("AnyUp")
-	RegisterStateDriver(chip, "visibility", "[@targettarget,exists] show; hide")
+	RegisterStateDriver(chip, "visibility", "[@" .. unit .. ",exists] show; hide")
 	chip:SetScript("OnEnter", function(button)
 		GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
-		pcall(GameTooltip.SetUnit, GameTooltip, "targettarget")
+		pcall(GameTooltip.SetUnit, GameTooltip, unit)
 		GameTooltip:Show()
 	end)
 	chip:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	local caption = UI.caption(chip, "Targeting")
-	caption:SetPoint("TOPLEFT")
-	local name = UI.text(chip, "sans", Stoa.typeSize.body, "text", "LEFT")
-	name:SetPoint("TOPLEFT", caption, "BOTTOMLEFT", 0, -4)
-	name:SetWidth(TOT_WIDTH)
-	name:SetWordWrap(false)
+	local label = UI.caption(chip, caption)
+	label:SetPoint("TOPLEFT")
+	local who = UI.text(chip, "sans", Stoa.typeSize.body, "text", "LEFT")
+	who:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+	who:SetWidth(TOT_WIDTH)
+	who:SetWordWrap(false)
 	local hp = UI.bar(chip, TOT_WIDTH, 3, "health")
-	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
+	hp:SetPoint("TOPLEFT", who, "BOTTOMLEFT", 0, -4)
 	if bare then
-		for _, fs in ipairs({ caption, name }) do UI.legible(fs) end
+		for _, fs in ipairs({ label, who }) do UI.legible(fs) end
 	end
-	chip.name, chip.hp = name, hp
-	target.tot = chip
+	chip.unit, chip.name, chip.hp = unit, who, hp
 	Stoa:NewTicker(0.2, function()
-		if chip:IsVisible() then self:UpdateTargetOfTarget() end
+		if chip:IsVisible() then self:UpdateUnitChip(chip) end
 	end)
+	return chip
+end
+
+function Halo:BuildTargetOfTarget(target)
+	local chip = self:BuildUnitChip("StoaTargetTarget", "targettarget", "Targeting", target)
+	chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD)
+	target.tot = chip
+end
+
+-- Your focus, under the target's target, there with or without a target.
+-- Its own mover, so it can go anywhere.
+function Halo:BuildFocus(target)
+	local chip = self:BuildUnitChip("StoaFocus", "focus", "Focus", UIParent)
+	chip:SetFrameStrata("LOW")
+	local function place()
+		chip:ClearAllPoints()
+		chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD - CHIP_HEIGHT - 16)
+	end
+	place()
+	self.focus = chip
+	Stoa:RegisterMover("focus", chip, "Focus", { default = place })
+	Stoa:On("PLAYER_FOCUS_CHANGED", function() self:UpdateUnitChip(chip) end)
 end
 
 function Halo:UpdateTargetOfTarget()
 	local chip = self.target and self.target.tot
-	if not chip or not UnitExists("targettarget") then return end
+	if chip then self:UpdateUnitChip(chip) end
+end
+
+function Halo:UpdateUnitChip(chip)
+	local unit = chip.unit
+	if not UnitExists(unit) then return end
 	local plain = Stoa.safe.plain
-	local hostile = plain(UnitCanAttack("player", "target"))
 	-- You, said plainly: on an enemy it is the thing to know at a glance.
-	if plain(UnitIsUnit("targettarget", "player")) then
+	if plain(UnitIsUnit(unit, "player")) then
+		local hostile = plain(UnitCanAttack("player", "target"))
 		chip.name:SetText("YOU")
 		chip.name:SetTextColor(Stoa:Color(hostile and "danger" or "accent"))
 	else
-		chip.name:SetText(UnitName("targettarget"))
-		chip.name:SetTextColor(UI.classColor("targettarget"))
+		chip.name:SetText(UnitName(unit))
+		chip.name:SetTextColor(UI.classColor(unit))
 	end
-	UI.setUnitBar(chip.hp, "targettarget", "health")
-	local foe = plain(UnitCanAttack("player", "targettarget"))
+	UI.setUnitBar(chip.hp, unit, "health")
+	local foe = plain(UnitCanAttack("player", unit))
 	chip.hp:SetStatusBarColor(Stoa:Color(foe and "hostile" or "health"))
 end
 
@@ -1024,7 +1055,8 @@ function Halo:OnEnable()
 	end
 	if self.db.hideTargetFrame then
 		Stoa:AfterCombat(function()
-			xpcall(hideBlizzard({ TargetFrame, FocusFrame }), Stoa.catch)
+			-- Blizzard's focus frame goes only when STOA shows the focus.
+			xpcall(hideBlizzard(self.db.focusFrame and { TargetFrame, FocusFrame } or { TargetFrame }), Stoa.catch)
 		end)
 	end
 
