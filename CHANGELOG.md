@@ -6,6 +6,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Your buffs at hand (on by default): out of combat, small icons left of the Halo for your own long buffs when one is missing or has under a tenth of its time left (30 seconds to 2 minutes): Inner Fire, Fortitude, Divine Spirit and Shadowform for priests, an aura, a blessing and Righteous Fury for paladins, Mark of the Wild and Omen of Clarity for druids, Arcane Intellect and an armor for mages, Demon Armor for warlocks, Lightning or Water Shield for shamans, Trueshot Aura for hunters. A missing one breathes softly, an ending one shows its time left. Click to cast; a buff you choose between (aura, blessing, armor, shield) casts the one you had on last. Hidden in a fight.
+- What's new note brought up to 1.1.5.
 - With OneForAll, STOA asks once whether to switch off OneForAll's low-rank check and info bar, which double up on STOA's Uprank and console.
 - Sparkle: objects up close now get the plate the sparkle hangs on (the game only gives an object one with its interact plate setting on, which STOA now turns on for objects and keeps off for NPCs). Without it the sparkle had nowhere to sit.
 - Interact icon up close also turns on the game's own sparkle on quest items lying in the world (its loot glow), as OneForAll's Quest loot sparkles does. Switching it off may need a restart of the game to take full effect.

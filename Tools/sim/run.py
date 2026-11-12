@@ -655,6 +655,32 @@ do
 		drain()
 	end
 end
+-- Your own buffs: a priest without Inner Fire gets a button for it, and
+-- none once it's on with time to spare.
+do
+	local buffs = Stoa.modules.SelfBuffs
+	local _, classFile = UnitClass("player")
+	if buffs and buffs.enabled and classFile == "PRIEST" then
+		local realBest, realAura = Stoa.Spells.best, C_UnitAuras.GetAuraDataBySpellName
+		Stoa.Spells.best = function(name) if name == "Spell588" then return 588, 1 end return realBest(name) end
+		buffs:Build()
+		buffs:Update()
+		local first = buffs.buttons[1]
+		if not (first and first:IsShown() and first.spell == "Spell588") then SIM_ERRORS[#SIM_ERRORS + 1] = "Own buffs: Inner Fire missing but no button" end
+		C_UnitAuras.GetAuraDataBySpellName = function(_, name)
+			if name == "Spell588" then return { name = "Spell588", duration = 600, expirationTime = GetTime() + 500 } end
+		end
+		buffs:Update()
+		if first and first:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Own buffs: button stays with Inner Fire on" end
+		C_UnitAuras.GetAuraDataBySpellName = function(_, name)
+			if name == "Spell588" then return { name = "Spell588", duration = 600, expirationTime = GetTime() + 40 } end
+		end
+		buffs:Update()
+		if not (first and first:IsShown() and first.left:GetText() == "40s") then SIM_ERRORS[#SIM_ERRORS + 1] = "Own buffs: no time left shown for an ending buff (" .. tostring(first and first.left:GetText()) .. ")" end
+		Stoa.Spells.best, C_UnitAuras.GetAuraDataBySpellName = realBest, realAura
+		buffs:Update()
+	end
+end
 -- Hovering the medallion's shield and mark.
 do
 	local console = Stoa.modules.Grimoire
