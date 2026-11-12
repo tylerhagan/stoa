@@ -238,6 +238,7 @@ local FRAMES = {
 	{ "FriendsFrame", "the friends window" },
 	{ "DamageMeter", "damage meters" },
 	{ "SwingTimerMainHandFrame", "the swing timer" },
+	{ "MainStatusTrackingBarContainer", "the experience bar" },
 	{ "ReadyCheckFrame", "the ready check skin" },
 	{ "ReadyCheckListenerFrame", "the ready check skin" },
 	{ "QuestInfoRewardsFrame", "the best quest reward" },

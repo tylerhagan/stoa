@@ -21,8 +21,9 @@ local NOTE = {
 	lines = {
 		{ "Your shield", "A silver shield beside the medallion and under the Halo's health number, draining as it soaks up damage." },
 		{ "Your class mark", "Next to it, the buff your class keeps up, emptying as it runs out: Inner Fire, your seal, Battle Shout, Slice and Dice, or your shaman shield." },
+		{ "A new experience bar", "Blizzard's bar along the bottom as a thin flat bar in STOA's dark track, filling in gold like the medallion, rested in blue. Reputation is coloured by standing." },
 	},
-	foot = "Both can be switched off in the settings under Combat. /stoa news shows this again.",
+	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }
 
 local WIDTH = 460

@@ -544,6 +544,55 @@ if glance and glance.rows then
 	end
 	IsInInstance = realInstance
 end
+-- The experience bar: a stand-in for Blizzard's container (an experience
+-- bar and a reputation bar, two dividers), dressed, then swapped about the
+-- way Blizzard does as you level and change faction.
+do
+	local xpbar = Stoa.modules.XPBar
+	if xpbar and xpbar.Dress then
+		local ok, e = xpcall(function()
+			local container = NewObject("Frame", UIParent, "MainStatusTrackingBarContainer")
+			container.BarFrameTexture = container:CreateTexture()
+			local function bar(index)
+				local b = NewObject("Frame", container)
+				b.barIndex = index
+				b.StatusBar = NewObject("StatusBar", b)
+				b.StatusBar.Background = b.StatusBar:CreateTexture()
+				b.StatusBar.SetBarTexture = function(own, tex) own:SetStatusBarTexture(tex) end
+				b.OverlayFrame = NewObject("Frame", b)
+				b.OverlayFrame.Text = b.OverlayFrame:CreateFontString()
+				return b
+			end
+			local xp, rep = bar(4), bar(1)
+			xp.ExhaustionLevelFillBar = xp:CreateTexture()
+			xp.ExhaustionTick = NewObject("Button", xp)
+			xp.ExhaustionTick.Normal = xp.ExhaustionTick:CreateTexture()
+			rep.UpdateBarTextures = function(own, level, blue) own.StatusBar:SetBarTexture("rep") end
+			container.bars = { [1] = rep, [4] = xp }
+			local dividers = {}
+			for i = 1, 2 do
+				local d = NewObject("Frame", container)
+				d.BarDividerTexture = d:CreateTexture()
+				dividers[i] = d
+			end
+			container.HorizontalDividersPool = { EnumerateActive = function() local i = 0 return function() i = i + 1 return dividers[i] end end }
+			container.UpdateDividers = function() end
+			container.ResizeContainerBars = function() end
+			xpbar:Dress()
+			xp.StatusBar:SetBarTexture("UI-HUD-ExperienceBar-Fill-Rested")
+			rep:UpdateBarTextures(6, false)
+			rep:UpdateBarTextures(2, true)
+			container:UpdateDividers(20)
+			container:ResizeContainerBars()
+			Stoa:Fire("STOA_THEME_CHANGED")
+			if not (xp.stoaDressed and rep.stoaDressed and container.stoaDressed) then
+				error("not dressed")
+			end
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Experience bar: " .. e end
+		drain()
+	end
+end
 -- Your shield: shown out of combat with a plain amount, hidden at none.
 UnitGetTotalAbsorbs = function() return 1200 end
 fire("UNIT_ABSORB_AMOUNT_CHANGED", "player")

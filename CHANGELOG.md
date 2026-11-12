@@ -9,6 +9,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - A short what's new note shows once after updating, for your shield and your class mark. /stoa news shows it again.
 - Your shield: a painted silver shield with a soft drop shadow, whose fill drains smoothly as it soaks up damage, the emptied part dark slate. It sits in the open corner left of the medallion's ring while the full console is open, and under the Halo's health number in every layout. A switch under Combat turns it off.
 - Your class mark: the buff your class keeps up, a painted silver emblem like the shield, emptying as it runs out. Warriors get Battle Shout (a horn), rogues Slice and Dice (a dagger), paladins their seal, shamans Lightning or Water Shield (an orb, by charges) and priests Inner Fire (a flame, by charges). It sits under the Halo's power number, and beside the shield left of the medallion. In a fight timers run from your own cast and charges hold at the last count seen. A switch under Combat turns it off.
+- The experience bar along the bottom of the screen in STOA's dress: a thin flat bar in a rounded dark track, experience in the accent like the medallion's bezel, the rested stretch in blue with a fine blue line where it ends, and Blizzard's segment dividers as fine dark notches. Reputation, honor and the other bars that share its place get the same track, reputation coloured by standing. Edit Mode still places it, and a switch under Windows turns it off.
 
 ## 1.1.3
 
