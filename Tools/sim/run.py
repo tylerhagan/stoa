@@ -544,9 +544,25 @@ if glance and glance.rows then
 	end
 	IsInInstance = realInstance
 end
+-- Your shield: shown out of combat with a plain amount, hidden at none.
+UnitGetTotalAbsorbs = function() return 1200 end
+fire("UNIT_ABSORB_AMOUNT_CHANGED", "player")
+drain()
+do
+	local halo = Stoa.modules.Halo
+	if halo and halo.shield and not halo.shield:IsShown() then
+		SIM_ERRORS[#SIM_ERRORS + 1] = "Shield gauge: hidden with a shield up"
+	end
+end
+UnitGetTotalAbsorbs = function() return 0 end
+fire("UNIT_ABSORB_AMOUNT_CHANGED", "player")
+drain()
 -- And again in combat, with secret values.
 SIM_ENTER_COMBAT()
 fire("PLAYER_REGEN_DISABLED")
+drain()
+UnitGetTotalAbsorbs = function() return SECRET end
+fire("UNIT_ABSORB_AMOUNT_CHANGED", "player")
 drain()
 for _, e in ipairs({ "UNIT_HEALTH", "UNIT_POWER_UPDATE", "UNIT_AURA", "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_START" }) do
 	fire(e, "player", "Cast-1", 589)
