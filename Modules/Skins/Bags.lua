@@ -264,6 +264,10 @@ local function decorateButton(button)
 		button.stoaUpgrade = gain and gain > 0
 	end
 	local parts = Item.markSlot(button, info.quality, button.stoaLevel)
+	-- An item one of your quests still needs: the edge in the accent.
+	if parts and Stoa.Items.questNeeds(info.itemID, info.itemName) then
+		parts.edge:Set(Stoa:Color("accent"))
+	end
 	-- Another addon's gear planner marks upgrades in bags already (Core/Companions.lua).
 	Item.markUpgrade(button, parts, button.stoaUpgrade and not Stoa:SharedBy("bagUpgrade"))
 end
@@ -706,6 +710,7 @@ function Bags:OnEnable()
 	end
 	Stoa:On("BAG_UPDATE_DELAYED", function() if dockWanted() then dock() end end)
 	Stoa:On("STOA_JUNK_CHANGED", refreshShown)
+	Stoa:On("STOA_QUEST_NEEDS_CHANGED", refreshShown)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Bags:SetJunkMode(false) end)
 	Stoa:On("PLAYER_MONEY", refreshShown)
 	Stoa:On("CURRENCY_DISPLAY_UPDATE", refreshShown)

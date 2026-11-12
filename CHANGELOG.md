@@ -16,6 +16,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - The shield and class marks redrawn simpler (a clean shape with one highlight) so they read at their small size, and the line where they drain shows more clearly.
 - Hovering the shield or the class mark beside the medallion says what it is: how much damage the shield still absorbs, or the buff with its time or charges left (or that it's missing) and what it does.
 - Highlight quest objects is now Interact icon up close: Forever's client has no outline round objects (Blizzard cut the option), so only the game's icon over the object you can use, within reach, is turned on. The outline settings earlier versions set are handed back.
+- Bags: items your quests still need (an item goal in your quest log not yet met, such as Scaber Stalk 2/5) get an accent edge, and junk selling never sells them.
 - At a glance: long labels shortened so they fit beside their figure: Gold rate, and Enchant, Smithing, Engineer, Leather, Jewels and Scribe for the long profession names.
 
 ## 1.1.3
