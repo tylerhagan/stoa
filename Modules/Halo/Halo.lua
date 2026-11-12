@@ -557,7 +557,17 @@ local TOT_WIDTH = 124
 function Halo:BuildTargetOfTarget(target)
 	local chip = CreateFrame("Button", "StoaTargetTarget", target, "SecureUnitButtonTemplate")
 	chip:SetSize(TOT_WIDTH, 38)
-	chip:SetPoint("TOPLEFT", target, "TOPRIGHT", 14, -TARGET_PAD)
+	-- It follows the target's look: a small panel of its own beside the
+	-- solid plaque, bare words beside the strip.
+	local bare = self.db.targetStrip
+	chip:SetPoint("TOPLEFT", target, "TOPRIGHT", bare and 14 or 18, -TARGET_PAD)
+	if not bare then
+		local fill = UI.pillFill(chip, 10)
+		UI.tint(fill, "panel", 0.9)
+		local r, g, b = Stoa:Color("panel")
+		fill:SetVertexColor(r, g, b, 0.9)
+		UI.pillEdge(chip, 10):Set(Stoa:Color("hairline"))
+	end
 	chip:SetAttribute("unit", "targettarget")
 	chip:SetAttribute("type1", "target")
 	chip:SetAttribute("type2", "togglemenu")
@@ -577,7 +587,9 @@ function Halo:BuildTargetOfTarget(target)
 	name:SetWordWrap(false)
 	local hp = UI.bar(chip, TOT_WIDTH, 3, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
-	for _, fs in ipairs({ caption, name }) do UI.legible(fs) end
+	if bare then
+		for _, fs in ipairs({ caption, name }) do UI.legible(fs) end
+	end
 	chip.name, chip.hp = name, hp
 	target.tot = chip
 	Stoa:NewTicker(0.2, function()
