@@ -15,6 +15,9 @@ local UI = Stoa.UI
 local XPBar = Stoa:NewModule("XPBar", {
 	-- In a fight the bar fades away with the console.
 	combatFade = true,
+	-- A paler stretch past the fill for the experience your finished quests
+	-- will give when you hand them in.
+	questXP = true,
 })
 
 local HEIGHT = 6
@@ -241,9 +244,112 @@ function XPBar:Fade(hidden)
 	fader:Show()
 end
 
+-- Finished quests ---------------------------------------------------------------
+-- Quests you've finished but not handed in show as a paler gold stretch
+-- running on from the fill, so you see how far turning them in takes you.
+-- Hovering the bar adds a line with the count and the experience. Waits
+-- while a companion (OneForAll's quest XP) draws its own.
+local call = Stoa.safe.call
+
+function XPBar:QuestXP()
+	local total, count = 0, 0
+	local log = C_QuestLog
+	if not (log and log.GetNumQuestLogEntries and log.GetInfo and log.IsComplete and GetQuestLogRewardXP) then return 0, 0 end
+	for index = 1, Stoa:PlainNumber(call(log.GetNumQuestLogEntries)) or 0 do
+		local info = call(log.GetInfo, index)
+		local id = type(info) == "table" and not info.isHeader and info.questID
+		if id and call(log.IsComplete, id) then
+			local xp = Stoa:PlainNumber(call(GetQuestLogRewardXP, id))
+			if xp and xp > 0 then
+				total, count = total + xp, count + 1
+			end
+		end
+	end
+	return total, count
+end
+
+-- The experience bar on show (the one with a rested stretch), if any.
+local function xpBar()
+	for _, name in ipairs(CONTAINERS) do
+		local container = _G[name]
+		if container and type(container.bars) == "table" then
+			for _, bar in pairs(container.bars) do
+				if bar.ExhaustionLevelFillBar and bar.StatusBar and bar:IsVisible() then return bar end
+			end
+		end
+	end
+end
+
+function XPBar:UpdateQuests()
+	local bar = xpBar()
+	local on = self.db.questXP ~= false and not Stoa:SharedBy("questXP")
+	if self.questStretch and (not bar or self.questStretch:GetParent() ~= bar.StatusBar) then self.questStretch:Hide() end
+	if not bar then return end
+	local status = bar.StatusBar
+	local stretch = status.stoaQuests
+	if not stretch then
+		stretch = status:CreateTexture(nil, "ARTWORK", nil, 3)
+		stretch:SetTexture(UI.WHITE)
+		status.stoaQuests = stretch
+		-- Kept in step as the bar fills and when Edit Mode resizes it.
+		status:HookScript("OnValueChanged", function() guarded(self.UpdateQuests, self) end)
+		status:HookScript("OnSizeChanged", function() guarded(self.UpdateQuests, self) end)
+		bar:HookScript("OnEnter", function(own) guarded(self.QuestTooltip, self, own) end)
+	end
+	self.questStretch = stretch
+	local xp = on and self:QuestXP() or 0
+	local most = Stoa:PlainNumber(UnitXPMax("player")) or 0
+	local width = Stoa:PlainNumber(status:GetWidth()) or 0
+	local share = 0
+	local low, high = status:GetMinMaxValues()
+	low, high = Stoa:PlainNumber(low), Stoa:PlainNumber(high)
+	local value = Stoa:PlainNumber(status:GetValue())
+	if low and high and value and high > low then share = (value - low) / (high - low) end
+	if xp <= 0 or most <= 0 or width <= 0 or share >= 1 then stretch:Hide() return end
+	local span = math.min(xp / most, 1 - share)
+	local r, g, b = Stoa:Color("accent")
+	stretch:SetVertexColor(r, g, b, 0.42)
+	stretch:ClearAllPoints()
+	stretch:SetPoint("TOPLEFT", status, "TOPLEFT", width * share, 0)
+	stretch:SetPoint("BOTTOMLEFT", status, "BOTTOMLEFT", width * share, 0)
+	stretch:SetWidth(math.max(1, width * span))
+	stretch:Show()
+end
+
+function XPBar:QuestTooltip(bar)
+	if self.db.questXP == false or Stoa:SharedBy("questXP") then return end
+	C_Timer.After(0, function()
+		if not (GameTooltip:IsShown() and GameTooltip:GetOwner() == bar) then return end
+		local xp, count = self:QuestXP()
+		if count == 0 then return end
+		local most = Stoa:PlainNumber(UnitXPMax("player")) or 0
+		local share = most > 0 and ("  (%d%%)"):format(math.floor(xp / most * 100 + 0.5)) or ""
+		local number = BreakUpLargeNumbers and BreakUpLargeNumbers(xp) or tostring(xp)
+		local r, g, b = Stoa:Color("accent")
+		GameTooltip:AddLine(" ")
+		GameTooltip:AddLine(("%d finished %s: +%s XP%s"):format(count, count == 1 and "quest" or "quests", number, share), r, g, b)
+		GameTooltip:Show()
+	end)
+end
+
+function XPBar:QuestsSoon()
+	if self.questsPending then return end
+	self.questsPending = true
+	C_Timer.After(0.5, function()
+		self.questsPending = false
+		guarded(self.UpdateQuests, self)
+	end)
+end
+
 function XPBar:OnEnable()
 	Stoa:On("STOA_THEME_CHANGED", function() XPBar:Recolour() end)
 	self:Dress()
+	for _, event in ipairs({ "QUEST_LOG_UPDATE", "PLAYER_XP_UPDATE", "PLAYER_LEVEL_UP", "PLAYER_ENTERING_WORLD", "UPDATE_FACTION" }) do
+		Stoa:On(event, function() XPBar:QuestsSoon() end)
+	end
+	if _G.StatusTrackingBarManager and _G.StatusTrackingBarManager.UpdateBarsShown then
+		hooksecurefunc(_G.StatusTrackingBarManager, "UpdateBarsShown", function() XPBar:QuestsSoon() end)
+	end
 	Stoa:On("STOA_STATE_CHANGED", function(state)
 		if XPBar.db.combatFade == false then return end
 		XPBar:Fade(state == Stoa.STATE_COMBAT)
