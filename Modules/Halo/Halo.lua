@@ -586,6 +586,8 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 	-- solid plaque, bare words beside the strip.
 	local bare = self.db.targetStrip
 	chip.gap = bare and 14 or 18
+	-- Room between the two blocks: their panels reach 10 past each edge.
+	chip.stack = bare and 16 or 28
 	if not bare then
 		local fill = UI.pillFill(chip, 10)
 		UI.tint(fill, "panel", 0.9)
@@ -635,7 +637,7 @@ function Halo:BuildFocus(target)
 	chip:SetFrameStrata("LOW")
 	local function place()
 		chip:ClearAllPoints()
-		chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD - CHIP_HEIGHT - 16)
+		chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD - CHIP_HEIGHT - chip.stack)
 	end
 	place()
 	self.focus = chip
