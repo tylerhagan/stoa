@@ -316,7 +316,7 @@ local function raiseOf(frame)
 	if name:find("^ContainerFrame") then return 0 end
 	local map = _G.WorldMapFrame
 	if map and frame == map.BorderFrame and map.IsMaximized and map:IsMaximized() then return 0 end
-	return RAISE
+	return tonumber(frame.stoaRaise) or RAISE
 end
 
 -- Lifts the panel's fill and edge with the header.

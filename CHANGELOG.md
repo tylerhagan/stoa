@@ -4,6 +4,10 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.1.5
+
+- Talents and spellbook window: its dark header now rises fully above the window, so the talent art no longer covers its lower half.
+
 ## 1.1.4
 
 - A short what's new note shows once after updating, for your shield and your class mark. /stoa news shows it again.
