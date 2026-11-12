@@ -13,18 +13,24 @@ local Merchant = Stoa:NewModule("Merchant", {
 -- so each home is tried before a plain text fallback.
 local function money(copper) return Stoa:Money(copper) end
 
+-- The greys' worth, and whether any grey is one a quest of yours still
+-- needs (then each is sold by hand, so that one stays).
 local function junkValue()
-	local total = 0
+	local total, keep = 0, false
 	for bag = 0, NUM_BAG_SLOTS or 4 do
 		for slot = 1, C_Container.GetContainerNumSlots(bag) do
 			local info = C_Container.GetContainerItemInfo(bag, slot)
 			if info and info.quality == Enum.ItemQuality.Poor and not info.hasNoValue then
-				local sellPrice = select(11, C_Item.GetItemInfo(info.itemID)) or 0
-				total = total + sellPrice * (info.stackCount or 1)
+				if Stoa.Items.questNeeds(info.itemID, info.itemName) then
+					keep = true
+				else
+					local sellPrice = select(11, C_Item.GetItemInfo(info.itemID)) or 0
+					total = total + sellPrice * (info.stackCount or 1)
+				end
 			end
 		end
 	end
-	return total
+	return total, keep
 end
 
 -- Items you marked as junk yourself (greys are left to the grey path below).
@@ -35,6 +41,8 @@ local function sellMarked()
 		if info.quality == Enum.ItemQuality.Poor or info.isLocked or info.hasNoValue then return end
 		local id = info.itemID
 		if not (id and Stoa.Items.isMarkedJunk(id)) then return end
+		-- Never an item a quest of yours still needs.
+		if Stoa.Items.questNeeds(id, info.itemName) then return end
 		local price = Stoa.Items.sellPrice(id) or 0
 		if price <= 0 then return end
 		if pcall(C_Container.UseContainerItem, bag, slot) then
@@ -48,20 +56,22 @@ local function sellJunk()
 	local marked = sellMarked()
 	-- Another addon selling greys already (Core/Companions.lua): Stoa sells
 	-- only what you marked yourself.
-	local value = Stoa:SharedBy("sellJunk") and 0 or junkValue()
+	local value, keep = 0, false
+	if not Stoa:SharedBy("sellJunk") then value, keep = junkValue() end
 	if value == 0 and marked == 0 then return end
 	if value == 0 then
 		Stoa:Note("merchant", ("Sold your marked junk for %s."):format(money(marked)))
 		return
 	end
 	value = value + marked
-	if C_MerchantFrame and C_MerchantFrame.SellAllJunkItems then
+	if C_MerchantFrame and C_MerchantFrame.SellAllJunkItems and not keep then
 		C_MerchantFrame.SellAllJunkItems()
 	else
 		for bag = 0, NUM_BAG_SLOTS or 4 do
 			for slot = 1, C_Container.GetContainerNumSlots(bag) do
 				local info = C_Container.GetContainerItemInfo(bag, slot)
-				if info and info.quality == Enum.ItemQuality.Poor and not info.hasNoValue then
+				if info and info.quality == Enum.ItemQuality.Poor and not info.hasNoValue
+					and not Stoa.Items.questNeeds(info.itemID, info.itemName) then
 					C_Container.UseContainerItem(bag, slot)
 				end
 			end

@@ -284,6 +284,57 @@ function Items.eachBagSlot(fn)
 	end
 end
 
+-- Items your quests still need -------------------------------------------------
+-- The item goals in your quest log ("Scaber Stalk: 2/5") not yet met, by
+-- the item's name. The bags edge these in the accent and junk selling
+-- leaves them be. Read again when the quest log changes.
+local questNeeds
+
+local function objectiveName(text)
+	if type(text) ~= "string" or Stoa:IsSecret(text) then return nil end
+	local name = text:match("^(.-):%s*%d+%s*/%s*%d+") or text:match("^%d+%s*/%s*%d+%s+(.+)$")
+	return name and name ~= "" and name:lower() or nil
+end
+
+local function readQuestNeeds()
+	local needs = {}
+	local log = C_QuestLog
+	if not (log and log.GetNumQuestLogEntries and log.GetInfo and log.GetQuestObjectives) then return needs end
+	local count = Stoa:PlainNumber(call(log.GetNumQuestLogEntries)) or 0
+	for index = 1, count do
+		local info = call(log.GetInfo, index)
+		if type(info) == "table" and not info.isHeader and info.questID then
+			local objectives = call(log.GetQuestObjectives, info.questID)
+			for _, goal in ipairs(type(objectives) == "table" and objectives or {}) do
+				if goal.type == "item" and not goal.finished then
+					local name = objectiveName(goal.text)
+					if name then needs[name] = true end
+				end
+			end
+		end
+	end
+	return needs
+end
+
+-- Whether a quest of yours still needs this item (a link, ID or name).
+function Items.questNeeds(item, name)
+	questNeeds = questNeeds or readQuestNeeds()
+	if not next(questNeeds) then return false end
+	if type(name) ~= "string" then
+		local id = Items.id(item)
+		name = id and C_Item and C_Item.GetItemNameByID and call(C_Item.GetItemNameByID, id)
+	end
+	if type(name) ~= "string" or Stoa:IsSecret(name) then return false end
+	return questNeeds[name:lower()] or false
+end
+
+for _, event in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED" }) do
+	Stoa:On(event, function()
+		questNeeds = nil
+		Stoa:Fire("STOA_QUEST_NEEDS_CHANGED")
+	end)
+end
+
 -- A trained weapon skill or a new level can make a red line go away.
 Stoa:On("PLAYER_LEVEL_UP", Items.forgetUsable)
 Stoa:On("SKILL_LINES_CHANGED", Items.forgetUsable)

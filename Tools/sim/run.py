@@ -610,6 +610,25 @@ do
 		SIM_ERRORS[#SIM_ERRORS + 1] = "Shield gauge: hidden with a shield up"
 	end
 end
+-- Items your quests still need, read from the log's item goals.
+do
+	local realNum, realInfo, realGoals = C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.GetQuestObjectives
+	C_QuestLog.GetNumQuestLogEntries = function() return 2, 2 end
+	C_QuestLog.GetInfo = function(i) return { questID = 100 + i, isHeader = false } end
+	C_QuestLog.GetQuestObjectives = function(id)
+		if id == 101 then return { { type = "item", text = "Scaber Stalk: 2/5", finished = false } } end
+		return { { type = "item", text = "Death Cap: 1/1", finished = true }, { type = "monster", text = "Defias slain: 0/5" } }
+	end
+	fire("QUEST_LOG_UPDATE")
+	drain()
+	local items = Stoa.Items
+	if not items.questNeeds(nil, "Scaber Stalk") then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest needs: Scaber Stalk missed" end
+	if items.questNeeds(nil, "Death Cap") then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest needs: a finished goal counted" end
+	if items.questNeeds(nil, "Defias") then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest needs: a kill goal counted" end
+	C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.GetQuestObjectives = realNum, realInfo, realGoals
+	fire("QUEST_LOG_UPDATE")
+	drain()
+end
 -- Hovering the medallion's shield and mark.
 do
 	local console = Stoa.modules.Grimoire
