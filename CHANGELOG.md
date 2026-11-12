@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Target plaque: the health bar is red again on a hostile target at full health (a theme pass was turning it back to the health colour), and the percent sign sits right after the number.
 - Target plaque restyled: the portrait is a round medallion in a gold ring breaking the plaque's right edge, with the level on a badge at its foot; a thicker rounded health bar carries the percent and the health; a fine line under it shows the target's mana, rage or energy; and the target's cast shows as a small bar with the spell and time left (warm while it can be interrupted). Out of combat on the full console the plaque docks on the gold rim, square at the foot with the gold running up its sides; in a fight it moves beside the Halo as before. The art is new, so it needs a full restart of the game.
 - Tooltips: under the sell price of a stack, an "Each" line with what one of them sells for.
 - Experience bar: quests you've finished but not handed in show as a paler gold stretch past the fill, to where turning them in takes you; hovering the bar adds the count and the experience to Blizzard's tooltip in the corner (or shows its own when you aren't rested). Waits while OneForAll's own quest XP marker is on.
