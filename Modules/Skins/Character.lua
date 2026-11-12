@@ -97,6 +97,13 @@ local function seatLevel()
 		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10)
 		title:SetJustifyH("LEFT")
 	end
+	-- The close cross sits level with the name, in the band's upper half,
+	-- rather than halfway down the two-line header.
+	local close = frame.CloseButton or _G.CharacterFrameCloseButton
+	if close then
+		close:ClearAllPoints()
+		close:SetPoint("RIGHT", frame.stoaHeader, "TOPRIGHT", -8, -(10 + Stoa.typeSize.title / 2))
+	end
 	level:ClearAllPoints()
 	if title then
 		-- The level line keeps its own spot; the title sits higher above it.
