@@ -318,15 +318,26 @@ end
 
 function XPBar:QuestTooltip(bar)
 	if self.db.questXP == false or Stoa:SharedBy("questXP") then return end
+	-- Blizzard's tooltip for the bar sits in the default corner (its owner is
+	-- the screen, not the bar), and is only made while you're rested; without
+	-- one STOA starts its own there.
 	C_Timer.After(0, function()
-		if not (GameTooltip:IsShown() and GameTooltip:GetOwner() == bar) then return end
+		if not (bar:IsMouseOver()) then return end
 		local xp, count = self:QuestXP()
 		if count == 0 then return end
+		if not GameTooltip:IsShown() then
+			if not GameTooltip_SetDefaultAnchor then return end
+			GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
+			local most = Stoa:PlainNumber(UnitXPMax("player")) or 0
+			local now = Stoa:PlainNumber(UnitXP("player")) or 0
+			GameTooltip:SetText(("%s / %s"):format(BreakUpLargeNumbers and BreakUpLargeNumbers(now) or now, BreakUpLargeNumbers and BreakUpLargeNumbers(most) or most))
+		else
+			GameTooltip:AddLine(" ")
+		end
 		local most = Stoa:PlainNumber(UnitXPMax("player")) or 0
 		local share = most > 0 and ("  (%d%%)"):format(math.floor(xp / most * 100 + 0.5)) or ""
 		local number = BreakUpLargeNumbers and BreakUpLargeNumbers(xp) or tostring(xp)
 		local r, g, b = Stoa:Color("accent")
-		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(("%d finished %s: +%s XP%s"):format(count, count == 1 and "quest" or "quests", number, share), r, g, b)
 		GameTooltip:Show()
 	end)
