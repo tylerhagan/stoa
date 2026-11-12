@@ -1,17 +1,20 @@
-"""Draw the docked target plaque's two ends, white with alpha (tinted in
+"""Draw the docked target plaque's ends, white with alpha (tinted in
 game). The plaque stands on the console rim as tall as the medallion.
 
-- PlaqueJoin.tga / PlaqueJoinLines.tga: the right end, the target's
-  portrait ring as tall as the plaque: the gold top edge runs straight on
-  into the ring and round its top right; at 45 degrees it flows straight
-  out of the curve, down at 45 degrees, easing into the rim like the
-  medallion's flourish (SWEEP 20).
+- PlaqueJoin.tga / PlaqueJoinLines.tga: the right end: the gold top edge
+  runs on round a corner as tall as half the plaque; at 45 degrees it
+  flows straight out of the curve, down at 45 degrees, easing into the rim
+  like the medallion's flourish (SWEEP 20).
+- PlaqueJoinShadow.tga: that end's soft shadow, a little to the right, cast
+  on the target of target tucked behind it.
+- PlaqueStep.tga / PlaqueStepLines.tga: the same end for the target of
+  target's lower slab (H 44, R 22, SWEEP 14).
 - PlaqueSocket.tga / PlaqueSocketLines.tga: the left end, cut round the
   console's medallion with a gold line following its ring, so the plaque
   sits against the medallion like a socket.
 
-Geometry in UI units, matching Core/Widgets.lua (JOIN_*, SOCKET_*): body
-height H 68, ring radius R 34. The medallion's outer
+Geometry in UI units, matching Core/Widgets.lua (JOIN_*, STEP_*,
+SOCKET_*): body height H 68, corner radius R 34. The medallion's outer
 ring is 74 (133 texels of ConsoleMedallion at 0.556), its centre 5.9 under
 the rim; the socket keeps 4 clear of it and starts 24 right of its centre.
 4 texels per unit.
@@ -22,12 +25,12 @@ import math
 import sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 PX, SS = 4, 4
 H, R = 68.0, 34.0
 SWEEP = 20.0
-LINE, INNER_A = 2.0, 0.45
+LINE = 2.0
 MED_R, MED_DROP, SOCKET_GAP, SOCKET_X, SOCKET_W = 74.0, 5.9, 4.0, 24.0, 56
 
 
@@ -49,11 +52,10 @@ def save(alpha, path):
     Image.fromarray(rgba, "RGBA").save(path)
 
 
-def join(out):
-    # The ring is as tall as the plaque: the gold top edge runs straight on
-    # into the ring and round its top right; at 45 degrees it flows straight
-    # out of the curve, on down at 45 degrees, and eases into the rim, the
-    # way the medallion's flourish does.
+def join(out, H=H, R=R, SWEEP=SWEEP, name="PlaqueJoin", shadow=False):
+    # The gold top edge runs straight on round a corner of radius R; at 45
+    # degrees it flows straight out of the curve, on down at 45 degrees, and
+    # eases into the rim, the way the medallion's flourish does.
     lead = 4.0
     cx, cy = lead + R, R
     r2 = math.sqrt(0.5)
@@ -78,11 +80,19 @@ def join(out):
     along = (x - y) / math.sqrt(2)
     sweep = (np.abs(x + y - c0) / math.sqrt(2) <= half) & (along >= (px - py) / math.sqrt(2)) & (along <= (tx - ty) / math.sqrt(2))
     ease = (np.abs(de - SWEEP) <= half) & (x <= fcx) & (fcy - y >= fcx - x)
-    inner = (np.abs(dc - (R - 4.5)) <= 0.5) * INNER_A
-    lines = np.maximum((top | ring | sweep | ease).astype(float), inner)
-    save(down(fill.astype(float)), f"{out}/PlaqueJoin.tga")
-    save(down(lines), f"{out}/PlaqueJoinLines.tga")
-    print(f"join: {w}x{h} units, ring centre {cx:.2f},{cy:.2f}, reaches {fcx:.1f}")
+    lines = (top | ring | sweep | ease).astype(float)
+    shape = down(fill.astype(float))
+    save(shape, f"{out}/{name}.tga")
+    save(down(lines), f"{out}/{name}Lines.tga")
+    print(f"{name}: {w}x{h} units, corner centre {cx:.2f},{cy:.2f}, reaches {fcx:.1f}")
+    if shadow:
+        # The same shape 4 units right, softened, 8 units wider.
+        pad = 8 * PX
+        img = np.zeros((shape.shape[0], shape.shape[1] + pad))
+        img[:, 4 * PX:4 * PX + shape.shape[1]] = shape
+        soft = Image.fromarray((img * 255).astype(np.uint8), "L").filter(ImageFilter.GaussianBlur(3 * PX))
+        save(np.asarray(soft, float) / 255 * 0.8, f"{out}/{name}Shadow.tga")
+        print(f"{name}Shadow: {w + 8}x{h} units")
 
 
 def socket(out):
@@ -100,5 +110,6 @@ def socket(out):
 
 
 if __name__ == "__main__":
-    join(sys.argv[1])
+    join(sys.argv[1], shadow=True)
+    join(sys.argv[1], H=44.0, R=22.0, SWEEP=14.0, name="PlaqueStep")
     socket(sys.argv[1])
