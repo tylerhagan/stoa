@@ -72,6 +72,7 @@ Modules\Halo\Halo.lua
 Modules\Halo\Party.lua
 Modules\Halo\CombatBar.lua
 Modules\Halo\Sign.lua
+Modules\Halo\Mark.lua
 Modules\Halo\Shadow.lua
 Modules\Halo\Paladin.lua
 Modules\Halo\Disc.lua

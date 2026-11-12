@@ -252,16 +252,24 @@ function Console:BuildSeal(frame)
 	-- The progress ring, the level plate, the moment glow (BuildRing).
 	self:BuildRing(seal, portrait, size)
 
-	-- Your shield at the top of the ring, opposite the level plate: a gold
-	-- shield whose fill drains (the Halo's setting; slim leaves it to the
-	-- Halo).
+	-- Your shield and your class mark at the top of the ring, opposite the
+	-- level plate: one alone sits centred, both sit side by side (the
+	-- Halo's settings; slim leaves them to the Halo).
 	local halo = Stoa.modules.Halo
-	if not slim and halo and halo.db and halo.db.shield then
-		local shield = UI.shieldGauge(seal, art and 29 or 22)
-		shield:SetFrameLevel(seal:GetFrameLevel() + 6)
-		-- Nudged by half the shadow, so the shield itself stays centred.
-		shield:SetPoint("CENTER", portrait, "TOP", math.floor((art and 29 or 22) * 0.05 + 0.5), 6 - math.floor((art and 29 or 22) * 0.05 + 0.5))
-		self.sealShield = shield
+	if not slim and halo and halo.db then
+		local crest = art and 29 or 22
+		self.crestSize, self.crestPortrait = crest, portrait
+		if halo.db.shield then
+			local shield = UI.shieldGauge(seal, crest)
+			shield:SetFrameLevel(seal:GetFrameLevel() + 6)
+			self.sealShield = shield
+		end
+		if halo.db.classMark and Stoa.Mark then
+			local mark = Stoa.Mark.attach(seal, crest, function() self:PlaceCrest() end)
+			if mark then mark:SetFrameLevel(seal:GetFrameLevel() + 6) end
+			self.sealMark = mark
+		end
+		self:PlaceCrest()
 	end
 
 	-- In an inn or a city: a small word across the foot of the portrait, in
@@ -820,6 +828,26 @@ function Console:BuildFellowship(frame, space)
 	open:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
+-- The crest: the shield and the class mark at the top of the ring. The
+-- shapes leave room for their shadow down and right, so each is nudged by
+-- half of it to sit centred.
+function Console:PlaceCrest()
+	local shield, mark = self.sealShield, self.sealMark
+	if not (shield or mark) then return end
+	local size = self.crestSize
+	local nudge = math.floor(size * 0.05 + 0.5)
+	local both = shield and mark and shield:IsShown() and mark:IsShown()
+	local apart = both and math.floor(size * 0.6 + 0.5) or 0
+	if shield then
+		shield:ClearAllPoints()
+		shield:SetPoint("CENTER", self.crestPortrait, "TOP", nudge - apart, 6 - nudge)
+	end
+	if mark then
+		mark:ClearAllPoints()
+		mark:SetPoint("CENTER", self.crestPortrait, "TOP", nudge + apart, 6 - nudge)
+	end
+end
+
 -- The medallion ring --------------------------------------------------------
 -- Round the portrait: a bezel of fine ticks that fill with experience (lit
 -- in the accent, the rested stretch in mana blue, the rest faint), and a
@@ -1219,6 +1247,7 @@ function Console:SetOpen(open, instant)
 		if self.db.slim then self.seal:SetAlpha(open and progress or 1 - progress) end
 		-- The shrunk seal is too small to read a shield on; the Halo has it.
 		if self.sealShield then self.sealShield:SetAlpha(open and progress or 1 - progress) end
+		if self.sealMark then self.sealMark:SetAlpha(open and progress or 1 - progress) end
 	end
 
 	if instant then
@@ -1390,13 +1419,18 @@ function Console:OnEnable()
 		if unit == "player" then self:UpdateSeal() end
 	end)
 	if self.sealShield then
+		local function update(changed)
+			local was = self.sealShield:IsShown()
+			self.sealShield:Update("player", changed)
+			if was ~= self.sealShield:IsShown() then self:PlaceCrest() end
+		end
 		Stoa:On("UNIT_ABSORB_AMOUNT_CHANGED", function(unit)
-			if unit == "player" then self.sealShield:Update("player", true) end
+			if unit == "player" then update(true) end
 		end)
 		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
-			Stoa:On(event, function() self.sealShield:Update("player") end)
+			Stoa:On(event, function() update() end)
 		end
-		self.sealShield:Update("player")
+		update()
 	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		self:UpdateSeal()
