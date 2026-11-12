@@ -610,6 +610,19 @@ do
 		SIM_ERRORS[#SIM_ERRORS + 1] = "Shield gauge: hidden with a shield up"
 	end
 end
+-- Hovering the medallion's shield and mark.
+do
+	local console = Stoa.modules.Grimoire
+	for _, key in ipairs({ "sealShield", "sealMark" }) do
+		local gauge = console and console[key]
+		if gauge then
+			local enter, leave = gauge:GetScript("OnEnter"), gauge:GetScript("OnLeave")
+			if not enter then SIM_ERRORS[#SIM_ERRORS + 1] = "Crest " .. key .. ": no tooltip" end
+			local ok, e = pcall(function() enter(gauge) leave(gauge) end)
+			if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Crest " .. key .. ": " .. tostring(e) end
+		end
+	end
+end
 UnitGetTotalAbsorbs = function() return 0 end
 fire("UNIT_ABSORB_AMOUNT_CHANGED", "player")
 drain()

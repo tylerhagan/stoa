@@ -270,6 +270,7 @@ function Console:BuildSeal(frame)
 			self.sealMark = mark
 		end
 		self:PlaceCrest()
+		self:CrestTooltips()
 	end
 
 	-- In an inn or a city: a small word across the foot of the portrait, in
@@ -838,6 +839,34 @@ end
 -- of the ring, their feet in the band between the portrait and the ring.
 local CREST_X, CREST_Y = -106, 30
 local CREST_FOOT = 3
+
+-- Hovering the shield or the mark says what it is and what's left.
+local function shieldWords(tip)
+	tip:AddLine("Your shield")
+	local left = Stoa:PlainNumber(UnitGetTotalAbsorbs and UnitGetTotalAbsorbs("player"))
+	if left and left > 0 then
+		tip:AddLine(("Absorbs %d more damage"):format(left), Stoa:Color("accent"))
+	end
+	local r, g, b = Stoa:Color("muted")
+	tip:AddLine("Drains as it soaks up damage. In a fight it empties without a number, since the game hides the amount.", r, g, b, true)
+	return true
+end
+
+function Console:CrestTooltips()
+	local function hover(gauge, describe)
+		if not gauge then return end
+		gauge:EnableMouse(true)
+		gauge:SetScript("OnEnter", function(own)
+			if InCombatLockdown() then return end
+			GameTooltip:SetOwner(own, "ANCHOR_TOP")
+			local ok, shown = pcall(describe, GameTooltip)
+			if ok and shown then GameTooltip:Show() else GameTooltip:Hide() end
+		end)
+		gauge:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	end
+	hover(self.sealShield, shieldWords)
+	if Stoa.Mark and Stoa.Mark.describe then hover(self.sealMark, Stoa.Mark.describe) end
+end
 
 function Console:PlaceCrest()
 	local shield, mark = self.sealShield, self.sealMark
