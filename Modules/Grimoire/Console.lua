@@ -252,18 +252,14 @@ function Console:BuildSeal(frame)
 	-- The progress ring, the level plate, the moment glow (BuildRing).
 	self:BuildRing(seal, portrait, size)
 
-	-- Your shield on the ring's lower right, with the amount left (the
-	-- Halo's setting; slim leaves it to the Halo).
+	-- Your shield at the top of the ring, opposite the level plate: a gold
+	-- shield and the share left on the same dark plate (the Halo's
+	-- setting; slim leaves it to the Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db and halo.db.shield then
-		local gaugeSize = art and 26 or 20
-		local shield = UI.shieldGauge(seal, gaugeSize, Stoa.typeSize.label, "left")
+		local shield = UI.shieldGauge(seal, 14, { share = true, plate = true })
 		shield:SetFrameLevel(seal:GetFrameLevel() + 6)
-		local radius, angle = size / 2 + 7, math.rad(-50)
-		shield:SetPoint("LEFT", portrait, "CENTER",
-			math.floor(math.cos(angle) * radius - gaugeSize / 2 - 1 + 0.5),
-			math.floor(math.sin(angle) * radius + 0.5))
-		UI.legible(shield.number)
+		shield:SetPoint("CENTER", portrait, "TOP", 0, 7 - 1)
 		self.sealShield = shield
 	end
 

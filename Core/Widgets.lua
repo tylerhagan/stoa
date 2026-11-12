@@ -477,35 +477,50 @@ local function hideShield(pip)
 	pip.text:SetPoint("CENTER", 0, 0)
 end
 
--- Your own shield as a gauge (the medallion, the Halo): the shield drawn
--- emptying as it soaks up damage, and the amount left beside it. Out of a
--- fight it shows while there is a shield. In a fight the amount can't be
--- read, only handed on, so the gauge rides a hidden bar of 0 to 1 that is
--- given the amount: any shield fills it and slides the gauge into its
--- clipping window, none slides it out (the lethal skull's trick). What the
--- shield started with is measured a moment after the amount first changes
--- from nothing, as the party tags do.
+-- Your own shield as a gauge (the medallion, the Halo): a gold shield
+-- emptying as it soaks up damage, and on the medallion how much of it is
+-- left, as a share. Out of a fight it shows while there is a shield. In a
+-- fight the amount can't be read, only handed on, so the share is left out
+-- and the gauge rides a hidden bar of 0 to 1 that is given the amount: any
+-- shield fills it and slides the gauge into its clipping window, none
+-- slides it out (the lethal skull's trick). What the shield started with
+-- is measured a moment after the amount first changes from nothing, as the
+-- party tags do.
 local GAUGE_SLIDE = 4000
+local GAUGE_PAD = 6
 local gaugeFull = {} -- unit -> { what the shield held when it went up }
 
-function UI.shieldGauge(parent, size, fontSize, align)
-	local width = size + 70
+-- opts.share: show the share left beside the shield. opts.plate: sit on a
+-- dark plate like the medallion's level plate.
+function UI.shieldGauge(parent, size, opts)
+	opts = opts or {}
+	local height = opts.plate and size + 4 or size
 	local gauge = CreateFrame("Frame", nil, parent)
-	gauge:SetSize(width, size + 4)
+	gauge:SetSize(size, height)
 	gauge:SetClipsChildren(true)
 	local slide = CreateFrame("StatusBar", nil, gauge)
 	slide:SetStatusBarTexture(UI.WHITE)
 	slide:SetStatusBarColor(0, 0, 0, 0)
-	slide:SetSize(GAUGE_SLIDE, size + 4)
+	slide:SetSize(GAUGE_SLIDE, height)
 	slide:SetPoint("RIGHT", gauge, "RIGHT")
 	slide:SetMinMaxValues(0, 1)
 	slide:SetValue(1)
 	local holder = CreateFrame("Frame", nil, slide)
-	holder:SetSize(width, size + 4)
+	holder:SetSize(size, height)
 	holder:SetPoint("RIGHT", slide:GetStatusBarTexture(), "RIGHT")
 
+	local plate
+	if opts.plate then
+		plate = UI.badge(holder, nil, "accent")
+		plate:ClearAllPoints()
+		plate:SetAllPoints(holder)
+		plate.fill:SetVertexColor(0, 0, 0, 0.95)
+		plate:Show()
+	end
 	local icon = CreateFrame("Frame", nil, holder)
 	icon:SetSize(size, size)
+	icon:SetFrameLevel(holder:GetFrameLevel() + 2)
+	icon:SetPoint("LEFT", holder, "LEFT", plate and GAUGE_PAD - 2 or 0, 0)
 	local back = icon:CreateTexture(nil, "ARTWORK")
 	back:SetAllPoints()
 	back:SetTexture(SHIELD_ART)
@@ -515,28 +530,36 @@ function UI.shieldGauge(parent, size, fontSize, align)
 	fill:SetStatusBarTexture(SHIELD_ART)
 	fill:SetMinMaxValues(0, 1)
 	fill:SetValue(1)
-	local number = holder:CreateFontString(nil, "OVERLAY")
-	Stoa:SetFont(number, "serif", fontSize, "OUTLINE")
-	if align == "right" then
-		-- Hugging the right edge: the number last, the shield before it.
-		number:SetPoint("RIGHT", holder, "RIGHT", -1, 0)
-		number:SetJustifyH("RIGHT")
-		icon:SetPoint("RIGHT", number, "LEFT", -4, 0)
-	else
-		icon:SetPoint("LEFT", holder, "LEFT", 1, 0)
-		number:SetPoint("LEFT", icon, "RIGHT", 4, 0)
-		number:SetJustifyH("LEFT")
+	local share
+	if opts.share then
+		share = icon:CreateFontString(nil, "OVERLAY")
+		Stoa:SetFont(share, "serif", opts.fontSize or Stoa.typeSize.label)
+		share:SetPoint("LEFT", icon, "RIGHT", 3, 0)
 	end
-	gauge.icon, gauge.fill, gauge.number = icon, fill, number
+	gauge.icon, gauge.fill, gauge.share = icon, fill, share
 
 	local function colour()
-		local r, g, b = Stoa:Color("shield")
-		back:SetVertexColor(0, 0, 0, 0.75)
+		local r, g, b = Stoa:Color("accent")
+		back:SetVertexColor(r * 0.35, g * 0.35, b * 0.35, 0.9)
 		fill:SetStatusBarColor(r, g, b, 1)
-		number:SetTextColor(r, g, b)
+		if share then share:SetTextColor(r, g, b) end
 	end
 	colour()
 	Stoa:On("STOA_THEME_CHANGED", colour)
+
+	-- Fits the plate round the shield and the share.
+	local function fit(text)
+		local width = size
+		if share then
+			share:SetText(text or "")
+			local words = text and share:GetStringWidth()
+			if words and not Stoa:IsSecret(words) and words > 0 then width = width + 3 + words end
+		end
+		if plate then width = width + GAUGE_PAD * 2 - 2 end
+		width = math.floor(width + 0.5)
+		gauge:SetWidth(width)
+		holder:SetWidth(width)
+	end
 
 	-- `changed`: called for an absorb change, the moment a fresh shield
 	-- in a fight can be measured.
@@ -563,11 +586,11 @@ function UI.shieldGauge(parent, size, fontSize, align)
 			fill:SetMinMaxValues(0, measure)
 			fill:SetValue(plain)
 			slide:SetValue(1)
-			number:SetText(BreakUpLargeNumbers and BreakUpLargeNumbers(plain) or plain)
+			fit(math.floor(plain / measure * 100 + 0.5) .. "%")
 			self:Show()
 			return
 		end
-		-- In a fight: only ever handed on.
+		-- In a fight: only ever handed on, so no share.
 		local full = gaugeFull[unit]
 		if full == nil and changed then
 			gaugeFull[unit] = false
@@ -585,10 +608,11 @@ function UI.shieldGauge(parent, size, fontSize, align)
 			fill:SetValue(1)
 		end
 		slide:SetValue(left)
-		number:SetText(left)
+		fit(nil)
 		self:Show()
 	end
 
+	fit(nil)
 	gauge:Hide()
 	return gauge
 end
