@@ -4,6 +4,10 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.1.4
+
+- Your shield: a small shield with the amount it has left, emptying as it soaks up damage. It sits under the Halo's health number in every layout, and on the medallion's ring while the full console is open. A switch under Combat turns it off.
+
 ## 1.1.3
 
 - Focus: STOA hid Blizzard's focus frame without showing the focus anywhere unless you healed it. Your focus now has a small block under the target of target, friend or foe, in and out of combat, and can be moved. A switch under Combat brings back Blizzard's instead.
