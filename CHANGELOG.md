@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Interact icon up close no longer shows over low-priority things such as chairs and furniture, only things worth using (herbs, ore, quest objects, chests).
 - Accept quests leaves low-level (grey) quests alone: they're never picked from an NPC's list or accepted for you.
 - Chat tabs: a whisper arriving in a chat window you aren't looking at (such as a Whispers tab) puts a gold dot on its tab that pulses a few times and stays until you open it.
 - Shift to stop the comforts now also counts a press in the last moment (the NPC's window or the loot opens a beat after you click, often after Shift is let go), and a talk begun with Shift stays yours until the NPC's windows close, so picking a quest from the list doesn't auto-accept it.
