@@ -31,7 +31,7 @@ local hide = Stoa.frames.hide
 local SLOTS = {
 	"Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist",
 	"Hands", "Waist", "Legs", "Feet", "Finger0", "Finger1", "Trinket0", "Trinket1",
-	"MainHand", "SecondaryHand",
+	"MainHand", "SecondaryHand", "Ranged",
 }
 local WORN_BELOW = 0.3
 
@@ -279,6 +279,105 @@ local function footer()
 	return bar
 end
 
+-- The stats column's pages (stats, titles, equipment sets, your pet) as
+-- words along the footer's right, in place of Blizzard's icon tabs. Each
+-- word clicks Blizzard's own tab, which stays hidden.
+local SIDEBAR_WORDS = {
+	{ "PAPERDOLL_SIDEBAR_STATS", "Stats" },
+	{ "EQUIPMENT_MANAGER", "Equipment sets" },
+	{ "PAPERDOLL_SIDEBAR_TITLES", "Titles" },
+	{ "PET", "Pet" },
+}
+local function sidebarName(i)
+	local bar = rawget(_G, "PAPERDOLL_SIDEBARS")
+	local entry = type(bar) == "table" and bar[i]
+	local name = type(entry) == "table" and entry.name
+	if type(name) == "string" and name ~= "" then return name end
+	local fallback = SIDEBAR_WORDS[i]
+	return fallback and (rawget(_G, fallback[1]) or fallback[2])
+end
+
+function Character:PaintSidebarWords()
+	local bar = footerBar
+	if not (bar and bar.words) then return end
+	local previous
+	for i = #bar.words, 1, -1 do
+		local word = bar.words[i]
+		local tab = word.tab
+		local shown = tab:IsShown()
+		word:SetShown(shown)
+		if shown then
+			word:ClearAllPoints()
+			word:SetSize(math.ceil(word.text:GetStringWidth()) + 4, FOOTER_H - 8)
+			if previous then
+				word:SetPoint("RIGHT", previous, "LEFT", -18, 0)
+			else
+				word:SetPoint("RIGHT", bar, "RIGHT", -22, 0)
+			end
+			previous = word
+			local on = tab.GetChecked and tab:GetChecked()
+			local usable = not tab.IsEnabled or tab:IsEnabled()
+			word.text:SetTextColor(Stoa:Color(on and "accent" or "muted"))
+			word:SetAlpha(usable and 1 or 0.4)
+			word.under:SetVertexColor(Stoa:Color("accent"))
+			word.under:SetShown(on and true or false)
+		end
+	end
+end
+
+local function sidebarWords(bar)
+	if bar.words or not _G.PaperDollSidebarTab1 then return end
+	bar.words = {}
+	for i = 1, 4 do
+		local tab = _G["PaperDollSidebarTab" .. i]
+		local name = tab and sidebarName(i)
+		if name then
+			local word = CreateFrame("Button", nil, bar)
+			word.tab = tab
+			word.text = UI.text(word, "sans", Stoa.typeSize.body, "muted", "CENTER")
+			word.text:SetPoint("CENTER", 0, 1)
+			word.text:SetText(name)
+			local under = word:CreateTexture(nil, "OVERLAY")
+			under:SetHeight(2)
+			under:SetPoint("BOTTOMLEFT", 0, 4)
+			under:SetPoint("BOTTOMRIGHT", 0, 4)
+			under:SetColorTexture(1, 1, 1)
+			word.under = under
+			word:SetScript("OnClick", function(self)
+				if not self.tab.IsEnabled or self.tab:IsEnabled() then self.tab:Click() end
+			end)
+			word:SetScript("OnEnter", function(self)
+				if self.tab.IsEnabled and not self.tab:IsEnabled() then
+					local why = self.tab.disabledTooltip
+					if type(why) == "function" then why = why(self.tab) end
+					GameTooltip:SetOwner(self, "ANCHOR_TOP")
+					GameTooltip:SetText(name)
+					if type(why) == "string" then GameTooltip:AddLine(why, Stoa:Color("danger")) end
+					GameTooltip:Show()
+				else
+					self.text:SetTextColor(Stoa:Color("text"))
+				end
+			end)
+			word:SetScript("OnLeave", function()
+				GameTooltip:Hide()
+				Character:PaintSidebarWords()
+			end)
+			bar.words[#bar.words + 1] = word
+		end
+	end
+	if #bar.words == 0 then return end
+	-- Blizzard's icon tabs stay, unseen and out of the mouse's way.
+	if PaperDollSidebarTabs then PaperDollSidebarTabs:SetAlpha(0) end
+	for i = 1, 4 do
+		local tab = _G["PaperDollSidebarTab" .. i]
+		if tab and tab.EnableMouse then tab:EnableMouse(false) end
+	end
+	if PaperDollFrame_UpdateSidebarTabs then
+		hooksecurefunc("PaperDollFrame_UpdateSidebarTabs", function() guarded(Character.PaintSidebarWords, Character) end)
+	end
+	Character:PaintSidebarWords()
+end
+
 function Character:UpdateFooter()
 	local bar = footerBar
 	if not bar then return end
@@ -418,6 +517,52 @@ local function dressStatRow(row)
 	end
 end
 
+-- Your role's numbers first: a tank sees Defence on top, melee and hunters
+-- Weapons, healers and casters the block with spell power.
+local function roleCategory()
+	local role = Stoa.GetRole and Stoa:GetRole()
+	local _, class = UnitClass("player")
+	if role == "TANK" then return rawget(_G, "STAT_CATEGORY_DEFENSE") end
+	if role == "MELEE" or class == "HUNTER" then return rawget(_G, "STAT_CATEGORY_WEAPONS") end
+	if role == "HEALER" or role == "RANGED" then return rawget(_G, "STAT_CATEGORY_MODIFIERS") end
+end
+Character.roleCategory = roleCategory
+
+-- Moves the role's block (its heading and rows) to the top of a stats
+-- list. Returns the new list, or nil when nothing moves.
+local function roleOrder(data, first)
+	if type(data) ~= "table" or not first or (data[1] and data[1].name == first) then return nil end
+	local blocks, block = {}, nil
+	for _, entry in ipairs(data) do
+		if entry.isHeader or not block then
+			block = {}
+			blocks[#blocks + 1] = block
+		end
+		block[#block + 1] = entry
+	end
+	local at
+	for i, b in ipairs(blocks) do
+		if b[1].isHeader and b[1].name == first then at = i break end
+	end
+	if not at then return nil end
+	table.insert(blocks, 1, table.remove(blocks, at))
+	local out = {}
+	for _, b in ipairs(blocks) do
+		for _, entry in ipairs(b) do out[#out + 1] = entry end
+	end
+	return out
+end
+Character.roleOrder = roleOrder
+
+local function orderStats(pane)
+	if pane:GetUnit() ~= "player" then return end
+	local out = roleOrder(pane.elementData, roleCategory())
+	if out and CreateDataProvider and pane.ScrollBox then
+		pane.elementData = out
+		pane.ScrollBox:SetDataProvider(CreateDataProvider(out), ScrollBoxConstants and ScrollBoxConstants.RetainScrollPosition)
+	end
+end
+
 local function dressStats()
 	for _, pane in ipairs({ CharacterStatsPaneScrollBox, CharacterStatsPanePetScrollBox }) do
 		local box = pane and pane.ScrollBox
@@ -426,6 +571,54 @@ local function dressStats()
 			local function each() box:ForEachFrame(function(row) guarded(dressStatRow, row) end) end
 			hooksecurefunc(box, "Update", each)
 			each()
+		end
+		if pane and pane.UpdateStats and pane.GetUnit and not pane.stoaOrdered then
+			pane.stoaOrdered = true
+			hooksecurefunc(pane, "UpdateStats", function(self) guarded(orderStats, self) end)
+		end
+	end
+end
+
+-- Blizzard's detail panes on the other pages (a skill, a faction, your
+-- rank) start just under the top of the stats column, which is inside
+-- STOA's taller header, so their titles ran into the tab words. They start
+-- under the header instead.
+local DETAIL_PAGES = { "SkillsFrame", "ReputationFrame", "PVPRankFrame", "TokenFrame", "CurrencyFrame" }
+local function seatPane(pane, frame)
+	if pane.stoaSeated or not pane.GetNumPoints then return end
+	local points, top = {}, nil
+	for i = 1, pane:GetNumPoints() do
+		local point, rel, relPoint, x, y = pane:GetPoint(i)
+		local stone = frame.RightPaneHost and frame.RightPaneHost.StoneBg
+		if point == "TOPLEFT" and (rel == frame.RightPaneHost or (stone and rel == stone)) then
+			top = x or 0
+		else
+			points[#points + 1] = { point, rel, relPoint, x, y }
+		end
+	end
+	if not top then return end
+	pane.stoaSeated = true
+	pane:ClearAllPoints()
+	for _, p in ipairs(points) do pane:SetPoint(p[1], p[2], p[3], p[4], p[5]) end
+	pane:SetPoint("TOPLEFT", frame.stoaHeader, "BOTTOMLEFT", LEFT_W + top, -12)
+end
+
+-- The stats column's own pages (stats, titles, sets) hung under Blizzard's
+-- icon tabs, which are words in the footer now: they start under the header.
+local function seatStatPanes(frame)
+	local list = { CharacterStatsPaneScrollBox, CharacterStatsPanePetScrollBox, rawget(_G, "CharacterStatsPane") }
+	if PaperDollFrame then
+		for _, key in ipairs({ "TitleManagerPane", "EquipmentManagerPane" }) do list[#list + 1] = PaperDollFrame[key] end
+	end
+	for _, pane in pairs(list) do seatPane(pane, frame) end
+end
+
+local function seatDetailPanes(frame)
+	if not (frame.stoaHeader and frame.RightPaneHost) then return end
+	for _, name in ipairs(DETAIL_PAGES) do
+		local page = rawget(_G, name)
+		if page and page.GetChildren then
+			for _, child in ipairs({ page:GetChildren() }) do seatPane(child, frame) end
 		end
 	end
 end
@@ -456,6 +649,7 @@ function Character:LayOut()
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	if title then title:SetTextColor(Stoa:Color("text")) end
 	if not sheet then
+		seatDetailPanes(frame)
 		self:PlaceTabs()
 		return
 	end
@@ -463,7 +657,8 @@ function Character:LayOut()
 		laidOut = true
 		hideArt()
 		dressStats()
-		footer()
+		sidebarWords(footer())
+		seatStatPanes(frame)
 		-- The toggle for the stats column stays only while it's folded, so
 		-- the column can always be brought back.
 		local toggle = frame.RightPaneToggleButton
