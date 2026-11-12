@@ -198,7 +198,7 @@ end
 
 function Comforts:Sparkle()
 	local frame = self.sparkleFrame
-	local on = self.db.questGlow and self.db.sparkle ~= false
+	local on = self.db.questGlow and self.db.sparkle ~= false and not Stoa:SharedBy("sparkle")
 	local plate
 	if on and UnitExists and UnitExists("softinteract") and UnitIsGameObject and UnitIsGameObject("softinteract")
 		and C_NamePlate and C_NamePlate.GetNamePlateForUnit then

@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Sparkle steps aside for other addons that sparkle (Sparkles, Goldspark, NodeSight, or OneForAll with its sparkle on), so two glows never stack on one object.
 - Focus: its block sits a little lower, so its panel no longer overlaps the target of target's.
 - Sparkle on what's up close (on by default, with Interact icon up close): the herb, ore, chest or quest object the game's icon marks gets a soft gold glow with a few twinkling stars, so it's easy to spot. NPCs don't sparkle. The art is new, so it needs a full restart of the game.
 - Interact icon up close no longer shows over low-priority things such as chairs and furniture, only things worth using (herbs, ore, quest objects, chests).
