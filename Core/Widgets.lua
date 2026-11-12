@@ -530,6 +530,8 @@ function UI.markGauge(parent, size, art)
 		if ease and EASE then fill:SetValue(share, EASE) else fill:SetValue(share) end
 	end
 	function gauge:SetArt(path) fill:SetArt(path) end
+	-- A buff you should have up and don't: the emblem empty and dimmed.
+	function gauge:SetMissing(missing) gauge:SetAlpha(missing and 0.55 or 1) end
 	gauge:Hide()
 	return gauge
 end
