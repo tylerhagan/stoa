@@ -47,14 +47,15 @@ local JOBS = {
 	acceptRes = "accepting resurrections",
 	dotPlates = "DoT marks on nameplates",
 	sparkle = "sparkles on what's up close",
+	questLoot = "the game's sparkle on quest items",
+	quietErrors = "hiding the red error text",
+	tray = "gathering the minimap's addon icons",
 }
 local JOB_ORDER = {
 	"fastLoot", "sellJunk", "repair", "lootFeed", "acceptQuests", "turnInQuests", "camera",
 	"windows", "chatCopy", "tooltipTarget", "gearUpgrade", "bagUpgrade", "rewardUpgrade", "invites", "keywordInvites", "duels",
-	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates", "sparkle",
+	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates", "sparkle", "questLoot", "quietErrors", "tray",
 }
-
-local SPARKLE_SWITCH = "*sparkle"
 
 -- Addons that only sparkle what's up close: while one is loaded, STOA's
 -- sparkle waits, so the two don't stack.
@@ -77,20 +78,10 @@ local COMPANIONS = {
 			acceptQuests = "autoAccept", turnInQuests = "autoTurnIn", camera = "cameraZoom",
 			windows = "moveWindows", chatCopy = "copyChat", tooltipTarget = "unitTarget",
 			gearUpgrade = "gearValue", bagUpgrade = "gearValue", rewardUpgrade = "gearValue", invites = "inviteOn", keywordInvites = "keywordOn",
-			duels = "duelOn", squareMinimap = "mmSquare", sparkle = SPARKLE_SWITCH,
+			duels = "duelOn", squareMinimap = "mmSquare", sparkle = "nodeGlow",
+			questLoot = "questSparkles", quietErrors = "hideErrors", tray = "mmCollect",
 		},
 		get = function(key)
-			-- Its sparkle switch's name isn't known for sure: any switch of
-			-- its own with "sparkl" in the name that is on counts.
-			if key == SPARKLE_SWITCH then
-				local db = _G.OneForAllDB
-				local qol = type(db) == "table" and db.qol
-				if type(qol) ~= "table" then return false end
-				for name, value in pairs(qol) do
-					if type(name) == "string" and name:lower():find("sparkl") and value then return true end
-				end
-				return false
-			end
 			local ofa = _G.OneForAll
 			local qol = type(ofa) == "table" and ofa.QoL
 			if type(qol) ~= "table" or type(qol.Get) ~= "function" then return false end

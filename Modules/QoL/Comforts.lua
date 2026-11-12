@@ -114,6 +114,12 @@ local QUEST_GLOW = {
 	-- Not on low-priority things like chairs and furniture.
 	{ "SoftTargetLowPriorityIcons", "0" },
 }
+-- The game's own sparkle on quest items lying in the world (its loot glow,
+-- which Forever only shows with the outline on unless this is set).
+local QUEST_LOOT = "outlineModeShowLootEffectWhenDisabled"
+-- The game gives an object up close a plate only while this is on.
+local PLATE_GATE = "SoftTargetNameplateInteract"
+local gateAt -- the value Stoa last gave PLATE_GATE
 -- Set by earlier versions; handed back to the game.
 local NO_LONGER = { "graphicsOutlineMode", "Outline" }
 
@@ -125,7 +131,17 @@ function Comforts:QuestGlow()
 		else
 			Stoa.GameSettings:Restore(pair[1])
 		end
+	end	-- A companion that turns the quest loot sparkle on keeps it.
+	if self.db.questGlow and not Stoa:SharedBy("questLoot") then
+		Stoa.GameSettings:Set("Comforts", QUEST_LOOT, "1")
+	else
+		Stoa.GameSettings:Restore(QUEST_LOOT)
 	end
+	if not self.db.questGlow then
+		gateAt = nil
+		Stoa.GameSettings:Restore(PLATE_GATE)
+	end
+	self:Sparkle()
 end
 
 -- Sparkle -------------------------------------------------------------------
@@ -199,8 +215,22 @@ end
 function Comforts:Sparkle()
 	local frame = self.sparkleFrame
 	local on = self.db.questGlow and self.db.sparkle ~= false and not Stoa:SharedBy("sparkle")
+	local object = on and UnitExists and UnitExists("softinteract") and UnitIsGameObject
+		and UnitIsGameObject("softinteract") == true
+	-- The game only gives an object a plate (where its icon and the sparkle
+	-- hang) while this is on; it stays off for NPCs, so they get none.
+	if on and not InCombatLockdown() then
+		local want = object and "1" or "0"
+		if gateAt ~= want then
+			gateAt = want
+			Stoa.GameSettings:Set("Comforts", PLATE_GATE, want)
+		end
+	elseif not on and gateAt then
+		gateAt = nil
+		Stoa.GameSettings:Restore(PLATE_GATE)
+	end
 	local plate
-	if on and UnitExists and UnitExists("softinteract") and UnitIsGameObject and UnitIsGameObject("softinteract")
+	if object and UnitExists and UnitExists("softinteract") and UnitIsGameObject and UnitIsGameObject("softinteract")
 		and C_NamePlate and C_NamePlate.GetNamePlateForUnit then
 		local ok, found = pcall(C_NamePlate.GetNamePlateForUnit, "softinteract")
 		if ok and found and not (found.IsForbidden and found:IsForbidden()) then plate = found end
@@ -417,6 +447,9 @@ end
 function Comforts:Errors(fighting)
 	local errors = UIErrorsFrame
 	if not errors then return end
+	-- A companion hiding them for good owns the error text; turning it back
+	-- on after a fight would undo that.
+	if Stoa:SharedBy("quietErrors") then return end
 	if fighting and self.db.quietErrors then
 		errors:UnregisterEvent("UI_ERROR_MESSAGE")
 	else

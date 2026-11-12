@@ -94,6 +94,8 @@ local function looksLikeButton(child)
 end
 
 function Tray:Scan()
+	-- A companion gathering the icons itself has them; two would fight.
+	if Stoa:SharedBy("tray") then return end
 	local found = false
 	local lib = libDBIcon()
 	if lib and lib.GetButtonList then
