@@ -19,12 +19,12 @@ local NOTE = {
 	edition = "1.1.3",
 	title = "New in STOA 1.1.3",
 	lines = {
-		{ "Target of target", "Who your target is targeting, beside the target. It says YOU when it is you." },
+		{ "Target of target and focus", "Who your target is targeting, beside the target, saying YOU when it is you. Your focus sits under it." },
 		{ "Shield", "On party cards, a small shield that drains as it soaks up damage." },
 		{ "Druid form mana", "Your mana in cat and bear form now shows in combat too." },
 		{ "Speed", "A new line you can add to At a glance." },
 	},
-	foot = "Target of target can be switched off in the settings under Combat. /stoa news shows this again.",
+	foot = "Both can be switched off in the settings under Combat. /stoa news shows this again.",
 }
 
 local WIDTH = 460
