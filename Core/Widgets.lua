@@ -70,7 +70,16 @@ function UI.applyTheme()
 		else
 			entry.region:SetTextColor(r, g, b, a)
 		end
+		-- A texture's colour carries its alpha, so recolouring undoes a fade.
+		-- Parts faded with UI.fadeTo keep theirs.
+		if entry.region.stoaFade then entry.region:SetAlpha(entry.region.stoaFade) end
 	end
+end
+
+-- Sets a region's alpha so that a later theme pass keeps it.
+function UI.fadeTo(region, alpha)
+	region.stoaFade = alpha
+	region:SetAlpha(alpha)
 end
 
 Stoa:On("STOA_THEME_CHANGED", UI.applyTheme)

@@ -1188,17 +1188,17 @@ function Console:SetOpen(open, instant)
 			page:SetAlpha(open and progress or 1 - progress)
 		end
 		for _, part in ipairs(self.resourceParts) do
-			part:SetAlpha(open and progress or 1 - progress)
+			UI.fadeTo(part, open and progress or 1 - progress)
 		end
 		for _, part in ipairs(self.archParts) do
-			part:SetAlpha(open and progress or 1 - progress)
+			UI.fadeTo(part, open and progress or 1 - progress)
 		end
-		self.bridge:SetAlpha(open and 1 - progress or progress)
+		UI.fadeTo(self.bridge, open and 1 - progress or progress)
 		for _, part in ipairs(self.tabArt or {}) do
-			part:SetAlpha(open and progress or 1 - progress)
+			UI.fadeTo(part, open and progress or 1 - progress)
 		end
 		for _, part in ipairs(self.flatParts) do
-			part:SetAlpha(open and 1 - progress or progress)
+			UI.fadeTo(part, open and 1 - progress or progress)
 		end
 		local scale = self.seal:GetScale()
 		self.seal:SetScale(scale + (sealScale - scale) * progress)
