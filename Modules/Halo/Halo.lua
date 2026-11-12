@@ -301,9 +301,11 @@ local TARGET_CAST_H = 14
 
 -- Out of combat, on the full console with its art, the plaque docks on the
 -- gold rim on the mana side, beside the bars you read there: as tall as the
--- medallion, its left end fitted round it, its right end joined to the
--- portrait ring (UI.plaque's SetDocked). In a fight it moves to the Halo's
--- upper right as the full plaque. A spot set with the movers wins.
+-- medallion, its left end fitted round it, no portrait (the level joins the
+-- caption), its right end sweeping down to the rim (UI.plaque's
+-- SetDocked). The target of target stands behind that sweep as a lower
+-- slab of its own. In a fight it moves to the Halo's upper right as the
+-- full plaque. A spot set with the movers wins.
 local TARGET_DOCK_Y = -1
 -- Where the words start, from the plaque's left end, clear of the medallion.
 local TARGET_DOCK_TEXT = 60
@@ -373,8 +375,11 @@ function Halo:PlaceTarget()
 	local curve = (self.targetTextLeft or TARGET_PAD) + TARGET_BAR_W + 14
 	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
 	self:LayoutTarget(target.plaque.docked and curve or nil)
+	self:PlaceTargetOfTarget(target.plaque.docked and curve or nil)
 	target:SetAlpha(self:TargetAlpha())
 	self:PlaceTargetAuras()
+	-- The level moves between the caption and the medallion's badge.
+	if target.caption then self:UpdateTarget() end
 end
 
 -- Lays the plaque's words and bar out: docked (the full plaque's rows
@@ -765,7 +770,9 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 		UI.tint(fill, "panel", 0.9)
 		local r, g, b = Stoa:Color("panel")
 		fill:SetVertexColor(r, g, b, 0.9)
-		UI.pillEdge(chip, 10):Set(Stoa:Color("hairline"))
+		local edge = UI.pillEdge(chip, 10)
+		edge:Set(Stoa:Color("hairline"))
+		chip.fill, chip.edge = fill, edge
 	end
 	chip:SetAttribute("unit", unit)
 	chip:SetAttribute("type1", "target")
@@ -789,7 +796,7 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 	if bare then
 		for _, fs in ipairs({ label, who }) do UI.legible(fs) end
 	end
-	chip.unit, chip.name, chip.hp = unit, who, hp
+	chip.unit, chip.name, chip.hp, chip.label = unit, who, hp, label
 	Stoa:NewTicker(0.2, function()
 		if chip:IsVisible() then self:UpdateUnitChip(chip) end
 	end)
@@ -800,6 +807,48 @@ function Halo:BuildTargetOfTarget(target)
 	local chip = self:BuildUnitChip("StoaTargetTarget", "targettarget", "Targeting", target)
 	chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD)
 	target.tot = chip
+	-- The docked plaque casts its shadow on it while it shows.
+	chip:HookScript("OnShow", function() target.plaque:SetShadow(true) end)
+	chip:HookScript("OnHide", function() target.plaque:SetShadow(false) end)
+	target.plaque:SetShadow(chip:IsShown())
+	self:PlaceTargetOfTarget(target.plaque.docked and target.plaque.curve or nil)
+end
+
+-- Docked, the target of target is a lower slab standing on the rim behind
+-- the plaque, its left end tucked under the plaque's sweep and its words
+-- starting where the sweep has passed; `curve` is where the plaque's own
+-- curve starts. Otherwise the small panel beside the plaque. Out of combat
+-- only: the chip is secure.
+local TOT_TUCK = 20    -- how far its left end sits under the plaque
+local TOT_DOCK_TEXT = 82 -- its words, from its left end, past the sweep
+function Halo:PlaceTargetOfTarget(curve)
+	local target = self.target
+	local chip = target and target.tot
+	if not chip or InCombatLockdown() then return end
+	local docked = curve ~= nil
+	if docked and not chip.slab then chip.slab = UI.plaqueStep(chip) end
+	chip:ClearAllPoints()
+	chip.label:ClearAllPoints()
+	if docked then
+		local left = curve + UI.PLAQUE_JOIN_SPAN - TOT_TUCK
+		local stepCurve = TOT_DOCK_TEXT + TOT_WIDTH + 8
+		-- Behind the plaque: a lower strata than its LOW.
+		chip:SetFrameStrata("BACKGROUND")
+		chip:SetSize(stepCurve + UI.PLAQUE_STEP_SPAN, UI.PLAQUE_STEP_H)
+		chip:SetPoint("BOTTOMLEFT", target, "BOTTOMLEFT", left, 0)
+		chip.slab:Layout(stepCurve)
+		chip.label:SetPoint("TOPLEFT", TOT_DOCK_TEXT, -6)
+	else
+		chip:SetFrameStrata("LOW")
+		chip:SetSize(TOT_WIDTH, CHIP_HEIGHT)
+		chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD)
+		chip.label:SetPoint("TOPLEFT")
+	end
+	if chip.slab then chip.slab:SetShown(docked) end
+	if chip.fill then
+		chip.fill:SetShown(not docked)
+		if docked then chip.edge:Clear() else chip.edge:Set(Stoa:Color("hairline")) end
+	end
 end
 
 -- Your focus, under the target's target, there with or without a target.
@@ -876,7 +925,14 @@ function Halo:UpdateTarget()
 	local words = {}
 	if rank == "elite" or rank == "worldboss" then words[#words + 1] = "ELITE" end
 	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
-	target.plaque:SetLevel(level and (level < 0 and "??" or tostring(level)) or nil)
+	local levelText = level and (level < 0 and "??" or tostring(level)) or nil
+	-- Docked there's no portrait, so the level leads the caption.
+	if target.plaque.docked then
+		target.plaque:SetLevel(nil)
+		if levelText then table.insert(words, 1, (rawget(_G, "LEVEL") or "Level"):upper() .. " " .. levelText) end
+	else
+		target.plaque:SetLevel(levelText)
+	end
 	-- The game calls creatures without a type "Not specified": say nothing.
 	local unspecified = kind == "Not specified" or kind == (rawget(_G, "UNKNOWN") or "")
 	if kind and not unspecified and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end

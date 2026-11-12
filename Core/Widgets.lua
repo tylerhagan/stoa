@@ -1384,18 +1384,19 @@ local function medallion(frame, coinSide, plaque)
 end
 
 -- Docked (the target out of combat): the plaque stands on the console's
--- rim, as tall as its medallion, as one shape with its portrait ring: the
--- left end is cut round the medallion with a gold line following its ring,
--- and the right end is round the portrait, as tall as the plaque, its gold
--- top edge running on round the top right and flowing straight out of the
--- curve into a long sweep down to the rim like the medallion's flourish
--- (Tools/art/plaque_join.py).
+-- rim, as tall as its medallion, with no portrait: the left end is cut
+-- round the medallion with a gold line following its ring, and at the
+-- right end the gold top edge runs on round a corner as tall as half the
+-- plaque and flows straight out of the curve into a long sweep down to the
+-- rim like the medallion's flourish (Tools/art/plaque_join.py).
 -- Between them, a plain fill with the gold line along its top. Built the
 -- first time it docks. Sizes in UI units, matching the art.
 local JOIN_R, JOIN_H = 34, 68
--- The join art: 131x70 (the sweep reaching 56 past the ring), its left
--- edge 4 before the ring starts, the ring's centre 38 in and 34 up.
+-- The join art: 131x70 (the sweep reaching 56 past the corner), its left
+-- edge 4 before the corner starts, the corner's centre 38 in and 34 up.
 local JOIN_W, JOIN_ART_H, JOIN_LEAD, JOIN_CX = 131, 70, 4, 38
+-- Its shadow: the same shape 4 to the right, softened, 8 wider.
+local SHADOW_W = JOIN_W + 8
 -- The socket art: 56x70, its left edge 24 right of the medallion's centre.
 local SOCKET_W, SOCKET_ART_H = 56, 70
 UI.PLAQUE_JOIN_H = JOIN_H
@@ -1425,7 +1426,69 @@ local function buildDock(frame, plaque)
 	dock.body, dock.top, dock.join, dock.lines = body, top, join, lines
 	dock.socket, dock.socketLines = socket, socketLines
 	plaque.dock = dock
+	-- Shown only while something sits behind the sweep (SetShadow).
+	local shadow = frame:CreateTexture(nil, "BACKGROUND", nil, 0)
+	shadow:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinShadow")
+	shadow:SetSize(SHADOW_W, JOIN_ART_H)
+	shadow:SetPoint("BOTTOMLEFT", join, "BOTTOMLEFT")
+	shadow:SetVertexColor(0, 0, 0, 1)
+	shadow:Hide()
+	plaque.shadow = shadow
 	return dock
+end
+
+-- A lower slab standing on the rim behind a docked plaque (the target of
+-- target): a plain fill with a softer gold line along its top and the same
+-- rounded sweep at its right end, smaller (PlaqueStep). Its left end tucks
+-- under the plaque in front, so it needs no end of its own. Returns the
+-- slab; slab:Layout(curve) sets where its curve starts, from the frame's
+-- left (the frame should be STEP_H tall and curve + STEP_SPAN wide), and
+-- slab:SetShown(on) shows or hides it.
+local STEP_R = 22
+local STEP_W, STEP_ART_H, STEP_LEAD, STEP_CX = 87, 46, 4, 26
+UI.PLAQUE_STEP_H = 2 * STEP_R
+UI.PLAQUE_STEP_SPAN = STEP_CX - STEP_LEAD + STEP_R
+local STEP_LINE_A = 0.6
+function UI.plaqueStep(frame)
+	local slab = {}
+	local body = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	body:SetColorTexture(1, 1, 1)
+	local top = frame:CreateTexture(nil, "BORDER", nil, 1)
+	top:SetColorTexture(1, 1, 1)
+	top:SetHeight(2)
+	local step = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	step:SetTexture(UI.MEDIA .. "Textures\\PlaqueStep")
+	step:SetSize(STEP_W, STEP_ART_H)
+	local lines = frame:CreateTexture(nil, "BORDER", nil, 1)
+	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueStepLines")
+	lines:SetAllPoints(step)
+	local parts = { body, top, step, lines }
+	for _, part in ipairs({ body, step }) do
+		part:SetVertexColor(Stoa:Color("panel"))
+		UI.tint(part, "panel", 1)
+	end
+	for _, part in ipairs({ top, lines }) do
+		local r, g, b = Stoa:Color("accent")
+		part:SetVertexColor(r, g, b, STEP_LINE_A)
+		UI.tint(part, "accent", STEP_LINE_A)
+	end
+	function slab:Layout(curve)
+		body:ClearAllPoints()
+		body:SetPoint("BOTTOMLEFT")
+		body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
+		top:ClearAllPoints()
+		top:SetPoint("TOPLEFT", 0, 1)
+		-- Up to where the art's own line starts: the line is see-through,
+		-- so an overlap would show as a brighter spot.
+		top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - STEP_LEAD, 1)
+		step:ClearAllPoints()
+		step:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - STEP_LEAD, 0)
+	end
+	function slab:SetShown(on)
+		for _, part in ipairs(parts) do part:SetShown(on) end
+	end
+	slab:SetShown(false)
+	return slab
 end
 
 function UI.plaque(frame, coinSide, opts)
@@ -1527,7 +1590,6 @@ function UI.plaque(frame, coinSide, opts)
 	end
 
 	-- Docked on the console rim, or free (see buildDock).
-	-- Docked on the console rim, joined to its portrait ring, or free.
 	-- `curve` is where the join's curve starts, from the plaque's left; the
 	-- plaque's height should be PLAQUE_JOIN_H and its width curve +
 	-- PLAQUE_JOIN_SPAN. Medallion plaques only.
@@ -1552,16 +1614,21 @@ function UI.plaque(frame, coinSide, opts)
 			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 1)
 			dock.join:ClearAllPoints()
 			dock.join:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - JOIN_LEAD, 0)
-			-- The portrait sits in the ring.
-			coin:SetScale(1)
-			coin:ClearAllPoints()
-			coin:SetPoint("CENTER", frame, "BOTTOMLEFT", curve - JOIN_LEAD + JOIN_CX, JOIN_R)
 		else
 			plaque.placeCoin(plaque.bare and 0.75 or 1)
 		end
+		-- Docked, there is no portrait: callers put the level in words.
+		coin:SetShown(not on)
+		if plaque.shadow then plaque.shadow:SetShown(on and plaque.shadowWanted or false) end
 		paintFill()
 		plaque:SetRank(plaque.rank)
 		plaque:SetReaction(plaque.reaction)
+	end
+
+	-- The docked sweep's shadow, for when something stands behind it.
+	function plaque:SetShadow(on)
+		plaque.shadowWanted = on and true or false
+		if plaque.shadow then plaque.shadow:SetShown(plaque.shadowWanted and plaque.docked or false) end
 	end
 
 	-- The strip: a colour token, or nil to hide it.

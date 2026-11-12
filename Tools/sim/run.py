@@ -725,10 +725,21 @@ do
 			if not (plaque.dock and plaque.dock.join:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: join missing when docked" end
 			halo:LayoutTarget(302)
 			if not target.laidDocked then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: not laid out docked" end
+			if plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait shows when docked" end
+			plaque:SetShadow(true)
+			if not plaque.shadow:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: no shadow behind the sweep" end
+			if target.tot then
+				halo:PlaceTargetOfTarget(302)
+				if target.tot.fill and target.tot.fill:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target of target: panel shows when docked" end
+				if not target.tot.slab then SIM_ERRORS[#SIM_ERRORS + 1] = "Target of target: no slab when docked" end
+				halo:PlaceTargetOfTarget(nil)
+			end
 			plaque:SetDocked(false)
 			halo:LayoutTarget(nil)
 			if plaque.dock and plaque.dock.join:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: join stays undocked" end
 			if target.laidDocked then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: still laid out docked" end
+			if not plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait missing undocked" end
+			if plaque.shadow:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: shadow stays undocked" end
 			halo:PlaceTarget()
 		end
 		local realCasting, realExists = UnitCastingInfo, UnitExists

@@ -241,6 +241,11 @@ function SelfBuffs:Button(i)
 	button:SetAttribute("unit", "player")
 	local icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetAllPoints()
+	-- In the theme's colour: the spell's art in grey, tinted, so the row
+	-- reads as STOA's and follows a theme change.
+	icon:SetDesaturated(true)
+	icon:SetVertexColor(Stoa:Color("accent"))
+	UI.tint(icon, "accent")
 	button.icon = icon
 	if Stoa.ItemSkin and Stoa.ItemSkin.skinSlot then Stoa.ItemSkin.skinSlot(button) end
 	local left = UI.text(button, "sans", Stoa.typeSize.caption, "accent", "CENTER")
