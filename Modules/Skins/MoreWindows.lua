@@ -19,9 +19,10 @@ local More = Stoa:NewModule("MoreWindows")
 -- world map's border frame alone. "parts" are extra named frames whose own
 -- art is hidden (insets and money bars).
 local TARGETS = {
-	-- The spellbook's tabs start just under its title, so its metal strip
-	-- stays short and the title sits above them.
-	{ name = "PlayerSpellsFrame", band = 24 },
+	-- Talents and the spellbook fill their window right up to its top edge
+	-- with their own art, which covered the lower half of the metal strip,
+	-- so the whole strip rises above the window instead.
+	{ name = "PlayerSpellsFrame", band = 0, raise = 42 },
 	{ name = "SpellBookFrame", band = 24 },
 	{ name = "PlayerTalentFrame" },
 	{ name = "TalentFrame" },
@@ -123,6 +124,7 @@ local function dressTarget(target, frame)
 		if windows and windows.DressButtonsIn and details then windows.DressButtonsIn(details, 3) end
 	else
 		if target.band then frame.stoaBandHeight = target.band end
+		if target.raise then frame.stoaRaise = target.raise end
 		dressFull(frame)
 	end
 	for _, partName in ipairs(target.parts or {}) do
