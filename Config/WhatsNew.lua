@@ -19,14 +19,14 @@ Stoa.WhatsNew = WhatsNew
 -- as "PRIEST"): each shows as a small tag in its class colour beside the
 -- line's name.
 local NOTE = {
-	edition = "1.1.4",
-	title = "New in STOA 1.1.4",
+	edition = "1.1.5",
+	title = "New in STOA 1.1.5",
 	lines = {
-		{ "Your shield", "A silver shield beside the medallion and under the Halo's health number, draining as it soaks up damage. It shows any shield on you, whoever cast it, such as a priest's Power Word: Shield or a mage's Ice Barrier or Mana Shield." },
-		{ "Your class mark", classes = { "PRIEST", "PALADIN", "WARRIOR", "ROGUE", "SHAMAN" }, "Next to it, the buff your class keeps up, emptying as it runs out: Inner Fire for priests, your seal for paladins, Battle Shout for warriors, Slice and Dice for rogues, and Lightning or Water Shield for shamans. A priest's missing Inner Fire, or a paladin's missing seal in a fight, shows as an empty mark instead of a warning." },
-		{ "A new experience bar", "Blizzard's experience bar as a thin flat bar in STOA's dark track, wherever Edit Mode puts it, filling in gold like the medallion, rested in blue. Reputation is coloured by standing, and it fades away in a fight." },
-		{ "Timer coins fade when off", classes = { "PRIEST", "PALADIN" }, "The Halo's coins for what you keep up, such as Shadow Word: Pain or your seal, fade to a faint outline when they're off, like an unticked line on a checklist, instead of turning orange." },
-		{ "Quest items in your bags", "Items a quest of yours still needs get a gold edge in your bags, and junk selling leaves them alone." },
+		{ "Your buffs at hand", "Out of combat, small icons left of the Halo for the long buffs you keep on yourself when one is missing or about to run out, such as Inner Fire, a paladin's aura and blessing, a mage's armor or a shaman's shield. Click one to cast it. Every class but warriors and rogues has some." },
+		{ "Sparkle on what's up close", "The herb, ore, chest or quest object the game's interact icon marks gets a soft gold glow with a few twinkling stars. Chairs and furniture no longer get the icon, and quest items lying in the world get the game's own loot sparkle." },
+		{ "A dot for new whispers", "A whisper arriving in a chat window you aren't looking at, such as a Whispers tab, puts a gold dot on its tab until you open it." },
+		{ "Grey quests left alone", "Accepting quests for you skips low-level quests, and holding Shift as you talk to an NPC now reliably stops the comforts for that talk." },
+		{ "OneForAll, side by side", "With OneForAll, the jobs both can do (sparkles, hiding errors, gathering minimap icons and more) go to whichever has its switch on, and STOA asks once whether to turn off OneForAll's low-rank check and info bar." },
 	},
 	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }

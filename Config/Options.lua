@@ -487,6 +487,7 @@ local function build()
 	actions("uprankNow", "Ranks", "Puts your best ranks on your bars now.", { { "Upgrade my bars now", command("uprank") } }, { cmd = "/stoa uprank" })
 	toggle(of("QuestReward"), "enabled", "Mark the best quest reward", "With a choice of rewards, UPGRADE marks the one that beats what you wear, or VALUE the one that sells for most.", true, { id = "reward", reload = true, words = "pawn upgrade" })
 	toggle(of("QuestItems"), "enabled", "Quest item buttons", "A small row of buttons for items your quests ask you to use, beside the Halo.", true, { id = "questItems", reload = true })
+	toggle(of("SelfBuffs"), "enabled", "Your buffs at hand", "Out of combat, small icons left of the Halo for your own long buffs (Inner Fire, an aura and a blessing, an armor) when one is missing or about to run out. Click one to cast it.", true, { id = "selfBuffs", reload = true, words = "buff reminder inner fire aura blessing armor" })
 	toggle(of("Emergency"), "enabled", "Emergency item", "A button for your healthstone, best healing potion or bandage. It stays in view in combat and lights with LOW under 40% health.", true, { id = "emergency", reload = true, words = "potion healthstone bandage" })
 	group = "Loot"
 	toggle(of("Loot"), "enabled", "Loot feed and gold an hour", "A short fading list of what you loot above the chat, plus gold an hour and loot value for At a glance.", true, { id = "lootFeed", reload = true, cmd = "/stoa loot", words = "gold per hour" })
