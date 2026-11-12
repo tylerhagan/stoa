@@ -373,6 +373,7 @@ function Halo:PlaceTarget()
 	local curve = (self.targetTextLeft or TARGET_PAD) + TARGET_BAR_W + 14
 	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
 	self:LayoutTarget(target.plaque.docked and curve or nil)
+	target:SetAlpha(self:TargetAlpha())
 	self:PlaceTargetAuras()
 end
 
@@ -1202,7 +1203,9 @@ function Halo:TargetAlpha(dead)
 		if Stoa:IsSecret(dead) then dead = false end
 	end
 	local alpha = dead and 0.6 or 1
-	if self.db.restFade and Stoa:GetState() ~= Stoa.STATE_COMBAT
+	-- Docked it is part of the console, which doesn't fade.
+	local docked = self.target and self.target.plaque.docked
+	if self.db.restFade and not docked and Stoa:GetState() ~= Stoa.STATE_COMBAT
 		and not (self.target and self.target:IsMouseOver()) then
 		alpha = alpha * REST_FADE
 	end
