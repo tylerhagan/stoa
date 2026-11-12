@@ -389,12 +389,13 @@ function Halo:LayoutTarget(curve)
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
 	if docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.PLAQUE_JOIN_H)
+		-- Set high, so the bar keeps clear of the console's gold rim.
 		local left = self.targetTextLeft
-		target.caption:SetPoint("TOPLEFT", left, -12)
-		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", curve - 4, -12)
-		target.name:SetPoint("TOPLEFT", left, -26)
+		target.caption:SetPoint("TOPLEFT", left, -9)
+		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", curve - 4, -9)
+		target.name:SetPoint("TOPLEFT", left, -22)
 		target.name:SetWidth(TARGET_BAR_W)
-		target.hp:SetPoint("TOPLEFT", left, -45)
+		target.hp:SetPoint("TOPLEFT", left, -40)
 	else
 		target:SetSize(TARGET_WIDTH, TARGET_HEIGHT)
 		target.caption:SetPoint("TOPLEFT", TARGET_PAD, -12)
