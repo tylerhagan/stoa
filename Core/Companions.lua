@@ -50,11 +50,12 @@ local JOBS = {
 	questLoot = "the game's sparkle on quest items",
 	quietErrors = "hiding the red error text",
 	tray = "gathering the minimap's addon icons",
+	questXP = "finished quests' experience on the bar",
 }
 local JOB_ORDER = {
 	"fastLoot", "sellJunk", "repair", "lootFeed", "acceptQuests", "turnInQuests", "camera",
 	"windows", "chatCopy", "tooltipTarget", "gearUpgrade", "bagUpgrade", "rewardUpgrade", "invites", "keywordInvites", "duels",
-	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates", "sparkle", "questLoot", "quietErrors", "tray",
+	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates", "sparkle", "questLoot", "quietErrors", "tray", "questXP",
 }
 
 -- Addons that only sparkle what's up close: while one is loaded, STOA's
@@ -79,7 +80,7 @@ local COMPANIONS = {
 			windows = "moveWindows", chatCopy = "copyChat", tooltipTarget = "unitTarget",
 			gearUpgrade = "gearValue", bagUpgrade = "gearValue", rewardUpgrade = "gearValue", invites = "inviteOn", keywordInvites = "keywordOn",
 			duels = "duelOn", squareMinimap = "mmSquare", sparkle = "nodeGlow",
-			questLoot = "questSparkles", quietErrors = "hideErrors", tray = "mmCollect",
+			questLoot = "questSparkles", quietErrors = "hideErrors", tray = "mmCollect", questXP = "questXP",
 		},
 		get = function(key)
 			local ofa = _G.OneForAll
