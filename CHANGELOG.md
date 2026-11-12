@@ -7,7 +7,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 1.1.3
 
 - Focus: STOA hid Blizzard's focus frame without showing the focus anywhere unless you healed it. Your focus now has a small block under the target of target, friend or foe, in and out of combat, and can be moved. A switch under Combat brings back Blizzard's instead.
-- A short what's new note shows once after updating, for target of target, the shield, druid form mana and Speed. /stoa news shows it again.
+- A short what's new note shows once after updating, for target of target and focus, the shield, druid form mana and Speed. /stoa news shows it again.
 - The console's gold medallion lines no longer reappear over the folded console after a window opens for the first time.
 - Send Mail: the Mine button no longer covers Postage. It is now a small arrow inside the To box that lists your characters and recent names. The mail window's header is a little shorter, so the To and Postage rows no longer touch it.
 - Druids: mana while in cat or bear form now shows in combat too (it only showed out of combat).
