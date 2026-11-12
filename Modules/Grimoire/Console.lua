@@ -253,11 +253,11 @@ function Console:BuildSeal(frame)
 	self:BuildRing(seal, portrait, size)
 
 	-- Your shield at the top of the ring, opposite the level plate: a gold
-	-- shield and the share left on the same dark plate (the Halo's
-	-- setting; slim leaves it to the Halo).
+	-- shield whose fill drains (the Halo's setting; slim leaves it to the
+	-- Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db and halo.db.shield then
-		local shield = UI.shieldGauge(seal, 14, { share = true, plate = true })
+		local shield = UI.shieldGauge(seal, art and 26 or 20)
 		shield:SetFrameLevel(seal:GetFrameLevel() + 6)
 		shield:SetPoint("CENTER", portrait, "TOP", 0, 7 - 1)
 		self.sealShield = shield
