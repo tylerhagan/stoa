@@ -140,12 +140,23 @@ local function dressPage(button, side)
 	if not word then return end
 	Stoa:SetFont(word, "sans", Stoa.typeSize.body)
 	word:ClearAllPoints()
-	word:SetPoint(side == "left" and "LEFT" or "RIGHT", button, side == "left" and "LEFT" or "RIGHT", 0, 0)
-	word:SetText(side == "left" and ("‹ " .. (PREV or "Prev")) or ((NEXT or "Next") .. " ›"))
+	-- A drawn chevron at the button's outer edge, the word inside it.
+	local chevron = Stoa.UI.glyph(button, "Chevron", 12, "text")
+	if side == "left" then
+		chevron:SetTexCoord(1, 0, 0, 1)
+		chevron:SetPoint("LEFT", button, "LEFT", -2, 0)
+		word:SetPoint("LEFT", chevron, "RIGHT", 1, 0)
+	else
+		chevron:SetPoint("RIGHT", button, "RIGHT", 2, 0)
+		word:SetPoint("RIGHT", chevron, "LEFT", -1, 0)
+	end
+	word:SetText(side == "left" and (PREV or "Prev") or (NEXT or "Next"))
 	local function colour(over)
 		local enabled = button:IsEnabled()
 		word:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
 		word:SetAlpha(enabled and 1 or 0.5)
+		chevron:SetVertexColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+		chevron:SetAlpha(enabled and 1 or 0.5)
 	end
 	button:HookScript("OnEnter", function() colour(true) end)
 	button:HookScript("OnLeave", function() colour(false) end)

@@ -144,9 +144,9 @@ function Character:Refresh()
 		if overall and overall > 0 then
 			local text = "Item level " .. math.floor(overall + 0.5)
 			if equipped and math.floor(equipped + 0.5) ~= math.floor(overall + 0.5) then
-				text = text .. "  ·  worn " .. math.floor(equipped + 0.5)
+				text = text .. Stoa.UI.WIDE_SEP .. "worn " .. math.floor(equipped + 0.5)
 			end
-			averageText(CharacterFrame):SetText("·  " .. text)
+			averageText(CharacterFrame):SetText(Stoa.UI.DOT .. "  " .. text)
 		else
 			averageText(CharacterFrame):SetText("")
 		end

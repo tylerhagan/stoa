@@ -51,7 +51,7 @@ local function fill(card, sample)
 	card.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
 	card.absorb:SetMinMaxValues(0, 1)
 	card.absorb:SetValue(sample.absorb or 0)
-	card.percent:SetText(sample.status and "·" or math.floor(sample.health * 100 + 0.5))
+	card.percent:SetText(sample.status and "-" or math.floor(sample.health * 100 + 0.5))
 	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
 
 	local pips = {}

@@ -48,7 +48,7 @@ local function buildSurfaces(page, x, y)
 	local body = UI.text(panel, "sans", T.body, "muted", "LEFT")
 	body:SetPoint("TOPLEFT", S.m, -34 - S.m)
 	body:SetText("Band, body with stone, tray")
-	label(page, panel, "panel  ·  band  ·  tray")
+	label(page, panel, "panel, band, tray")
 
 	-- Card with a bar on a well.
 	local card = CreateFrame("Frame", nil, page)
@@ -66,7 +66,7 @@ local function buildSurfaces(page, x, y)
 	bar:SetValue(0.62)
 	bar.track:Hide()
 	UI.surface(bar, "well", { outset = 2 })
-	label(page, card, "card  ·  bar on a well  ·  badge")
+	label(page, card, "card, bar on a well, badge")
 
 	-- Inset ground inside a window.
 	local inset = CreateFrame("Frame", nil, page)
