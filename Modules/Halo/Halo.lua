@@ -372,7 +372,11 @@ function Halo:PlaceTarget()
 		target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 		self.targetResting = false
 	end
-	local curve = (self.targetTextLeft or TARGET_PAD) + TARGET_BAR_W + 14
+	-- Docked, the corner starts rounding just past the health bar: there's
+	-- no portrait to leave room for.
+	local barEnd = (self.targetTextLeft or TARGET_PAD) + TARGET_BAR_W
+	local curve = barEnd + 14
+	if self.targetResting and self.targetDocks then curve = barEnd + 14 - UI.PLAQUE_JOIN_FLAT end
 	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
 	self:LayoutTarget(target.plaque.docked and curve or nil)
 	self:PlaceTargetOfTarget(target.plaque.docked and curve or nil)
@@ -383,8 +387,8 @@ function Halo:PlaceTarget()
 end
 
 -- Lays the plaque's words and bar out: docked (the full plaque's rows
--- between the medallion and the ring, `curve` being where the ring's curve
--- starts) or the full plaque. Out of combat only.
+-- between the medallion and the rounded corner, `curve` being where the
+-- corner's art starts) or the full plaque. Out of combat only.
 function Halo:LayoutTarget(curve)
 	local target = self.target
 	if not (target and target.hp) then return end
@@ -397,7 +401,7 @@ function Halo:LayoutTarget(curve)
 		-- Set high, so the bar keeps clear of the console's gold rim.
 		local left = self.targetTextLeft
 		target.caption:SetPoint("TOPLEFT", left, -9)
-		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", curve - 4, -9)
+		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", left + TARGET_BAR_W, -9)
 		target.name:SetPoint("TOPLEFT", left, -22)
 		target.name:SetWidth(TARGET_BAR_W)
 		target.hp:SetPoint("TOPLEFT", left, -40)
@@ -831,7 +835,8 @@ function Halo:PlaceTargetOfTarget(curve)
 	chip.label:ClearAllPoints()
 	if docked then
 		local left = curve + UI.PLAQUE_JOIN_SPAN - TOT_TUCK
-		local stepCurve = TOT_DOCK_TEXT + TOT_WIDTH + 8
+		-- Its corner starts rounding just past its words.
+		local stepCurve = TOT_DOCK_TEXT + TOT_WIDTH + 10 - UI.PLAQUE_STEP_FLAT
 		-- Behind the plaque: a lower strata than its LOW.
 		chip:SetFrameStrata("BACKGROUND")
 		chip:SetSize(stepCurve + UI.PLAQUE_STEP_SPAN, UI.PLAQUE_STEP_H)
