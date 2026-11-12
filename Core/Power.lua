@@ -35,7 +35,13 @@ end
 function Power.manaHidden()
 	local kind = Stoa:PlainNumber((call(UnitPowerType, "player")))
 	if kind == nil or kind == MANA then return false end
-	local max = Stoa:PlainNumber(call(UnitPowerMax, "player", MANA))
+	local max = call(UnitPowerMax, "player", MANA)
+	-- In combat the game keeps the number to itself; a druid has mana.
+	if Stoa:IsSecret(max) then
+		local _, class = UnitClass("player")
+		return class == "DRUID"
+	end
+	max = Stoa:PlainNumber(max)
 	return max ~= nil and max > 0
 end
 
@@ -101,8 +107,8 @@ end)
 -- shade(tex, from, to) stretches the shade between two fractions;
 -- enabled(key) says whether "manaRule", "castCost" or "formMana" is on;
 -- form = { bar = StatusBar, show = function(current, max) , hide = function() }
--- is optional. Everything is hidden whenever mana can't be read (secret in
--- combat).
+-- is optional. The spark and shade are hidden whenever mana can't be read
+-- (secret in combat); the form bar still fills, as bars may draw it.
 local PULSE_SECONDS = 0.5
 
 function Power.dress(sb, opts)
@@ -168,12 +174,15 @@ function Power.dress(sb, opts)
 	function dress.Form()
 		local form = opts.form
 		if not form then return end
-		local current, max = Power.mana()
-		if opts.enabled("formMana") and Power.manaHidden() and current then
+		-- Straight from the game to the bar: in combat the numbers are kept
+		-- from addons, but a bar can still draw them.
+		local current, max = call(UnitPower, "player", MANA), call(UnitPowerMax, "player", MANA)
+		if opts.enabled("formMana") and Power.manaHidden() and current ~= nil and max ~= nil then
 			form.bar:SetMinMaxValues(0, max)
 			form.bar:SetValue(current)
 			form.bar:Show()
-			form.show(current)
+			-- show(plain number or nil, the value as the game gave it).
+			form.show(Stoa:PlainNumber(current), current)
 		else
 			form.bar:Hide()
 			form.hide()

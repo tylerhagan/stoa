@@ -580,7 +580,7 @@ function Console:BuildManaPlay(mana, manaCap)
 		end,
 		form = {
 			bar = form,
-			show = function(current) manaCap:SetText("MANA " .. current) end,
+			show = function(current) manaCap:SetText(current and ("MANA " .. current) or "MANA") end,
 			hide = function() manaCap:SetText("MANA") end,
 		},
 	})

@@ -215,7 +215,7 @@ function Halo:BuildManaPlay(frame, arcBar, manaText)
 		end,
 		form = {
 			bar = form,
-			show = function(current) number:SetText(current) number:Show() end,
+			show = function(_, raw) number:SetText(raw) number:Show() end,
 			hide = function() number:Hide() end,
 		},
 	})
