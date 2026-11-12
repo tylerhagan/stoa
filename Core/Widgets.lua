@@ -1384,16 +1384,20 @@ local function medallion(frame, coinSide, plaque)
 end
 
 -- Docked (the target out of combat): the plaque stands on the console's
--- rim as one shape with its portrait ring: its gold top edge curves up into
--- the ring, which rests on the rim, the way the rim flows into the
--- console's medallion (Tools/art/plaque_join.py). The body is a plain fill
--- with the gold line along its top; the join is drawn art. Built the first
--- time it docks. Sizes in UI units, matching the art.
-local JOIN_R, JOIN_H = 34, 50
--- The join art: 80x72, its left edge 4 before the curve starts, the ring's
--- centre 40.5 in and 34 up.
-local JOIN_W, JOIN_ART_H, JOIN_LEAD, JOIN_CX = 80, 72, 4, 40.5
+-- rim, as tall as its medallion, as one shape with its portrait ring: the
+-- left end is cut round the medallion with a gold line following its ring,
+-- and the gold top edge curves up into the portrait ring, which rests on the
+-- rim, the way the rim flows into the medallion (Tools/art/plaque_join.py).
+-- Between them, a plain fill with the gold line along its top. Built the
+-- first time it docks. Sizes in UI units, matching the art.
+local JOIN_R, JOIN_H = 42, 68
+-- The join art: 88x87, its left edge 4 before the curve starts, the ring's
+-- centre 42.37 in and 42 up.
+local JOIN_W, JOIN_ART_H, JOIN_LEAD, JOIN_CX = 88, 87, 4, 42.37
+-- The socket art: 56x70, its left edge 24 right of the medallion's centre.
+local SOCKET_W, SOCKET_ART_H = 56, 70
 UI.PLAQUE_JOIN_H = JOIN_H
+UI.PLAQUE_SOCKET_X = 24
 -- From where the curve starts to the plaque's right end.
 UI.PLAQUE_JOIN_SPAN = JOIN_CX - JOIN_LEAD + JOIN_R
 local function buildDock(frame, plaque)
@@ -1409,7 +1413,15 @@ local function buildDock(frame, plaque)
 	local lines = frame:CreateTexture(nil, "BORDER", nil, 1)
 	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinLines")
 	lines:SetAllPoints(join)
+	local socket = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	socket:SetTexture(UI.MEDIA .. "Textures\\PlaqueSocket")
+	socket:SetSize(SOCKET_W, SOCKET_ART_H)
+	socket:SetPoint("BOTTOMLEFT")
+	local socketLines = frame:CreateTexture(nil, "BORDER", nil, 1)
+	socketLines:SetTexture(UI.MEDIA .. "Textures\\PlaqueSocketLines")
+	socketLines:SetAllPoints(socket)
 	dock.body, dock.top, dock.join, dock.lines = body, top, join, lines
+	dock.socket, dock.socketLines = socket, socketLines
 	plaque.dock = dock
 	return dock
 end
@@ -1431,6 +1443,7 @@ function UI.plaque(frame, coinSide, opts)
 		if plaque.dock then
 			plaque.dock.body:SetVertexColor(r, g, b, 1)
 			plaque.dock.join:SetVertexColor(r, g, b, 1)
+			plaque.dock.socket:SetVertexColor(r, g, b, 1)
 		end
 	end
 	paintFill()
@@ -1507,6 +1520,7 @@ function UI.plaque(frame, coinSide, opts)
 			if rank == "rare" then dr, dg, db = unpack(SILVER) end
 			plaque.dock.top:SetVertexColor(dr, dg, db, 1)
 			plaque.dock.lines:SetVertexColor(dr, dg, db, 1)
+			plaque.dock.socketLines:SetVertexColor(dr, dg, db, 1)
 		end
 	end
 
@@ -1528,17 +1542,19 @@ function UI.plaque(frame, coinSide, opts)
 		end
 		if on then
 			dock.body:ClearAllPoints()
-			dock.body:SetPoint("BOTTOMLEFT")
+			dock.body:SetPoint("BOTTOMLEFT", SOCKET_W, 0)
 			dock.body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
 			dock.top:ClearAllPoints()
-			dock.top:SetPoint("TOPLEFT")
+			dock.top:SetPoint("TOPLEFT", SOCKET_W, 0)
 			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
 			dock.join:ClearAllPoints()
 			dock.join:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - JOIN_LEAD, 0)
 			-- The portrait sits in the ring.
-			coin:SetScale(1)
+			-- A little larger, to fill the bigger ring.
+			local scale = 1.2
+			coin:SetScale(scale)
 			coin:ClearAllPoints()
-			coin:SetPoint("CENTER", frame, "BOTTOMLEFT", curve - JOIN_LEAD + JOIN_CX, JOIN_R)
+			coin:SetPoint("CENTER", frame, "BOTTOMLEFT", (curve - JOIN_LEAD + JOIN_CX) / scale, JOIN_R / scale)
 		else
 			plaque.placeCoin(plaque.bare and 0.75 or 1)
 		end
