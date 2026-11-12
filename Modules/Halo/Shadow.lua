@@ -2,7 +2,7 @@
 -- What a Shadow Priest watches, kept around the Halo:
 --   * three coins along the ring's right side for Shadow Word: Pain,
 --     Devouring Plague and Vampiric Embrace on your target, each draining
---     as its timer runs and calling out in the warning colour when it's off;
+--     as its timer runs and fading to a faint outline when it's off;
 --   * an outline on the combat bar's next press (DoTs first, then Mind
 --     Blast and Shadow Word: Death when ready, then Mind Flay);
 --   * SHADOWFORM over the ring when you've dropped out of form;
@@ -191,12 +191,8 @@ end
 -- Updates -------------------------------------------------------------------
 
 local function paintCoin(coin, state)
-	local token = state == "off" and "danger" or state == "ending" and "accent" or "muted"
-	local r, g, b = Stoa:Color(token)
-	coin.ring:SetVertexColor(r, g, b, state == "on" and 0.7 or 1)
-	coin.letter:SetTextColor(Stoa:Color(state == "on" and "text" or token))
 	UI.coinArt(coin, SPELLS[coin.key])
-	UI.coinLit(coin, state ~= "off")
+	Stoa.Sign.paintTimer(coin, state)
 end
 
 function Shadow:UpdateCoins()
