@@ -306,7 +306,7 @@ local function flagsOf(entry)
 	if entry.game then out[#out + 1] = "GAME SETTING" end
 	if entry.scope then out[#out + 1] = entry.scope:upper() end
 	if entry.needs then out[#out + 1] = "ADDON" end
-	return table.concat(out, " · ")
+	return UI.join(out)
 end
 
 local function rowBase(entry)
@@ -479,9 +479,8 @@ function builders.words(row, entry)
 				chip.edge = UI.pillEdge(chip, 0)
 				chip.text = UI.text(chip, "sans", Stoa.typeSize.body, "text")
 				chip.text:SetPoint("LEFT", 10, 0)
-				chip.cross = UI.text(chip, "sans", Stoa.typeSize.body, "muted")
+				chip.cross = UI.glyph(chip, "Cross", 10, "muted")
 				chip.cross:SetPoint("RIGHT", -8, 0)
-				chip.cross:SetText("×")
 				chip:SetScript("OnClick", function(c)
 					entry.remove(c.value)
 					Stoa:Fire("STOA_OPTION_CHANGED", entry.id)
@@ -714,7 +713,7 @@ function Window:Draw(keep)
 	local y = -(tonumber(self.intro:GetStringHeight()) or 16) - 54
 	local lastGroup
 	for _, entry in ipairs(list) do
-		local groupName = query and (self:PageName(entry.page) .. " · " .. entry.group) or entry.group
+		local groupName = query and (self:PageName(entry.page) .. ": " .. entry.group) or entry.group
 		if groupName ~= lastGroup then
 			lastGroup = groupName
 			y = groupHeader(groupName, y - 8)
@@ -866,9 +865,8 @@ function Window:Build()
 	local close = CreateFrame("Button", nil, page)
 	close:SetSize(26, 26)
 	close:SetPoint("TOPRIGHT", -14, -17)
-	local cross = UI.text(close, "sans", Stoa.typeSize.title, "muted", "CENTER")
+	local cross = UI.glyph(close, "Cross", 16, "muted")
 	cross:SetPoint("CENTER")
-	cross:SetText("×")
 	close:SetScript("OnClick", function() page:Hide() end)
 	close:SetScript("OnEnter", function() colour(cross, "accent") end)
 	close:SetScript("OnLeave", function() colour(cross, "muted") end)
@@ -890,9 +888,8 @@ function Window:Build()
 	local clear = CreateFrame("Button", nil, search)
 	clear:SetSize(20, 20)
 	clear:SetPoint("RIGHT", -6, 0)
-	local clearText = UI.text(clear, "sans", Stoa.typeSize.label, "muted", "CENTER")
+	local clearText = UI.glyph(clear, "Cross", 10, "muted")
 	clearText:SetPoint("CENTER")
-	clearText:SetText("×")
 	clear:SetScript("OnClick", function() search:SetText("") search:ClearFocus() end)
 	local function paintSearch()
 		local text = search:GetText()

@@ -187,17 +187,17 @@ function Tooltip:Difficulty(unit)
 	end
 	local class = CLASSIFICATIONS[known(UnitClassification(unit)) or ""]
 	if class then
-		word = word and (word .. " · " .. class) or class
+		word = word and (word .. " " .. class) or class
 		if class == "BOSS" then token = "danger" end
 	end
 	return word, token or "text"
 end
 
--- The difficulty word sits beside the level ("Level 4 · Even"), in its
+-- The difficulty word sits beside the level ("Level 4, a dot, Even"), in its
 -- colour: trivial grey, easy plain, even gold, hard and deadly amber, with
 -- the word itself carrying the meaning. Without a level line it gets its own.
 local function titleCase(word)
-	return (word:lower():gsub("^%l", string.upper):gsub(" · (%l)", function(c) return " · " .. c:upper() end))
+	return (word:lower():gsub("^%l", string.upper):gsub(" (%l)", function(c) return " " .. c:upper() end))
 end
 
 function Tooltip:SayDifficulty(tip, word, token)
@@ -206,7 +206,7 @@ function Tooltip:SayDifficulty(tip, word, token)
 		local fs = line(tip, i)
 		local text = fs and fs:GetText()
 		if type(text) == "string" and not Stoa:IsSecret(text) and text:find(prefix, 1, true) == 1 then
-			fs:SetText(text .. "  ·  " .. tokenHex(token) .. titleCase(word) .. "|r")
+			fs:SetText(text .. Stoa.UI.WIDE_SEP .. tokenHex(token) .. titleCase(word) .. "|r")
 			return
 		end
 	end
@@ -331,7 +331,7 @@ function Tooltip:DressItem(tip, data)
 	if bank > 0 then parts[#parts + 1] = bank .. " in bank" end
 	for i = 1, math.min(#others, 3) do parts[#parts + 1] = others[i][1] .. " " .. others[i][2] end
 	if #others > 3 then parts[#parts + 1] = "+" .. (#others - 3) end
-	addPair(tip, "OWNED", table.concat(parts, " · "), Stoa:Color("text"))
+	addPair(tip, "OWNED", Stoa.UI.join(parts), Stoa:Color("text"))
 	tip:Show()
 end
 
@@ -437,11 +437,11 @@ function Tooltip:Gathering(tip)
 	if not profession then return end
 	local mine = Tooltip.GatherSkill(profession)
 	if not mine then
-		tip:AddLine(("%s %d · you haven't learned it"):format(profession, needed), Stoa:Color("muted"))
+		tip:AddLine(("%s %d (you haven't learned it)"):format(profession, needed), Stoa:Color("muted"))
 	elseif mine < needed then
-		tip:AddLine(("%s %d · you %d · TOO LOW"):format(profession, needed, mine), Stoa:Color("danger"))
+		tip:AddLine(("%s %d (you %d, TOO LOW)"):format(profession, needed, mine), Stoa:Color("danger"))
 	else
-		tip:AddLine(("%s %d · you %d"):format(profession, needed, mine), Stoa:Color("text"))
+		tip:AddLine(("%s %d (you %d)"):format(profession, needed, mine), Stoa:Color("text"))
 	end
 	tip:Show()
 end

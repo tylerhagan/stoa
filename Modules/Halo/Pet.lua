@@ -135,7 +135,7 @@ function Pet:Words()
 	elseif keeper and not fighting and not plain(IsMounted()) and not plain(UnitOnTaxi("player"))
 		and not plain(UnitIsDeadOrGhost("player")) then
 		if self.char().dead and knows(REVIVE_PET) then
-			out[#out + 1] = "PET DEAD · REVIVE"
+			out[#out + 1] = "PET DEAD, REVIVE"
 		elseif not (Stoa.aura.byName and Stoa.aura.byName("player", "Demonic Sacrifice")) then
 			out[#out + 1] = "CALL PET"
 		end
@@ -248,7 +248,7 @@ function Pet:UpdatePlaque()
 	if level then words[#words + 1] = "LEVEL " .. level end
 	if family and family ~= "" then words[#words + 1] = family:upper()
 	elseif kind then words[#words + 1] = kind:upper() end
-	frame.caption:SetText(table.concat(words, " · "))
+	frame.caption:SetText(Stoa.UI.join(words))
 
 	frame.name:SetText(UnitName("pet"))
 	UI.setUnitBar(frame.hp, "pet", "health")
@@ -276,7 +276,7 @@ function Pet:UpdatePlaque()
 
 	local stance, command = self:Stance()
 	local foot = {}
-	if mood == 1 then foot[#foot + 1] = "DOES LESS DAMAGE · FEED IT"
+	if mood == 1 then foot[#foot + 1] = "DOES LESS DAMAGE, FEED IT"
 	elseif stance then foot[#foot + 1] = stance end
 	local target = UnitExists("pettarget")
 	if plain(target) and mood ~= 1 then
@@ -286,7 +286,7 @@ function Pet:UpdatePlaque()
 		if command and mood ~= 1 then foot[#foot + 1] = command end
 		frame.on:SetText("")
 	end
-	frame.foot:SetText(table.concat(foot, " · "))
+	frame.foot:SetText(Stoa.UI.join(foot))
 end
 
 -- The arc ---------------------------------------------------------------------

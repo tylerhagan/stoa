@@ -195,7 +195,7 @@ SlashCmdList.STOA = function(input)
 	elseif command == "theme" then
 		Stoa:CycleTheme()
 	elseif command == "state" then
-		Stoa:Print("State:", Stoa:GetState(), "· Role:", Stoa:GetRole())
+		Stoa:Print("State:", Stoa:GetState(), "Role:", Stoa:GetRole())
 	elseif Stoa.commands[command] then
 		Stoa.commands[command](rest)
 	else

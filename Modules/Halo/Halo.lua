@@ -582,7 +582,7 @@ function Halo:UpdateTarget()
 	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
 	if level then words[#words + 1] = "LEVEL " .. (level < 0 and "??" or level) end
 	if kind and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end
-	target.caption:SetText(table.concat(words, " · "))
+	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
 		or (rank == "elite" or rank == "worldboss") and "elite" or nil
 	target.plaque:SetRank(plaqueRank)
@@ -787,7 +787,7 @@ function Halo:UpdateReminders()
 	local warn = Stoa:Hex("danger")
 	for _, word in ipairs(missing) do parts[#parts + 1] = warn .. word .. "|r" end
 	if active then parts[#parts + 1] = active end
-	line:SetText(table.concat(parts, "  ·  "))
+	line:SetText(UI.join(parts, true))
 	-- The console shows what's missing out of combat.
 	Stoa.missingBuffs = missing
 	Stoa:Fire("STOA_REMINDERS_CHANGED")

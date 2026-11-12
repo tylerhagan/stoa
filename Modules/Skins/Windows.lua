@@ -90,13 +90,10 @@ local function dressClose(button)
 	button.stoaDressed = true
 	plainTextures(button)
 	button:HookScript("OnShow", plainTextures)
-	local cross = button:CreateFontString(nil, "OVERLAY")
-	Stoa:SetFont(cross, "sans", Stoa.typeSize.title)
-	cross:SetPoint("CENTER", 0, 1)
-	cross:SetText("×")
-	cross:SetTextColor(Stoa:Color("muted"))
-	button:HookScript("OnEnter", function() cross:SetTextColor(Stoa:Color("accent")) end)
-	button:HookScript("OnLeave", function() cross:SetTextColor(Stoa:Color("muted")) end)
+	local cross = Stoa.UI.glyph(button, "Cross", 16, "muted")
+	cross:SetPoint("CENTER", 0, 0)
+	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("accent")) end)
+	button:HookScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
 end
 
 -- Every red button inside a window, however deep.

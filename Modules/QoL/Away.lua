@@ -116,7 +116,7 @@ function Away:Fill()
 	local guild = GetGuildInfo and GetGuildInfo("player")
 	local words = { ("Level %s %s"):format(level, className), zone }
 	if guild then words[#words + 1] = "<" .. guild .. ">" end
-	self.about:SetText(table.concat(words, "  ·  "))
+	self.about:SetText(UI.join(words, true))
 	local max = plain(UnitXPMax("player"))
 	local rested = GetXPExhaustion and GetXPExhaustion() or 0
 	if max and max > 0 and rested > 0 then

@@ -338,7 +338,7 @@ function Alts:Refresh()
 			row.gold:SetText(money(entry.money))
 		end
 	end
-	self.total:SetText(("%d characters · %s in all"):format(#list, money(Alts.totalMoney())))
+	self.total:SetText(("%d characters, %s in all"):format(#list, money(Alts.totalMoney())))
 end
 
 function Alts:Toggle()

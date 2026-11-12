@@ -265,7 +265,7 @@ end
 
 function ClickCast:Refresh()
 	local role = Stoa:GetRole()
-	self.title:SetText("Clicks · " .. (role and Stoa.ROLE_LABELS[role] or "Any role"))
+	self.title:SetText("Clicks: " .. (role and Stoa.ROLE_LABELS[role] or "Any role"))
 	local bindings = self:Bindings()
 	for key, field in pairs(self.fields) do
 		field:SetText(bindings[key] or "")
