@@ -710,6 +710,19 @@ end
 -- The target plaque: a medallion with a level badge, docked while it rests
 -- on the full console, and a cast bar that shows for the target's cast.
 do
+	local character = Stoa.modules.Character
+	if character and character.enabled and character.LayOut and CharacterFrame then
+		CharacterFrame.activeSubframe = "PaperDollFrame"
+		character:LayOut()
+		local head = _G.CharacterHeadSlot
+		if not head then SIM_ERRORS[#SIM_ERRORS + 1] = "Character layout: no head slot to check" end
+		if head and not head.stoaSide then SIM_ERRORS[#SIM_ERRORS + 1] = "Character layout: no words beside the head slot" end
+		character:UpdateFooter()
+		CharacterFrame.activeSubframe = "ReputationFrame"
+		character:LayOut()
+	end
+end
+do
 	local halo = Stoa.modules.Halo
 	local target = halo and halo.enabled and halo.target
 	if target then
