@@ -19,6 +19,9 @@ local Halo = Stoa:NewModule("Halo", {
 	targetOfTarget = true,
 	-- Your focus as a small block under the target of target.
 	focusFrame = true,
+	-- Your own shield, with the amount left, under the health number (and
+	-- on the console's medallion while it is open).
+	shield = true,
 	scale = 1,
 	-- Quiet mana play: the five-second rule and regen ticks, the cost of
 	-- the spell you are casting, and a druid's mana while shapeshifted.
@@ -168,6 +171,15 @@ function Halo:Build()
 	Stoa:SetFont(manaText, "serif", Stoa.typeSize.title, "OUTLINE")
 	self.healthText, self.manaText = healthText, manaText
 	self:BuildManaPlay(frame, mana, manaText)
+
+	-- Your shield under the health number, as the druid's form mana sits
+	-- under the power number.
+	if self.db.shield then
+		local shield = UI.shieldGauge(frame, 15, Stoa.typeSize.label, "right")
+		shield:SetPoint("TOPRIGHT", healthText, "BOTTOMRIGHT", 1, -2)
+		UI.legible(shield.number)
+		self.shield = shield
+	end
 
 	self:BuildSignature(frame)
 	self:BuildTarget(frame)
@@ -1095,6 +1107,14 @@ function Halo:OnEnable()
 	Stoa:OnUnit("UNIT_MAXHEALTH", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateHealth() end
 	end)
+	if self.shield then
+		Stoa:OnUnit("UNIT_ABSORB_AMOUNT_CHANGED", { "player" }, function(unit)
+			if unit == "player" then self.shield:Update("player", true) end
+		end)
+		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
+			Stoa:On(event, function() self.shield:Update("player") end)
+		end
+	end
 	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
 	end)

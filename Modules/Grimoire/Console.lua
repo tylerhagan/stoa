@@ -252,6 +252,21 @@ function Console:BuildSeal(frame)
 	-- The progress ring, the level plate, the moment glow (BuildRing).
 	self:BuildRing(seal, portrait, size)
 
+	-- Your shield on the ring's lower right, with the amount left (the
+	-- Halo's setting; slim leaves it to the Halo).
+	local halo = Stoa.modules.Halo
+	if not slim and halo and halo.db and halo.db.shield then
+		local gaugeSize = art and 26 or 20
+		local shield = UI.shieldGauge(seal, gaugeSize, Stoa.typeSize.label, "left")
+		shield:SetFrameLevel(seal:GetFrameLevel() + 6)
+		local radius, angle = size / 2 + 7, math.rad(-50)
+		shield:SetPoint("LEFT", portrait, "CENTER",
+			math.floor(math.cos(angle) * radius - gaugeSize / 2 - 1 + 0.5),
+			math.floor(math.sin(angle) * radius + 0.5))
+		UI.legible(shield.number)
+		self.sealShield = shield
+	end
+
 	-- In an inn or a city: a small word across the foot of the portrait, in
 	-- the rested blue the experience bar uses.
 	local rest = UI.badge(seal, "RESTING")
@@ -1205,6 +1220,8 @@ function Console:SetOpen(open, instant)
 		-- On the slim line the seal goes altogether in a fight; shrunk, it
 		-- only peeked over the folded line.
 		if self.db.slim then self.seal:SetAlpha(open and progress or 1 - progress) end
+		-- The shrunk seal is too small to read a shield on; the Halo has it.
+		if self.sealShield then self.sealShield:SetAlpha(open and progress or 1 - progress) end
 	end
 
 	if instant then
@@ -1375,6 +1392,15 @@ function Console:OnEnable()
 	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
 		if unit == "player" then self:UpdateSeal() end
 	end)
+	if self.sealShield then
+		Stoa:On("UNIT_ABSORB_AMOUNT_CHANGED", function(unit)
+			if unit == "player" then self.sealShield:Update("player", true) end
+		end)
+		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
+			Stoa:On(event, function() self.sealShield:Update("player") end)
+		end
+		self.sealShield:Update("player")
+	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		self:UpdateSeal()
 		self:UpdateResources()

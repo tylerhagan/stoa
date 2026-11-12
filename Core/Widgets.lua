@@ -477,6 +477,122 @@ local function hideShield(pip)
 	pip.text:SetPoint("CENTER", 0, 0)
 end
 
+-- Your own shield as a gauge (the medallion, the Halo): the shield drawn
+-- emptying as it soaks up damage, and the amount left beside it. Out of a
+-- fight it shows while there is a shield. In a fight the amount can't be
+-- read, only handed on, so the gauge rides a hidden bar of 0 to 1 that is
+-- given the amount: any shield fills it and slides the gauge into its
+-- clipping window, none slides it out (the lethal skull's trick). What the
+-- shield started with is measured a moment after the amount first changes
+-- from nothing, as the party tags do.
+local GAUGE_SLIDE = 4000
+local gaugeFull = {} -- unit -> { what the shield held when it went up }
+
+function UI.shieldGauge(parent, size, fontSize, align)
+	local width = size + 70
+	local gauge = CreateFrame("Frame", nil, parent)
+	gauge:SetSize(width, size + 4)
+	gauge:SetClipsChildren(true)
+	local slide = CreateFrame("StatusBar", nil, gauge)
+	slide:SetStatusBarTexture(UI.WHITE)
+	slide:SetStatusBarColor(0, 0, 0, 0)
+	slide:SetSize(GAUGE_SLIDE, size + 4)
+	slide:SetPoint("RIGHT", gauge, "RIGHT")
+	slide:SetMinMaxValues(0, 1)
+	slide:SetValue(1)
+	local holder = CreateFrame("Frame", nil, slide)
+	holder:SetSize(width, size + 4)
+	holder:SetPoint("RIGHT", slide:GetStatusBarTexture(), "RIGHT")
+
+	local icon = CreateFrame("Frame", nil, holder)
+	icon:SetSize(size, size)
+	local back = icon:CreateTexture(nil, "ARTWORK")
+	back:SetAllPoints()
+	back:SetTexture(SHIELD_ART)
+	local fill = CreateFrame("StatusBar", nil, icon)
+	fill:SetAllPoints()
+	fill:SetOrientation("VERTICAL")
+	fill:SetStatusBarTexture(SHIELD_ART)
+	fill:SetMinMaxValues(0, 1)
+	fill:SetValue(1)
+	local number = holder:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(number, "serif", fontSize, "OUTLINE")
+	if align == "right" then
+		-- Hugging the right edge: the number last, the shield before it.
+		number:SetPoint("RIGHT", holder, "RIGHT", -1, 0)
+		number:SetJustifyH("RIGHT")
+		icon:SetPoint("RIGHT", number, "LEFT", -4, 0)
+	else
+		icon:SetPoint("LEFT", holder, "LEFT", 1, 0)
+		number:SetPoint("LEFT", icon, "RIGHT", 4, 0)
+		number:SetJustifyH("LEFT")
+	end
+	gauge.icon, gauge.fill, gauge.number = icon, fill, number
+
+	local function colour()
+		local r, g, b = Stoa:Color("shield")
+		back:SetVertexColor(0, 0, 0, 0.75)
+		fill:SetStatusBarColor(r, g, b, 1)
+		number:SetTextColor(r, g, b)
+	end
+	colour()
+	Stoa:On("STOA_THEME_CHANGED", colour)
+
+	-- `changed`: called for an absorb change, the moment a fresh shield
+	-- in a fight can be measured.
+	function gauge:Update(unit, changed)
+		unit = unit or "player"
+		local known, left = absorbOf(unit)
+		if not known then
+			self:Hide()
+			return
+		end
+		local plain = Stoa:PlainNumber(left)
+		if plain then
+			if plain <= 0 then
+				gaugeFull[unit] = nil
+				self:Hide()
+				return
+			end
+			local full = gaugeFull[unit]
+			local measure = type(full) == "table" and Stoa:PlainNumber(full[1])
+			if not measure or plain > measure then
+				gaugeFull[unit] = { plain }
+				measure = plain
+			end
+			fill:SetMinMaxValues(0, measure)
+			fill:SetValue(plain)
+			slide:SetValue(1)
+			number:SetText(BreakUpLargeNumbers and BreakUpLargeNumbers(plain) or plain)
+			self:Show()
+			return
+		end
+		-- In a fight: only ever handed on.
+		local full = gaugeFull[unit]
+		if full == nil and changed then
+			gaugeFull[unit] = false
+			C_Timer.After(0.25, function()
+				if gaugeFull[unit] ~= false then return end
+				local ok, amount = absorbOf(unit)
+				if ok then gaugeFull[unit] = { amount } end
+			end)
+		end
+		if type(full) == "table" then
+			fill:SetMinMaxValues(0, full[1])
+			fill:SetValue(left)
+		else
+			fill:SetMinMaxValues(0, 1)
+			fill:SetValue(1)
+		end
+		slide:SetValue(left)
+		number:SetText(left)
+		self:Show()
+	end
+
+	gauge:Hide()
+	return gauge
+end
+
 -- A row of the cards' word tags under any health bar (the tank watch, the
 -- target), so your buffs read the same there as on a party card. Fill it
 -- with UI.setPips.
