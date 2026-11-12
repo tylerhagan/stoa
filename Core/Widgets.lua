@@ -448,13 +448,17 @@ local function showShield(pip, unit, sample)
 	local known, left
 	if not sample then known, left = absorbOf(unit) end
 	local full = known and shieldFull[unit]
+	-- A measure only lasts as long as a shield can (see UI.shieldGauge).
+	if type(full) == "table" and GetTime() - (full.at or 0) > 60 then
+		shieldFull[unit], full = nil, nil
+	end
 	if known and full == nil then
 		-- Shown full until the amount has settled; that is then the measure.
 		shieldFull[unit] = false
 		C_Timer.After(0.25, function()
 			if shieldFull[unit] ~= false then return end
 			local ok, amount = absorbOf(unit)
-			if ok then shieldFull[unit] = { amount } end
+			if ok then shieldFull[unit] = { amount, at = GetTime() } end
 		end)
 	end
 	if type(full) == "table" then
@@ -524,28 +528,41 @@ end
 function UI.markGauge(parent, size, art)
 	local gauge = CreateFrame("Frame", nil, parent)
 	gauge:SetSize(size, size)
-	local fill = UI.markArt(gauge, size, art)
+	-- The drawing sits on a face of its own, so dimming it never fights
+	-- the fades a parent runs on the gauge (the console folding).
+	local face = CreateFrame("Frame", nil, gauge)
+	face:SetAllPoints()
+	local fill = UI.markArt(face, size, art)
 	gauge.fill = fill
 	function gauge:SetShare(share, ease)
 		if ease and EASE then fill:SetValue(share, EASE) else fill:SetValue(share) end
 	end
 	function gauge:SetArt(path) fill:SetArt(path) end
 	-- A buff you should have up and don't: the emblem empty and dimmed.
-	function gauge:SetMissing(missing) gauge:SetAlpha(missing and 0.55 or 1) end
+	function gauge:SetMissing(missing) face:SetAlpha(missing and 0.55 or 1) end
 	gauge:Hide()
 	return gauge
 end
 
--- Your own shield as a gauge (the medallion, the Halo): a gold shield
--- whose fill drains smoothly as it soaks up damage, the emptied part left
--- in a dark gold. Out of a fight it shows while there is a shield. In a
--- fight the amount can't be read, only handed on, so the gauge rides a
--- hidden bar of 0 to 1 that is given the amount: any shield fills it and
--- slides the gauge into its clipping window, none slides it out (the
--- lethal skull's trick). What the shield started with is measured a moment
--- after the amount first changes from nothing, as the party tags do.
+-- Your own shield as a gauge (the medallion, the Halo): the silver
+-- shield, whose fill drains as it soaks up damage, the emptied part dark
+-- slate. It shows while there is a shield.
+--
+-- Out of a fight the amount is a plain number: the fill is the amount
+-- over the most it has held since it went up, gliding down as it drains.
+--
+-- In a fight the amount is secret: it can't be compared or worked out,
+-- only handed to a bar. So the gauge rides a hidden 0 to 1 bar that is
+-- given the amount: any shield fills it and slides the gauge into its
+-- clipping window, none slides it out (the lethal skull's trick). For the
+-- fill, what the shield held is measured a moment after the amount
+-- changes and is handed to the fill as its top. Secret values can only be
+-- set, never eased (an eased secret stays where it started, which left
+-- the shield dark), and a measure only lasts as long as a shield can, so
+-- one taken at a bad moment (the amount at nothing) can't stick.
 local GAUGE_SLIDE = 4000
-local gaugeFull = {} -- unit -> { what the shield held when it went up }
+local MEASURE_LIFE = 60
+local gaugeFull = {} -- unit -> { amount, at = when it was measured }, or false while measuring
 local gaugeLast = {} -- unit -> the plain amount seen last
 
 function UI.shieldGauge(parent, size)
@@ -566,10 +583,6 @@ function UI.shieldGauge(parent, size)
 	local fill = UI.markArt(holder, size, UI.MEDIA .. "Textures\\MarkShield")
 	gauge.fill = fill
 
-	local function drain(value)
-		if EASE then fill:SetValue(value, EASE) else fill:SetValue(value) end
-	end
-
 	-- A missed absorb event would leave the gauge stale, so while it shows
 	-- it looks again twice a second.
 	local wait = 0
@@ -580,8 +593,13 @@ function UI.shieldGauge(parent, size)
 		own:Update(own.unit)
 	end)
 
-	-- `changed`: called for an absorb change, the moment a fresh shield
-	-- in a fight can be measured.
+	local function full()
+		fill:SetMinMaxValues(0, 1)
+		fill:SetValue(1)
+	end
+
+	-- `changed`: called for an absorb change, the moment a shield in a
+	-- fight can be measured.
 	function gauge:Update(unit, changed)
 		unit = unit or "player"
 		self.unit = unit
@@ -597,41 +615,40 @@ function UI.shieldGauge(parent, size)
 				self:Hide()
 				return
 			end
-			-- Any rise is a shield going up (or another on top), and is the new
-			-- measure; only a fall is the shield soaking up damage. So a
-			-- measure left over from an earlier, larger shield can't leave a
-			-- fresh one looking empty.
-			local full = gaugeFull[unit]
-			local measure = type(full) == "table" and Stoa:PlainNumber(full[1])
+			-- Any rise is a shield going up (or another on top) and is the
+			-- new top; only a fall is damage soaked up. A top that isn't a
+			-- plain number (measured in a fight) is measured again.
+			local measure = type(gaugeFull[unit]) == "table" and Stoa:PlainNumber(gaugeFull[unit][1])
 			local last = gaugeLast[unit]
-			if not measure or plain > measure or not last or plain > last then
-				gaugeFull[unit] = { plain }
+			local rose = not measure or plain > measure or not last or plain > last
+			if rose then
 				measure = plain
+				gaugeFull[unit] = { plain, at = GetTime() }
 			end
 			gaugeLast[unit] = plain
 			fill:SetMinMaxValues(0, measure)
-			fill:SetValue(plain)
+			if EASE and not rose then fill:SetValue(plain, EASE) else fill:SetValue(plain) end
 			slide:SetValue(1)
 			self:Show()
 			return
 		end
-		-- In a fight: only ever handed on.
+		-- In a fight: only ever handed on, never eased.
 		gaugeLast[unit] = nil
-		local full = gaugeFull[unit]
-		if full == nil and changed then
+		local top = gaugeFull[unit]
+		if type(top) == "table" and changed and GetTime() - (top.at or 0) > MEASURE_LIFE then top = nil end
+		if top == nil and changed then
 			gaugeFull[unit] = false
 			C_Timer.After(0.25, function()
 				if gaugeFull[unit] ~= false then return end
 				local ok, amount = absorbOf(unit)
-				if ok then gaugeFull[unit] = { amount } end
+				gaugeFull[unit] = ok and { amount, at = GetTime() } or nil
 			end)
 		end
-		if type(full) == "table" then
-			fill:SetMinMaxValues(0, full[1])
-			drain(left)
+		if type(top) == "table" then
+			fill:SetMinMaxValues(0, top[1])
+			fill:SetValue(left)
 		else
-			fill:SetMinMaxValues(0, 1)
-			fill:SetValue(1)
+			full()
 		end
 		slide:SetValue(left)
 		self:Show()
