@@ -176,17 +176,26 @@ function Sign.buildWord(halo, text)
 end
 
 -- Coins ------------------------------------------------------------------------
--- A timer coin (a DoT, a buff you keep up) drains as it runs and turns to
--- the warning colour once it's off. A cooldown coin is pale gold when
--- ready, bone while its effect is up, and muted while it comes back.
+-- A timer coin (a DoT, a buff you keep up) is lit while it runs, draining
+-- as it goes, turns pale gold in its last seconds, and fades to a faint
+-- outline once it's off, like an unticked line on a checklist: it keeps its
+-- place, so what's missing reads at a glance. A cooldown coin is pale gold
+-- when ready, bone while its effect is up, and muted while it comes back.
 
-local function paintTimer(coin, state)
-	local token = state == "off" and "danger" or state == "ending" and "accent" or "muted"
+-- How far a timer coin that's off fades.
+local OFF_ALPHA = 0.35
+
+function Sign.paintTimer(coin, state)
+	local off = state == "off"
+	local token = state == "ending" and "accent" or "muted"
 	local r, g, b = Stoa:Color(token)
 	coin.ring:SetVertexColor(r, g, b, state == "on" and 0.7 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "on" and "text" or token))
-	UI.coinLit(coin, state ~= "off")
+	UI.coinLit(coin, not off)
+	coin.ring:SetAlpha(off and OFF_ALPHA or 1)
+	coin.letter:SetAlpha(off and OFF_ALPHA + 0.15 or 1)
 end
+local paintTimer = Sign.paintTimer
 
 local function paintCooldown(coin, state)
 	local token = state == "ready" and "accent" or state == "active" and "text" or "muted"
@@ -194,6 +203,8 @@ local function paintCooldown(coin, state)
 	coin.ring:SetVertexColor(r, g, b, state == "cooling" and 0.6 or 1)
 	coin.letter:SetTextColor(Stoa:Color(state == "cooling" and "muted" or token))
 	UI.coinLit(coin, state ~= "cooling")
+	coin.ring:SetAlpha(1)
+	coin.letter:SetAlpha(1)
 end
 
 local function letter(coin, text)
