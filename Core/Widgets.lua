@@ -1387,15 +1387,15 @@ end
 -- rim, as tall as its medallion, as one shape with its portrait ring: the
 -- left end is cut round the medallion with a gold line following its ring,
 -- and the right end is round the portrait, as tall as the plaque, its gold
--- top edge running on round the top right, then bending out into a long
--- sweep down to the rim like the medallion's flourish
+-- top edge running on round the top right and flowing straight out of the
+-- curve into a long sweep down to the rim like the medallion's flourish
 -- (Tools/art/plaque_join.py).
 -- Between them, a plain fill with the gold line along its top. Built the
 -- first time it docks. Sizes in UI units, matching the art.
 local JOIN_R, JOIN_H = 34, 68
--- The join art: 113x70 (the sweep reaching 38 past the ring), its left
+-- The join art: 131x70 (the sweep reaching 56 past the ring), its left
 -- edge 4 before the ring starts, the ring's centre 38 in and 34 up.
-local JOIN_W, JOIN_ART_H, JOIN_LEAD, JOIN_CX = 113, 70, 4, 38
+local JOIN_W, JOIN_ART_H, JOIN_LEAD, JOIN_CX = 131, 70, 4, 38
 -- The socket art: 56x70, its left edge 24 right of the medallion's centre.
 local SOCKET_W, SOCKET_ART_H = 56, 70
 UI.PLAQUE_JOIN_H = JOIN_H
