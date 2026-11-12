@@ -109,6 +109,8 @@ local QUEST_GLOW = {
 	{ "SoftTargetInteract", "3" },
 	{ "SoftTargetIconInteract", "1" },
 	{ "SoftTargetIconGameObject", "1" },
+	-- Not on low-priority things like chairs and furniture.
+	{ "SoftTargetLowPriorityIcons", "0" },
 }
 -- Set by earlier versions; handed back to the game.
 local NO_LONGER = { "graphicsOutlineMode", "Outline" }
