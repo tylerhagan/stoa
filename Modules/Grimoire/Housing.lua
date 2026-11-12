@@ -175,6 +175,16 @@ local function capped(tab, sublevel, gold)
 	return parts
 end
 
+-- Chat windows with a whisper you haven't seen yet (any window but the
+-- main one that shows whispers): their tab gets a gold dot that pulses a
+-- few times and stays until you open it.
+local unread = {}
+
+local function showsWhispers(chatFrame)
+	if chatFrame.ContainsMessageGroup then return chatFrame:ContainsMessageGroup("WHISPER") end
+	return ChatFrame_ContainsMessageGroup ~= nil and ChatFrame_ContainsMessageGroup(chatFrame, "WHISPER")
+end
+
 local function paintTab(tab)
 	local kind = tab.selected and "Open" or "Closed"
 	if tab.kind ~= kind then
@@ -184,8 +194,22 @@ local function paintTab(tab)
 	end
 	-- The open tab sits in front, so its border reads over its neighbours'.
 	tab:SetFrameLevel(strip:GetFrameLevel() + (tab.selected and 3 or 1))
-	local token = (tab.selected and "accent") or (tab:IsMouseOver() and "text") or "muted"
+	if tab.selected and tab.chatFrame then unread[tab.chatFrame] = nil end
+	local waiting = not tab.selected and tab.chatFrame and unread[tab.chatFrame]
+	local token = (tab.selected and "accent") or ((waiting or tab:IsMouseOver()) and "text") or "muted"
 	tab.label:SetTextColor(Stoa:Color(token))
+	if tab.dot then
+		tab.dot:SetVertexColor(Stoa:Color("accent"))
+		if waiting then
+			if not tab.dot:IsShown() then
+				tab.dot:Show()
+				tab.pulse:Play()
+			end
+		else
+			tab.pulse:Stop()
+			tab.dot:Hide()
+		end
+	end
 end
 
 local function makeTab()
@@ -199,6 +223,23 @@ local function makeTab()
 	label:SetShadowOffset(0, 0)
 	label:SetPoint("CENTER", 0, -3)
 	tab.label = label
+	local dot = UI.glyph(tab, "Dot", 10, "accent")
+	dot:SetPoint("LEFT", label, "RIGHT", 4, 0)
+	dot:Hide()
+	tab.dot = dot
+	local pulse = dot:CreateAnimationGroup()
+	pulse:SetLooping("BOUNCE")
+	local fade = pulse:CreateAnimation("Alpha")
+	fade:SetFromAlpha(1)
+	fade:SetToAlpha(0.25)
+	fade:SetDuration(0.5)
+	local beats = 0
+	pulse:SetScript("OnLoop", function(own)
+		beats = beats + 1
+		if beats >= 6 then beats = 0 own:Stop() dot:SetAlpha(1) end
+	end)
+	pulse:SetScript("OnStop", function() beats = 0 dot:SetAlpha(1) end)
+	tab.pulse = pulse
 	tab:SetScript("OnClick", function(self, button)
 		-- Click Blizzard's own tab, so its own handler does the work.
 		local blizzard = blizzardTab(self.chatFrame)
@@ -674,6 +715,20 @@ function Console:House()
 			if _G[name] then hooksecurefunc(name, safeRefresh) end
 		end
 		Stoa:On("STOA_THEME_CHANGED", safeRefresh)
+		-- A whisper in a window you aren't looking at marks its tab.
+		local function whispered()
+			local selected = FCFDock_GetSelectedWindow and FCFDock_GetSelectedWindow(GENERAL_CHAT_DOCK)
+			local marked = false
+			for _, chatFrame in ipairs(dockedWindows()) do
+				if chatFrame ~= selected and chatFrame ~= _G.ChatFrame1 and showsWhispers(chatFrame) then
+					unread[chatFrame] = true
+					marked = true
+				end
+			end
+			if marked then safeRefresh() end
+		end
+		Stoa:On("CHAT_MSG_WHISPER", function() xpcall(whispered, Stoa.catch) end)
+		Stoa:On("CHAT_MSG_BN_WHISPER", function() xpcall(whispered, Stoa.catch) end)
 		Stoa:On("UPDATE_CHAT_WINDOWS", safeRefresh)
 		Stoa:On("UPDATE_FLOATING_CHAT_WINDOWS", safeRefresh)
 		-- Names can arrive a moment after login.
