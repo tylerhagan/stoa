@@ -1,9 +1,9 @@
 """Draw the restyled target plaque's pieces, white with alpha (tinted in game):
 
 - TargetBar.tga (512x64): a pill the exact shape of the plaque's health bar
-  (228x20 in game), used as a mask on the bar's fill and track, so the bar
+  (228x14 in game), used as a mask on the bar's fill and track, so the bar
   has fully round ends at its real size. The pill fills the width and sits
-  centred; the texture is anchored 4.25 above and below the bar.
+  centred; the texture is anchored 7.25 above and below the bar.
 - TargetBarEdge.tga (512x64): the pill's 1px outline at that size.
 
 Usage: python plaque_dock.py <Media/Textures>
@@ -14,7 +14,7 @@ import numpy as np
 from PIL import Image
 
 SS = 8
-BAR_W, BAR_H = 228, 20
+BAR_W, BAR_H = 228, 14
 TEX_W, TEX_H = 512, 64
 
 
