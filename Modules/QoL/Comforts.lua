@@ -11,6 +11,7 @@
 -- Holding Shift stops any of the automation for that window.
 local _, ns = ...
 local Stoa = ns.Stoa
+local UI = Stoa.UI
 
 local Comforts = Stoa:NewModule("Comforts", {
 	fastLoot = true,
@@ -27,6 +28,7 @@ local Comforts = Stoa:NewModule("Comforts", {
 	acceptRes = false,
 	keepTracking = true,
 	questGlow = false,
+	sparkle = true,
 })
 
 local FAR_CAMERA = 2.6
@@ -123,6 +125,105 @@ function Comforts:QuestGlow()
 		else
 			Stoa.GameSettings:Restore(pair[1])
 		end
+	end
+end
+
+-- Sparkle -------------------------------------------------------------------
+-- With the interact icon on, the herb, ore, chest or quest object the game
+-- has picked out (the one its icon marks) also gets a soft gold glow with a
+-- few twinkling stars under the icon, so it stands out from further off.
+-- The game hangs its icon on a small plate over the object; the sparkle
+-- follows that plate. NPCs don't sparkle.
+
+local SPARKLE_DROP = 34 -- below the plate, onto the object
+local STARS = { -- x, y, size, delay
+	{ -14, 6, 26, 0 }, { 16, -4, 20, 0.45 }, { 2, -18, 16, 0.9 },
+	{ -22, -12, 12, 1.25 }, { 20, 14, 12, 0.7 },
+}
+
+local function buildSparkle()
+	local frame = CreateFrame("Frame", nil, UIParent)
+	frame:SetSize(90, 90)
+	frame:SetFrameStrata("BACKGROUND")
+	frame:Hide()
+	local glow = frame:CreateTexture(nil, "BACKGROUND")
+	glow:SetTexture(UI.MEDIA .. "Textures\\SparkleGlow")
+	glow:SetAllPoints()
+	glow:SetBlendMode("ADD")
+	frame.glow = glow
+	frame.stars = {}
+	for _, spec in ipairs(STARS) do
+		local star = frame:CreateTexture(nil, "ARTWORK")
+		star:SetTexture(UI.MEDIA .. "Textures\\Sparkle")
+		star:SetSize(spec[3], spec[3])
+		star:SetPoint("CENTER", spec[1], spec[2])
+		star:SetBlendMode("ADD")
+		star:SetAlpha(0)
+		local twinkle = star:CreateAnimationGroup()
+		twinkle:SetLooping("REPEAT")
+		local rise = twinkle:CreateAnimation("Alpha")
+		rise:SetFromAlpha(0)
+		rise:SetToAlpha(1)
+		rise:SetDuration(0.5)
+		rise:SetStartDelay(spec[4])
+		rise:SetOrder(1)
+		local fall = twinkle:CreateAnimation("Alpha")
+		fall:SetFromAlpha(1)
+		fall:SetToAlpha(0)
+		fall:SetDuration(0.7)
+		fall:SetOrder(2)
+		local rest = twinkle:CreateAnimation("Alpha")
+		rest:SetFromAlpha(0)
+		rest:SetToAlpha(0)
+		rest:SetDuration(0.6)
+		rest:SetOrder(3)
+		star.twinkle = twinkle
+		frame.stars[#frame.stars + 1] = star
+	end
+	local breathe = glow:CreateAnimationGroup()
+	breathe:SetLooping("BOUNCE")
+	local soft = breathe:CreateAnimation("Alpha")
+	soft:SetFromAlpha(0.55)
+	soft:SetToAlpha(0.3)
+	soft:SetDuration(1.4)
+	frame.breathe = breathe
+	return frame
+end
+
+local function tintSparkle(frame)
+	local r, g, b = Stoa:Color("accent")
+	frame.glow:SetVertexColor(r, g, b)
+	for _, star in ipairs(frame.stars) do star:SetVertexColor(1, 0.95, 0.8) end
+end
+
+function Comforts:Sparkle()
+	local frame = self.sparkleFrame
+	local on = self.db.questGlow and self.db.sparkle ~= false
+	local plate
+	if on and UnitExists and UnitExists("softinteract") and UnitIsGameObject and UnitIsGameObject("softinteract")
+		and C_NamePlate and C_NamePlate.GetNamePlateForUnit then
+		local ok, found = pcall(C_NamePlate.GetNamePlateForUnit, "softinteract")
+		if ok and found and not (found.IsForbidden and found:IsForbidden()) then plate = found end
+	end
+	if not plate then
+		if frame and frame:IsShown() then
+			frame:Hide()
+			frame.breathe:Stop()
+			for _, star in ipairs(frame.stars) do star.twinkle:Stop() star:SetAlpha(0) end
+		end
+		return
+	end
+	if not frame then
+		frame = buildSparkle()
+		self.sparkleFrame = frame
+	end
+	tintSparkle(frame)
+	frame:ClearAllPoints()
+	frame:SetPoint("CENTER", plate, "BOTTOM", 0, -SPARKLE_DROP)
+	if not frame:IsShown() then
+		frame:Show()
+		frame.breathe:Play()
+		for _, star in ipairs(frame.stars) do star.twinkle:Play() end
 	end
 end
 
@@ -417,6 +518,9 @@ function Comforts:OnEnable()
 	on("PLAYER_REGEN_ENABLED", "Errors", false)
 	on("PLAYER_ENTERING_WORLD", "Camera")
 	on("PLAYER_ENTERING_WORLD", "QuestGlow")
+	on("PLAYER_SOFT_INTERACT_CHANGED", "Sparkle")
+	on("NAME_PLATE_UNIT_ADDED", "Sparkle")
+	on("NAME_PLATE_UNIT_REMOVED", "Sparkle")
 	on("DUEL_REQUESTED", "Duel")
 	on("PLAYER_DEAD", "Dead")
 	Stoa:On("RESURRECT_REQUEST", function(from) xpcall(self.Resurrect, Stoa.catch, self, from) end)
