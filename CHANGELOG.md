@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Shift to stop the comforts now also counts a press in the last moment (the NPC's window or the loot opens a beat after you click, often after Shift is let go), and a talk begun with Shift stays yours until the NPC's windows close, so picking a quest from the list doesn't auto-accept it.
 - Talents and spellbook window: its dark header now rises fully above the window, so the talent art no longer covers its lower half.
 
 ## 1.1.4
