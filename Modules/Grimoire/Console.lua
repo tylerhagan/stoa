@@ -832,8 +832,9 @@ end
 -- shapes leave room for their shadow down and right, so each is nudged by
 -- half of it to sit centred.
 -- Measured on ConsoleMedallion.tga: the dark band of ticks runs from the
--- seal's ring (2 px out from the portrait) to the art's gold ring (13 px out).
-local CREST_FOOT = 7
+-- seal's ring (2 px out from the portrait) to the art's gold ring (13 px out);
+-- the feet sit a little inside its middle (Tyler's pick, 4 px under it).
+local CREST_FOOT = 3
 
 function Console:PlaceCrest()
 	local shield, mark = self.sealShield, self.sealMark
