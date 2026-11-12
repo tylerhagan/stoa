@@ -16,13 +16,11 @@ Stoa.WhatsNew = WhatsNew
 -- gets a fresh note and a new `edition` (its version), so it shows once
 -- to everyone; a fixes-only release keeps the last one.
 local NOTE = {
-	edition = "1.1.3",
-	title = "New in STOA 1.1.3",
+	edition = "1.1.4",
+	title = "New in STOA 1.1.4",
 	lines = {
-		{ "Target of target and focus", "Who your target is targeting, beside the target, saying YOU when it is you. Your focus sits under it." },
-		{ "Shield", "On party cards, a small shield that drains as it soaks up damage." },
-		{ "Druid form mana", "Your mana in cat and bear form now shows in combat too." },
-		{ "Speed", "A new line you can add to At a glance." },
+		{ "Your shield", "A silver shield beside the medallion and under the Halo's health number, draining as it soaks up damage." },
+		{ "Your class mark", "Next to it, the buff your class keeps up, emptying as it runs out: Inner Fire, your seal, Battle Shout, Slice and Dice, or your shaman shield." },
 	},
 	foot = "Both can be switched off in the settings under Combat. /stoa news shows this again.",
 }
