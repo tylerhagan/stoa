@@ -1,5 +1,5 @@
 -- Stoa: the class mark.
--- One buff per class you keep up, drawn like the shield (a gold shape that
+-- One buff per class you keep up, drawn like the shield (a silver shape that
 -- empties) at the top of the medallion beside the shield and under the
 -- Halo's power number:
 --   Warrior: Battle Shout, a horn, emptying as its two minutes run.

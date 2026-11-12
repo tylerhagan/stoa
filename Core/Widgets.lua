@@ -477,12 +477,13 @@ local function hideShield(pip)
 	pip.text:SetPoint("CENTER", 0, 0)
 end
 
--- A mark's drawing (the shield, the class marks): the shape in dark gold,
--- a gold fill that empties from the top down, and a shadow cast down and
+-- A mark's drawing (the shield, the class marks): the shape in dark slate,
+-- a silver fill that empties from the top down, and a shadow cast down and
 -- to the right (a tight dark copy over a wider faint one) so it sits on
 -- the ring rather than printed on it. Returns the fill, a vertical bar;
 -- fill.SetArt swaps the drawing.
 function UI.markArt(holder, size, art)
+	local SILVER = Stoa.silver or { 0.79, 0.8, 0.82 }
 	local drop = math.max(2, math.floor(size * 0.1 + 0.5))
 	local back = holder:CreateTexture(nil, "ARTWORK")
 	back:SetPoint("TOPLEFT", 0, 0)
@@ -507,13 +508,12 @@ function UI.markArt(holder, size, art)
 		soft:SetTexture(path)
 		shadow:SetTexture(path)
 		fill:SetStatusBarTexture(path)
-		local r, g, b = Stoa:Color("accent")
-		fill:SetStatusBarColor(r, g, b, 1)
+		fill:SetStatusBarColor(SILVER[1], SILVER[2], SILVER[3], 1)
 	end
+	-- Silver rather than the theme's gold, so it stands off the gold ring.
 	local function colour()
-		local r, g, b = Stoa:Color("accent")
-		back:SetVertexColor(r * 0.3, g * 0.3, b * 0.3, 0.95)
-		fill:SetStatusBarColor(r, g, b, 1)
+		back:SetVertexColor(SILVER[1] * 0.22, SILVER[2] * 0.22, SILVER[3] * 0.24, 0.95)
+		fill:SetStatusBarColor(SILVER[1], SILVER[2], SILVER[3], 1)
 	end
 	fill:SetArt(art)
 	colour()
