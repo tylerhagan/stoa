@@ -61,6 +61,13 @@ local function talkClosed()
 	end)
 end
 
+-- Low-level (grey) quests are left for you to take or not.
+local function trivial(questID)
+	if not (questID and questID ~= 0 and C_QuestLog and C_QuestLog.IsQuestTrivial) then return false end
+	local ok, grey = pcall(C_QuestLog.IsQuestTrivial, questID)
+	return ok and grey == true
+end
+
 -- Quest help another addon does already (Core/Companions.lua) is left to it.
 local function accepting(db)
 	return db.acceptQuests and not Stoa:SharedBy("acceptQuests")
@@ -219,10 +226,11 @@ function Comforts:Gossip()
 		end
 	end
 	if accepting(db) then
-		local available = C_GossipInfo.GetAvailableQuests() or {}
-		if available[1] then
-			C_GossipInfo.SelectAvailableQuest(available[1].questID)
-			return
+		for _, quest in ipairs(C_GossipInfo.GetAvailableQuests() or {}) do
+			if not quest.isTrivial and not trivial(quest.questID) then
+				C_GossipInfo.SelectAvailableQuest(quest.questID)
+				return
+			end
 		end
 	end
 	if db.skipGossip and not Stoa:SharedBy("skipGossip") then
@@ -248,13 +256,20 @@ function Comforts:Greeting()
 			end
 		end
 	end
-	if accepting(db) and GetNumAvailableQuests and GetNumAvailableQuests() > 0 then
-		SelectAvailableQuest(1)
+	if accepting(db) and GetNumAvailableQuests then
+		for i = 1, GetNumAvailableQuests() do
+			local isTrivial, _, _, _, questID = GetAvailableQuestInfo(i)
+			if not isTrivial and not trivial(questID) then
+				SelectAvailableQuest(i)
+				return
+			end
+		end
 	end
 end
 
 function Comforts:Detail()
 	if not accepting(self.db) or held() then return end
+	if trivial(GetQuestID and GetQuestID()) then return end
 	if QuestGetAutoAccept and QuestGetAutoAccept() then
 		if AcknowledgeAutoAcceptQuest then AcknowledgeAutoAcceptQuest() end
 	else
