@@ -296,7 +296,7 @@ local TARGET_COIN_SPACE = UI.PLAQUE_MEDALLION_SPACE
 -- The health bar: its size matches the pill drawn in TargetBar.tga
 -- (Tools/art/plaque_dock.py), which masks it to round ends.
 local TARGET_BAR_W = TARGET_WIDTH - TARGET_PAD - TARGET_COIN_SPACE
-local TARGET_BAR_H = 20
+local TARGET_BAR_H = 14
 local TARGET_CAST_H = 14
 
 -- Out of combat, on the full console with its art, the plaque docks on the
@@ -466,8 +466,8 @@ function Halo:BuildTarget(frame)
 	name:SetPoint("TOPLEFT", TARGET_PAD, -26)
 	name:SetWidth(TARGET_BAR_W)
 	name:SetWordWrap(false)
-	-- The health bar: rounded, thick enough to carry the percent and the
-	-- health inside it.
+	-- The health bar: rounded, slim, carrying the percent and the health
+	-- inside it.
 	local hp = UI.bar(target, TARGET_BAR_W, TARGET_BAR_H, "health")
 	-- Coloured by UpdateTarget (hostile or not), so a theme pass mustn't
 	-- turn it back to the health colour.
@@ -493,10 +493,10 @@ function Halo:BuildTarget(frame)
 	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
 	rim:SetAllPoints(mask)
 	UI.tint(rim, "text", 0.18)
-	local health = UI.text(words, "sans", Stoa.typeSize.label, "text", "LEFT")
+	local health = UI.text(words, "sans", Stoa.typeSize.body, "text", "LEFT")
 	health:SetPoint("LEFT", 10, 0)
 	UI.legible(health)
-	local amount = UI.text(words, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	local amount = UI.text(words, "sans", Stoa.typeSize.micro, "text", "LEFT")
 	amount:SetPoint("LEFT", health, "RIGHT", 8, 0)
 	amount:SetAlpha(0.8)
 	UI.legible(amount)
