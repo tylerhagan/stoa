@@ -108,6 +108,7 @@ Modules\Skins\Meters.lua
 Modules\Skins\Top.lua
 Modules\Skins\Plates.lua
 Modules\Skins\Swing.lua
+Modules\Skins\Experience.lua
 
 Config\Options.lua
 Config\Window.lua
