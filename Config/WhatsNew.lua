@@ -22,7 +22,7 @@ local NOTE = {
 	edition = "1.1.4",
 	title = "New in STOA 1.1.4",
 	lines = {
-		{ "Your shield", "A silver shield beside the medallion and under the Halo's health number, draining as it soaks up damage." },
+		{ "Your shield", "A silver shield beside the medallion and under the Halo's health number, draining as it soaks up damage. It shows any shield on you, whoever cast it, such as a priest's Power Word: Shield or a mage's Ice Barrier or Mana Shield." },
 		{ "Your class mark", classes = { "PRIEST", "PALADIN", "WARRIOR", "ROGUE", "SHAMAN" }, "Next to it, the buff your class keeps up, emptying as it runs out: Inner Fire for priests, your seal for paladins, Battle Shout for warriors, Slice and Dice for rogues, and Lightning or Water Shield for shamans. A priest's missing Inner Fire, or a paladin's missing seal in a fight, shows as an empty mark instead of a warning." },
 		{ "A new experience bar", "Blizzard's experience bar as a thin flat bar in STOA's dark track, wherever Edit Mode puts it, filling in gold like the medallion, rested in blue. Reputation is coloured by standing, and it fades away in a fight." },
 		{ "Quest items in your bags", "Items a quest of yours still needs get a gold edge in your bags, and junk selling leaves them alone." },
