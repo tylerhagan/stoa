@@ -477,13 +477,12 @@ local function hideShield(pip)
 	pip.text:SetPoint("CENTER", 0, 0)
 end
 
--- A mark's drawing (the shield, the class marks): the shape in dark slate,
--- a silver fill that empties from the top down, and a shadow cast down and
--- to the right (a tight dark copy over a wider faint one) so it sits on
--- the ring rather than printed on it. Returns the fill, a vertical bar;
--- fill.SetArt swaps the drawing.
+-- A mark's drawing (the shield, the class marks): the painting darkened,
+-- the painting itself over it as a fill that empties from the top down,
+-- and a shadow cast down and to the right (a tight dark copy over a wider
+-- faint one) so it sits on the ring rather than printed on it. Returns the
+-- fill, a vertical bar; fill.SetArt swaps the drawing.
 function UI.markArt(holder, size, art)
-	local SILVER = Stoa.silver or { 0.79, 0.8, 0.82 }
 	local drop = math.max(2, math.floor(size * 0.1 + 0.5))
 	local back = holder:CreateTexture(nil, "ARTWORK")
 	back:SetPoint("TOPLEFT", 0, 0)
@@ -508,16 +507,13 @@ function UI.markArt(holder, size, art)
 		soft:SetTexture(path)
 		shadow:SetTexture(path)
 		fill:SetStatusBarTexture(path)
-		fill:SetStatusBarColor(SILVER[1], SILVER[2], SILVER[3], 1)
+		fill:SetStatusBarColor(1, 1, 1, 1)
 	end
-	-- Silver rather than the theme's gold, so it stands off the gold ring.
-	local function colour()
-		back:SetVertexColor(SILVER[1] * 0.22, SILVER[2] * 0.22, SILVER[3] * 0.24, 0.95)
-		fill:SetStatusBarColor(SILVER[1], SILVER[2], SILVER[3], 1)
-	end
+	-- Painted silver (Tools/art/cut_marks.py), shown as painted; the
+	-- drained part is the same painting darkened, so it stands off the
+	-- gold ring either way.
+	back:SetVertexColor(0.26, 0.26, 0.29, 0.95)
 	fill:SetArt(art)
-	colour()
-	Stoa:On("STOA_THEME_CHANGED", colour)
 	return fill
 end
 
@@ -564,7 +560,7 @@ function UI.shieldGauge(parent, size)
 	holder:SetSize(size, size)
 	holder:SetPoint("RIGHT", slide:GetStatusBarTexture(), "RIGHT")
 
-	local fill = UI.markArt(holder, size, SHIELD_ART)
+	local fill = UI.markArt(holder, size, UI.MEDIA .. "Textures\\MarkShield")
 	gauge.fill = fill
 
 	local function drain(value)
