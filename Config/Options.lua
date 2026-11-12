@@ -240,6 +240,7 @@ local function build()
 		{ false, "Slide" }, { true, "Instantly" },
 	}, { words = "animation motion instant reduce" })
 	toggle(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar.", true, { reload = true, words = "unit frame" })
+	toggle(halo, "targetOfTarget", "Target of target", "Who your target is targeting: a name and a thin health line to the right of the target plaque. Says YOU when it is you. Click it to target them.", true, { reload = true, words = "tot assist aggro" })
 	toggle(halo, "hideTargetFrame", "Hide Blizzard's target frame", "STOA shows your target beside the Halo.", true, { reload = true, words = "unit frame" })
 	group = "Combat bar"
 	toggle(of("CombatBar"), "enabled", "Combat bar under the Halo", "In combat, a compact row of your main bar's spells under the Halo, with their keys. Your keybinds keep working as before.", true, { id = "combatBar", reload = true, words = "action bar" })
