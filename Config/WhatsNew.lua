@@ -15,21 +15,39 @@ Stoa.WhatsNew = WhatsNew
 -- version going out. Each release with something worth telling players
 -- gets a fresh note and a new `edition` (its version), so it shows once
 -- to everyone; a fixes-only release keeps the last one.
+-- A line only some classes get names them in `classes` (class files, such
+-- as "PRIEST"): each shows as a small tag in its class colour beside the
+-- line's name.
 local NOTE = {
 	edition = "1.1.4",
 	title = "New in STOA 1.1.4",
 	lines = {
 		{ "Your shield", "A silver shield beside the medallion and under the Halo's health number, draining as it soaks up damage." },
-		{ "Your class mark", "Next to it, the buff your class keeps up, emptying as it runs out: Inner Fire for priests, your seal for paladins, Battle Shout for warriors, Slice and Dice for rogues, and Lightning or Water Shield for shamans. A priest's missing Inner Fire, or a paladin's missing seal in a fight, shows as an empty mark instead of a warning." },
+		{ "Your class mark", classes = { "PRIEST", "PALADIN", "WARRIOR", "ROGUE", "SHAMAN" }, "Next to it, the buff your class keeps up, emptying as it runs out: Inner Fire for priests, your seal for paladins, Battle Shout for warriors, Slice and Dice for rogues, and Lightning or Water Shield for shamans. A priest's missing Inner Fire, or a paladin's missing seal in a fight, shows as an empty mark instead of a warning." },
 		{ "A new experience bar", "Blizzard's experience bar as a thin flat bar in STOA's dark track, wherever Edit Mode puts it, filling in gold like the medallion, rested in blue. Reputation is coloured by standing, and it fades away in a fight." },
 		{ "Quest items in your bags", "Items a quest of yours still needs get a gold edge in your bags, and junk selling leaves them alone." },
 	},
 	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }
 
-local WIDTH = 460
+local WIDTH = 520
 local PAD = Stoa.space.xl
 local HEADER, FOOTER = 64, 58
+
+-- A class's name as a small tag in its class colour.
+function WhatsNew.classTag(parent, class)
+	local word = LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class] or class
+	local tag = UI.badge(parent, word, "text")
+	local function colour()
+		local c = RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+		if not c then return end
+		tag.text:SetTextColor(c.r, c.g, c.b)
+		tag.fill:SetVertexColor(c.r, c.g, c.b, 0.16)
+	end
+	colour()
+	Stoa:On("STOA_THEME_CHANGED", colour)
+	return tag
+end
 
 function WhatsNew:Build()
 	local page = CreateFrame("Frame", "StoaNewsPage", UIParent)
@@ -59,8 +77,13 @@ function WhatsNew:Build()
 		else
 			name:SetPoint("TOPLEFT", PAD, -(HEADER + 18))
 		end
-		name:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
 		name:SetText(line[1])
+		local tagAfter = name
+		for _, class in ipairs(line.classes or {}) do
+			local tag = WhatsNew.classTag(page, class)
+			tag:SetPoint("LEFT", tagAfter, "RIGHT", tagAfter == name and 8 or 4, 0)
+			tagAfter = tag
+		end
 		local words = UI.text(page, "sans", Stoa.typeSize.body, "muted", "LEFT")
 		words:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -3)
 		words:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
