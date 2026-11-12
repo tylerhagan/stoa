@@ -20,6 +20,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - The Halo's timer coins (DoTs and buffs you keep up, such as Shadow Word: Pain and Devouring Plague) fade to a faint outline when they're off instead of turning orange, like an unticked line on a checklist; they keep their place, and pale gold still marks the last seconds.
 - What's new: lines about one class or a few now carry class tags in class colour beside the headline, and the note is a little wider to fit them.
 - Character window: the close cross sits level with your name in the header instead of halfway down it.
+- Talents and spellbook window: its dark header now rises fully above the window, so the talent art no longer covers its lower half.
 - At a glance: long labels shortened so they fit beside their figure: Gold rate, and Enchant, Smithing, Engineer, Leather, Jewels and Scribe for the long profession names.
 
 ## 1.1.3
