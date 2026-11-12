@@ -257,9 +257,10 @@ function Console:BuildSeal(frame)
 	-- Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db and halo.db.shield then
-		local shield = UI.shieldGauge(seal, art and 26 or 20)
+		local shield = UI.shieldGauge(seal, art and 29 or 22)
 		shield:SetFrameLevel(seal:GetFrameLevel() + 6)
-		shield:SetPoint("CENTER", portrait, "TOP", 0, 7 - 1)
+		-- Nudged by half the shadow, so the shield itself stays centred.
+		shield:SetPoint("CENTER", portrait, "TOP", math.floor((art and 29 or 22) * 0.05 + 0.5), 6 - math.floor((art and 29 or 22) * 0.05 + 0.5))
 		self.sealShield = shield
 	end
 
