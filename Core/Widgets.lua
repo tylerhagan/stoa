@@ -1310,7 +1310,112 @@ UI.PLAQUE_BARE_INSET = PORTRAIT_INSET + PORTRAIT - BARE_PORTRAIT
 UI.PLAQUE_COIN_SPACE = PORTRAIT_INSET + PORTRAIT + 10
 local FILL_ALPHA = 0.97
 
-function UI.plaque(frame, coinSide)
+-- The target's medallion (opts.medallion): a round portrait in a gold ring,
+-- larger than the card's square coin, breaking the card's edge, with the
+-- level on a small badge at its foot.
+local MEDALLION = 62
+-- How far the medallion's centre sits inside the card's edge, and how much
+-- of the card's width it takes (callers keep their words clear of it).
+local MEDALLION_IN = 8
+UI.PLAQUE_MEDALLION_SPACE = MEDALLION / 2 + MEDALLION_IN + 14
+-- How far the ring reaches past the card's edge.
+UI.PLAQUE_MEDALLION_OUT = MEDALLION / 2 - MEDALLION_IN + 5
+local BADGE = 22
+
+local function medallion(frame, coinSide, plaque)
+	local coin = CreateFrame("Frame", nil, frame)
+	coin:SetSize(MEDALLION, MEDALLION)
+	coin:SetFrameLevel(frame:GetFrameLevel() + 3)
+	local function place(scale)
+		coin:SetScale(scale)
+		coin:ClearAllPoints()
+		local x = (coinSide == "LEFT" and MEDALLION_IN or -MEDALLION_IN) / scale
+		coin:SetPoint("CENTER", frame, coinSide, x, 4 / scale)
+	end
+	place(1)
+	-- Outward: a faint gold hairline, a panel gap, the gold ring, then the
+	-- dark well the portrait sits in.
+	local outer = UI.circle(coin, "BACKGROUND", 0, MEDALLION + 10)
+	outer:SetPoint("CENTER")
+	UI.paint(outer, "accent", 0.35)
+	local mat = UI.circle(coin, "BACKGROUND", 1, MEDALLION + 8)
+	mat:SetPoint("CENTER")
+	UI.paint(mat, "panel")
+	local ring = UI.circle(coin, "BORDER", 0, MEDALLION)
+	ring:SetPoint("CENTER")
+	ring:SetColorTexture(1, 1, 1)
+	local well = UI.circle(coin, "BORDER", 1, MEDALLION - 6)
+	well:SetPoint("CENTER")
+	well:SetColorTexture(0, 0, 0, 1)
+	local portrait = UI.circle(coin, "ARTWORK", 0, MEDALLION - 6)
+	portrait:SetPoint("CENTER")
+
+	local badge = CreateFrame("Frame", nil, coin)
+	badge:SetSize(BADGE, BADGE)
+	badge:SetPoint("CENTER", coin, "BOTTOM", 0, 3)
+	badge:SetFrameLevel(coin:GetFrameLevel() + 2)
+	local badgeRing = UI.circle(badge, "BORDER", 0, BADGE)
+	badgeRing:SetPoint("CENTER")
+	badgeRing:SetColorTexture(1, 1, 1)
+	local badgeFill = UI.circle(badge, "BORDER", 1, BADGE - 4)
+	badgeFill:SetPoint("CENTER")
+	UI.paint(badgeFill, "panel")
+	local level = UI.text(badge, "sans", Stoa.typeSize.micro, "accent", "CENTER")
+	level:SetPoint("CENTER", 0, 0)
+	badge:Hide()
+	plaque.badge, plaque.badgeRing, plaque.level = badge, badgeRing, level
+	plaque.placeCoin = place
+
+	-- The level, or nil to hide the badge.
+	function plaque:SetLevel(text)
+		level:SetText(text or "")
+		badge:SetShown(text ~= nil)
+	end
+	return coin, ring, portrait
+end
+
+-- Docked (the target out of combat): the card stands on the console's rim,
+-- square at the foot, its gold edge running up the sides and curving out
+-- into the rim. Built the first time it docks.
+local DOCK_ALPHA = 1
+local FILLET = 16
+local function buildDock(frame, plaque)
+	local dock = {}
+	-- Covers the rounded foot corners, so the card meets the rim square.
+	local foot = frame:CreateTexture(nil, "BORDER", nil, 7)
+	foot:SetColorTexture(1, 1, 1)
+	foot:SetPoint("BOTTOMLEFT")
+	foot:SetPoint("BOTTOMRIGHT")
+	foot:SetHeight(14)
+	dock.foot = foot
+	dock.sides, dock.fillets = {}, {}
+	for i, side in ipairs({ "LEFT", "RIGHT" }) do
+		local line = frame:CreateTexture(nil, "ARTWORK", nil, -8)
+		line:SetColorTexture(1, 1, 1)
+		UI.pixel(line, "width")
+		line:SetPoint("BOTTOM" .. side, 0, 0)
+		line:SetHeight(14)
+		dock.sides[i] = line
+		local fill = frame:CreateTexture(nil, "BACKGROUND")
+		fill:SetTexture(UI.MEDIA .. "Textures\\PlaqueFillet")
+		local edge = frame:CreateTexture(nil, "ARTWORK", nil, -8)
+		edge:SetTexture(UI.MEDIA .. "Textures\\PlaqueFilletEdge")
+		for _, tex in ipairs({ fill, edge }) do
+			tex:SetSize(FILLET, FILLET)
+			if side == "LEFT" then
+				tex:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", 0, 0)
+			else
+				tex:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT", 0, 0)
+				tex:SetTexCoord(1, 0, 0, 1)
+			end
+		end
+		dock.fillets[#dock.fillets + 1] = { fill = fill, edge = edge }
+	end
+	plaque.dock = dock
+	return dock
+end
+
+function UI.plaque(frame, coinSide, opts)
 	local plaque = {}
 	local fill = sliced(frame, "BACKGROUND", "CardFill.tga")
 	if not fill then
@@ -1319,9 +1424,15 @@ function UI.plaque(frame, coinSide)
 		fill:SetColorTexture(1, 1, 1)
 	end
 	UI.tint(fill, "panel", FILL_ALPHA)
+	-- Docked, the card and its foot are solid, so where they overlap
+	-- doesn't show as a band.
 	local function paintFill()
 		local r, g, b = Stoa:Color("panel")
-		fill:SetVertexColor(r, g, b, FILL_ALPHA)
+		fill:SetVertexColor(r, g, b, plaque.docked and DOCK_ALPHA or FILL_ALPHA)
+		if plaque.dock then
+			plaque.dock.foot:SetVertexColor(r, g, b, DOCK_ALPHA)
+			for _, f in ipairs(plaque.dock.fillets) do f.fill:SetVertexColor(r, g, b, DOCK_ALPHA) end
+		end
 	end
 	paintFill()
 
@@ -1339,32 +1450,38 @@ function UI.plaque(frame, coinSide)
 	plaque.strip = strip
 
 	-- The portrait, inside the card, in a rounded square like the buttons.
-	local coin = CreateFrame("Frame", nil, frame)
-	coin:SetSize(PORTRAIT, PORTRAIT)
-	if coinSide == "LEFT" then
-		coin:SetPoint("LEFT", frame, "LEFT", PORTRAIT_INSET, 0)
+	local coin, ring, portrait
+	if opts and opts.medallion then
+		coin, ring, portrait = medallion(frame, coinSide, plaque)
+		plaque.medallion = true
 	else
-		coin:SetPoint("RIGHT", frame, "RIGHT", -PORTRAIT_INSET, 0)
+		coin = CreateFrame("Frame", nil, frame)
+		coin:SetSize(PORTRAIT, PORTRAIT)
+		if coinSide == "LEFT" then
+			coin:SetPoint("LEFT", frame, "LEFT", PORTRAIT_INSET, 0)
+		else
+			coin:SetPoint("RIGHT", frame, "RIGHT", -PORTRAIT_INSET, 0)
+		end
+		coin:SetFrameLevel(frame:GetFrameLevel() + 3)
+		local function rounded(layer, size)
+			local tex = coin:CreateTexture(nil, layer)
+			tex:SetSize(size, size)
+			tex:SetPoint("CENTER")
+			local mask = coin:CreateMaskTexture()
+			mask:SetTexture(UI.MEDIA .. "Textures\\ButtonMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			mask:SetAllPoints(tex)
+			tex:AddMaskTexture(mask)
+			return tex
+		end
+		ring = rounded("BORDER", PORTRAIT)
+		ring:SetColorTexture(1, 1, 1)
+		local well = rounded("BORDER", PORTRAIT - 2)
+		well:SetColorTexture(0, 0, 0, 1)
+		portrait = rounded("ARTWORK", PORTRAIT - 2)
+		-- The game draws portraits as a disc; crop to the square inside it so
+		-- the face fills the rounded square instead of sitting in a circle.
+		portrait:SetTexCoord(0.15, 0.85, 0.15, 0.85)
 	end
-	coin:SetFrameLevel(frame:GetFrameLevel() + 3)
-	local function rounded(layer, size)
-		local tex = coin:CreateTexture(nil, layer)
-		tex:SetSize(size, size)
-		tex:SetPoint("CENTER")
-		local mask = coin:CreateMaskTexture()
-		mask:SetTexture(UI.MEDIA .. "Textures\\ButtonMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-		mask:SetAllPoints(tex)
-		tex:AddMaskTexture(mask)
-		return tex
-	end
-	local ring = rounded("BORDER", PORTRAIT)
-	ring:SetColorTexture(1, 1, 1)
-	local well = rounded("BORDER", PORTRAIT - 2)
-	well:SetColorTexture(0, 0, 0, 1)
-	local portrait = rounded("ARTWORK", PORTRAIT - 2)
-	-- The game draws portraits as a disc; crop to the square inside it so
-	-- the face fills the rounded square instead of sitting in a circle.
-	portrait:SetTexCoord(0.15, 0.85, 0.15, 0.85)
 	plaque.coin, plaque.ring, plaque.portrait = coin, ring, portrait
 
 	-- A quiet edge for everyone; elite gold, rare silver.
@@ -1374,8 +1491,49 @@ function UI.plaque(frame, coinSide)
 		a = 0.16
 		if rank == "elite" then r, g, b = Stoa:Color("accent"); a = 0.9 end
 		if rank == "rare" then r, g, b = unpack(SILVER); a = 0.9 end
+		-- Docked, the edge is the console's gold carried up the sides.
+		if plaque.docked and not rank then
+			r, g, b = Stoa:Color("accent")
+			a = 0.55
+		end
 		if edge then edge:SetVertexColor(r, g, b, a) end
-		ring:SetVertexColor(r, g, b, rank and 0.9 or 0.3)
+		if plaque.medallion then
+			-- The medallion is gold for everyone; silver for a rare.
+			local mr, mg, mb = Stoa:Color("accent")
+			if rank == "rare" then mr, mg, mb = unpack(SILVER) end
+			ring:SetVertexColor(mr, mg, mb, rank and 1 or 0.85)
+			plaque.badgeRing:SetVertexColor(mr, mg, mb, 1)
+			plaque.level:SetTextColor(mr, mg, mb)
+		else
+			ring:SetVertexColor(r, g, b, rank and 0.9 or 0.3)
+		end
+		if plaque.dock then
+			local dr, dg, db = Stoa:Color("accent")
+			if rank then dr, dg, db = r, g, b end
+			for _, line in ipairs(plaque.dock.sides) do line:SetVertexColor(dr, dg, db, rank and a or 0.55) end
+			for _, f in ipairs(plaque.dock.fillets) do f.edge:SetVertexColor(dr, dg, db, rank and a or 0.55) end
+		end
+	end
+
+	-- Docked on the console rim, or free (see buildDock).
+	function plaque:SetDocked(on)
+		on = on and not plaque.bare and true or false
+		if on == (plaque.docked or false) then return end
+		plaque.docked = on
+		local dock = plaque.dock or (on and buildDock(frame, plaque))
+		if dock then
+			local r, g, b = Stoa:Color("panel")
+			dock.foot:SetVertexColor(r, g, b, DOCK_ALPHA)
+			dock.foot:SetShown(on)
+			for _, line in ipairs(dock.sides) do line:SetShown(on) end
+			for _, f in ipairs(dock.fillets) do
+				f.fill:SetVertexColor(r, g, b, DOCK_ALPHA)
+				f.fill:SetShown(on)
+				f.edge:SetShown(on)
+			end
+		end
+		paintFill()
+		plaque:SetRank(plaque.rank)
 	end
 
 	-- The strip: a colour token, or nil to hide it.
@@ -1396,6 +1554,12 @@ function UI.plaque(frame, coinSide)
 		plaque.bare = on and true or false
 		fill:SetShown(not on)
 		if edge then edge:SetShown(not on) end
+		if on then plaque:SetDocked(false) end
+		if plaque.medallion then
+			plaque.placeCoin(on and 0.75 or 1)
+			plaque:SetReaction(plaque.reaction)
+			return
+		end
 		local scale = on and BARE_PORTRAIT / PORTRAIT or 1
 		coin:SetScale(scale)
 		coin:ClearAllPoints()

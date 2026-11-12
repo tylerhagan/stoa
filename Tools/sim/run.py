@@ -707,6 +707,39 @@ do
 		C_Item.GetItemInfo = realInfo
 	end
 end
+-- The target plaque: a medallion with a level badge, docked while it rests
+-- on the full console, and a cast bar that shows for the target's cast.
+do
+	local halo = Stoa.modules.Halo
+	local target = halo and halo.enabled and halo.target
+	if target then
+		local plaque = target.plaque
+		if not (plaque.medallion and plaque.SetLevel) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: no medallion" end
+		plaque:SetLevel("15")
+		if not plaque.badge:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: level badge hidden" end
+		if (halo.targetResting and true or false) ~= (plaque.docked and true or false) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: docked doesn't follow resting"
+		end
+		if not plaque.bare then
+			plaque:SetDocked(true)
+			if not (plaque.dock and plaque.dock.foot:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: dock foot missing" end
+			plaque:SetDocked(false)
+			if plaque.dock and plaque.dock.foot:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: dock foot stays undocked" end
+			halo:PlaceTarget()
+		end
+		local realCasting, realExists = UnitCastingInfo, UnitExists
+		UnitExists = function(unit) return unit == "target" or realExists(unit) end
+		UnitCastingInfo = function(unit)
+			if unit == "target" then return "Fireball", "Fireball", nil, GetTime() * 1000, GetTime() * 1000 + 2500, false, 1, false end
+		end
+		halo:UpdateTargetCast()
+		if not target.castBar:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target cast: no bar for a cast" end
+		UnitCastingInfo = function() return nil end
+		halo:UpdateTargetCast()
+		if target.castBar:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target cast: bar stays after the cast" end
+		UnitCastingInfo, UnitExists = realCasting, realExists
+	end
+end
 -- Your own buffs: a priest without Inner Fire gets a button for it, and
 -- none once it's on with time to spare.
 do

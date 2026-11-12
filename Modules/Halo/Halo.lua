@@ -280,21 +280,29 @@ function Halo:BuildSignature(frame)
 end
 
 -- The target sits at the Halo's upper right, opposite the tank watch, on a
--- plaque with its portrait coin: level and kind, name and health, an
--- engraved bar, the hostile and threat words, and a row of auras under it.
--- Elite and rare targets get a doubled gold or a silver line and the word. Like the cast bar it is parented to UIParent, so
--- it stays with you out of combat as well. It's a secure unit button, so
+-- plaque with a round portrait medallion breaking its right edge (the level
+-- on a badge at its foot): kind, name, a rounded health bar carrying the
+-- percent and the health, a fine power line, the hostile and threat words,
+-- its cast and a row of auras. Elite and rare targets get a gold or a
+-- silver edge and the word. Like the cast bar it is parented to UIParent,
+-- so it stays with you out of combat as well. It's a secure unit button, so
 -- right click opens the unit menu (focus, invite, inspect, trade) like
 -- Blizzard's target frame.
 local TARGET_WIDTH = 294
-local TARGET_PAD = 12
--- Room on the left for the half of the coin inside the plaque.
-local TARGET_COIN_SPACE = UI.PLAQUE_COIN_SPACE
+local TARGET_HEIGHT = 100
+local TARGET_PAD = 14
+-- Room on the right for the part of the medallion inside the plaque.
+local TARGET_COIN_SPACE = UI.PLAQUE_MEDALLION_SPACE
+-- The health bar: its size matches the pill drawn in TargetBar.tga
+-- (Tools/art/plaque_dock.py), which masks it to round ends.
+local TARGET_BAR_W = TARGET_WIDTH - TARGET_PAD - TARGET_COIN_SPACE
+local TARGET_BAR_H = 20
+local TARGET_CAST_H = 14
 
--- Out of combat the plaque rests just above the console on the mana side,
--- beside the bars you read there; in a fight it
--- moves to the Halo's upper right. A spot set with the movers wins.
-local TARGET_REST_Y = 14
+-- Out of combat the plaque docks on the console's gold rim on the mana
+-- side, beside the bars you read there; in a fight it moves to the Halo's
+-- upper right. A spot set with the movers wins.
+local TARGET_DOCK_Y = -1
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
@@ -303,14 +311,22 @@ function Halo:PlaceTargetAuras()
 	local icons = self.target and self.target.auras
 	if not (icons and icons[1]) or InCombatLockdown() then return end
 	icons[1]:ClearAllPoints()
+	-- The cast sits next to the plaque and the auras past it, so a cast
+	-- starting never moves them.
+	local cast = self.target.castBar
+	cast:ClearAllPoints()
+	local step = TARGET_CAST_H + 6
 	if self.targetResting then
-		icons[1]:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", TARGET_COIN_SPACE, 6)
+		cast:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", TARGET_PAD, 6)
+		icons[1]:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", TARGET_PAD, 6 + step)
 	elseif self.db.targetStrip then
-		-- Without the panel the row follows the bar, leaving one line for
-		-- the threat and KICK words between them.
-		icons[1]:SetPoint("TOPLEFT", self.target.hp, "BOTTOMLEFT", 0, -20)
+		-- Without the panel they follow the bar, leaving one line for the
+		-- threat and KICK words between them.
+		cast:SetPoint("TOPLEFT", self.target.hp, "BOTTOMLEFT", 0, -26)
+		icons[1]:SetPoint("TOPLEFT", self.target.hp, "BOTTOMLEFT", 0, -26 - step)
 	else
-		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_COIN_SPACE, -6)
+		cast:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_PAD, -6)
+		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_PAD, -6 - step)
 	end
 	icons.placed = true
 end
@@ -329,23 +345,24 @@ function Halo:PlaceTarget()
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.
 		local gap = 150 * (console.ART_SCALE or 0.556) + 22
-		target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
+		target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_DOCK_Y)
 		self.targetResting = true
 	elseif self.db.targetStrip then
 		-- Level with the Halo, mirroring the party strips on its left.
-		target:SetPoint("LEFT", frame, "RIGHT", 52 - UI.PLAQUE_BARE_INSET, -6)
+		target:SetPoint("LEFT", frame, "RIGHT", 52 - TARGET_PAD, -6)
 		self.targetResting = false
 	else
 		target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 		self.targetResting = false
 	end
+	target.plaque:SetDocked(self.targetResting)
 	self:PlaceTargetAuras()
 end
 
 function Halo:BuildTarget(frame)
 	local target = CreateFrame("Button", "StoaTarget", UIParent, "SecureUnitButtonTemplate")
 	target:SetFrameStrata("LOW")
-	target:SetSize(TARGET_WIDTH, 84)
+	target:SetSize(TARGET_WIDTH, TARGET_HEIGHT)
 	-- Over your head it fought with the game's own nameplate.
 	target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 	target:SetAttribute("unit", "target")
@@ -366,6 +383,10 @@ function Halo:BuildTarget(frame)
 	-- DEAD, so the plaque always matches what you have targeted.
 	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
 	self.target = target
+	-- The medallion faces away from the Halo, balancing the card.
+	local plaque = UI.plaque(target, "RIGHT", { medallion = true })
+	target.plaque = plaque
+	self:BuildTargetCast(target)
 	Stoa:RegisterMover("target", target, "Target plaque", {
 		default = function() self:PlaceTarget() end,
 	})
@@ -377,42 +398,72 @@ function Halo:BuildTarget(frame)
 	end
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:PlaceTarget() end)
 
-	-- A plaque like the tank watch opposite: the coin faces the Halo.
-	local plaque = UI.plaque(target, "LEFT")
-	target.plaque = plaque
-	local left = TARGET_COIN_SPACE
 	local caption = UI.caption(target, "")
-	caption:SetPoint("TOPLEFT", left, -TARGET_PAD)
+	caption:SetPoint("TOPLEFT", TARGET_PAD, -12)
 	-- Hostile targets get a word as well as a colour.
 	local cue = UI.caption(target, "")
-	cue:SetPoint("TOPRIGHT", -TARGET_PAD, -TARGET_PAD)
+	cue:SetPoint("TOPRIGHT", -TARGET_COIN_SPACE, -12)
 	-- One step below title size, so most creature names fit whole.
 	local name = UI.text(target, "serif", Stoa.typeSize.name, "text", "LEFT")
-	name:SetPoint("TOPLEFT", caption, "BOTTOMLEFT", 0, -4)
-	name:SetWidth(TARGET_WIDTH - left - TARGET_PAD - 44)
+	name:SetPoint("TOPLEFT", TARGET_PAD, -26)
+	name:SetWidth(TARGET_BAR_W)
 	name:SetWordWrap(false)
-	local health = UI.text(target, "serif", Stoa.typeSize.name, "text", "RIGHT")
-	health:SetPoint("TOPRIGHT", cue, "BOTTOMRIGHT", 0, -4)
-	local barWidth = TARGET_WIDTH - left - TARGET_PAD
-	local hp = UI.bar(target, barWidth, 7, "health")
-	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
-	UI.engrave(hp, barWidth)
+	-- The health bar: rounded, thick enough to carry the percent and the
+	-- health inside it.
+	local hp = UI.bar(target, TARGET_BAR_W, TARGET_BAR_H, "health")
+	hp:SetPoint("TOPLEFT", TARGET_PAD, -48)
+	local outset = (TARGET_BAR_W * 64 / 512 - TARGET_BAR_H) / 2
+	local mask = hp:CreateMaskTexture()
+	mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	mask:SetPoint("TOPLEFT", 0, outset)
+	mask:SetPoint("BOTTOMRIGHT", 0, -outset)
+	hp:GetStatusBarTexture():AddMaskTexture(mask)
+	-- A dark well rather than the usual faint track, so the words read.
+	hp.track:Hide()
+	local well = hp:CreateTexture(nil, "BACKGROUND")
+	well:SetAllPoints()
+	well:SetColorTexture(0, 0, 0, 0.6)
+	well:AddMaskTexture(mask)
+	-- Its words sit above anything drawn over the bar (Lethal.lua).
+	local words = CreateFrame("Frame", nil, hp)
+	words:SetAllPoints()
+	words:SetFrameLevel(hp:GetFrameLevel() + 6)
+	local rim = words:CreateTexture(nil, "BORDER")
+	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
+	rim:SetAllPoints(mask)
+	UI.tint(rim, "text", 0.18)
+	local health = UI.text(words, "sans", Stoa.typeSize.label, "text", "LEFT")
+	health:SetPoint("LEFT", 10, 0)
+	UI.legible(health)
+	local percent = UI.text(words, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	percent:SetPoint("BOTTOMLEFT", health, "BOTTOMRIGHT", 1, 1)
+	percent:SetText("%")
+	UI.legible(percent)
+	local amount = UI.text(words, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	amount:SetPoint("LEFT", health, "RIGHT", 16, 0)
+	amount:SetAlpha(0.8)
+	UI.legible(amount)
+	target.healthWords = words
+	-- Mana, rage or energy as a fine line under the bar.
+	local power = UI.bar(target, TARGET_BAR_W - 16, 3, "mana")
+	power:SetPoint("TOP", hp, "BOTTOM", 0, -4)
 	-- Threat, in words: tanks hear when they are losing it, everyone else
 	-- when they are taking it.
 	local threat = UI.caption(target, "")
-	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -6)
+	threat:SetPoint("TOPRIGHT", hp, "BOTTOMRIGHT", 0, -12)
 	-- KICK, when the target is casting something you can interrupt (Kit.lua).
-	local kick = UI.text(target, "sans", Stoa.typeSize.label, "danger", "LEFT")
-	kick:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -6)
+	local kick = UI.text(target, "sans", Stoa.typeSize.caption, "danger", "LEFT")
+	kick:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -12)
 	kick:Hide()
 	target.kick = kick
 	target.name, target.hp, target.cue, target.health = name, hp, cue, health
+	target.amount, target.power = amount, power
 	-- On a friend: your buffs on them as the party cards' tags.
-	target.pips = UI.pipRow(target, hp, 5)
+	target.pips = UI.pipRow(target, hp, 12)
 	target.threat, target.caption = threat, caption
 	if self.db.targetStrip then
 		plaque:SetBare(true)
-		for _, fs in ipairs({ caption, cue, name, health, threat, kick }) do UI.legible(fs) end
+		for _, fs in ipairs({ caption, cue, name, threat, kick }) do UI.legible(fs) end
 	end
 
 	if self.db.targetOfTarget then self:BuildTargetOfTarget(target) end
@@ -463,6 +514,78 @@ function Halo:BuildTarget(frame)
 		icon:Hide()
 		target.auras[i] = icon
 	end
+	self:PlaceTargetAuras()
+end
+
+-- The target's cast: a small rounded bar with the spell and the time left,
+-- beside the plaque (above it when docked, under it at the Halo). Warm
+-- while it can be interrupted, grey when it can't. Runs only while the
+-- target is casting.
+function Halo:BuildTargetCast(target)
+	local cast = UI.bar(target, TARGET_BAR_W, TARGET_CAST_H, "accent")
+	cast.track:Hide()
+	local fill = UI.pillFill(cast, 0)
+	UI.tint(fill, "panel", 0.92)
+	UI.pillEdge(cast, 0):Set(Stoa:Color("hairline"))
+	local spell = UI.text(cast, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	spell:SetPoint("LEFT", 8, 0)
+	spell:SetPoint("RIGHT", -36, 0)
+	spell:SetWordWrap(false)
+	UI.legible(spell)
+	local left = UI.text(cast, "sans", Stoa.typeSize.caption, "text", "RIGHT")
+	left:SetPoint("RIGHT", -8, 0)
+	UI.legible(left)
+	cast.spell, cast.left = spell, left
+	cast:Hide()
+	target.castBar = cast
+end
+
+function Halo:StartTargetCast(channel)
+	local cast = self.target and self.target.castBar
+	if not cast then return end
+	local name, text, _, startMS, endMS, _, _, flag = (channel and UnitChannelInfo or UnitCastingInfo)("target")
+	if channel then flag = select(7, UnitChannelInfo("target")) end
+	if name == nil then return self:StopTargetCast() end
+	local label = name
+	if text and not Stoa:IsSecret(text) and text ~= "" then label = text end
+	cast.spell:SetText(label)
+	local locked = not Stoa:IsSecret(flag) and flag == true
+	cast:SetStatusBarColor(Stoa:Color(locked and "muted" or "accent"))
+	cast.left:SetText("")
+	cast:SetScript("OnUpdate", nil)
+	if not Stoa:IsSecret(startMS) and not Stoa:IsSecret(endMS) then
+		local finish = endMS / 1000
+		cast:SetMinMaxValues(startMS / 1000, finish)
+		cast:SetScript("OnUpdate", Stoa:GuardUpdate(function(bar)
+			local now = GetTime()
+			bar:SetValue(channel and finish - (now - startMS / 1000) or now)
+			bar.left:SetFormattedText("%.1f", math.max(finish - now, 0))
+		end))
+	elseif cast.SetTimerDuration then
+		local getDuration = channel and UnitChannelDuration or UnitCastingDuration
+		if getDuration then pcall(cast.SetTimerDuration, cast, getDuration("target")) end
+	end
+	cast:Show()
+end
+
+function Halo:StopTargetCast()
+	local cast = self.target and self.target.castBar
+	if not cast then return end
+	cast:SetScript("OnUpdate", nil)
+	cast:Hide()
+end
+
+-- What the target is casting now, if anything (on a new target, or after
+-- a stop that may have belonged to an earlier cast).
+function Halo:UpdateTargetCast()
+	if not UnitExists("target") then return self:StopTargetCast() end
+	local function busy(info)
+		local name = info("target")
+		return Stoa:IsSecret(name) or name ~= nil
+	end
+	if busy(UnitCastingInfo) then return self:StartTargetCast(false) end
+	if busy(UnitChannelInfo) then return self:StartTargetCast(true) end
+	self:StopTargetCast()
 end
 
 -- The cast bar is parented to UIParent rather than the Halo, so it shows for
@@ -585,7 +708,8 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 	-- It follows the target's look: a small panel of its own beside the
 	-- solid plaque, bare words beside the strip.
 	local bare = self.db.targetStrip
-	chip.gap = bare and 14 or 18
+	-- Past the medallion breaking the plaque's edge.
+	chip.gap = (bare and 14 or 18) + UI.PLAQUE_MEDALLION_OUT
 	-- Room between the two blocks: their panels reach 10 past each edge.
 	chip.stack = bare and 16 or 28
 	if not bare then
@@ -691,10 +815,12 @@ function Halo:UpdateTarget()
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
 	UI.setHealthPercent(target.health, "target")
+	self:UpdateTargetAmount()
+	self:UpdateTargetPower()
 	SetPortraitTexture(target.plaque.portrait, "target")
 
-	-- Level and kind on the caption; elite and rare say so and change the
-	-- plaque's line.
+	-- Level on the medallion's badge, kind on the caption; elite and rare
+	-- say so and change the plaque's line.
 	local plain = Stoa.safe.plain
 	local rank = plain(UnitClassification("target"))
 	local level = plain(UnitLevel("target"))
@@ -702,7 +828,7 @@ function Halo:UpdateTarget()
 	local words = {}
 	if rank == "elite" or rank == "worldboss" then words[#words + 1] = "ELITE" end
 	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
-	if level then words[#words + 1] = "LEVEL " .. (level < 0 and "??" or level) end
+	target.plaque:SetLevel(level and (level < 0 and "??" or tostring(level)) or nil)
 	if kind and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
@@ -723,7 +849,7 @@ function Halo:UpdateTarget()
 	target.cue:SetTextColor(Stoa:Color(dead and "muted" or Stoa:StateToken(cue)))
 	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "hostile" or nil) end
 	target.hp:SetShown(not dead)
-	target.health:SetShown(not dead)
+	target.power:SetShown(not dead and target.power.hasPower or false)
 	target:SetAlpha(self:TargetAlpha(dead))
 	self:UpdateTargetAuras()
 	self:UpdateTargetOfTarget()
@@ -732,6 +858,39 @@ function Halo:UpdateTarget()
 	else
 		self:UpdateThreat()
 	end
+end
+
+-- The health itself beside the percent, as the game gives it.
+function Halo:UpdateTargetAmount()
+	local fs = self.target and self.target.amount
+	if not fs then return end
+	local health = UnitHealth("target")
+	if Stoa:IsSecret(health) then
+		pcall(fs.SetText, fs, health)
+	elseif health and BreakUpLargeNumbers then
+		fs:SetText(BreakUpLargeNumbers(health))
+	else
+		fs:SetText(health or "")
+	end
+end
+
+-- The power line, in the power's own colour; hidden for a target with none.
+function Halo:UpdateTargetPower()
+	local power = self.target and self.target.power
+	if not power then return end
+	local max = UnitPowerMax("target")
+	local has = Stoa:IsSecret(max)
+	if not has then
+		max = Stoa:PlainNumber(max)
+		has = max ~= nil and max > 0
+	end
+	power.hasPower = has
+	if not has then return power:Hide() end
+	UI.setUnitBar(power, "target", "power")
+	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType("target")))
+	power:SetStatusBarColor(Stoa:Color(kind and POWER_TOKENS[kind] or "mana"))
+	local dead = UnitIsDead("target")
+	power:SetShown(Stoa:IsSecret(dead) or not dead)
 end
 
 -- Your Shield, Renew and the like on a friendly target, as the same tags
@@ -1098,6 +1257,7 @@ function Halo:OnEnable()
 	end)
 	Stoa:On("UNIT_DISPLAYPOWER", function(unit)
 		if unit == "player" then self:UpdatePower() end
+		if unit == "target" then self:UpdateTargetPower() end
 	end)
 	Stoa:On("STOA_THEME_CHANGED", function()
 		self.powerToken = nil
@@ -1131,13 +1291,18 @@ function Halo:OnEnable()
 			Stoa:On(event, function() self.shield:Update("player") end)
 		end
 	end
-	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player" }, function(unit)
+	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
+		if unit == "target" then self:UpdateTargetPower() end
 	end)
-	Stoa:OnUnit("UNIT_MAXPOWER", { "player" }, function(unit)
+	Stoa:OnUnit("UNIT_MAXPOWER", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
+		if unit == "target" then self:UpdateTargetPower() end
 	end)
-	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateTarget() end)
+	Stoa:On("PLAYER_TARGET_CHANGED", function()
+		self:UpdateTarget()
+		self:UpdateTargetCast()
+	end)
 	-- A creature not yet seen this session has no name until the game has
 	-- looked it up, a moment after targeting; fill it in when it arrives.
 	Stoa:OnUnit("UNIT_NAME_UPDATE", { "target" }, function(unit)
@@ -1151,6 +1316,7 @@ function Halo:OnEnable()
 	local function onCast(channel)
 		return function(unit)
 			if unit == "player" then self:StartCast(channel) end
+			if unit == "target" then self:StartTargetCast(channel) end
 		end
 	end
 	-- A stop, fail or interrupt can belong to another cast than the one on
@@ -1158,6 +1324,7 @@ function Halo:OnEnable()
 	-- the game says so. Blizzard's bar checks the cast's ID; this asks the
 	-- game what is casting now and keeps the bar while it is.
 	local function onStop(unit)
+		if unit == "target" then return self:UpdateTargetCast() end
 		if unit ~= "player" then return end
 		-- A hidden name still means something is casting.
 		local function busy(info)
