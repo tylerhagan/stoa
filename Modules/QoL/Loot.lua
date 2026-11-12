@@ -204,6 +204,7 @@ function Loot:OnEnable()
 	if tally and tally.Register then
 		tally:Register("goldHour", {
 			label = "Gold an hour",
+			short = "Gold rate",
 			value = function()
 				local rate = perHour()
 				if not rate then return "Counting" end

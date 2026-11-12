@@ -208,9 +208,21 @@ end
 
 local professions = {}
 
+-- The long profession names, shortened for a line that also carries a
+-- bar and a skill (the settings list keeps the full name).
+local SHORT_PROFESSION = {
+	Blacksmithing = "Smithing", Enchanting = "Enchant", Engineering = "Engineer",
+	Leatherworking = "Leather", Jewelcrafting = "Jewels", Inscription = "Scribe",
+}
+
 local function profession(key, fallback)
 	return {
 		label = function() local p = professions[key] return p and p[1] or fallback end,
+		short = function()
+			local p = professions[key]
+			local name = p and p[1]
+			return name and SHORT_PROFESSION[name] or name or fallback
+		end,
 		value = function()
 			local p = professions[key]
 			if not p then return nil end
@@ -674,7 +686,9 @@ function Tally:Read(key)
 	end
 	local entry = ENTRIES[key]
 	if not entry then return nil end
-	local label = type(entry.label) == "function" and entry.label() or entry.label
+	-- A line's own short label where it has one, so a figure fits beside it.
+	local label = entry.short or entry.label
+	if type(label) == "function" then label = label() end
 	local value, warn = entry.value()
 	return label, value, warn
 end

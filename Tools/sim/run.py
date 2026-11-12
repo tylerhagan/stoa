@@ -578,7 +578,14 @@ do
 			container.HorizontalDividersPool = { EnumerateActive = function() local i = 0 return function() i = i + 1 return dividers[i] end end }
 			container.UpdateDividers = function() end
 			container.ResizeContainerBars = function() end
+			container.ApplyPendingBarToShow = function() end
+			container.GetShownBar = function() return xp end
+			StatusTrackingBarManager = NewObject("Frame", UIParent, "StatusTrackingBarManager")
 			xpbar:Dress()
+			xp.StatusBar:SetValue(0.5)
+			container:ApplyPendingBarToShow()
+			xpbar:Fade(true)
+			xpbar:Fade(false)
 			xp.StatusBar:SetBarTexture("UI-HUD-ExperienceBar-Fill-Rested")
 			rep:UpdateBarTextures(6, false)
 			rep:UpdateBarTextures(2, true)

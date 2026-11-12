@@ -20,8 +20,8 @@ local NOTE = {
 	title = "New in STOA 1.1.4",
 	lines = {
 		{ "Your shield", "A silver shield beside the medallion and under the Halo's health number, draining as it soaks up damage." },
-		{ "Your class mark", "Next to it, the buff your class keeps up, emptying as it runs out: Inner Fire, your seal, Battle Shout, Slice and Dice, or your shaman shield." },
-		{ "A new experience bar", "Blizzard's bar along the bottom as a thin flat bar in STOA's dark track, filling in gold like the medallion, rested in blue. Reputation is coloured by standing." },
+		{ "Your class mark", "Next to it, the buff your class keeps up, emptying as it runs out: Inner Fire, your seal, Battle Shout, Slice and Dice, or your shaman shield. Missing Inner Fire, or a seal in a fight, shows as an empty mark instead of a warning." },
+		{ "A new experience bar", "Blizzard's bar along the bottom as a thin flat bar in STOA's dark track, filling in gold like the medallion, rested in blue. Reputation is coloured by standing, and it fades away in a fight." },
 	},
 	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }
