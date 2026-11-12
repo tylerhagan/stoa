@@ -544,6 +544,7 @@ end
 -- after the amount first changes from nothing, as the party tags do.
 local GAUGE_SLIDE = 4000
 local gaugeFull = {} -- unit -> { what the shield held when it went up }
+local gaugeLast = {} -- unit -> the plain amount seen last
 
 function UI.shieldGauge(parent, size)
 	local gauge = CreateFrame("Frame", nil, parent)
@@ -567,10 +568,21 @@ function UI.shieldGauge(parent, size)
 		if EASE then fill:SetValue(value, EASE) else fill:SetValue(value) end
 	end
 
+	-- A missed absorb event would leave the gauge stale, so while it shows
+	-- it looks again twice a second.
+	local wait = 0
+	gauge:SetScript("OnUpdate", function(own, elapsed)
+		wait = wait - elapsed
+		if wait > 0 then return end
+		wait = 0.5
+		own:Update(own.unit)
+	end)
+
 	-- `changed`: called for an absorb change, the moment a fresh shield
 	-- in a fight can be measured.
 	function gauge:Update(unit, changed)
 		unit = unit or "player"
+		self.unit = unit
 		local known, left = absorbOf(unit)
 		if not known then
 			self:Hide()
@@ -579,23 +591,30 @@ function UI.shieldGauge(parent, size)
 		local plain = Stoa:PlainNumber(left)
 		if plain then
 			if plain <= 0 then
-				gaugeFull[unit] = nil
+				gaugeFull[unit], gaugeLast[unit] = nil, nil
 				self:Hide()
 				return
 			end
+			-- Any rise is a shield going up (or another on top), and is the new
+			-- measure; only a fall is the shield soaking up damage. So a
+			-- measure left over from an earlier, larger shield can't leave a
+			-- fresh one looking empty.
 			local full = gaugeFull[unit]
 			local measure = type(full) == "table" and Stoa:PlainNumber(full[1])
-			if not measure or plain > measure then
+			local last = gaugeLast[unit]
+			if not measure or plain > measure or not last or plain > last then
 				gaugeFull[unit] = { plain }
 				measure = plain
 			end
+			gaugeLast[unit] = plain
 			fill:SetMinMaxValues(0, measure)
-			drain(plain)
+			fill:SetValue(plain)
 			slide:SetValue(1)
 			self:Show()
 			return
 		end
 		-- In a fight: only ever handed on.
+		gaugeLast[unit] = nil
 		local full = gaugeFull[unit]
 		if full == nil and changed then
 			gaugeFull[unit] = false
