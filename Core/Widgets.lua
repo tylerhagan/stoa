@@ -1386,8 +1386,9 @@ end
 -- Docked (the target out of combat): the plaque stands on the console's
 -- rim, as tall as its medallion, as one shape with its portrait ring: the
 -- left end is cut round the medallion with a gold line following its ring,
--- and the right end is the portrait ring, as tall as the plaque, its gold
--- top edge running straight on round the ring (Tools/art/plaque_join.py).
+-- and the right end is round the portrait, as tall as the plaque, its gold
+-- top edge running on round the top right and straight down to the rim
+-- (Tools/art/plaque_join.py).
 -- Between them, a plain fill with the gold line along its top. Built the
 -- first time it docks. Sizes in UI units, matching the art.
 local JOIN_R, JOIN_H = 34, 68
