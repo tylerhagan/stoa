@@ -877,7 +877,9 @@ function Halo:UpdateTarget()
 	if rank == "elite" or rank == "worldboss" then words[#words + 1] = "ELITE" end
 	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
 	target.plaque:SetLevel(level and (level < 0 and "??" or tostring(level)) or nil)
-	if kind and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end
+	-- The game calls creatures without a type "Not specified": say nothing.
+	local unspecified = kind == "Not specified" or kind == (rawget(_G, "UNKNOWN") or "")
+	if kind and not unspecified and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
 		or (rank == "elite" or rank == "worldboss") and "elite" or nil
