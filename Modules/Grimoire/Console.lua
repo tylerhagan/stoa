@@ -831,20 +831,28 @@ end
 -- The crest: the shield and the class mark at the top of the ring. The
 -- shapes leave room for their shadow down and right, so each is nudged by
 -- half of it to sit centred.
+-- Measured on ConsoleMedallion.tga: the dark band of ticks runs from the
+-- seal's ring (2 px out from the portrait) to the art's gold ring (13 px out).
+local CREST_FOOT = 7
+
 function Console:PlaceCrest()
 	local shield, mark = self.sealShield, self.sealMark
 	if not (shield or mark) then return end
 	local size = self.crestSize
-	local nudge = math.floor(size * 0.05 + 0.5)
+	local drop = math.max(2, math.floor(size * 0.1 + 0.5))
+	local nudge = math.floor(drop / 2 + 0.5)
+	-- Raised so the shapes' feet rest halfway across the dark band between
+	-- the portrait and the ring (CREST_FOOT above the portrait's top).
+	local lift = math.floor(CREST_FOOT + (size - drop) / 2 - drop / 2 + 0.5)
 	local both = shield and mark and shield:IsShown() and mark:IsShown()
 	local apart = both and math.floor(size * 0.6 + 0.5) or 0
 	if shield then
 		shield:ClearAllPoints()
-		shield:SetPoint("CENTER", self.crestPortrait, "TOP", nudge - apart, 6 - nudge)
+		shield:SetPoint("CENTER", self.crestPortrait, "TOP", nudge - apart, lift)
 	end
 	if mark then
 		mark:ClearAllPoints()
-		mark:SetPoint("CENTER", self.crestPortrait, "TOP", nudge + apart, 6 - nudge)
+		mark:SetPoint("CENTER", self.crestPortrait, "TOP", nudge + apart, lift)
 	end
 end
 
