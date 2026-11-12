@@ -7,7 +7,8 @@
 --   Paladin: your seal, emptying over its thirty seconds.
 --   Shaman: Lightning or Water Shield, an orb, one step per charge.
 --   Priest: Inner Fire, a flame, one step per charge.
--- It shows while the buff is up. In a fight the game hides buff times and
+-- It shows while the buff is up. Inner Fire, and a seal in a fight, show
+-- empty and dimmed when they're missing, in place of the warning words. In a fight the game hides buff times and
 -- charges, so timers run from your own cast, and charges hold at the last
 -- count seen (a charge spent mid-fight shows once the fight ends).
 local _, ns = ...
@@ -25,9 +26,9 @@ local ART = UI.MEDIA .. "Textures\\Mark"
 local MARKS = {
 	WARRIOR = { art = "Horn", kind = "timer", spell = 6673, length = 120 },
 	ROGUE = { art = "Dagger", kind = "timer", spell = 5171, length = 21 },
-	PALADIN = { art = "Seal", kind = "seal", length = 30 },
+	PALADIN = { art = "Seal", kind = "seal", length = 30, remind = "combat" },
 	SHAMAN = { art = "Orb", kind = "charges", spells = { 24398, 324 }, charges = 3 },
-	PRIEST = { art = "Flame", kind = "charges", spell = 588, charges = 20 },
+	PRIEST = { art = "Flame", kind = "charges", spell = 588, charges = 20, remind = "always" },
 }
 
 local gauges, listeners = {}, {}
@@ -102,14 +103,27 @@ local function share(def)
 	end
 end
 
+-- Whether the buff this mark reminds you of is missing: known, not up,
+-- and readable (a fight that hides buffs can't tell missing from hidden,
+-- except for a seal, which is read from your casts).
+local function missing(def)
+	if not def.remind then return false end
+	local fighting = Sign.inCombat()
+	if def.remind == "combat" then return fighting end
+	if fighting or Stoa:AurasHidden() then return false end
+	return def.spell and Sign.knows(def.spell) or false
+end
+
 local function update()
 	local def = mark()
-	local value, glide
+	local value, glide, empty
 	if def then value, glide = share(def) end
+	if def and not value and missing(def) then value, glide, empty = 0, false, true end
 	for gauge, onShown in pairs(gauges) do
 		local was = gauge:IsShown()
 		if value then
 			gauge:SetShare(value, glide)
+			gauge:SetMissing(empty)
 			gauge:Show()
 		else
 			gauge:Hide()

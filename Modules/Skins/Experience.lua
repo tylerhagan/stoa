@@ -4,13 +4,18 @@
 -- its glossy fill for a thin flat bar in the same rounded dark track as the
 -- nameplates and the swing timer. Experience fills in the accent like the
 -- medallion's bezel, the rested stretch runs on in mana blue, and the
--- segment dividers become fine dark notches. Edit Mode still places it.
+-- segment dividers become fine dark notches over the filled part. In a
+-- fight it fades away with the console and comes back after. Edit Mode
+-- still places it.
 local _, ns = ...
 local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
-local XPBar = Stoa:NewModule("XPBar")
+local XPBar = Stoa:NewModule("XPBar", {
+	-- In a fight the bar fades away with the console.
+	combatFade = true,
+})
 
 local HEIGHT = 6
 local PAD = 2
@@ -131,19 +136,39 @@ local function dressBar(bar)
 	colourBar(bar)
 end
 
+-- How far the bar on show has filled, 0 to 1.
+local function filled(container)
+	local bar = container.GetShownBar and container:GetShownBar()
+	local status = bar and bar.StatusBar
+	if not status then return 0 end
+	local low, high = status:GetMinMaxValues()
+	low, high = Stoa:PlainNumber(low), Stoa:PlainNumber(high)
+	local value = Stoa:PlainNumber(status:GetValue())
+	if not (low and high and value) or high <= low then return 0 end
+	return (value - low) / (high - low)
+end
+
 -- Blizzard's dividers (20 on Forever's bar) as fine dark notches that only
--- show where the bar has filled.
+-- show where the bar has filled; the empty track stays plain.
 local function notch(container)
 	local pool = container.HorizontalDividersPool
 	if not pool or not pool.EnumerateActive then return end
+	local share = filled(container)
+	local width = Stoa:PlainNumber(container:GetWidth()) or 0
 	for divider in pool:EnumerateActive() do
 		local tex = divider.BarDividerTexture
 		if tex then
-			tex:SetTexture(UI.WHITE)
-			tex:SetVertexColor(0, 0, 0, 0.55)
-			tex:ClearAllPoints()
-			tex:SetPoint("CENTER")
-			tex:SetSize(1, HEIGHT)
+			if not divider.stoaNotch then
+				tex:SetTexture(UI.WHITE)
+				tex:SetVertexColor(0, 0, 0, 0.55)
+				tex:ClearAllPoints()
+				tex:SetPoint("CENTER")
+				tex:SetSize(1, HEIGHT)
+				divider.stoaNotch = true
+			end
+			local _, _, _, x = divider:GetPoint(1)
+			x = Stoa:PlainNumber(x)
+			tex:SetShown(x ~= nil and width > 0 and x / width < share)
 		end
 	end
 end
@@ -155,6 +180,16 @@ local function dressContainer(container)
 	for _, bar in pairs(container.bars) do guarded(dressBar, bar) end
 	if container.UpdateDividers then
 		hooksecurefunc(container, "UpdateDividers", notch)
+	end
+	-- The notches follow the fill as it grows, and the bar on show.
+	for _, bar in pairs(container.bars) do
+		local status = bar.StatusBar
+		if status and status.HookScript then
+			status:HookScript("OnValueChanged", function() guarded(notch, container) end)
+		end
+	end
+	if container.ApplyPendingBarToShow then
+		hooksecurefunc(container, "ApplyPendingBarToShow", notch)
 	end
 	if container.ResizeContainerBars then
 		hooksecurefunc(container, "ResizeContainerBars", function(own)
@@ -183,7 +218,34 @@ function XPBar:Recolour()
 	end
 end
 
+-- In a fight the bar fades out over a quarter second, and back after.
+local FADE = 0.25
+function XPBar:Fade(hidden)
+	local manager = _G.StatusTrackingBarManager
+	if not manager then return end
+	local target = hidden and 0 or 1
+	local fader = self.fader
+	if not fader then
+		fader = CreateFrame("Frame")
+		fader:Hide()
+		fader:SetScript("OnUpdate", function(own, elapsed)
+			local now = Stoa:PlainNumber(manager:GetAlpha()) or 1
+			local step = elapsed / FADE
+			local nextAlpha = now < own.target and math.min(own.target, now + step) or math.max(own.target, now - step)
+			manager:SetAlpha(nextAlpha)
+			if nextAlpha == own.target then own:Hide() end
+		end)
+		self.fader = fader
+	end
+	fader.target = target
+	fader:Show()
+end
+
 function XPBar:OnEnable()
 	Stoa:On("STOA_THEME_CHANGED", function() XPBar:Recolour() end)
 	self:Dress()
+	Stoa:On("STOA_STATE_CHANGED", function(state)
+		if XPBar.db.combatFade == false then return end
+		XPBar:Fade(state == Stoa.STATE_COMBAT)
+	end)
 end

@@ -100,11 +100,11 @@ local SIGNATURES = {
 local REMINDERS = {
 	PALADIN = {
 		{ word = "NO AURA", suffix = " Aura", spell = 465 },             -- Devotion Aura
-		{ word = "NO SEAL", prefix = "Seal of ", combat = true, show = true },
+		{ word = "NO SEAL", prefix = "Seal of ", combat = true, show = true, mark = true },
 		{ word = "NO FURY", name = "Righteous Fury", spell = 25780, roles = { TANK = true } },
 	},
 	PRIEST = {
-		{ word = "NO INNER FIRE", name = "Inner Fire", spell = 588 },
+		{ word = "NO INNER FIRE", name = "Inner Fire", spell = 588, mark = true },
 		{ word = "NO SHADOWFORM", name = "Shadowform", spell = 15473, roles = { RANGED = true } },
 	},
 	DRUID = {
@@ -877,6 +877,12 @@ function Halo:Reminders()
 	local role = Stoa:GetRole()
 	local inCombat = Stoa:GetState() == Stoa.STATE_COMBAT
 	local missing, active = {}, nil
+	-- The class mark shows these itself, empty and dimmed.
+	-- In a fight that's the Halo's mark; out of one, the medallion's.
+	local console = Stoa.modules.Grimoire
+	local marked
+	if inCombat then marked = self.classMark ~= nil
+	else marked = console and console.sealMark ~= nil and not (console.db and console.db.slim) end
 	for _, rule in ipairs(rules) do
 		local applies = (not rule.roles or rule.roles[role])
 			and (not rule.spell or knows(rule.spell))
@@ -884,7 +890,7 @@ function Halo:Reminders()
 		if applies then
 			local found = matching(names, rule)
 			if not found then
-				missing[#missing + 1] = rule.word
+				if not (rule.mark and marked) then missing[#missing + 1] = rule.word end
 			elseif rule.show and rule.prefix then
 				active = found:sub(#rule.prefix + 1):upper()
 			end
