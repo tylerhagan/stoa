@@ -780,7 +780,8 @@ end
 -- of the card ones. Square where slicing isn't available.
 function UI.roundPanel(frame, alpha, kind)
 	local fill, edgeFile = "CardFill.tga", "CardEdge.tga"
-	if kind == "window" then fill, edgeFile = "WindowFill.tga", "WindowEdge.tga" end
+	-- Windows are solid: at 0.96 a name or light behind one showed through.
+	if kind == "window" then fill, edgeFile, alpha = "WindowFill.tga", "WindowEdge.tga", alpha or 1 end
 	local bg = sliced(frame, "BACKGROUND", fill)
 	if bg then
 		bg:SetDrawLayer("BACKGROUND", -8)
@@ -901,7 +902,7 @@ end
 -- shows them all side by side.
 
 UI.SURFACES = {
-	panel = { fill = "panel", alpha = 0.97, edge = true, stone = true },
+	panel = { fill = "panel", alpha = 1, edge = true, stone = true },
 	card = { fill = "panel", alpha = 0.97, edge = true },
 	-- Behind bars: dark enough that any fill colour reads against it.
 	well = { black = 0.72, layer = -5 },
