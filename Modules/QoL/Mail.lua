@@ -195,6 +195,7 @@ function Mail:TwoRows(openAll, gold)
 	fit()
 end
 
+local ROW_DROP = 12
 function Mail:Dress()
 	if self.dressed then return end
 	self.dressed = true
@@ -219,6 +220,18 @@ function Mail:Dress()
 		self.goldButton = gold
 	end
 	local box = SendMailNameEditBox
+	-- The game starts the To row 30px down, inside STOA's 40px header band.
+	-- Lower To (Subject hangs from it) and Postage into the body. Only when
+	-- STOA dresses the window.
+	if MailFrame and MailFrame.stoaHeader and not InCombatLockdown() then
+		for _, row in ipairs({ box, SendMailCostMoneyFrame }) do
+			local point, to, toPoint, x, y = row and row:GetPoint(1)
+			if point and type(y) == "number" and y > -ROW_DROP * 3 then
+				row:ClearAllPoints()
+				row:SetPoint(point, to, toPoint, x, y - ROW_DROP)
+			end
+		end
+	end
 	if self.db.toList and box then
 		-- A small arrow inside the To box's right end (Postage sits right
 		-- beside the box, so there is no room for a button there).

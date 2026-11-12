@@ -6,7 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.3
 
-- Send Mail: the Mine button no longer covers Postage. It is now a small arrow inside the To box that lists your characters and recent names.
+- Send Mail: the Mine button no longer covers Postage. It is now a small arrow inside the To box that lists your characters and recent names. The To, Subject and Postage rows sit below the header instead of across it.
 - Druids: mana while in cat or bear form now shows in combat too (it only showed out of combat).
 - Target of target: who your target is targeting shows to the right of the target plaque, a name and a thin health line, and says YOU when it is you. Click it to target them. It takes the target's look: a small panel beside the plaque, bare words beside the words-only target. A switch under Combat turns it off.
 - Drawn glyphs replace font symbols: close crosses, fold plus and minus, the mail window's page chevrons, the Shift arrow on the combat bar and the dot between words are now STOA's own art, and several lines read with plain punctuation instead.
