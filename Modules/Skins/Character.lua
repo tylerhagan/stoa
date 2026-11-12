@@ -185,6 +185,9 @@ local SLOTS_TOP = 72     -- under the header band
 local NAME_W = 150
 local WEAPON_W = 170     -- each weapon: its slot and its name
 local FOOTER_H = 40
+-- The model's frame: Blizzard's 398 wide and as tall as Blizzard's
+-- (484, less its 20 title and 36 strip), under the header band.
+local MODEL_TOP, MODEL_H = 60, 428
 local LEFT_SLOTS = { "Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist" }
 local RIGHT_SLOTS = { "Hands", "Waist", "Legs", "Feet", "Finger0", "Finger1", "Trinket0", "Trinket1" }
 local WEAPONS = { "MainHand", "SecondaryHand", "Ranged" }
@@ -205,7 +208,8 @@ end
 -- while it's empty. side is "LEFT" (words right of the slot) or "RIGHT".
 local function sideWords(button, side, width)
 	if button.stoaSide then return button.stoaSide end
-	local holder = PaperDollFrame or CharacterFrame
+	-- On the slots' own layer, above the model.
+	local holder = PaperDollItemsFrame or PaperDollFrame or CharacterFrame
 	local name = UI.text(holder, "sans", Stoa.typeSize.body, "text", side == "LEFT" and "LEFT" or "RIGHT")
 	name:SetWidth(width)
 	name:SetWordWrap(false)
@@ -476,6 +480,14 @@ function Character:LayOut()
 			button:SetPoint("TOPRIGHT", frame, "TOPLEFT", LEFT_W - SIDE, -SLOTS_TOP - (i - 1) * (SLOT + SLOT_GAP))
 			sideWords(button, "RIGHT", NAME_W)
 		end
+	end
+	-- The model keeps Blizzard's size, centred between the columns: stretched
+	-- to the wider sheet its camera zooms in on the chest.
+	local scene = CharacterModelScene
+	if scene then
+		scene:ClearAllPoints()
+		scene:SetPoint("TOP", frame, "TOPLEFT", LEFT_W / 2, -MODEL_TOP)
+		scene:SetSize(BLIZZ_LEFT_W, MODEL_H)
 	end
 	local start = LEFT_W / 2 - WEAPON_W * #WEAPONS / 2
 	for i, slot in ipairs(WEAPONS) do
