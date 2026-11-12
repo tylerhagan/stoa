@@ -3,9 +3,9 @@ game). The plaque stands on the console rim as tall as the medallion.
 
 - PlaqueJoin.tga / PlaqueJoinLines.tga: the right end, the target's
   portrait ring as tall as the plaque: the gold top edge runs straight on
-  into the ring and round its top right; where the ring's side turns
-  straight it bends out into a sweep down at 45 degrees that eases into the
-  rim like the medallion's flourish (BEND 10, SWEEP 20).
+  into the ring and round its top right; at 45 degrees it flows straight
+  out of the curve, down at 45 degrees, easing into the rim like the
+  medallion's flourish (SWEEP 20).
 - PlaqueSocket.tga / PlaqueSocketLines.tga: the left end, cut round the
   console's medallion with a gold line following its ring, so the plaque
   sits against the medallion like a socket.
@@ -26,7 +26,7 @@ from PIL import Image
 
 PX, SS = 4, 4
 H, R = 68.0, 34.0
-SWEEP, BEND = 20.0, 10.0
+SWEEP = 20.0
 LINE, INNER_A = 2.0, 0.45
 MED_R, MED_DROP, SOCKET_GAP, SOCKET_X, SOCKET_W = 74.0, 5.9, 4.0, 24.0, 56
 
@@ -51,39 +51,35 @@ def save(alpha, path):
 
 def join(out):
     # The ring is as tall as the plaque: the gold top edge runs straight on
-    # into the ring and round its top right. Where the ring's side turns
-    # straight down it bends out into a long sweep at 45 degrees, easing into
-    # the rim, the way the medallion's flourish does.
+    # into the ring and round its top right; at 45 degrees it flows straight
+    # out of the curve, on down at 45 degrees, and eases into the rim, the
+    # way the medallion's flourish does.
     lead = 4.0
     cx, cy = lead + R, R
     r2 = math.sqrt(0.5)
-    edge = cx + R
-    bcx, bcy = edge + BEND, cy                            # the bend's centre
-    bx, by = bcx - BEND * r2, bcy - BEND * r2             # bend ends, sweep starts
-    c0 = bx + by                                          # the sweep: x + y = c0
+    px, py = cx + R * r2, cy + R * r2                     # leaves the ring
+    c0 = px + py                                          # the sweep: x + y = c0
     fcx, fcy = c0 - SWEEP + SWEEP * math.sqrt(2), SWEEP   # the easing curve's centre
     tx, ty = fcx - SWEEP * r2, fcy - SWEEP * r2           # where the sweep meets it
     w, h = int(math.ceil(fcx + 2)), int(H + 2)
     x, y = grid(w, h)
     dc = np.hypot(x - cx, y - cy)
-    db = np.hypot(x - bcx, y - bcy)
     de = np.hypot(x - fcx, y - fcy)
-    fill = ((x <= cx) & (y <= H)) | (dc <= R) | ((x <= edge) & (y <= cy))
-    right = x >= edge
-    fill |= right & (y <= cy) & (y >= by) & (db >= BEND) & (x <= bcx)
-    fill |= right & (y <= by) & (y >= ty) & (x + y <= c0)
+    fill = ((x <= cx) & (y <= H)) | (dc <= R)
+    right = x >= cx
+    # Under the sweep, right of where it leaves the ring (the ring fills the rest).
+    fill |= (x >= px) & (y >= ty) & (x + y <= c0)
+    fill |= right & (y <= py) & (x <= px)
     fill |= right & (y <= ty) & (x <= fcx) & (de >= SWEEP)
     half = LINE / 2
     top = (x <= cx) & (np.abs(y - H) <= half)
-    ring = (np.abs(dc - R) <= half) & (x >= cx) & (y >= cy)
-    bend = (np.abs(db - BEND) <= half) & (x <= bcx) & (y <= cy) & (bcx - x >= bcy - y)
-    # Cut the sweep's ends square to it, so it meets the bend and the ease
-    # without a step.
+    # The ring's edge from its top to 45 degrees.
+    ring = (np.abs(dc - R) <= half) & (x >= cx) & (y - cy >= x - cx)
     along = (x - y) / math.sqrt(2)
-    sweep = (np.abs(x + y - c0) / math.sqrt(2) <= half) & (along >= (bx - by) / math.sqrt(2)) & (along <= (tx - ty) / math.sqrt(2))
+    sweep = (np.abs(x + y - c0) / math.sqrt(2) <= half) & (along >= (px - py) / math.sqrt(2)) & (along <= (tx - ty) / math.sqrt(2))
     ease = (np.abs(de - SWEEP) <= half) & (x <= fcx) & (fcy - y >= fcx - x)
     inner = (np.abs(dc - (R - 4.5)) <= 0.5) * INNER_A
-    lines = np.maximum((top | ring | bend | sweep | ease).astype(float), inner)
+    lines = np.maximum((top | ring | sweep | ease).astype(float), inner)
     save(down(fill.astype(float)), f"{out}/PlaqueJoin.tga")
     save(down(lines), f"{out}/PlaqueJoinLines.tga")
     print(f"join: {w}x{h} units, ring centre {cx:.2f},{cy:.2f}, reaches {fcx:.1f}")
