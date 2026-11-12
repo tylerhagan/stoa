@@ -1372,6 +1372,8 @@ local function medallion(frame, coinSide, plaque)
 	badge:Hide()
 	plaque.badge, plaque.badgeRing, plaque.level = badge, badgeRing, level
 	plaque.placeCoin = place
+	-- The rings the docked join draws itself.
+	plaque.medallionParts = { outer, mat, ring }
 
 	-- The level, or nil to hide the badge.
 	function plaque:SetLevel(text)
@@ -1381,43 +1383,33 @@ local function medallion(frame, coinSide, plaque)
 	return coin, ring, portrait
 end
 
--- Docked (the target out of combat): the card stands on the console's rim,
--- square at the foot, its gold edge running up the sides and curving out
--- into the rim. Built the first time it docks.
-local DOCK_ALPHA = 1
-local FILLET = 16
+-- Docked (the target out of combat): the plaque stands on the console's
+-- rim as one shape with its portrait ring: its gold top edge curves up into
+-- the ring, which rests on the rim, the way the rim flows into the
+-- console's medallion (Tools/art/plaque_join.py). The body is a plain fill
+-- with the gold line along its top; the join is drawn art. Built the first
+-- time it docks. Sizes in UI units, matching the art.
+local JOIN_R, JOIN_H = 34, 50
+-- The join art: 80x72, its left edge 4 before the curve starts, the ring's
+-- centre 40.5 in and 34 up.
+local JOIN_W, JOIN_ART_H, JOIN_LEAD, JOIN_CX = 80, 72, 4, 40.5
+UI.PLAQUE_JOIN_H = JOIN_H
+-- From where the curve starts to the plaque's right end.
+UI.PLAQUE_JOIN_SPAN = JOIN_CX - JOIN_LEAD + JOIN_R
 local function buildDock(frame, plaque)
 	local dock = {}
-	-- Covers the rounded foot corners, so the card meets the rim square.
-	local foot = frame:CreateTexture(nil, "BORDER", nil, 7)
-	foot:SetColorTexture(1, 1, 1)
-	foot:SetPoint("BOTTOMLEFT")
-	foot:SetPoint("BOTTOMRIGHT")
-	foot:SetHeight(14)
-	dock.foot = foot
-	dock.sides, dock.fillets = {}, {}
-	for i, side in ipairs({ "LEFT", "RIGHT" }) do
-		local line = frame:CreateTexture(nil, "ARTWORK", nil, -8)
-		line:SetColorTexture(1, 1, 1)
-		UI.pixel(line, "width")
-		line:SetPoint("BOTTOM" .. side, 0, 0)
-		line:SetHeight(14)
-		dock.sides[i] = line
-		local fill = frame:CreateTexture(nil, "BACKGROUND")
-		fill:SetTexture(UI.MEDIA .. "Textures\\PlaqueFillet")
-		local edge = frame:CreateTexture(nil, "ARTWORK", nil, -8)
-		edge:SetTexture(UI.MEDIA .. "Textures\\PlaqueFilletEdge")
-		for _, tex in ipairs({ fill, edge }) do
-			tex:SetSize(FILLET, FILLET)
-			if side == "LEFT" then
-				tex:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", 0, 0)
-			else
-				tex:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT", 0, 0)
-				tex:SetTexCoord(1, 0, 0, 1)
-			end
-		end
-		dock.fillets[#dock.fillets + 1] = { fill = fill, edge = edge }
-	end
+	local body = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	body:SetColorTexture(1, 1, 1)
+	local top = frame:CreateTexture(nil, "BORDER", nil, 1)
+	top:SetColorTexture(1, 1, 1)
+	top:SetHeight(2)
+	local join = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	join:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoin")
+	join:SetSize(JOIN_W, JOIN_ART_H)
+	local lines = frame:CreateTexture(nil, "BORDER", nil, 1)
+	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinLines")
+	lines:SetAllPoints(join)
+	dock.body, dock.top, dock.join, dock.lines = body, top, join, lines
 	plaque.dock = dock
 	return dock
 end
@@ -1431,14 +1423,14 @@ function UI.plaque(frame, coinSide, opts)
 		fill:SetColorTexture(1, 1, 1)
 	end
 	UI.tint(fill, "panel", FILL_ALPHA)
-	-- Docked, the card and its foot are solid, so where they overlap
-	-- doesn't show as a band.
+	-- Docked, the body and its join are solid, so where they meet doesn't
+	-- show as a seam.
 	local function paintFill()
 		local r, g, b = Stoa:Color("panel")
-		fill:SetVertexColor(r, g, b, plaque.docked and DOCK_ALPHA or FILL_ALPHA)
+		fill:SetVertexColor(r, g, b, FILL_ALPHA)
 		if plaque.dock then
-			plaque.dock.foot:SetVertexColor(r, g, b, DOCK_ALPHA)
-			for _, f in ipairs(plaque.dock.fillets) do f.fill:SetVertexColor(r, g, b, DOCK_ALPHA) end
+			plaque.dock.body:SetVertexColor(r, g, b, 1)
+			plaque.dock.join:SetVertexColor(r, g, b, 1)
 		end
 	end
 	paintFill()
@@ -1498,11 +1490,6 @@ function UI.plaque(frame, coinSide, opts)
 		a = 0.16
 		if rank == "elite" then r, g, b = Stoa:Color("accent"); a = 0.9 end
 		if rank == "rare" then r, g, b = unpack(SILVER); a = 0.9 end
-		-- Docked, the edge is the console's gold carried up the sides.
-		if plaque.docked and not rank then
-			r, g, b = Stoa:Color("accent")
-			a = 0.55
-		end
 		if edge then edge:SetVertexColor(r, g, b, a) end
 		if plaque.medallion then
 			-- The medallion is gold for everyone; silver for a rare.
@@ -1515,38 +1502,55 @@ function UI.plaque(frame, coinSide, opts)
 			ring:SetVertexColor(r, g, b, rank and 0.9 or 0.3)
 		end
 		if plaque.dock then
+			-- The console's gold; silver for a rare.
 			local dr, dg, db = Stoa:Color("accent")
-			if rank then dr, dg, db = r, g, b end
-			for _, line in ipairs(plaque.dock.sides) do line:SetVertexColor(dr, dg, db, rank and a or 0.55) end
-			for _, f in ipairs(plaque.dock.fillets) do f.edge:SetVertexColor(dr, dg, db, rank and a or 0.55) end
+			if rank == "rare" then dr, dg, db = unpack(SILVER) end
+			plaque.dock.top:SetVertexColor(dr, dg, db, 1)
+			plaque.dock.lines:SetVertexColor(dr, dg, db, 1)
 		end
 	end
 
 	-- Docked on the console rim, or free (see buildDock).
-	function plaque:SetDocked(on)
-		on = on and not plaque.bare and true or false
-		if on == (plaque.docked or false) then return end
-		plaque.docked = on
+	-- Docked on the console rim, joined to its portrait ring, or free.
+	-- `curve` is where the join's curve starts, from the plaque's left; the
+	-- plaque's height should be PLAQUE_JOIN_H and its width curve +
+	-- PLAQUE_JOIN_SPAN. Medallion plaques only.
+	function plaque:SetDocked(on, curve)
+		on = on and plaque.medallion and not plaque.bare and true or false
+		if on == (plaque.docked or false) and (not on or curve == plaque.curve) then return end
+		plaque.docked, plaque.curve = on, curve
 		local dock = plaque.dock or (on and buildDock(frame, plaque))
+		fill:SetShown(not on)
+		if edge then edge:SetShown(not on) end
+		for _, part in ipairs(plaque.medallionParts) do part:SetShown(not on) end
 		if dock then
-			local r, g, b = Stoa:Color("panel")
-			dock.foot:SetVertexColor(r, g, b, DOCK_ALPHA)
-			dock.foot:SetShown(on)
-			for _, line in ipairs(dock.sides) do line:SetShown(on) end
-			for _, f in ipairs(dock.fillets) do
-				f.fill:SetVertexColor(r, g, b, DOCK_ALPHA)
-				f.fill:SetShown(on)
-				f.edge:SetShown(on)
-			end
+			for _, part in pairs(dock) do part:SetShown(on) end
+		end
+		if on then
+			dock.body:ClearAllPoints()
+			dock.body:SetPoint("BOTTOMLEFT")
+			dock.body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
+			dock.top:ClearAllPoints()
+			dock.top:SetPoint("TOPLEFT")
+			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
+			dock.join:ClearAllPoints()
+			dock.join:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - JOIN_LEAD, 0)
+			-- The portrait sits in the ring.
+			coin:SetScale(1)
+			coin:ClearAllPoints()
+			coin:SetPoint("CENTER", frame, "BOTTOMLEFT", curve - JOIN_LEAD + JOIN_CX, JOIN_R)
+		else
+			plaque.placeCoin(plaque.bare and 0.75 or 1)
 		end
 		paintFill()
 		plaque:SetRank(plaque.rank)
+		plaque:SetReaction(plaque.reaction)
 	end
 
 	-- The strip: a colour token, or nil to hide it.
 	function plaque:SetReaction(token)
 		plaque.reaction = token
-		if token and not plaque.bare then
+		if token and not plaque.bare and not plaque.docked then
 			local r, g, b = Stoa:Color(token)
 			strip:SetVertexColor(r, g, b, 0.9)
 			strip:Show()
