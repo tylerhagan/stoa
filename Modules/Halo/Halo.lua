@@ -411,6 +411,9 @@ function Halo:BuildTarget(frame)
 	-- The health bar: rounded, thick enough to carry the percent and the
 	-- health inside it.
 	local hp = UI.bar(target, TARGET_BAR_W, TARGET_BAR_H, "health")
+	-- Coloured by UpdateTarget (hostile or not), so a theme pass mustn't
+	-- turn it back to the health colour.
+	UI.unpaint(hp)
 	hp:SetPoint("TOPLEFT", TARGET_PAD, -48)
 	local outset = (TARGET_BAR_W * 64 / 512 - TARGET_BAR_H) / 2
 	local mask = hp:CreateMaskTexture()
@@ -435,12 +438,8 @@ function Halo:BuildTarget(frame)
 	local health = UI.text(words, "sans", Stoa.typeSize.label, "text", "LEFT")
 	health:SetPoint("LEFT", 10, 0)
 	UI.legible(health)
-	local percent = UI.text(words, "sans", Stoa.typeSize.caption, "text", "LEFT")
-	percent:SetPoint("BOTTOMLEFT", health, "BOTTOMRIGHT", 1, 1)
-	percent:SetText("%")
-	UI.legible(percent)
 	local amount = UI.text(words, "sans", Stoa.typeSize.caption, "text", "LEFT")
-	amount:SetPoint("LEFT", health, "RIGHT", 16, 0)
+	amount:SetPoint("LEFT", health, "RIGHT", 8, 0)
 	amount:SetAlpha(0.8)
 	UI.legible(amount)
 	target.healthWords = words
@@ -814,7 +813,7 @@ function Halo:UpdateTarget()
 	C_Timer.After(0.1, function() self:ResetTargetName() end)
 	target.name:SetTextColor(UI.classColor("target"))
 	UI.setUnitBar(target.hp, "target", "health")
-	UI.setHealthPercent(target.health, "target")
+	UI.setHealthPercent(target.health, "target", nil, true)
 	self:UpdateTargetAmount()
 	self:UpdateTargetPower()
 	SetPortraitTexture(target.plaque.portrait, "target")
@@ -1262,6 +1261,7 @@ function Halo:OnEnable()
 	Stoa:On("STOA_THEME_CHANGED", function()
 		self.powerToken = nil
 		self:UpdatePower()
+		self:UpdateTarget()
 	end)
 	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateReminders() end

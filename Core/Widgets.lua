@@ -55,6 +55,13 @@ function UI.paint(region, token, alpha)
 	return region
 end
 
+-- Drops a region from the theme passes, for one its owner colours itself.
+function UI.unpaint(region)
+	for i = #themed, 1, -1 do
+		if themed[i].region == region then table.remove(themed, i) end
+	end
+end
+
 function UI.applyTheme()
 	for _, entry in ipairs(themed) do
 		local r, g, b, a = Stoa:Color(entry.token)
@@ -1583,20 +1590,21 @@ end
 
 -- Health as a whole percent. Combat health can be secret: newer clients
 -- hand out a percent that is safe to show; failing that, the plain health.
-function UI.setHealthPercent(fs, unit, fraction)
+function UI.setHealthPercent(fs, unit, fraction, sign)
 	if not fraction then
 		local health, max = UnitHealth(unit), UnitHealthMax(unit)
 		if not Stoa:IsSecret(health) and not Stoa:IsSecret(max) and max and max > 0 then
 			fraction = health / max
 		end
 	end
+	local format = sign and "%d%%" or "%d"
 	if fraction then
-		fs:SetText(math.floor(fraction * 100 + 0.5))
+		fs:SetFormattedText(format, math.floor(fraction * 100 + 0.5))
 		return
 	end
 	if UnitHealthPercent and CurveConstants and CurveConstants.ScaleTo100 then
 		local ok = pcall(function()
-			fs:SetFormattedText("%d", UnitHealthPercent(unit, true, CurveConstants.ScaleTo100))
+			fs:SetFormattedText(format, UnitHealthPercent(unit, true, CurveConstants.ScaleTo100))
 		end)
 		if ok then return end
 	end
