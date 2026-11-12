@@ -31,8 +31,34 @@ local Comforts = Stoa:NewModule("Comforts", {
 
 local FAR_CAMERA = 2.6
 
+-- Shift stops every comfort. The NPC's window or the loot only opens after
+-- a trip to the server, often after Shift is let go, so a press in the
+-- last moment counts too, and a talk begun with Shift stays yours until
+-- its windows close (the quest you pick from the list included).
+local RECENT = 1.5
+local shiftAt = -math.huge
+local pausedWith -- the NPC a Shift talk is with
+
+local function talkingTo()
+	return UnitGUID and UnitGUID("npc") or nil
+end
+
 local function held()
-	return IsShiftKeyDown()
+	local now = GetTime()
+	if IsShiftKeyDown() or now - shiftAt < RECENT then
+		pausedWith = talkingTo() or pausedWith
+		return true
+	end
+	local npc = talkingTo()
+	return pausedWith ~= nil and npc == pausedWith
+end
+
+local function talkClosed()
+	C_Timer.After(0.5, function()
+		local gossip, quest = _G.GossipFrame, _G.QuestFrame
+		if (gossip and gossip:IsShown()) or (quest and quest:IsShown()) then return end
+		pausedWith = nil
+	end)
 end
 
 -- Quest help another addon does already (Core/Companions.lua) is left to it.
@@ -357,7 +383,12 @@ function Comforts:OnEnable()
 			xpcall(self[method], Stoa.catch, self, unpack(args))
 		end)
 	end
-	on("LOOT_READY", "Loot")
+	Stoa:On("MODIFIER_STATE_CHANGED", function(key)
+		if key == "LSHIFT" or key == "RSHIFT" then shiftAt = GetTime() end
+	end)
+	Stoa:On("GOSSIP_CLOSED", talkClosed)
+	Stoa:On("QUEST_FINISHED", talkClosed)
+		on("LOOT_READY", "Loot")
 	on("GOSSIP_SHOW", "Gossip")
 	on("QUEST_GREETING", "Greeting")
 	on("QUEST_DETAIL", "Detail")
