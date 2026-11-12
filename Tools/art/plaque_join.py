@@ -1,15 +1,18 @@
-"""Draw the docked target plaque's join: the plaque's top edge curving up
-into the portrait ring, which rests on the console rim, like the rim flowing
-into the console's medallion. White with alpha, tinted in game.
+"""Draw the docked target plaque's two ends, white with alpha (tinted in
+game). The plaque stands on the console rim as tall as the medallion.
 
-- PlaqueJoin.tga: the filled shape (panel colour in game).
-- PlaqueJoinLines.tga: its gold edge (the top line, the curve and the ring,
-  not the foot), plus a faint inner ring.
+- PlaqueJoin.tga / PlaqueJoinLines.tga: the right end. The plaque's gold
+  top edge curves up into the target's portrait ring, which rests on the
+  rim, the way the rim flows into the console's medallion.
+- PlaqueSocket.tga / PlaqueSocketLines.tga: the left end, cut round the
+  console's medallion with a gold line following its ring, so the plaque
+  sits against the medallion like a socket.
 
-Geometry in UI units (Core/Widgets.lua JOIN_*): ring radius R 34, body
-height H 50, curve radius F 12. The texture is 80x72 units at 4 texels per
-unit (320x288); its bottom edge is the rim, its left edge 4 units before the
-curve starts.
+Geometry in UI units, matching Core/Widgets.lua (JOIN_*, SOCKET_*): body
+height H 68, ring radius R 42, curve radius F 12. The medallion's outer
+ring is 74 (133 texels of ConsoleMedallion at 0.556), its centre 5.9 under
+the rim; the socket keeps 4 clear of it and starts 24 right of its centre.
+4 texels per unit.
 
 Usage: python plaque_join.py <Media/Textures>
 """
@@ -19,27 +22,15 @@ import sys
 import numpy as np
 from PIL import Image
 
-R, H, F = 34.0, 50.0, 12.0
-W_UNITS, H_UNITS, PX, SS = 80, 72, 4, 4
-LINE, INNER_R, INNER_A = 2.0, 29.5, 0.45
-
-dy = (H + F) - R
-dx = math.sqrt((R + F) ** 2 - dy ** 2)
-LEFT_PAD = 4.0
-FX = LEFT_PAD          # curve start, from the texture's left edge
-CX = FX + dx           # ring centre
-CY = R                 # above the rim
-FCX, FCY = FX, H + F   # curve centre
-# Where the curve meets the ring.
-TX = CX + (FCX - CX) * R / (R + F)
-TY = CY + (FCY - CY) * R / (R + F)
+PX, SS = 4, 4
+H, R, F = 68.0, 42.0, 12.0
+LINE, INNER_A = 2.0, 0.45
+MED_R, MED_DROP, SOCKET_GAP, SOCKET_X, SOCKET_W = 74.0, 5.9, 4.0, 24.0, 56
 
 
-def grid():
-    n_w, n_h = W_UNITS * PX * SS, H_UNITS * PX * SS
-    x = (np.arange(n_w) + 0.5) / (PX * SS)
-    # Image rows run top down; y is up from the rim.
-    y = H_UNITS - (np.arange(n_h) + 0.5) / (PX * SS)
+def grid(w, h):
+    x = (np.arange(w * PX * SS) + 0.5) / (PX * SS)
+    y = h - (np.arange(h * PX * SS) + 0.5) / (PX * SS)
     return np.meshgrid(x, y)
 
 
@@ -55,28 +46,43 @@ def save(alpha, path):
     Image.fromarray(rgba, "RGBA").save(path)
 
 
-def main(out):
-    x, y = grid()
-    dc = np.hypot(x - CX, y - CY)
-    df = np.hypot(x - FCX, y - FCY)
-    body = (x <= CX) & (y >= 0) & (y <= H)
-    ring = dc <= R
-    curve = (x >= FX) & (x <= TX) & (y >= H) & (y <= TY) & (df >= F)
-    fill = body | ring | curve
+def join(out):
+    dy = (H + F) - R
+    dx = math.sqrt((R + F) ** 2 - dy ** 2)
+    lead = 4.0
+    fx, cx, cy = lead, lead + dx, R
+    fcx, fcy = fx, H + F
+    tx = cx + (fcx - cx) * R / (R + F)
+    ty = cy + (fcy - cy) * R / (R + F)
+    w, h = int(math.ceil(cx + R + 3)), int(math.ceil(2 * R + 3))
+    x, y = grid(w, h)
+    dc, df = np.hypot(x - cx, y - cy), np.hypot(x - fcx, y - fcy)
+    fill = ((x <= cx) & (y <= H)) | (dc <= R) | ((x >= fx) & (x <= tx) & (y >= H) & (y <= ty) & (df >= F))
     half = LINE / 2
-    top = (x <= FX) & (np.abs(y - H) <= half)
-    arc = (x >= FX - half) & (x <= TX + half) & (y >= H - half) & (y <= TY + half) & (np.abs(df - F) <= half)
-    # The ring's edge from where the curve meets it, over the top and
-    # round the right side down to the rim; not inside the body.
-    outside_body = ~((x < CX) & (y < TY))
-    rim_edge = (np.abs(dc - R) <= half) & outside_body & (y >= 0)
-    lines = (top | arc | rim_edge).astype(float)
-    inner = (np.abs(dc - INNER_R) <= 0.5).astype(float) * INNER_A
-    lines = np.maximum(lines, inner)
+    top = (x <= fx) & (np.abs(y - H) <= half)
+    arc = (x >= fx - half) & (x <= tx + half) & (y >= H - half) & (y <= ty + half) & (np.abs(df - F) <= half)
+    ring = (np.abs(dc - R) <= half) & ~((x < cx) & (y < ty))
+    inner = (np.abs(dc - (R - 4.5)) <= 0.5) * INNER_A
+    lines = np.maximum((top | arc | ring).astype(float), inner)
     save(down(fill.astype(float)), f"{out}/PlaqueJoin.tga")
     save(down(lines), f"{out}/PlaqueJoinLines.tga")
-    print(f"curve start {FX:.2f}, ring centre {CX:.2f},{CY:.2f}, meets ring at {TX:.2f},{TY:.2f}")
+    print(f"join: {w}x{h} units, curve at {fx}, ring centre {cx:.2f}")
+
+
+def socket(out):
+    w, h = SOCKET_W, int(H + 2)
+    x, y = grid(w, h)
+    d = np.hypot(x + SOCKET_X, y + MED_DROP)
+    rr = MED_R + SOCKET_GAP
+    fill = (d >= rr) & (y <= H)
+    half = LINE / 2
+    top = (d >= rr) & (np.abs(y - H) <= half)
+    arc = (np.abs(d - rr) <= 0.75) & (y <= H + half)
+    save(down(fill.astype(float)), f"{out}/PlaqueSocket.tga")
+    save(down((top | arc).astype(float)), f"{out}/PlaqueSocketLines.tga")
+    print(f"socket: {w}x{h} units")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    join(sys.argv[1])
+    socket(sys.argv[1])

@@ -299,14 +299,17 @@ local TARGET_BAR_W = TARGET_WIDTH - TARGET_PAD - TARGET_COIN_SPACE
 local TARGET_BAR_H = 20
 local TARGET_CAST_H = 14
 
--- Out of combat the plaque docks on the console's gold rim on the mana
--- side, beside the bars you read there: shorter, its left end tucked under
--- your medallion and its right end joined to the portrait ring (UI.plaque's
--- SetDocked). In a fight it moves to the Halo's upper right as the full
--- plaque. A spot set with the movers wins.
+-- Out of combat, on the full console with its art, the plaque docks on the
+-- gold rim on the mana side, beside the bars you read there: as tall as the
+-- medallion, its left end fitted round it, its right end joined to the
+-- portrait ring (UI.plaque's SetDocked). In a fight it moves to the Halo's
+-- upper right as the full plaque. A spot set with the movers wins.
 local TARGET_DOCK_Y = -1
--- Its left end, from the screen's centre: under the medallion.
-local TARGET_DOCK_LEFT = 40
+-- Where the words start, from the plaque's left end, clear of the medallion.
+local TARGET_DOCK_TEXT = 60
+-- Without the console's art there's no medallion to fit round: the plaque
+-- rests a little above the console instead.
+local TARGET_REST_Y = 14
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
@@ -349,10 +352,16 @@ function Halo:PlaceTarget()
 		-- Pinned to the screen where the open console's top edge sits, never
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.
-		target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", TARGET_DOCK_LEFT, console:OpenHeight() + TARGET_DOCK_Y)
-		-- The words start just clear of the medallion.
-		self.targetTextLeft = 150 * (console.ART_SCALE or 0.556) + 16 - TARGET_DOCK_LEFT
 		self.targetResting = true
+		self.targetDocks = console.Art and console:Art() or false
+		if self.targetDocks then
+			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", UI.PLAQUE_SOCKET_X, console:OpenHeight() + TARGET_DOCK_Y)
+			self.targetTextLeft = TARGET_DOCK_TEXT
+		else
+			local gap = 150 * (console.ART_SCALE or 0.556) + 22
+			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
+			self.targetTextLeft = nil
+		end
 	elseif self.db.targetStrip then
 		-- Level with the Halo, mirroring the party strips on its left.
 		target:SetPoint("LEFT", frame, "RIGHT", 52 - TARGET_PAD, -6)
@@ -362,50 +371,30 @@ function Halo:PlaceTarget()
 		self.targetResting = false
 	end
 	local curve = (self.targetTextLeft or TARGET_PAD) + TARGET_BAR_W + 14
-	target.plaque:SetDocked(self.targetResting, curve)
+	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
 	self:LayoutTarget(target.plaque.docked and curve or nil)
 	self:PlaceTargetAuras()
 end
 
--- Docked, the name is as wide as its words, up to the room the kind and
--- HOSTILE leave on the line.
-function Halo:FitTargetName()
-	local target = self.target
-	if not (target and target.laidDocked) then return end
-	local name = target.name
-	local room = target.laidCurve - 6 - self.targetTextLeft - 24
-		- (target.cue:GetStringWidth() or 0) - (target.caption:GetStringWidth() or 0)
-	name:SetWidth(0)
-	local wide = name:GetStringWidth() or 0
-	if Stoa:IsSecret(wide) or wide > room then name:SetWidth(math.max(room, 60)) end
-end
-
--- Lays the plaque's words and bar out: docked (two lines between the
--- medallion and the ring, `curve` being where the ring's curve starts) or
--- the full plaque. Out of combat only.
+-- Lays the plaque's words and bar out: docked (the full plaque's rows
+-- between the medallion and the ring, `curve` being where the ring's curve
+-- starts) or the full plaque. Out of combat only.
 function Halo:LayoutTarget(curve)
 	local target = self.target
 	if not (target and target.hp) then return end
 	local docked = curve ~= nil
 	if docked == target.laidDocked and (not docked or curve == target.laidCurve) then return end
 	target.laidDocked, target.laidCurve = docked, curve
-	local console = Stoa.modules.Grimoire
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
 	if docked then
-		-- Under the console, so its medallion covers the plaque's left end.
-		target:SetFrameStrata("BACKGROUND")
-		local level = console and console.frame and console.frame:GetFrameLevel() or 1
-		target:SetFrameLevel(math.max(level - 1, 0))
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.PLAQUE_JOIN_H)
 		local left = self.targetTextLeft
-		-- One line: the name, its kind just after it, HOSTILE at the end.
-		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", curve - 6, -10)
-		target.name:SetPoint("TOPLEFT", left, -7)
-		target.caption:SetPoint("BOTTOMLEFT", target.name, "BOTTOMRIGHT", 10, 2)
-		self:FitTargetName()
-		target.hp:SetPoint("TOPLEFT", left, -26)
+		target.caption:SetPoint("TOPLEFT", left, -12)
+		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", curve - 4, -12)
+		target.name:SetPoint("TOPLEFT", left, -26)
+		target.name:SetWidth(TARGET_BAR_W)
+		target.hp:SetPoint("TOPLEFT", left, -45)
 	else
-		target:SetFrameStrata("LOW")
 		target:SetSize(TARGET_WIDTH, TARGET_HEIGHT)
 		target.caption:SetPoint("TOPLEFT", TARGET_PAD, -12)
 		target.cue:SetPoint("TOPRIGHT", -TARGET_COIN_SPACE, -12)
@@ -855,7 +844,6 @@ function Halo:ResetTargetName()
 	Stoa:SetFont(fs, "serif", Stoa.typeSize.name)
 	fs:SetText("")
 	fs:SetText(UnitName("target"))
-	self:FitTargetName()
 end
 
 function Halo:UpdateTarget()
@@ -904,7 +892,6 @@ function Halo:UpdateTarget()
 	target.hp:SetStatusBarColor(Stoa:Color(hostile and "hostile" or "health"))
 	local cue = dead and "DEAD" or hostile and "HOSTILE" or ""
 	target.cue:SetText(cue)
-	self:FitTargetName()
 	target.cue:SetTextColor(Stoa:Color(dead and "muted" or Stoa:StateToken(cue)))
 	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "hostile" or nil) end
 	target.hp:SetShown(not dead)
