@@ -221,6 +221,28 @@ function UI.settleText(fs, words, tries)
 	end)
 end
 
+-- Drawn glyphs (Tools/art/glyphs.py), so no control leans on a symbol
+-- from the font. UI.glyph is a tinted texture for buttons: Cross, Plus,
+-- Minus, Chevron, Shift.
+local GLYPH = UI.MEDIA .. "Textures\\Glyph"
+function UI.glyph(parent, name, size, token)
+	local tex = parent:CreateTexture(nil, "OVERLAY")
+	tex:SetTexture(GLYPH .. name)
+	tex:SetSize(size, size)
+	tex:SetVertexColor(Stoa:Color(token or "muted"))
+	return tex
+end
+
+-- The same glyphs inside a line of text, as tall as the line.
+UI.DOT = "|T" .. GLYPH .. "Dot:0:0.5|t"
+UI.SHIFT = "|T" .. GLYPH .. "Shift:0|t"
+-- Words set apart by the dot: "LEVEL 12 (dot) BEAST". Join after any
+-- change of case, which would break the dot's own markup.
+UI.SEP, UI.WIDE_SEP = " " .. UI.DOT .. " ", "  " .. UI.DOT .. "  "
+function UI.join(parts, wide)
+	return table.concat(parts, wide and UI.WIDE_SEP or UI.SEP)
+end
+
 function UI.caption(parent, label)
 	local fs = UI.text(parent, "sans", Stoa.typeSize.caption, "muted")
 	UI.settleText(fs, label:upper())
@@ -546,15 +568,13 @@ function UI.foldGlyph(button)
 			if tex then tex:SetAlpha(0) end
 		end
 	end
-	local glyph = button:CreateFontString(nil, "OVERLAY")
-	Stoa:SetFont(glyph, "sans", Stoa.typeSize.label)
-	glyph:SetPoint("CENTER", 0, 1)
-	glyph:SetTextColor(Stoa:Color("muted"))
-	button:HookScript("OnEnter", function() glyph:SetTextColor(Stoa:Color("accent")) end)
-	button:HookScript("OnLeave", function() glyph:SetTextColor(Stoa:Color("muted")) end)
+	local glyph = UI.glyph(button, "Minus", 12, "muted")
+	glyph:SetPoint("CENTER", 0, 0)
+	button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color("accent")) end)
+	button:HookScript("OnLeave", function() glyph:SetVertexColor(Stoa:Color("muted")) end)
 	return function(collapsed)
 		plain()
-		glyph:SetText(collapsed and "+" or "–")
+		glyph:SetTexture(GLYPH .. (collapsed and "Plus" or "Minus"))
 	end
 end
 

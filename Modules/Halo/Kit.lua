@@ -126,7 +126,7 @@ function Kit:XPLine()
 	end
 	local line = shortNumber(rate) .. " xp/h"
 	local left = self:SecondsToLevel()
-	if left then line = line .. "  ·  level in " .. duration(left) end
+	if left then line = line .. Stoa.UI.WIDE_SEP .. "level in " .. duration(left) end
 	return line
 end
 

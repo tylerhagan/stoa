@@ -222,7 +222,7 @@ local SHORT_NAMES = {
 	["^menu$"] = "Menu",
 }
 local function shortName(action)
-	if not action then return "·" end
+	if not action then return "-" end
 	for pattern, short in pairs(SHORT_NAMES) do
 		action = action:gsub(pattern, short)
 	end
@@ -329,7 +329,7 @@ function Party:UpdateGridBody()
 	if not grid then return end
 	local open = self:GridMode() == "open" or next(self.peeks) ~= nil
 	grid.body:SetShown(open)
-	grid.title:SetText(open and "CLICK GRID · CLICK-CAST ON ANY CARD" or "CLICK GRID · HOVER A CARD OR HOLD SHIFT")
+	grid.title:SetText("CLICK GRID" .. UI.SEP .. (open and "CLICK-CAST ON ANY CARD" or "HOVER A CARD OR HOLD SHIFT"))
 end
 
 function Party:UpdateGrid()
@@ -451,7 +451,7 @@ function Party:UpdateCard(card)
 	local dispel = not gone and self:DispelFor(unit)
 
 	if gone then
-		card.percent:SetText("·")
+		card.percent:SetText("-")
 		card.hp:SetValue(0)
 		pips[1] = { gone }
 	else
@@ -781,7 +781,7 @@ end
 -- Fills the watch from sample data, for the /stoa test preview.
 function Party:PreviewWatch()
 	local watch = self.watch
-	watch.label:SetText("WATCHING · TANK")
+	watch.label:SetText("WATCHING" .. UI.SEP .. "TANK")
 	SetPortraitTexture(watch.plaque.portrait, "player")
 	watch.name:SetText("Brunhok")
 	watch.name:SetTextColor(Stoa:Color("text"))
@@ -828,7 +828,7 @@ function Party:UpdateWatch()
 
 	watch.name:SetText(UnitName(unit))
 	watch.name:SetTextColor(UI.classColor(unit))
-	watch.label:SetText(unit == "focus" and "WATCHING · FOCUS" or "WATCHING · TANK")
+	watch.label:SetText("WATCHING" .. UI.SEP .. (unit == "focus" and "FOCUS" or "TANK"))
 	SetPortraitTexture(watch.plaque.portrait, unit)
 	UI.setUnitBar(watch.hp, unit, "health")
 

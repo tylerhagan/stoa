@@ -637,7 +637,7 @@ function Bags:DockReagents()
 		local free = C_Container.GetContainerNumFreeSlots and C_Container.GetContainerNumFreeSlots(REAGENT_BAG)
 		local name = C_Container.GetBagName and C_Container.GetBagName(REAGENT_BAG)
 		frame.stoaSection.label:SetText(((name and name ~= "") and name or "Reagents"):upper()
-			.. (free and ("  ·  " .. free .. " free") or ""))
+			.. (free and (Stoa.UI.WIDE_SEP .. free .. " free") or ""))
 	end)
 	self.docking = false
 end

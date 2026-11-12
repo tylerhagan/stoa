@@ -335,7 +335,7 @@ local function build()
 	local groupRules = Stoa.Rules.options({ "GROUP", "RAID", "ALWAYS", "NEVER" })
 	choice(of("Threat"), "show", "Threat meter", "Up to five people by threat on your target, or your tank's, to the left of the combat bar in a fight.", "GROUP", groupRules, { id = "threat", list = true, words = "aggro tank", change = rulesChanged })
 	toggle(of("Threat"), "combatOnly", "Threat meter only in combat", "Hide the threat list out of combat.", true, { id = "threatCombat", change = rulesChanged })
-	toggle(of("Buffs"), "enabled", "Group buff reminders", "Out of combat, the console's Ready page says who in range is missing a buff you can cast, such as FORTITUDE · 3 missing.", true, { id = "buffs", reload = true, words = "fortitude mark of the wild intellect" })
+	toggle(of("Buffs"), "enabled", "Group buff reminders", "Out of combat, the console's Ready page says who in range is missing a buff you can cast, such as FORTITUDE: 3 missing.", true, { id = "buffs", reload = true, words = "fortitude mark of the wild intellect" })
 	toggle(of("Buffs"), "readyCheck", "Buff reminder at ready checks", "The same line on screen while a ready check runs.", true, { id = "buffsReady" })
 	toggle(of("Kit"), "readyCheck", "Ready check dress and words", "The ready check prompt on STOA's panel, and READY, NOT READY or WAITING on each party card while it runs.", true, { id = "readyCheck", reload = true })
 	toggle(of("Kit"), "bigNumber", "Big number for the pull timer", "/stoa pull 10 shows a large number in the middle of the screen when the game's own group countdown can't be used (you aren't a leader, or you are alone). Group chat gets 3, 2, 1 when you are grouped.", true, { cmd = "/stoa pull 10", words = "countdown pull timer" })
@@ -408,7 +408,7 @@ local function build()
 	actions("resetPlaces", "Put things back", "Every Blizzard window back where the game puts it, or STOA's frames back in their usual places.", {
 		{ "Put every window back", command("windows", "reset") },
 		{ "Reset STOA's frames", command("reset"), confirm = true },
-	}, { cmd = "/stoa windows reset · /stoa reset", words = "reset positions default" })
+	}, { cmd = "/stoa windows reset, /stoa reset", words = "reset positions default" })
 
 	-- Map and chat
 	page = "mapchat"
@@ -530,7 +530,7 @@ local function build()
 		placeholder = "Item and count, then Enter", links = true, words = "restock reagents ammo arrows candles poisons food water",
 		items = function()
 			local out = {}
-			for id, n in pairs(Stoa.Restock.list()) do out[#out + 1] = { id, ("%s · %d"):format(Stoa.Restock.name(id), n) } end
+			for id, n in pairs(Stoa.Restock.list()) do out[#out + 1] = { id, ("%d %s"):format(n, Stoa.Restock.name(id)) } end
 			table.sort(out, function(a, b) return a[2]:lower() < b[2]:lower() end)
 			return out
 		end,

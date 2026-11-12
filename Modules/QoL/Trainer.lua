@@ -170,7 +170,7 @@ function Trainer:UpdateConsole()
 	local kind, full, short = nil, "", ""
 	if count > 0 then
 		local total, known = self:Total(self:Missing())
-		local cost = total > 0 and ("  ·  %s%s"):format(known and "" or "~", money(total)) or ""
+		local cost = total > 0 and (UI.WIDE_SEP .. "%s%s"):format(known and "" or "~", money(total)) or ""
 		full = ("%d %s to train%s"):format(count, count == 1 and "spell" or "spells", cost)
 		short = ("%d to train"):format(count)
 		kind = "now"
@@ -182,7 +182,7 @@ function Trainer:UpdateConsole()
 			if entry.level == first and not entry.skipped then at = at + 1 end
 		end
 		if first and at > 0 then
-			full = ("Next training: level %d  ·  %d %s"):format(first, at, at == 1 and "spell" or "spells")
+			full = ("Next training: level %d" .. UI.WIDE_SEP .. "%d %s"):format(first, at, at == 1 and "spell" or "spells")
 			short = ("Train at %d"):format(first)
 			kind = "next"
 		end
@@ -321,9 +321,8 @@ function Trainer:BuildRow(page, i)
 	cost:SetWidth(80)
 	-- Section headings use the same row: a caption and the section's total.
 	-- Headings fold: a quiet plus or minus before the caption.
-	local fold = UI.text(row, "sans", Stoa.typeSize.label, "muted", "CENTER")
+	local fold = UI.glyph(row, "Minus", 12, "muted")
 	fold:SetPoint("LEFT", 0, -1)
-	fold:SetWidth(14)
 	local head = UI.text(row, "sans", Stoa.typeSize.caption, "accent", "LEFT")
 	head:SetPoint("LEFT", fold, "RIGHT", 4, -1)
 	local rule = UI.line(row, "hairline", 0.8)
@@ -334,7 +333,7 @@ function Trainer:BuildRow(page, i)
 		if not row.entry then return end
 		if row.entry.key then
 			hover:Show()
-			fold:SetTextColor(Stoa:Color("accent"))
+			fold:SetVertexColor(Stoa:Color("accent"))
 			return
 		end
 		if row.entry.heading then return end
@@ -348,7 +347,7 @@ function Trainer:BuildRow(page, i)
 	end)
 	row:SetScript("OnLeave", function()
 		hover:Hide()
-		fold:SetTextColor(Stoa:Color("muted"))
+		fold:SetVertexColor(Stoa:Color("muted"))
 		if GameTooltip then GameTooltip:Hide() end
 	end)
 	row:SetScript("OnClick", function(_, button)
@@ -464,7 +463,7 @@ function Trainer:Rows()
 		for _, group in ipairs(names) do
 			local items, subKey = byGroup[group], key .. ":" .. group
 			local subFolded = self:Folded(subKey)
-			list[#list + 1] = { heading = ("%s  ·  %d"):format(group, #items), key = subKey, sub = true,
+			list[#list + 1] = { heading = ("%s" .. UI.WIDE_SEP .. "%d"):format(group, #items), key = subKey, sub = true,
 				folded = subFolded, price = priceOf(self, items) }
 			if not subFolded then
 				for _, entry in ipairs(items) do
@@ -476,7 +475,7 @@ function Trainer:Rows()
 	end
 	section("now", "NOW", self:Spells(1, myLevel()), "Nothing waiting. You know it all.")
 	local coming, last = self:Coming()
-	if last then section("next", ("NEXT  ·  to level %d"):format(last), coming, "Nothing new for a while.") end
+	if last then section("next", ("NEXT" .. UI.WIDE_SEP .. "to level %d"):format(last), coming, "Nothing new for a while.") end
 	return list
 end
 
@@ -517,7 +516,7 @@ function Trainer:Fill()
 		elseif entry then
 			row.head:SetText(entry.empty or entry.heading)
 			row.head:SetTextColor(Stoa:Color((entry.empty or entry.sub) and "muted" or "accent"))
-			if entry.key then row.fold:SetText(entry.folded and "+" or "–") end
+			if entry.key then row.fold:SetTexture(UI.MEDIA .. "Textures\\Glyph" .. (entry.folded and "Plus" or "Minus")) end
 			row.cost:SetText(entry.price or "")
 			row.cost:SetTextColor(Stoa:Color("text"))
 		end

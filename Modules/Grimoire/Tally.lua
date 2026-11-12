@@ -892,7 +892,7 @@ function Tally:Refresh()
 		row.key = key or nil
 		if key and label then
 			row.label:SetText(label)
-			row.value:SetText(value or "–")
+			row.value:SetText(value or "-")
 			row.value:SetTextColor(Stoa:Color(warn and "danger" or "text"))
 			row.pin:SetShown(self:IsPinned(key))
 			self:DrawFigure(row, key)

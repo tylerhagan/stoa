@@ -133,11 +133,11 @@ function Buffs:Missing()
 	return list
 end
 
--- "FORTITUDE · 3 missing", one buff to a line.
+-- "FORTITUDE: 3 missing", one buff to a line.
 function Buffs.Line(list)
 	local parts = {}
 	for _, entry in ipairs(list) do
-		parts[#parts + 1] = entry.word .. " · " .. entry.count .. " missing"
+		parts[#parts + 1] = entry.word .. ": " .. entry.count .. " missing"
 	end
 	return table.concat(parts, "\n")
 end

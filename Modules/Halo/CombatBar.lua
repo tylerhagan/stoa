@@ -51,9 +51,9 @@ local GetActionInfo = api("GetActionInfo")
 
 local plain = Stoa.safe.plain
 
--- "SHIFT-Q" reads as "⇧Q", the key's own symbol; Ctrl and Alt keep short
--- letters ("c-", "a-").
-local SHIFT = "\226\135\167"
+-- "SHIFT-Q" reads as the Shift key's arrow (a drawn glyph) and Q; Ctrl
+-- and Alt keep short letters ("c-", "a-").
+local SHIFT = Stoa.UI.SHIFT
 local function shortKey(key)
 	if type(key) ~= "string" then return "" end
 	key = key:gsub("SHIFT%-", SHIFT):gsub("CTRL%-", "c-"):gsub("ALT%-", "a-")
