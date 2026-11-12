@@ -629,6 +629,32 @@ do
 	fire("QUEST_LOG_UPDATE")
 	drain()
 end
+-- The sparkle under the game's interact icon: shown for an object's
+-- plate, hidden for an NPC's or none.
+do
+	local comforts = Stoa.modules.Comforts
+	if comforts then
+		comforts.db.questGlow = true
+		local plate = CreateFrame("Frame", nil, UIParent)
+		local realExists, realGO, realPlate = UnitExists, UnitIsGameObject, C_NamePlate.GetNamePlateForUnit
+		local isObject = true
+		UnitExists = function(u) if u == "softinteract" then return true end return realExists(u) end
+		UnitIsGameObject = function(u) return u == "softinteract" and isObject end
+		C_NamePlate.GetNamePlateForUnit = function(u) if u == "softinteract" then return plate end end
+		fire("PLAYER_SOFT_INTERACT_CHANGED", "", "")
+		drain()
+		local frame = comforts.sparkleFrame
+		if not (frame and frame:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Sparkle: not shown for an object" end
+		isObject = false
+		fire("PLAYER_SOFT_INTERACT_CHANGED", "", "")
+		drain()
+		if frame and frame:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Sparkle: shown for an NPC" end
+		UnitExists, UnitIsGameObject, C_NamePlate.GetNamePlateForUnit = realExists, realGO, realPlate
+		comforts.db.questGlow = false
+		fire("PLAYER_SOFT_INTERACT_CHANGED", "", "")
+		drain()
+	end
+end
 -- Hovering the medallion's shield and mark.
 do
 	local console = Stoa.modules.Grimoire

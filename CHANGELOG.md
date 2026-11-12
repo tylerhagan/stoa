@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Sparkle on what's up close (on by default, with Interact icon up close): the herb, ore, chest or quest object the game's icon marks gets a soft gold glow with a few twinkling stars, so it's easy to spot. NPCs don't sparkle. The art is new, so it needs a full restart of the game.
 - Interact icon up close no longer shows over low-priority things such as chairs and furniture, only things worth using (herbs, ore, quest objects, chests).
 - Accept quests leaves low-level (grey) quests alone: they're never picked from an NPC's list or accepted for you.
 - Chat tabs: a whisper arriving in a chat window you aren't looking at (such as a Whispers tab) puts a gold dot on its tab that pulses a few times and stays until you open it.
