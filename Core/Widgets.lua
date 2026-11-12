@@ -1403,6 +1403,8 @@ UI.PLAQUE_JOIN_H = JOIN_H
 UI.PLAQUE_SOCKET_X = 24
 -- From where the curve starts to the plaque's right end.
 UI.PLAQUE_JOIN_SPAN = JOIN_CX - JOIN_LEAD + JOIN_R
+-- From where the curve starts to where its corner begins to round.
+UI.PLAQUE_JOIN_FLAT = JOIN_CX - JOIN_LEAD
 local function buildDock(frame, plaque)
 	local dock = {}
 	local body = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
@@ -1448,6 +1450,7 @@ local STEP_R = 22
 local STEP_W, STEP_ART_H, STEP_LEAD, STEP_CX = 87, 46, 4, 26
 UI.PLAQUE_STEP_H = 2 * STEP_R
 UI.PLAQUE_STEP_SPAN = STEP_CX - STEP_LEAD + STEP_R
+UI.PLAQUE_STEP_FLAT = STEP_CX - STEP_LEAD
 local STEP_LINE_A = 0.6
 function UI.plaqueStep(frame)
 	local slab = {}
