@@ -262,11 +262,7 @@ end
 -- Updates ---------------------------------------------------------------------
 
 local function paintCoin(coin, state)
-	local token = state == "off" and "danger" or state == "ending" and "accent" or "muted"
-	local r, g, b = Stoa:Color(token)
-	coin.ring:SetVertexColor(r, g, b, state == "on" and 0.7 or 1)
-	coin.letter:SetTextColor(Stoa:Color(state == "on" and "text" or token))
-	UI.coinLit(coin, state ~= "off")
+	Stoa.Sign.paintTimer(coin, state)
 end
 
 -- Shows a coin running until `ends` out of `length`, or off.
