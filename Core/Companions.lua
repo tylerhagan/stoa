@@ -46,12 +46,24 @@ local JOBS = {
 	releaseInPvP = "releasing in battlegrounds",
 	acceptRes = "accepting resurrections",
 	dotPlates = "DoT marks on nameplates",
+	sparkle = "sparkles on what's up close",
 }
 local JOB_ORDER = {
 	"fastLoot", "sellJunk", "repair", "lootFeed", "acceptQuests", "turnInQuests", "camera",
 	"windows", "chatCopy", "tooltipTarget", "gearUpgrade", "bagUpgrade", "rewardUpgrade", "invites", "keywordInvites", "duels",
-	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates",
+	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates", "sparkle",
 }
+
+local SPARKLE_SWITCH = "*sparkle"
+
+-- Addons that only sparkle what's up close: while one is loaded, STOA's
+-- sparkle waits, so the two don't stack.
+local function sparkler(folder, name)
+	return {
+		folder = folder, name = name, keys = { sparkle = "on" }, get = function() return true end,
+		note = "Sparkles what's up close; STOA's own sparkle waits while it's here.",
+	}
+end
 
 -- Each companion: its folder, the name players know, and how to read its
 -- switch for a job (true when it does that job now).
@@ -65,9 +77,20 @@ local COMPANIONS = {
 			acceptQuests = "autoAccept", turnInQuests = "autoTurnIn", camera = "cameraZoom",
 			windows = "moveWindows", chatCopy = "copyChat", tooltipTarget = "unitTarget",
 			gearUpgrade = "gearValue", bagUpgrade = "gearValue", rewardUpgrade = "gearValue", invites = "inviteOn", keywordInvites = "keywordOn",
-			duels = "duelOn", squareMinimap = "mmSquare",
+			duels = "duelOn", squareMinimap = "mmSquare", sparkle = SPARKLE_SWITCH,
 		},
 		get = function(key)
+			-- Its sparkle switch's name isn't known for sure: any switch of
+			-- its own with "sparkl" in the name that is on counts.
+			if key == SPARKLE_SWITCH then
+				local db = _G.OneForAllDB
+				local qol = type(db) == "table" and db.qol
+				if type(qol) ~= "table" then return false end
+				for name, value in pairs(qol) do
+					if type(name) == "string" and name:lower():find("sparkl") and value then return true end
+				end
+				return false
+			end
 			local ofa = _G.OneForAll
 			local qol = type(ofa) == "table" and ofa.QoL
 			if type(qol) ~= "table" or type(qol.Get) ~= "function" then return false end
@@ -125,6 +148,10 @@ local COMPANIONS = {
 		end,
 		note = "Tracks your DoTs; STOA shows their damage left and a kill skull on the target plaque, and on its nameplates if you choose; Settings, Combat, DoT marks on nameplates changes it.",
 	},
+	sparkler("Sparkles", "Sparkles"),
+	sparkler("AzerothForge_Goldspark", "AzerothForge Goldspark"),
+	sparkler("NodeSightSparkles", "NodeSight Sparkles"),
+	sparkler("NodeSight", "NodeSight"),
 }
 
 local function isLoaded(folder)
