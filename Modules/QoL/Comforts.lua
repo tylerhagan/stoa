@@ -4,7 +4,7 @@
 --   straight past it, and the tracking you last chose (Find Minerals, Find
 --   Herbs...) comes back on after you log in or come back from the dead.
 --   Also on: other people's duel results and drunken lines stay out of chat.
---   Off by default: the game's highlights on quest objects, accepting and handing in quests (a quest with a choice
+--   Off by default: the game's icon over the object you can use, accepting and handing in quests (a quest with a choice
 --   of reward always waits for you), skipping cinematics, quieting the
 --   red error text in combat, declining duels, releasing your spirit in
 --   battlegrounds and accepting a resurrection.
@@ -65,21 +65,23 @@ function Comforts:Camera()
 	end
 end
 
--- Quest objects ---------------------------------------------------------------
--- An addon cannot draw on the world, so this turns on the game's own
--- highlights: the outline around things you can use, and the small icon
--- over the nearest one. Each is set only where this client has it, and
--- goes back when the setting is switched off (Core/GameSettings.lua).
+-- Interact icon ---------------------------------------------------------------
+-- An addon cannot draw on the world, so this turns on the game's own small
+-- icon over the object or NPC you can use, once you're within reach and
+-- facing it. (Retail's outline round objects is cut from Forever's client,
+-- so it isn't offered.) Each setting goes back when the switch is turned
+-- off (Core/GameSettings.lua).
 
 local QUEST_GLOW = {
-	{ "graphicsOutlineMode", "2" },
-	{ "Outline", "3" },
 	{ "SoftTargetInteract", "3" },
 	{ "SoftTargetIconInteract", "1" },
 	{ "SoftTargetIconGameObject", "1" },
 }
+-- Set by earlier versions; handed back to the game.
+local NO_LONGER = { "graphicsOutlineMode", "Outline" }
 
 function Comforts:QuestGlow()
+	for _, name in ipairs(NO_LONGER) do Stoa.GameSettings:Restore(name) end
 	for _, pair in ipairs(QUEST_GLOW) do
 		if self.db.questGlow then
 			Stoa.GameSettings:Set("Comforts", pair[1], pair[2])
