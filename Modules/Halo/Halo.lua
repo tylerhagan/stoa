@@ -300,9 +300,13 @@ local TARGET_BAR_H = 20
 local TARGET_CAST_H = 14
 
 -- Out of combat the plaque docks on the console's gold rim on the mana
--- side, beside the bars you read there; in a fight it moves to the Halo's
--- upper right. A spot set with the movers wins.
+-- side, beside the bars you read there: shorter, its left end tucked under
+-- your medallion and its right end joined to the portrait ring (UI.plaque's
+-- SetDocked). In a fight it moves to the Halo's upper right as the full
+-- plaque. A spot set with the movers wins.
 local TARGET_DOCK_Y = -1
+-- Its left end, from the screen's centre: under the medallion.
+local TARGET_DOCK_LEFT = 40
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
@@ -317,8 +321,9 @@ function Halo:PlaceTargetAuras()
 	cast:ClearAllPoints()
 	local step = TARGET_CAST_H + 6
 	if self.targetResting then
-		cast:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", TARGET_PAD, 6)
-		icons[1]:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", TARGET_PAD, 6 + step)
+		local left = self.targetTextLeft or TARGET_PAD
+		cast:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", left, 6)
+		icons[1]:SetPoint("BOTTOMLEFT", self.target, "TOPLEFT", left, 6 + step)
 	elseif self.db.targetStrip then
 		-- Without the panel they follow the bar, leaving one line for the
 		-- threat and KICK words between them.
@@ -344,8 +349,9 @@ function Halo:PlaceTarget()
 		-- Pinned to the screen where the open console's top edge sits, never
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.
-		local gap = 150 * (console.ART_SCALE or 0.556) + 22
-		target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_DOCK_Y)
+		target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", TARGET_DOCK_LEFT, console:OpenHeight() + TARGET_DOCK_Y)
+		-- The words start just clear of the medallion.
+		self.targetTextLeft = 150 * (console.ART_SCALE or 0.556) + 16 - TARGET_DOCK_LEFT
 		self.targetResting = true
 	elseif self.db.targetStrip then
 		-- Level with the Halo, mirroring the party strips on its left.
@@ -355,8 +361,60 @@ function Halo:PlaceTarget()
 		target:SetPoint("BOTTOMLEFT", frame, "RIGHT", 52, 36)
 		self.targetResting = false
 	end
-	target.plaque:SetDocked(self.targetResting)
+	local curve = (self.targetTextLeft or TARGET_PAD) + TARGET_BAR_W + 14
+	target.plaque:SetDocked(self.targetResting, curve)
+	self:LayoutTarget(target.plaque.docked and curve or nil)
 	self:PlaceTargetAuras()
+end
+
+-- Docked, the name is as wide as its words, up to the room the kind and
+-- HOSTILE leave on the line.
+function Halo:FitTargetName()
+	local target = self.target
+	if not (target and target.laidDocked) then return end
+	local name = target.name
+	local room = target.laidCurve - 6 - self.targetTextLeft - 24
+		- (target.cue:GetStringWidth() or 0) - (target.caption:GetStringWidth() or 0)
+	name:SetWidth(0)
+	local wide = name:GetStringWidth() or 0
+	if Stoa:IsSecret(wide) or wide > room then name:SetWidth(math.max(room, 60)) end
+end
+
+-- Lays the plaque's words and bar out: docked (two lines between the
+-- medallion and the ring, `curve` being where the ring's curve starts) or
+-- the full plaque. Out of combat only.
+function Halo:LayoutTarget(curve)
+	local target = self.target
+	if not (target and target.hp) then return end
+	local docked = curve ~= nil
+	if docked == target.laidDocked and (not docked or curve == target.laidCurve) then return end
+	target.laidDocked, target.laidCurve = docked, curve
+	local console = Stoa.modules.Grimoire
+	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
+	if docked then
+		-- Under the console, so its medallion covers the plaque's left end.
+		target:SetFrameStrata("BACKGROUND")
+		local level = console and console.frame and console.frame:GetFrameLevel() or 1
+		target:SetFrameLevel(math.max(level - 1, 0))
+		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.PLAQUE_JOIN_H)
+		local left = self.targetTextLeft
+		-- One line: the name, its kind just after it, HOSTILE at the end.
+		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", curve - 6, -10)
+		target.name:SetPoint("TOPLEFT", left, -7)
+		target.caption:SetPoint("BOTTOMLEFT", target.name, "BOTTOMRIGHT", 10, 2)
+		self:FitTargetName()
+		target.hp:SetPoint("TOPLEFT", left, -26)
+	else
+		target:SetFrameStrata("LOW")
+		target:SetSize(TARGET_WIDTH, TARGET_HEIGHT)
+		target.caption:SetPoint("TOPLEFT", TARGET_PAD, -12)
+		target.cue:SetPoint("TOPRIGHT", -TARGET_COIN_SPACE, -12)
+		target.name:SetPoint("TOPLEFT", TARGET_PAD, -26)
+		target.name:SetWidth(TARGET_BAR_W)
+		target.hp:SetPoint("TOPLEFT", TARGET_PAD, -48)
+	end
+	self:UpdateTargetPower()
+	self:UpdateTargetPips()
 end
 
 function Halo:BuildTarget(frame)
@@ -513,7 +571,7 @@ function Halo:BuildTarget(frame)
 		icon:Hide()
 		target.auras[i] = icon
 	end
-	self:PlaceTargetAuras()
+	self:PlaceTarget()
 end
 
 -- The target's cast: a small rounded bar with the spell and the time left,
@@ -797,6 +855,7 @@ function Halo:ResetTargetName()
 	Stoa:SetFont(fs, "serif", Stoa.typeSize.name)
 	fs:SetText("")
 	fs:SetText(UnitName("target"))
+	self:FitTargetName()
 end
 
 function Halo:UpdateTarget()
@@ -845,10 +904,11 @@ function Halo:UpdateTarget()
 	target.hp:SetStatusBarColor(Stoa:Color(hostile and "hostile" or "health"))
 	local cue = dead and "DEAD" or hostile and "HOSTILE" or ""
 	target.cue:SetText(cue)
+	self:FitTargetName()
 	target.cue:SetTextColor(Stoa:Color(dead and "muted" or Stoa:StateToken(cue)))
 	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "hostile" or nil) end
 	target.hp:SetShown(not dead)
-	target.power:SetShown(not dead and target.power.hasPower or false)
+	target.power:SetShown(not dead and target.power.hasPower and not target.plaque.docked or false)
 	target:SetAlpha(self:TargetAlpha(dead))
 	self:UpdateTargetAuras()
 	self:UpdateTargetOfTarget()
@@ -884,7 +944,7 @@ function Halo:UpdateTargetPower()
 		has = max ~= nil and max > 0
 	end
 	power.hasPower = has
-	if not has then return power:Hide() end
+	if not has or self.target.plaque.docked then return power:Hide() end
 	UI.setUnitBar(power, "target", "power")
 	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType("target")))
 	power:SetStatusBarColor(Stoa:Color(kind and POWER_TOKENS[kind] or "mana"))
@@ -903,7 +963,9 @@ function Halo:UpdateTargetPips()
 		local hostile, dead = UnitCanAttack("player", "target"), UnitIsDead("target")
 		if Stoa:IsSecret(hostile) then hostile = true end
 		if Stoa:IsSecret(dead) then dead = false end
-		if not hostile and not dead then party:AuraPips("target", pips) end
+		-- Docked, there's no room under the bar: it's on the rim.
+		local docked = self.target.plaque.docked
+		if not hostile and not dead and not docked then party:AuraPips("target", pips) end
 	end
 	UI.setPips(row, pips)
 end
