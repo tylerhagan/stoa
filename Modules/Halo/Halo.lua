@@ -175,8 +175,7 @@ function Halo:Build()
 	-- Your shield under the health number, as the druid's form mana sits
 	-- under the power number.
 	if self.db.shield then
-		-- No share here: in a fight the amount can't be read.
-		local shield = UI.shieldGauge(frame, 18)
+		local shield = UI.shieldGauge(frame, 20)
 		shield:SetPoint("TOPRIGHT", healthText, "BOTTOMRIGHT", 1, -3)
 		self.shield = shield
 	end
