@@ -713,13 +713,45 @@ do
 	local character = Stoa.modules.Character
 	if character and character.enabled and character.LayOut and CharacterFrame then
 		CharacterFrame.activeSubframe = "PaperDollFrame"
+		-- The stats column's icon tabs, which become words in the footer.
+		for i = 1, 3 do
+			local tab = CreateFrame("CheckButton", "PaperDollSidebarTab" .. i)
+			tab.Click = function() character.clicked = i end
+		end
+		_G.PaperDollSidebarTabs = CreateFrame("Frame")
 		character:LayOut()
+		local roleOrder = character.roleOrder
+		local moved = roleOrder({ { isHeader = true, name = "A" }, { name = "a1" }, { isHeader = true, name = "B" }, { name = "b1" }, { name = "b2" } }, "B")
+		if not (moved and moved[1].name == "B" and moved[3].name == "b2" and moved[4].name == "A" and #moved == 5) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Character stats: role block not moved to the top"
+		end
+		if roleOrder({ { isHeader = true, name = "B" } }, "B") then SIM_ERRORS[#SIM_ERRORS + 1] = "Character stats: reordered a list already in order" end
+		character:PaintSidebarWords()
 		local head = _G.CharacterHeadSlot
 		if not head then SIM_ERRORS[#SIM_ERRORS + 1] = "Character layout: no head slot to check" end
 		if head and not head.stoaSide then SIM_ERRORS[#SIM_ERRORS + 1] = "Character layout: no words beside the head slot" end
 		character:UpdateFooter()
+		-- A detail pane on another page starts under the header, not in it.
+		local page = rawget(_G, "ReputationFrame") or CreateFrame("Frame")
+		_G.ReputationFrame = page
+		local pane = CreateFrame("Frame")
+		local right = CharacterFrame.RightPaneHost
+		pane.GetNumPoints = function() return 2 end
+		pane.GetPoint = function(_, i)
+			if i == 1 then return "TOPLEFT", right, "TOPLEFT", 16, -14 end
+			return "BOTTOMRIGHT", right, "BOTTOMRIGHT", -12, 14
+		end
+		local realChildren = page.GetChildren
+		page.GetChildren = function() return pane end
 		CharacterFrame.activeSubframe = "ReputationFrame"
+		local sheetShown = PaperDollFrame and PaperDollFrame.IsShown
+		if PaperDollFrame then PaperDollFrame.IsShown = function() return false end end
 		character:LayOut()
+		if PaperDollFrame then PaperDollFrame.IsShown = sheetShown end
+		page.GetChildren = realChildren
+		if right and CharacterFrame.stoaHeader and not pane.stoaSeated then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Character layout: detail pane left inside the header"
+		end
 	end
 end
 do
