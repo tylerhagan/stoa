@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- With OneForAll, STOA asks once whether to switch off OneForAll's low-rank check and info bar, which double up on STOA's Uprank and console.
 - Sparkle: objects up close now get the plate the sparkle hangs on (the game only gives an object one with its interact plate setting on, which STOA now turns on for objects and keeps off for NPCs). Without it the sparkle had nowhere to sit.
 - Interact icon up close also turns on the game's own sparkle on quest items lying in the world (its loot glow), as OneForAll's Quest loot sparkles does. Switching it off may need a restart of the game to take full effect.
 - OneForAll, reviewed against 6.2.5: its Sparkle on herbs & ore, Quest loot sparkles, Hide error messages and Collect minimap buttons now count as shared jobs, so STOA's own copy waits while that switch is on. Before, STOA's combat errors switch turned the red text back on after every fight even with OneForAll hiding it, and both could try to gather the minimap icons.

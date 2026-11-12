@@ -281,3 +281,71 @@ local function register()
 end
 
 Stoa:On("PLAYER_LOGIN", function() xpcall(register, Stoa.catch) end)
+
+-- OneForAll's doubles ----------------------------------------------------------
+-- Two of OneForAll's helpers do what STOA does in its own way but can't hand
+-- over by a switch STOA reads: its low-rank check (STOA's Uprank puts new
+-- ranks on your bars by itself) and its info bar (a band at the top of the
+-- screen, where STOA's console already shows gold, bags and the rest). STOA
+-- asks once per account whether to switch OneForAll's off; only those
+-- switches change, through OneForAll's own QoL.Set, and its Quality of Life
+-- page turns them back on.
+local DOUBLES = {
+	{ key = "lowRank", words = "checking your bars for low spell ranks", stoa = "Uprank" },
+	{ key = "infoBar", words = "an info bar at the top of the screen", stoa = "Grimoire" },
+}
+
+local function doublesOn()
+	local addon = ofa()
+	local qol = addon and addon.QoL
+	if type(qol) ~= "table" or type(qol.Get) ~= "function" or type(qol.Set) ~= "function" then return end
+	local list = {}
+	for _, double in ipairs(DOUBLES) do
+		local ok, on = pcall(qol.Get, double.key)
+		if ok and on and Stoa:IsModuleEnabled(double.stoa) then list[#list + 1] = double end
+	end
+	if #list > 0 then return list, qol end
+end
+
+function Companions:AskOneForAll()
+	if Stoa.db.askedOneForAll then return end
+	local list = doublesOn()
+	if not list then return end
+	if Stoa.Welcome and Stoa.Welcome:Pending() then return end
+	local busy = (Stoa.Conflicts and Stoa.Conflicts.asking) or (Stoa.Looks and Stoa.Looks.asking)
+		or (_G.StoaDotPlatesPage and _G.StoaDotPlatesPage:IsShown())
+	if busy or InCombatLockdown() then
+		C_Timer.After(15, function() self:AskOneForAll() end)
+		return
+	end
+	if not self.askPage then
+		local function answer(useStoa)
+			Stoa.db.askedOneForAll = true
+			self.askPage:Hide()
+			if not useStoa then return end
+			local now, qol = doublesOn()
+			if not now then return end
+			local names = {}
+			for _, double in ipairs(now) do
+				pcall(qol.Set, double.key, false)
+				names[#names + 1] = double.words
+			end
+			Stoa:Print(("OneForAll's %s is off now; STOA looks after it. OneForAll's Quality of Life page turns it back on."):format(table.concat(names, " and ")))
+		end
+		self.askPage = Stoa.Conflicts:Page("StoaOneForAllPage", function() answer(true) end, function() answer(false) end)
+	end
+	local words = {}
+	for _, double in ipairs(list) do words[#words + 1] = double.words end
+	local page = self.askPage
+	page.title:SetText("OneForAll and STOA")
+	page.body:SetText(("OneForAll is also doing what STOA does: %s. STOA can switch OneForAll's off, so the two don't double up."):format(table.concat(words, ", and ")))
+	page.note:SetText("Only those switches change; everything else of OneForAll stays as it is, and its Quality of Life page turns them back on.")
+	page.left.text:SetText("Use STOA's")
+	page.right.text:SetText("Leave it")
+	page:Show()
+end
+
+Stoa:On("PLAYER_LOGIN", function()
+	if not ofa() then return end
+	C_Timer.After(20, function() xpcall(function() Companions:AskOneForAll() end, Stoa.catch) end)
+end)
