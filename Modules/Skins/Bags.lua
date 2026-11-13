@@ -833,7 +833,7 @@ local function addViewWord(frame, parts)
 	end
 	parts.view = word
 	aboveTitle(frame, word)
-	tip(word, "Switch view")
+	tip(word, "Switch View")
 	-- The game can re-level the title strip when the bag opens.
 	frame:HookScript("OnShow", function()
 		for _, key in ipairs({ "sort", "junk", "view" }) do
