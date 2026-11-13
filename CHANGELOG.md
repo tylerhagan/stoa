@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.2.0
 
+- No error on login from the newly dressed windows: STOA passes by the game's own locked frames inside them.
 - More windows in STOA's dress: bank, guild bank (edge only), trade, professions and the professions book, dressing room, books and letters, macros, collections, the adventure guide, the stable, tabard, petitions and guild charters, gem sockets, the clock, chat channels, the addon list and click bindings.
 - Windows with a raised header (character, spellbook and talents, and others): Shift-dragging the top half of the header moves the window again. The strip sits above the window's own edge, so clicks there went through to the world; the window's clickable area now covers it, and the raised talents page no longer catches them either.
 - Character window: your name and the level line sit closer together, the pair centred in the header (the close cross stays level with the name).
