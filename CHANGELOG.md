@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Character sheet from the console and At a glance: clicking Gear or a stat opens the sheet again (the secure cover took only the mouse release, and the game acts on the press).
 - Clicking Gear under Ready on the console opens the character sheet through the game's own Character button, so it no longer raises the "secret number" error on the player frame.
 - Window headers: the lighter top half of the header runs to the window's left and right edges, not 8 pixels short of them, and follows the rounded top corners.
 - Character window: opening it no longer raises an error about the player frame's health text ("secret number"). The stats keep Blizzard's own order for now; putting your role's stats first tainted Blizzard's code.

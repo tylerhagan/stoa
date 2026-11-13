@@ -737,10 +737,14 @@ function Tally:SheetProxy()
 	if not (_G.CharacterMicroButton and CreateFrame) then self.proxy = false return nil end
 	local ok, proxy = pcall(CreateFrame, "Button", "StoaTallyOpen", UIParent, "SecureActionButtonTemplate")
 	if not ok or not proxy then self.proxy = false return nil end
-	proxy:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	-- Secure buttons act on the press or the release, by the game's
+	-- ActionButtonUseKeyDown setting (on by default), so both are taken: with
+	-- releases alone the click was dropped and nothing opened.
+	proxy:RegisterForClicks("AnyUp", "AnyDown")
 	proxy:SetAttribute("type1", "click")
 	proxy:SetAttribute("clickbutton1", _G.CharacterMicroButton)
-	proxy:HookScript("OnClick", function(button, mouse)
+	proxy:HookScript("OnClick", function(button, mouse, down)
+		if down then return end
 		if mouse == "RightButton" and button.row and button.row.key then self:OpenPicker(button.row) end
 	end)
 	-- The mouse moves from the line onto the cover: the tooltip stays the line's.
