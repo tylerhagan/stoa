@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Windows with a raised header (character, spellbook and talents, and others): Shift-dragging the top half of the header moves the window again. The strip sits above the window's own edge, so clicks there went through to the world; the window's clickable area now covers it, and the raised talents page no longer catches them either.
 - Character window: your name and the level line sit closer together, the pair centred in the header (the close cross stays level with the name).
 - Talents: the window shortens while the talents show, so they rise into the empty band under the title (Blizzard's spec art used to sit there), and it takes its height back for the spellbook. The spec's Activate button moves into the row with the search. Window headers are a shade lighter.
 - Window headers lose their faint brown tint: the dark plate across the top is the same neutral as the rest of STOA.
