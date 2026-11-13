@@ -107,6 +107,24 @@ local function dressClose(button)
 	button:HookScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
 end
 
+-- Maximise and minimise (map, spellbook): the same quiet glyphs as the
+-- close cross, a plus to grow and a minus to shrink.
+local function dressMaxMin(holder)
+	if not holder or holder.stoaDressed or forbidden(holder) then return end
+	holder.stoaDressed = true
+	for key, glyphName in pairs({ MaximizeButton = "Plus", MinimizeButton = "Minus" }) do
+		local button = holder[key]
+		if button then
+			plainTextures(button)
+			button:HookScript("OnShow", plainTextures)
+			local glyph = Stoa.UI.glyph(button, glyphName, 14, "muted")
+			glyph:SetPoint("CENTER", 0, 0)
+			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color("accent")) end)
+			button:HookScript("OnLeave", function() glyph:SetVertexColor(Stoa:Color("muted")) end)
+		end
+	end
+end
+
 -- Every red button inside a window, however deep.
 local function dressButtonsIn(frame, depth)
 	if not (frame and frame.GetChildren) or depth <= 0 then return end
@@ -122,6 +140,8 @@ end
 
 Windows.DressButtonsIn = dressButtonsIn
 Windows.DressButton = dressButton
+Windows.DressClose = dressClose
+Windows.DressMaxMin = dressMaxMin
 
 -- Window tabs stay where Blizzard hangs them, under the window, dressed as
 -- tabs of the window: a dark rounded tab tucked under its edge, the chosen
