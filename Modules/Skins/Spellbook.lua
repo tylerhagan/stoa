@@ -566,8 +566,9 @@ function Spellbook.PaintTalentTabs(talents)
 	local system = talents.TabSystem
 	if not (system and system.GetChildren) then return end
 	for _, tab in ipairs({ system:GetChildren() }) do
-		if not tab.stoaDressed then
-			tab.stoaDressed = true
+		-- Its own mark: the window dress may already have marked the tab.
+		if not tab.stoaTalentTab then
+			tab.stoaTalentTab = true
 			Stoa.frames.strip(tab)
 			local label = tab.Text or (tab.GetFontString and tab:GetFontString())
 			if label then
@@ -589,7 +590,7 @@ function Spellbook.PaintTalentTabs(talents)
 		local chosen = tab.isSelected
 		if chosen == nil and talents.GetTab and tab.tabID then chosen = talents:GetTab() == tab.tabID end
 		if tab.stoaLabel then tab.stoaLabel:SetTextColor(Stoa:Color(chosen and "accent" or "muted")) end
-		tab.stoaUnder:SetShown(chosen and true or false)
+		if tab.stoaUnder then tab.stoaUnder:SetShown(chosen and true or false) end
 	end
 end
 
