@@ -422,16 +422,27 @@ local function dressTab(tab, index)
 	under:SetColorTexture(1, 1, 1)
 	tab.stoaWord, tab.stoaUnder = word, under
 	tab:HookScript("OnEnter", function(self)
-		if not (self.GetChecked and self:GetChecked()) then self.stoaWord:SetTextColor(Stoa:Color("text")) end
+		if not Character.TabOn(self) then self.stoaWord:SetTextColor(Stoa:Color("text")) end
+		-- The tab's own name label is the word itself now.
+		if GameTooltip and GameTooltip:GetOwner() == self then GameTooltip:Hide() end
 	end)
 	tab:HookScript("OnLeave", function() Character:PaintTabs() end)
+end
+
+-- The tab you're on: the game's own record of the chosen tab first (Skills
+-- never gets its check, its page is named differently from its tab), then
+-- the tab's check.
+function Character.TabOn(tab)
+	local chosen = CharacterFrame and CharacterFrame.selectedTab
+	if chosen and tab.GetID then return tab:GetID() == chosen end
+	return tab.GetChecked and tab:GetChecked() and true or false
 end
 
 function Character:PaintTabs()
 	local tabs = CharacterFrame and CharacterFrame.ModeTabs and CharacterFrame.ModeTabs.Tabs
 	for _, tab in ipairs(tabs or {}) do
 		if tab.stoaWord then
-			local on = tab.GetChecked and tab:GetChecked()
+			local on = Character.TabOn(tab)
 			tab.stoaWord:SetTextColor(Stoa:Color(on and "accent" or "muted"))
 			tab.stoaUnder:SetVertexColor(Stoa:Color("accent"))
 			tab.stoaUnder:SetShown(on and true or false)
@@ -757,6 +768,7 @@ local function dressCharacter()
 			end)
 		end
 		if frame.SetSelectedModeTabByFrame then hooksecurefunc(frame, "SetSelectedModeTabByFrame", function() guarded(Character.PaintTabs, Character) end) end
+		if frame.OnModeTabClicked then hooksecurefunc(frame, "OnModeTabClicked", function() guarded(Character.PaintTabs, Character) end) end
 		frame:HookScript("OnShow", function() guarded(Character.LayOut, Character) end)
 		Stoa:On("PLAYER_REGEN_ENABLED", function()
 			if Character.layOutAfterCombat then

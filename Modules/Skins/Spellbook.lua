@@ -65,10 +65,14 @@ local function trainerWord(frame, book)
 		GameTooltip:Hide()
 		Spellbook:PaintTrainerWord()
 	end)
-	-- Left of Blizzard's search box, on the book's top row.
-	local search = book.SearchBox
-	if search then
-		word:SetPoint("RIGHT", search, "LEFT", -24, 0)
+	-- In the window's header band, left of the maximise button: the book's
+	-- top row is taken by its school tabs, which grow with your spells.
+	local maximise = frame.MaximizeMinimizeButton
+	local close = frame.CloseButton
+	if maximise then
+		word:SetPoint("RIGHT", maximise, "LEFT", -14, 0)
+	elseif close then
+		word:SetPoint("RIGHT", close, "LEFT", -40, 0)
 	else
 		word:SetPoint("TOPRIGHT", book, "TOPRIGHT", -280, -26)
 	end
@@ -639,7 +643,13 @@ local function dressTalents()
 	end
 	dressCurrency(talents)
 	local windows = Stoa.modules.Windows
-	if windows and windows.DressButtonsIn then windows.DressButtonsIn(talents, 2) end
+	-- Apply and the spec buttons in the window's dress; the Primary and
+	-- Secondary tabs are left to PaintTalentTabs, as words.
+	if windows and windows.DressButton then
+		for _, button in ipairs({ talents.ApplyButton, talents.InspectCopyButton, talents.ActiveSpec and talents.ActiveSpec.ActivateButton }) do
+			guarded(windows.DressButton, button)
+		end
+	end
 	Spellbook.DressTreeHeaders(talents)
 	Spellbook.PaintTalentTabs(talents)
 	Spellbook.PaintWaiting(talents)
