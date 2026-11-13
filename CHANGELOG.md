@@ -4,7 +4,7 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
-## 1.1.5
+## 1.2.0
 
 - Windows with a raised header (character, spellbook and talents, and others): Shift-dragging the top half of the header moves the window again. The strip sits above the window's own edge, so clicks there went through to the world; the window's clickable area now covers it, and the raised talents page no longer catches them either.
 - Character window: your name and the level line sit closer together, the pair centred in the header (the close cross stays level with the name).
@@ -35,7 +35,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Tooltips: under the sell price of a stack, an "Each" line with what one of them sells for.
 - Experience bar: quests you've finished but not handed in show as a paler gold stretch past the fill, to where turning them in takes you; hovering the bar adds the count and the experience to Blizzard's tooltip in the corner (or shows its own when you aren't rested). Waits while OneForAll's own quest XP marker is on.
 - Your buffs at hand (on by default): out of combat, small icons left of the Halo for your own long buffs when one is missing or has under a tenth of its time left (30 seconds to 2 minutes): Inner Fire, Fortitude, Divine Spirit and Shadowform for priests, an aura, a blessing and Righteous Fury for paladins, Mark of the Wild and Omen of Clarity for druids, Arcane Intellect and an armor for mages, Demon Armor for warlocks, Lightning or Water Shield for shamans, Trueshot Aura for hunters. They're drawn in your theme's colour. A missing one breathes softly, an ending one shows its time left. Click to cast; a buff you choose between (aura, blessing, armor, shield) casts the one you had on last. Hidden in a fight.
-- What's new note brought up to 1.1.5.
+- What's new note brought up to 1.2.
 - With OneForAll, STOA asks once whether to switch off OneForAll's low-rank check and info bar, which double up on STOA's Uprank and console.
 - Sparkle: objects up close now get the plate the sparkle hangs on (the game only gives an object one with its interact plate setting on, which STOA now turns on for objects and keeps off for NPCs). Without it the sparkle had nowhere to sit.
 - Interact icon up close also turns on the game's own sparkle on quest items lying in the world (its loot glow), as OneForAll's Quest loot sparkles does. Switching it off may need a restart of the game to take full effect.
