@@ -23,6 +23,7 @@ local NOTE = {
 	title = "New in STOA 1.1.5",
 	lines = {
 		{ "A new character sheet", "Your gear in two columns with each item's name and item level beside it, the weapons named under the model, calmer stats with your role's numbers on top, the tabs as words in the header, and your durability, titles and equipment sets at the foot. Settings > Dress turns it off." },
+		{ "The spellbook in STOA's dress", "No more parchment: your spells on the window's dark panel in STOA's type, and a To train word by the search that opens what your trainer has for you beside the book. Settings > Dress turns it off." },
 		{ "A new target plaque", "A round portrait in a gold ring with the level on a badge, a rounded health bar with the numbers inside, the target's power and its cast. Out of combat it docks on the console's gold rim without the portrait, its target of target tucked in behind it." },
 		{ "Your buffs at hand", "Out of combat, small icons left of the Halo for the long buffs you keep on yourself when one is missing or about to run out, such as Inner Fire, a paladin's aura and blessing, a mage's armor or a shaman's shield. Drawn in your theme's colour. Click one to cast it. Every class but warriors and rogues has some." },
 		{ "Sparkle on what's up close", "The herb, ore, chest or quest object the game's interact icon marks gets a soft gold glow with a few twinkling stars. Chairs and furniture no longer get the icon, and quest items lying in the world get the game's own loot sparkle." },

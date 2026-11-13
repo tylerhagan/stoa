@@ -105,6 +105,7 @@ Modules\Skins\Bags.lua
 Modules\Skins\Tooltip.lua
 Modules\Skins\Map.lua
 Modules\Skins\Character.lua
+Modules\Skins\Spellbook.lua
 Modules\Skins\Meters.lua
 Modules\Skins\Top.lua
 Modules\Skins\Plates.lua
