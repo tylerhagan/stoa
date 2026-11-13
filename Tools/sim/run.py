@@ -707,6 +707,29 @@ do
 		C_Item.GetItemInfo = realInfo
 	end
 end
+-- The spellbook: the book loads later (Blizzard_PlayerSpells); a mock of
+-- it gets dressed, an item takes STOA's type and the To train word shows.
+do
+	local spellbook = Stoa.modules.Spellbook
+	if spellbook and spellbook.enabled then
+		_G.SpellBookItemMixin = { UpdateVisuals = function() end }
+		local frame = CreateFrame("Frame", "PlayerSpellsFrame")
+		local book = CreateFrame("Frame", nil, frame)
+		frame.SpellBookFrame = book
+		book.TopBar = book:CreateTexture()
+		book.SearchBox = CreateFrame("EditBox", nil, book)
+		SIM_FIRE("ADDON_LOADED", "Blizzard_PlayerSpells")
+		if not book.stoaBook then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: book not dressed" end
+		if not frame.stoaTrainWord then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: no To train word" end
+		local item = CreateFrame("Frame")
+		item.Name, item.SubName, item.RequiredLevel = item:CreateFontString(), item:CreateFontString(), item:CreateFontString()
+		item.Backplate = item:CreateTexture()
+		spellbook.DressItem(item)
+		if not item.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: item not dressed" end
+		spellbook:ToggleTraining()
+		spellbook:ToggleTraining()
+	end
+end
 -- The target plaque: a medallion with a level badge, docked while it rests
 -- on the full console, and a cast bar that shows for the target's cast.
 do
