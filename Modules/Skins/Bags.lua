@@ -17,7 +17,7 @@ local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
-local Bags = Stoa:NewModule("Bags", { bagMode = "combined", reagentsInBag = true })
+local Bags = Stoa:NewModule("Bags", { bagMode = "combined", reagentsInBag = true, bagView = "sections" })
 
 local guarded = Stoa.safe.guarded
 
@@ -559,7 +559,7 @@ seatCombined = function(combined, extra)
 		end
 	end
 	local height = combined.CalculateHeight and combined:CalculateHeight()
-	if type(height) == "number" then combined:SetHeight(height - trackerRoom + extra) end
+	if type(height) == "number" then combined:SetHeight(height - trackerRoom + extra + (combined.stoaSectionExtra or 0)) end
 	money:ClearAllPoints()
 	money:SetPoint("BOTTOMLEFT", combined, "BOTTOMLEFT", 8, 8 + extra)
 	money:SetPoint("BOTTOMRIGHT", combined, "BOTTOMRIGHT", -8, 8 + extra)
@@ -646,6 +646,169 @@ function Bags:DockReagents()
 	self.docking = false
 end
 
+-- Sections ------------------------------------------------------------------
+-- The combined bag can sort its slots into sections (new, consumables, trade
+-- goods, quest, equipment, other, junk, then empty slots) or keep the game's
+-- one grid in bag order. A word in the header switches between them.
+-- Blizzard's item buttons stay as they are; only their places change, laid
+-- out after the game's own layout from the same anchor (the money row), so
+-- the reagent section and footer below are untouched. The bag grows by the
+-- room the section labels need.
+local LABEL_H, SECTION_GAP = 18, 8
+local SECTIONS = {
+	{ key = "new", label = NEW or "New", token = "accent" },
+	{ key = "consumable", label = BAG_FILTER_CONSUMABLES or "Consumables" },
+	{ key = "trade", label = BAG_FILTER_TRADE_GOODS or "Trade Goods" },
+	{ key = "quest", label = QUESTS_LABEL or "Quests" },
+	{ key = "equipment", label = BAG_FILTER_EQUIPMENT or "Equipment" },
+	{ key = "other", label = OTHER or "Other" },
+	{ key = "junk", label = BAG_FILTER_JUNK or "Junk", token = "muted" },
+	{ key = "empty", label = EMPTY or "Empty", token = "muted" },
+}
+local CLASS_SECTION = { [0] = "consumable", [2] = "equipment", [4] = "equipment", [3] = "trade", [5] = "trade", [7] = "trade", [9] = "trade", [12] = "quest" }
+
+function Bags.SectionOf(bag, slot)
+	local info = C_Container.GetContainerItemInfo(bag, slot)
+	if type(info) ~= "table" or not info.itemID then return "empty" end
+	if C_NewItems and C_NewItems.IsNewItem and C_NewItems.IsNewItem(bag, slot) then return "new" end
+	local quality = Stoa:PlainNumber(info.quality)
+	if quality == 0 or Stoa.Items.isMarkedJunk(info.itemID) then return "junk" end
+	local quest = C_Container.GetContainerItemQuestInfo and C_Container.GetContainerItemQuestInfo(bag, slot)
+	if type(quest) == "table" and (quest.isQuestItem or quest.questID) then return "quest" end
+	local classID = C_Item and C_Item.GetItemInfoInstant and select(6, C_Item.GetItemInfoInstant(info.itemID))
+	return CLASS_SECTION[classID] or "other"
+end
+
+function Bags:SectionsOn()
+	return self.db.bagView ~= "grid"
+end
+
+local function sectionLabel(combined, i)
+	combined.stoaSectionLabels = combined.stoaSectionLabels or {}
+	local label = combined.stoaSectionLabels[i]
+	if not label then
+		label = {
+			name = UI.text(combined, "sans", Stoa.typeSize.caption, "muted"),
+			count = UI.text(combined, "sans", Stoa.typeSize.caption, "muted", "RIGHT"),
+		}
+		combined.stoaSectionLabels[i] = label
+	end
+	return label
+end
+
+local function hideLabels(combined, from)
+	for i = from, #(combined.stoaSectionLabels or {}) do
+		local label = combined.stoaSectionLabels[i]
+		label.name:Hide()
+		label.count:Hide()
+	end
+end
+
+function Bags:LayOutSections()
+	local combined = ContainerFrameCombinedBags
+	if not (combined and combined.stoaBag and combined:IsShown()) then return end
+	if self.laying then return end
+	local money = combined.MoneyFrame
+	local buttons = items(combined)
+	if not money or #buttons == 0 then return end
+	if InCombatLockdown() and (combined:IsProtected() or buttons[1]:IsProtected()) then
+		Stoa:AfterCombat(function() Bags:LayOutSections() end)
+		return
+	end
+	self.laying = true
+	guarded(function()
+		if not self:SectionsOn() then
+			hideLabels(combined, 1)
+			if (combined.stoaSectionExtra or 0) ~= 0 or combined.stoaSectioned then
+				combined.stoaSectionExtra, combined.stoaSectioned = 0, nil
+				-- The game's own grid again.
+				if combined.UpdateItemLayout then combined:UpdateItemLayout() end
+				Bags:DockReagents()
+			end
+			return
+		end
+		local groups = {}
+		for _, button in ipairs(buttons) do
+			local bag, slot = bagIDOf(button), button:GetID()
+			local key = bag and slot and Bags.SectionOf(bag, slot) or "other"
+			groups[key] = groups[key] or {}
+			table.insert(groups[key], button)
+		end
+		local size = buttons[1]:GetWidth() or 37
+		if size <= 0 then size = 37 end
+		local cols = combined.GetColumns and combined:GetColumns() or COLUMNS
+		local width = cols * size + (cols - 1) * GAP
+		-- Top-down offsets first, then placed from the money row up.
+		local placed, labels, top = {}, {}, 0
+		for _, section in ipairs(SECTIONS) do
+			local list = groups[section.key]
+			if list and #list > 0 then
+				table.sort(list, function(a, b)
+					local ba, bb = bagIDOf(a) or 0, bagIDOf(b) or 0
+					if ba ~= bb then return ba < bb end
+					return a:GetID() < b:GetID()
+				end)
+				labels[#labels + 1] = { section = section, top = top, count = #list }
+				top = top + LABEL_H
+				for i, button in ipairs(list) do
+					local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
+					placed[#placed + 1] = { button, col * (size + GAP), top + row * (size + GAP) }
+				end
+				local rows = math.ceil(#list / cols)
+				top = top + rows * size + (rows - 1) * GAP + SECTION_GAP
+			end
+		end
+		local height = top - SECTION_GAP
+		local base = 4 + height
+		for _, p in ipairs(placed) do
+			p[1]:ClearAllPoints()
+			p[1]:SetPoint("TOPLEFT", money, "TOPRIGHT", -width + p[2], base - p[3])
+		end
+		for i, l in ipairs(labels) do
+			local label = sectionLabel(combined, i)
+			label.name:ClearAllPoints()
+			label.name:SetPoint("TOPLEFT", money, "TOPRIGHT", -width + 2, base - l.top - 3)
+			label.name:SetText(l.section.label:upper())
+			label.name:SetTextColor(Stoa:Color(l.section.token or "text"))
+			label.count:ClearAllPoints()
+			label.count:SetPoint("TOPRIGHT", money, "TOPRIGHT", -2, base - l.top - 3)
+			label.count:SetText(l.count)
+			label.name:Show()
+			label.count:Show()
+		end
+		hideLabels(combined, #labels + 1)
+		local rows = math.ceil(#buttons / cols)
+		combined.stoaSectionExtra = height - (rows * size + (rows - 1) * GAP)
+		combined.stoaSectioned = true
+		Bags:DockReagents()
+	end)
+	self.laying = false
+end
+
+function Bags:SetView(view)
+	if InCombatLockdown() then return end
+	self.db.bagView = view
+	local combined = ContainerFrameCombinedBags
+	local word = combined and combined.stoaBag and combined.stoaBag.view
+	if word then word.text:SetText(view == "grid" and "Sections" or "Grid") end
+	self:LayOutSections()
+end
+
+-- "Grid" or "Sections" in the header, left of Junk: the view it switches to.
+local function addViewWord(frame, parts)
+	local word = UI.button(frame, Bags:SectionsOn() and "Grid" or "Sections", 64, function()
+		Bags:SetView(Bags:SectionsOn() and "grid" or "sections")
+	end)
+	word:SetHeight(20)
+	if parts.junk then
+		word:SetPoint("RIGHT", parts.junk, "LEFT", -6, 0)
+	else
+		word:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -146, -6)
+	end
+	parts.view = word
+end
+Bags.AddViewWord = addViewWord
+
 -- Combined or separate bags is Blizzard's "combinedBags" setting. It is set
 -- once when the choice changes, so the bag menu's own toggle still works
 -- afterwards.
@@ -697,6 +860,17 @@ function Bags:OnEnable()
 		end
 		combined:HookScript("OnShow", dock)
 		combined:HookScript("OnHide", dock)
+		-- Sections: laid out again after the game lays the bag out, and
+		-- whenever items move between sections.
+		if combined.stoaBag then guarded(addViewWord, combined, combined.stoaBag) end
+		local function sections() Bags:LayOutSections() end
+		for _, method in ipairs({ "UpdateItemLayout", "UpdateFrameSize" }) do
+			if combined[method] then hooksecurefunc(combined, method, sections) end
+		end
+		combined:HookScript("OnShow", sections)
+		Stoa:On("BAG_UPDATE_DELAYED", sections)
+		Stoa:On("STOA_JUNK_CHANGED", sections)
+		Stoa:On("STOA_QUEST_NEEDS_CHANGED", sections)
 	end
 	for i = 1, 13 do
 		local frame = _G["ContainerFrame" .. i]

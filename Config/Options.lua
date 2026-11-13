@@ -394,6 +394,9 @@ local function build()
 	choice(of("Bags"), "bagMode", "Bag layout", "One combined bag, or a window for each bag. You can still switch from the bag's own menu.", "combined", {
 		{ "combined", "One bag" }, { "separate", "Separate" },
 	}, { game = true, words = "combined bags inventory", change = function() Stoa.modules.Bags.db.appliedMode = nil; Stoa.modules.Bags:ApplyMode() end })
+	choice(of("Bags"), "bagView", "One bag's view", "Sections sorts your items into new, consumables, trade goods, quest, equipment, other, junk and empty slots. Grid keeps the game's one grid in bag order. A word in the bag's header switches too.", "sections", {
+		{ "sections", "Sections" }, { "grid", "Grid" },
+	}, { words = "bag sections categories sort grid", change = function() Stoa.modules.Bags:SetView(Stoa.modules.Bags.db.bagView) end })
 	toggle(of("Bags"), "reagentsInBag", "Reagents in the bag", "The reagent bag opens with the combined bag as its bottom section, its slots in the same ten columns, instead of a window of its own.", true, { words = "reagent bag herb pouch profession", change = function() Stoa.modules.Bags:DockReagents() end })
 	toggle(of("Character"), "enabled", "Restyle the character sheet", "Item level and quality edges on every slot, WORN and BROKEN on gear that needs repair, an average item level line. The inspect window gets item levels too.", true, { id = "character", reload = true, words = "paper doll gear durability" })
 	toggle(of("Character"), "layout", "STOA's character layout", "A wider sheet: each item's name in its quality colour and its item level beside its slot, the weapons named under the model, the stats on a quiet column, the tabs as words in the header and your durability in a footer. Off keeps Blizzard's layout, dressed.", true, { id = "characterLayout", reload = true, words = "paper doll gear item names stats" })
