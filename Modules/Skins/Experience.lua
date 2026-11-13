@@ -63,7 +63,7 @@ local function colourBar(bar)
 	local rested = bar.ExhaustionLevelFillBar
 	if rested then
 		local mr, mg, mb = Stoa:Color("mana")
-		rested:SetVertexColor(mr, mg, mb, 0.55)
+		rested:SetVertexColor(mr, mg, mb, 0.7)
 	end
 	if bar.stoaTick then
 		local mr, mg, mb = Stoa:Color("mana")
@@ -307,8 +307,12 @@ function XPBar:UpdateQuests()
 	if low and high and value and high > low then share = (value - low) / (high - low) end
 	if xp <= 0 or most <= 0 or width <= 0 or share >= 1 then stretch:Hide() return end
 	local span = math.min(xp / most, 1 - share)
+	-- Solid, not see-through: over the blue rested stretch a see-through gold
+	-- mixed into a muddy grey. A deeper gold, mixed with the track, instead.
 	local r, g, b = Stoa:Color("accent")
-	stretch:SetVertexColor(r, g, b, 0.42)
+	local pr, pg, pb = Stoa:Color("panel")
+	local mix = 0.55
+	stretch:SetVertexColor(r * mix + pr * (1 - mix), g * mix + pg * (1 - mix), b * mix + pb * (1 - mix), 1)
 	stretch:ClearAllPoints()
 	stretch:SetPoint("TOPLEFT", status, "TOPLEFT", width * share, 0)
 	stretch:SetPoint("BOTTOMLEFT", status, "BOTTOMLEFT", width * share, 0)
