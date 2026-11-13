@@ -525,24 +525,175 @@ function Spellbook.DressTreeHeaders(talents)
 			text:SetTextColor(Stoa:Color(token))
 		end
 	end
-	-- Quiet rules halfway between neighbouring trees, down to the foot.
-	talents.stoaRules = talents.stoaRules or {}
-	local border = talents.BackgroundBorder
-	local height = border and border.GetHeight and border:GetHeight() or 0
-	for i = 1, #headers - 1 do
-		local rule = talents.stoaRules[i]
-		if not rule then
-			rule = talents:CreateTexture(nil, "BACKGROUND", nil, 1)
-			UI.pixel(rule, "width")
-			UI.paint(rule, "hairline")
-			talents.stoaRules[i] = rule
-		end
-		rule:ClearAllPoints()
-		rule:SetPoint("TOP", headers[i], "CENTER", TREE_SPACING / 2, 10)
-		rule:SetHeight(height > 80 and height - 60 or 560)
-		rule:Show()
+	-- The trees' cards and rails wait a frame: Blizzard places the talent
+	-- buttons after the headers.
+	Spellbook.DressTrees(talents)
+	if C_Timer and not talents.stoaTreesPending then
+		talents.stoaTreesPending = true
+		C_Timer.After(0, function()
+			talents.stoaTreesPending = nil
+			guarded(Spellbook.DressTrees, talents)
+		end)
 	end
-	for i = #headers, #talents.stoaRules do talents.stoaRules[i]:Hide() end
+end
+
+-- Each tree on its own recessed card, with rails for its rows: every row
+-- of talents is a faint band labelled with the points the tree needs before
+-- it opens (5 a row), rows you have reached a touch lighter. Under the name
+-- a thin bar fills toward the next row. Only STOA's own textures; the
+-- talent buttons are read for their places and never moved.
+local TIER_POINTS = 5
+local CARD_INSET = 12
+
+local function treeParts(talents, i)
+	talents.stoaTrees = talents.stoaTrees or {}
+	local parts = talents.stoaTrees[i]
+	if parts then return parts end
+	parts = { rails = {}, labels = {} }
+	parts.fill = UI.sliced(talents, "BACKGROUND", "CardFill.tga")
+	if parts.fill then
+		parts.fill:SetDrawLayer("BACKGROUND", 1)
+		parts.fill:SetVertexColor(0, 0, 0, 0.22)
+	end
+	parts.edge = UI.sliced(talents, "BACKGROUND", "CardEdge.tga")
+	if parts.edge then
+		parts.edge:SetDrawLayer("BACKGROUND", 3)
+		UI.tint(parts.edge, "hairline")
+	end
+	parts.track = talents:CreateTexture(nil, "BACKGROUND", nil, 3)
+	parts.track:SetTexture(UI.WHITE)
+	parts.track:SetVertexColor(0, 0, 0, 0.45)
+	parts.bar = talents:CreateTexture(nil, "BACKGROUND", nil, 4)
+	parts.bar:SetTexture(UI.WHITE)
+	UI.paint(parts.bar, "accent")
+	parts.next = UI.text(talents, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	talents.stoaTrees[i] = parts
+	UI.applyTheme()
+	return parts
+end
+
+local function hideTree(parts)
+	for _, key in ipairs({ "fill", "edge", "track", "bar", "next" }) do
+		if parts[key] then parts[key]:Hide() end
+	end
+	for _, tex in ipairs(parts.rails) do tex:Hide() end
+	for _, label in ipairs(parts.labels) do label:Hide() end
+end
+
+function Spellbook.DressTrees(talents)
+	local headers = talents.treeHeaders
+	for _, rule in ipairs(talents.stoaRules or {}) do rule:Hide() end
+	if not (headers and #headers > 0 and talents.EnumerateAllTalentButtons) then return end
+	local left, top = talents:GetLeft(), talents:GetTop()
+	if not (left and top) then return end
+	-- Where each tree's talents sit, by the header nearest them.
+	local centres = {}
+	for i, header in ipairs(headers) do centres[i] = select(1, header:GetCenter()) end
+	local trees = {}
+	for i = 1, #headers do trees[i] = { rows = {}, bottom = nil, size = 0 } end
+	for button in talents:EnumerateAllTalentButtons() do
+		local x, y = button:GetCenter()
+		if x and y and button:IsShown() then
+			local best, gap = 1, math.huge
+			for i, cx in ipairs(centres) do
+				if cx and math.abs(cx - x) < gap then best, gap = i, math.abs(cx - x) end
+			end
+			local tree = trees[best]
+			local row = math.floor(y + 0.5)
+			tree.rows[row] = true
+			local size = button:GetHeight() or 0
+			if size > tree.size then tree.size = size end
+			if not tree.bottom or y < tree.bottom then tree.bottom = y end
+		end
+	end
+	for i, header in ipairs(headers) do
+		local parts = treeParts(talents, i)
+		local tree = trees[i]
+		local cx, cy = header:GetCenter()
+		if not (cx and cy and tree.bottom) then
+			hideTree(parts)
+		else
+			local width = TREE_SPACING - 2 * CARD_INSET
+			local x0 = cx - left - width / 2
+			local cardTop = cy - top + 26
+			local cardBottom = tree.bottom - top - tree.size / 2 - 18
+			for _, key in ipairs({ "fill", "edge" }) do
+				local tex = parts[key]
+				if tex then
+					tex:ClearAllPoints()
+					tex:SetPoint("TOPLEFT", talents, "TOPLEFT", x0, cardTop)
+					tex:SetPoint("BOTTOMRIGHT", talents, "TOPLEFT", x0 + width, cardBottom)
+					tex:Show()
+				end
+			end
+			-- Rows, top first, one band each.
+			local ys = {}
+			for y in pairs(tree.rows) do ys[#ys + 1] = y end
+			table.sort(ys, function(a, b) return a > b end)
+			local step = #ys > 1 and (ys[1] - ys[2]) or (tree.size + 12)
+			local spent = tonumber(header.Text and header.Text:GetText()) or 0
+			local reached = math.floor(spent / TIER_POINTS)
+			for r, y in ipairs(ys) do
+				local band = parts.rails[r]
+				if not band then
+					band = talents:CreateTexture(nil, "BACKGROUND", nil, 2)
+					band:SetTexture(UI.WHITE)
+					parts.rails[r] = band
+				end
+				local open = (r - 1) <= reached
+				band:ClearAllPoints()
+				band:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 6, y - top + step / 2)
+				band:SetSize(width - 12, math.max(1, step - 2))
+				if open then
+					local ar, ag, ab = Stoa:Color("accent")
+					band:SetVertexColor(ar, ag, ab, 0.035)
+				else
+					band:SetVertexColor(0, 0, 0, 0.18)
+				end
+				band:Show()
+				local label = parts.labels[r]
+				if not label then
+					label = UI.text(talents, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+					-- Coloured here by reach, not by the theme pass.
+					if UI.unpaint then UI.unpaint(label) end
+					parts.labels[r] = label
+				end
+				label:ClearAllPoints()
+				label:SetPoint("LEFT", talents, "TOPLEFT", x0 + 14, y - top)
+				label:SetText((r - 1) * TIER_POINTS)
+				if open then label:SetTextColor(Stoa:Color("accent")) else label:SetTextColor(Stoa:Color("muted")) end
+				label:SetAlpha(open and 0.75 or 0.6)
+				label:Show()
+			end
+			for r = #ys + 1, #parts.rails do
+				parts.rails[r]:Hide()
+				if parts.labels[r] then parts.labels[r]:Hide() end
+			end
+			-- Toward the next row: a thin bar under the name.
+			local barWidth = width - 120
+			local barY = cy - top - 18
+			parts.track:ClearAllPoints()
+			parts.track:SetPoint("TOPLEFT", talents, "TOPLEFT", cx - left - barWidth / 2, barY)
+			parts.track:SetSize(barWidth, 3)
+			parts.track:Show()
+			local last = (#ys - 1) <= reached
+			local share = last and 1 or (spent % TIER_POINTS) / TIER_POINTS
+			parts.bar:ClearAllPoints()
+			parts.bar:SetPoint("TOPLEFT", parts.track, "TOPLEFT")
+			parts.bar:SetSize(math.max(0.01, barWidth * share), 3)
+			parts.bar:SetShown(share > 0)
+			parts.next:ClearAllPoints()
+			parts.next:SetPoint("TOP", talents, "TOPLEFT", cx - left, barY - 7)
+			if last then
+				parts.next:SetText("Every row open")
+			else
+				local need = (reached + 1) * TIER_POINTS - spent
+				parts.next:SetText(("%d more to open row %d"):format(need, reached + 2))
+			end
+			parts.next:Show()
+		end
+	end
+	for i = #headers + 1, #(talents.stoaTrees or {}) do hideTree(talents.stoaTrees[i]) end
 end
 
 -- Points left: the label quiet, the number in the display face and accent.
@@ -628,6 +779,7 @@ local function dressTalents()
 		hideTalentArt(self)
 		guarded(Spellbook.PaintTalentTabs, self)
 		guarded(Spellbook.PaintWaiting, self)
+		guarded(Spellbook.DressTrees, self)
 	end)
 	if talents.RefreshTreeHeaders then
 		hooksecurefunc(talents, "RefreshTreeHeaders", function(self) guarded(Spellbook.DressTreeHeaders, self) end)
