@@ -131,6 +131,8 @@ Windows.DressButton = dressButton
 local TAB_SHADE = { selected = 0.32, other = 0.5 }
 
 local function tabSelected(tab)
+	-- Side tabs (collections) are check buttons: checked is chosen.
+	if tab.GetChecked and tab.Icon then return tab:GetChecked() and true or false end
 	if tab.isSelected ~= nil then return tab.isSelected and true or false end
 	return tab.IsEnabled and not tab:IsEnabled()
 end
@@ -175,6 +177,7 @@ local function tabArt(tab)
 	end
 	UI.paint(underline, "accent")
 	tab.stoaShade, tab.stoaUnderline = shade, underline
+	tab.stoaTabParts = { base, shade, edge }
 	UI.applyTheme()
 end
 
@@ -192,6 +195,8 @@ local function dressTabs(frame)
 	frame.stoaTabs = tabs
 	for _, tab in ipairs(tabs) do
 		strip(tab)
+		-- Side tabs are icons: the icon stays, on a dark tile.
+		if tab.Icon and tab.Icon.SetAlpha then tab.Icon:SetAlpha(1) end
 		for _, key in ipairs({ "Left", "Middle", "Right", "LeftActive", "MiddleActive", "RightActive", "LeftHighlight", "MiddleHighlight", "RightHighlight" }) do
 			hide(tab[key])
 		end
@@ -206,6 +211,7 @@ local function dressTabs(frame)
 			if words and not tabSelected(self) then words:SetTextColor(Stoa:Color("accent")) end
 		end)
 		tab:HookScript("OnLeave", function() colourTabs(frame) end)
+		if tab.Icon and tab.SetChecked then hooksecurefunc(tab, "SetChecked", function() colourTabs(frame) end) end
 	end
 	colourTabs(frame)
 	frame:HookScript("OnShow", function() colourTabs(frame) end)
