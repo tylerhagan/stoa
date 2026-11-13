@@ -178,7 +178,7 @@ local PROFESSIONS = {
 	Mining = true, Skinning = true, Tailoring = true,
 }
 
-local function readProfessions()
+function Stoa.readProfessions()
 	local found = {}
 	if GetProfessions and GetProfessionInfo then
 		local one, two, _, fishing, cooking, firstAid = call(GetProfessions)
@@ -899,7 +899,7 @@ end
 
 function Tally:Refresh()
 	if not self.rows or InCombatLockdown() then return end
-	professions = readProfessions()
+	professions = Stoa.readProfessions()
 	local shown = (self.columns or 2) * ROWS_PER_COLUMN
 	local keys = self:Chosen()
 	if self.where then
