@@ -502,7 +502,19 @@ local function hideArt()
 	local scene = CharacterModelScene
 	if scene then
 		for _, key in ipairs({ "BackgroundTopLeft", "BackgroundTopRight", "BackgroundBotLeft", "BackgroundBotRight", "BackgroundOverlay" }) do
-			hide(scene[key])
+			local region = scene[key]
+			if region then
+				hide(region)
+				region:Hide()
+			end
+		end
+		-- Blizzard sets the dark overlay's alpha again each time the model
+		-- updates, which left a darker band behind the model.
+		if not scene.stoaOverlayHooked and SetPaperDollBackgroundOverlayAlpha then
+			scene.stoaOverlayHooked = true
+			hooksecurefunc("SetPaperDollBackgroundOverlayAlpha", function(overlay)
+				if overlay and overlay.SetAlpha then overlay:SetAlpha(0) end
+			end)
 		end
 	end
 	local strip = PaperDollFrame and PaperDollFrame.TopBackgroundStripHost
