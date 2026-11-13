@@ -616,7 +616,7 @@ function Welcome:Go(id)
 	-- Each step eases in from a little to the right (or left, going back).
 	local step = changed and self.steps and self.steps[id]
 	if step then
-		step.stoaIn = step.stoaIn or UI.intro(step, 12, 0, UI.MOTION.open)
+		step.stoaIn = step.stoaIn or UI.intro(step, 8, 0, UI.MOTION.open)
 		step.stoaIn:Play()
 	end
 end
