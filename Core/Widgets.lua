@@ -337,7 +337,8 @@ end
 -- STOA's small eased moves, all made with the game's own animation groups
 -- (the client runs them; no addon code per frame). Kept to STOA's own
 -- frames: Blizzard windows and secure buttons are never animated.
-UI.MOTION = { rise = 10, quick = 0.12, open = 0.22, stagger = 0.025 }
+-- Kept swift: nothing waits on them, and a window takes clicks at once.
+UI.MOTION = { rise = 8, quick = 0.1, open = 0.16, grow = 0.14, stagger = 0.015 }
 
 -- Rises (or slides) in from dx, dy short of its place while fading in.
 -- `delay` holds it hidden first, for things that arrive one after another.
@@ -404,7 +405,7 @@ function UI.growIn(region, axis)
 	if axis == "y" then scale:SetScaleFrom(1, 0.1) else scale:SetScaleFrom(0.1, 1) end
 	scale:SetScaleTo(1, 1)
 	scale:SetOrigin("CENTER", 0, 0)
-	scale:SetDuration(0.2)
+	scale:SetDuration(UI.MOTION.grow)
 	scale:SetSmoothing("OUT")
 	return group
 end
@@ -1241,7 +1242,7 @@ function UI.button(parent, label, width, onClick, reloads)
 			if not button.lit and glow.edges then
 				button.glowIn = button.glowIn or {}
 				for i, tex in ipairs(glow.edges) do
-					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, 0.14)
+					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, UI.MOTION.quick)
 					button.glowIn[i]:Play()
 				end
 			end

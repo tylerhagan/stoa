@@ -713,7 +713,7 @@ function Window:Draw(keep)
 	-- A new page (or a new search) eases in; redraws in place don't.
 	local shown = query and "?" or current
 	if not keep and shown ~= self.drawn then
-		self.childIn = self.childIn or UI.fadeIn(self.child, 0.18)
+		self.childIn = self.childIn or UI.fadeIn(self.child, UI.MOTION.quick)
 		self.childIn:Play()
 	end
 	self.drawn = shown
