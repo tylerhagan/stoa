@@ -620,10 +620,11 @@ local function dressStats()
 			hooksecurefunc(box, "Update", each)
 			each()
 		end
-		if pane and pane.UpdateStats and pane.GetUnit and not pane.stoaOrdered then
-			pane.stoaOrdered = true
-			hooksecurefunc(pane, "UpdateStats", function(self) guarded(orderStats, self) end)
-		end
+		-- Role-first ordering is off: handing the pane a reordered list from
+		-- STOA's code tainted Blizzard's stats data, and opening the window
+		-- then broke the player frame's health text (secret values compared
+		-- in tainted code). Kept for a taint-free way back.
+		local _ = orderStats
 	end
 end
 
