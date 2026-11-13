@@ -1,7 +1,7 @@
 -- Stoa: more Blizzard windows in the same dress as the quest and merchant
 -- windows (see Windows.lua): spellbook and talents, world map border, mail,
--- auction house, group finder, friends and guild, game menu and the settings
--- panel border.
+-- auction house, group finder, friends and guild, the bank, trade,
+-- professions, wardrobe, journals, macros and the other framed windows.
 --
 -- Many of these load with their own addon the first time they open, so each
 -- is dressed when its frame turns up (ADDON_LOADED) and again on first show.
@@ -37,6 +37,26 @@ local TARGETS = {
 	-- A slimmer band: the channel dropdown and online count start just
 	-- under the title, and the usual band reached halfway down them.
 	{ name = "CommunitiesFrame", band = 30, after = "communities" },
+	-- The rest of Blizzard's framed windows, in the same dress.
+	{ name = "BankFrame" },
+	{ name = "GuildBankFrame", mode = "border" },
+	{ name = "TradeFrame" },
+	{ name = "ProfessionsFrame" },
+	{ name = "ProfessionsBookFrame" },
+	{ name = "DressUpFrame" },
+	{ name = "ItemTextFrame" },
+	{ name = "MacroFrame" },
+	{ name = "CollectionsJournal" },
+	{ name = "EncounterJournal" },
+	{ name = "StableFrame" },
+	{ name = "TabardFrame" },
+	{ name = "PetitionFrame" },
+	{ name = "GuildRegistrarFrame" },
+	{ name = "ItemSocketingFrame" },
+	{ name = "TimeManagerFrame" },
+	{ name = "ChannelFrame" },
+	{ name = "AddonList" },
+	{ name = "ClickBindingFrame" },
 	-- The game menu and the settings panel are left alone: addons touching
 	-- them are a known cause of blocked-action errors (Edit Mode, logout).
 	-- The map canvas, pins and quest panel are never touched.

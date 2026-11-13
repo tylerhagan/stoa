@@ -22,7 +22,8 @@ local WINDOWS = {
 	"CommunitiesFrame", "AuctionHouseFrame", "BankFrame", "GuildBankFrame", "TradeFrame",
 	"PVEFrame", "LFGParentFrame", "ItemTextFrame", "TaxiFrame", "TradeSkillFrame",
 	"ProfessionsFrame", "CraftFrame", "AchievementFrame", "ContainerFrameCombinedBags",
-	"ContainerFrame1", "WorldMapFrame",
+	"ContainerFrame1", "WorldMapFrame", "ProfessionsBookFrame", "MacroFrame", "CollectionsJournal",
+	"EncounterJournal", "StableFrame", "ItemSocketingFrame",
 }
 
 -- Windows that stay put in one of their states: the map fills the screen
