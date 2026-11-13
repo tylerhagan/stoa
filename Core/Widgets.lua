@@ -939,8 +939,8 @@ function UI.band(frame, size, family, plain)
 	header:SetDrawLayer("BACKGROUND", -6)
 	frame.stoaHeader = header
 	if plain then
-		-- Blizzard's windows: a dark metal plate across the top, embossed:
-		-- a faint warm tone, a sheen on its upper
+		-- Blizzard's windows: a dark metal plate across the top, embossed
+		-- (neutral, no warm tone, as everywhere else): a sheen on its upper
 		-- half, a bright hairline along its top and a dark line with a
 		-- soft fall under it.
 		header:SetVertexColor(0, 0, 0, UI.PLAIN_HEADER_DARK)
@@ -958,13 +958,6 @@ end
 -- The embossed metal look on a header band (see UI.band).
 local EMBOSS_INSET = 8
 function UI.emboss(frame, header)
-	local tone = sliced(frame, "BACKGROUND", "WindowTop.tga")
-	if tone then
-		tone:ClearAllPoints()
-		tone:SetAllPoints(header)
-		tone:SetDrawLayer("BACKGROUND", -5)
-		UI.tint(tone, "accent", 0.09)
-	end
 	-- The sheen runs the header's full width in the header's own rounded
 	-- shape, so its top corners follow the window's.
 	local sheen = sliced(frame, "BACKGROUND", "WindowTop.tga")
