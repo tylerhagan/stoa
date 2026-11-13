@@ -105,9 +105,19 @@ local function seatLevel()
 	local frame, level = CharacterFrame, CharacterLevelText
 	if not (frame and level and frame.stoaHeader) or InCombatLockdown() then return end
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
+	-- On the sheet the title sits high with the level line under it; the
+	-- other pages have no level line, so their title sits level with the
+	-- tab words (centred 29 below the window's top, see PlaceTabs).
+	local onSheet = (frame.activeSubframe or "PaperDollFrame") == "PaperDollFrame"
 	if title then
 		title:ClearAllPoints()
-		title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10)
+		if onSheet then
+			title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10)
+		else
+			local headerTop, frameTop = frame.stoaHeader:GetTop(), frame:GetTop()
+			local drop = (headerTop and frameTop) and (frameTop - headerTop) or 0
+			title:SetPoint("LEFT", frame.stoaHeader, "TOPLEFT", 18, -29 + drop)
+		end
 		title:SetJustifyH("LEFT")
 	end
 	-- The close cross sits level with the name, in the band's upper half,
@@ -769,6 +779,10 @@ local function dressCharacter()
 		end
 		if frame.SetSelectedModeTabByFrame then hooksecurefunc(frame, "SetSelectedModeTabByFrame", function() guarded(Character.PaintTabs, Character) end) end
 		if frame.OnModeTabClicked then hooksecurefunc(frame, "OnModeTabClicked", function() guarded(Character.PaintTabs, Character) end) end
+		-- The title's place depends on the page.
+		for _, method in ipairs({ "SetSelectedModeTabByFrame", "UpdateTitle" }) do
+			if frame[method] then hooksecurefunc(frame, method, function() guarded(seatLevel) end) end
+		end
 		frame:HookScript("OnShow", function() guarded(Character.LayOut, Character) end)
 		Stoa:On("PLAYER_REGEN_ENABLED", function()
 			if Character.layOutAfterCombat then
