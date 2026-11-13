@@ -718,7 +718,39 @@ do
 		frame.SpellBookFrame = book
 		book.TopBar = book:CreateTexture()
 		book.SearchBox = CreateFrame("EditBox", nil, book)
+		-- Talents: three tree headers, a tab, Apply with changes waiting.
+		local talents = CreateFrame("Frame", nil, frame)
+		frame.TalentsFrame = talents
+		talents.Background = talents:CreateTexture()
+		talents.BackgroundBorder = talents:CreateTexture()
+		talents.ApplyButton = CreateFrame("Button", nil, talents)
+		talents.TabSystem = CreateFrame("Frame", nil, talents)
+		local tab = CreateFrame("Button", nil, talents.TabSystem)
+		tab.Text = tab:CreateFontString()
+		tab.isSelected = true
+		talents.TabSystem.GetChildren = function() return tab end
+		talents.ClassCurrencyDisplay = CreateFrame("Frame", nil, talents)
+		talents.treeHeaders = {}
+		for i, spent in ipairs({ "5", "0", "19" }) do
+			local header = CreateFrame("Frame", nil, talents)
+			header.Name, header.Text = header:CreateFontString(), header:CreateFontString()
+			header.Name:SetText("Tree " .. i)
+			header.Text:SetText(spent)
+			header.MainRing = header:CreateTexture()
+			talents.treeHeaders[i] = header
+		end
+		talents.RefreshTreeHeaders = function() end
+		talents.HasAnyConfigChanges = function() return true end
 		SIM_FIRE("ADDON_LOADED", "Blizzard_PlayerSpells")
+		if not talents.stoaTalents then SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: window not dressed" end
+		spellbook.DressTreeHeaders(talents)
+		if talents.treeHeaders[1].Name:GetText() ~= "TREE 1" or not (talents.stoaRules and talents.stoaRules[2]) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: tree headers not dressed"
+		end
+		spellbook.PaintWaiting(talents)
+		if not talents.stoaWaiting then SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: no changes waiting line" end
+		spellbook.PaintTalentTabs(talents)
+		if not tab.stoaUnder then SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: tabs not dressed" end
 		if not book.stoaBook then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: book not dressed" end
 		if not frame.stoaTrainWord then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: no To train word" end
 		local item = CreateFrame("Frame")
