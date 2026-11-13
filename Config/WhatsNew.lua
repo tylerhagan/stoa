@@ -19,8 +19,8 @@ Stoa.WhatsNew = WhatsNew
 -- as "PRIEST"): each shows as a small tag in its class colour beside the
 -- line's name.
 local NOTE = {
-	edition = "1.1.5",
-	title = "New in STOA 1.1.5",
+	edition = "1.2.0",
+	title = "New in STOA 1.2",
 	lines = {
 		{ "A new character sheet", "Your gear in two columns with each item's name and item level beside it, the weapons named under the model, calmer stats, the tabs as words in the header, and your durability, titles and equipment sets at the foot. Settings > Dress turns it off." },
 		{ "The spellbook in STOA's dress", "Every spell you know on one scrolling list by school, with its rank, cost, cast time and when the next rank comes. Click to cast, drag to a bar, or switch back to Blizzard's pages. A To train word by the search opens what your trainer has for you beside the book. Settings > Dress turns it off." },
