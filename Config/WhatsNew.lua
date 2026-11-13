@@ -65,6 +65,7 @@ function WhatsNew:Build()
 	local columns = count > PER_COLUMN and 2 or 1
 	local perColumn = math.ceil(count / columns)
 	local page = CreateFrame("Frame", "StoaNewsPage", UIParent)
+	UI.riseOnShow(page)
 	page:SetSize(PAD * 2 + columns * COLUMN + (columns - 1) * GAP, 240)
 	page:SetPoint("CENTER", 0, 120)
 	page:SetFrameStrata("DIALOG")

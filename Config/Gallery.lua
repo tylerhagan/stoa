@@ -205,6 +205,7 @@ end
 
 function Gallery:Build()
 	local page = CreateFrame("Frame", "StoaGalleryPage", UIParent)
+	UI.riseOnShow(page)
 	page:SetSize(WIDTH, HEIGHT)
 	page:SetPoint("CENTER")
 	page:SetFrameStrata("DIALOG")

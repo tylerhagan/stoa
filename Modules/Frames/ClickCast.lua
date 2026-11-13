@@ -172,6 +172,7 @@ end
 
 function ClickCast:BuildPage()
 	local page = CreateFrame("Frame", "StoaClickCastPage", UIParent)
+	UI.riseOnShow(page)
 	page:SetSize(720, 380)
 	page:SetPoint("CENTER")
 	page:SetFrameStrata("DIALOG")

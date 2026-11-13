@@ -144,6 +144,8 @@ local function buildMenu()
 	menu:EnableMouse(true)
 	UI.roundPanel(menu, 0.98)
 	menu:Hide()
+	menu.stoaRise = UI.intro(menu, 0, 4, UI.MOTION.quick)
+	menu:HookScript("OnShow", function(self) self.stoaRise:Play() end)
 	local catcher = CreateFrame("Button", nil, UIParent)
 	catcher:SetAllPoints(UIParent)
 	catcher:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -708,6 +710,13 @@ function Window:Draw(keep)
 		end
 	end
 	if not keep then self.scroll:SetVerticalScroll(0) end
+	-- A new page (or a new search) eases in; redraws in place don't.
+	local shown = query and "?" or current
+	if not keep and shown ~= self.drawn then
+		self.childIn = self.childIn or UI.fadeIn(self.child, 0.18)
+		self.childIn:Play()
+	end
+	self.drawn = shown
 	self.title:SetText(title or "")
 	self.intro:SetText(intro or "")
 	local y = -(tonumber(self.intro:GetStringHeight()) or 16) - 54
@@ -772,6 +781,11 @@ function Window:Nav()
 		local chosen = not query and button.id == current
 		colour(button.text, chosen and "accent" or (button:IsMouseOver() and "text" or "muted"))
 		button.mark:SetShown(chosen)
+		if chosen and not button.wasChosen then
+			button.markIn = button.markIn or UI.growIn(button.mark, "y")
+			button.markIn:Play()
+		end
+		button.wasChosen = chosen
 		colour(button.mark, "accent")
 		button.lift:SetShown(chosen)
 		colour(button.lift, "text", 0.06)
@@ -839,6 +853,7 @@ end
 
 function Window:Build()
 	local page = CreateFrame("Frame", "StoaSettings", UIParent)
+	UI.riseOnShow(page)
 	page:SetSize(WIDTH, HEIGHT)
 	page:SetPoint("CENTER", 0, 30)
 	page:SetFrameStrata("DIALOG")

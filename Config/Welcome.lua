@@ -509,6 +509,7 @@ end
 
 function Welcome:Build()
 	local page = CreateFrame("Frame", "StoaWelcomePage", UIParent)
+	UI.riseOnShow(page)
 	page:SetSize(WIDTH, HEIGHT)
 	page:SetPoint("CENTER", 0, 40)
 	page:SetFrameStrata("DIALOG")
@@ -608,9 +609,16 @@ function Welcome:Order()
 end
 
 function Welcome:Go(id)
+	local changed = self.current ~= id
 	self.current = id
 	self.seen[id] = true
 	self:Refresh()
+	-- Each step eases in from a little to the right (or left, going back).
+	local step = changed and self.steps and self.steps[id]
+	if step then
+		step.stoaIn = step.stoaIn or UI.intro(step, 12, 0, UI.MOTION.open)
+		step.stoaIn:Play()
+	end
 end
 
 function Welcome:Move(by)

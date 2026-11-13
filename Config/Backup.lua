@@ -277,6 +277,7 @@ local PAD = Stoa.space.xl
 
 function Backup:Build()
 	local page = CreateFrame("Frame", "StoaBackupPage", UIParent)
+	UI.riseOnShow(page)
 	page:SetSize(WIDTH, HEIGHT)
 	page:SetPoint("CENTER", 0, 60)
 	page:SetFrameStrata("DIALOG")
