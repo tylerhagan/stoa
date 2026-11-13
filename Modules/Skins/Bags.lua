@@ -243,6 +243,7 @@ local function addJunk(frame, parts)
 		junk:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -90, -6)
 	end
 	parts.junk = junk
+	aboveTitle(frame, junk)
 end
 
 local function decorateButton(button)
@@ -389,6 +390,12 @@ local function moneyHover(frame, text)
 	return hover
 end
 
+-- Blizzard lays an invisible button over the whole title strip that opens
+-- the bag menu; the header words sit above it so their clicks reach them.
+local function aboveTitle(frame, button)
+	button:SetFrameLevel((frame:GetFrameLevel() or 1) + 10)
+end
+
 -- The Sort button, only where Blizzard has something to call.
 local function addSort(frame, parts)
 	if not (C_Container and C_Container.SortBags) then return end
@@ -404,6 +411,7 @@ local function addSort(frame, parts)
 		sort:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -36, -6)
 	end
 	parts.sort = sort
+	aboveTitle(frame, sort)
 end
 
 local function decorateFrame(frame)
@@ -806,6 +814,7 @@ local function addViewWord(frame, parts)
 		word:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -146, -6)
 	end
 	parts.view = word
+	aboveTitle(frame, word)
 end
 Bags.AddViewWord = addViewWord
 
