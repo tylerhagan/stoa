@@ -44,6 +44,10 @@ end
 local PANEL_PARTS = { "Left", "Middle", "Right", "LeftSeparator", "RightSeparator" }
 
 local function isPanelButton(button)
+	-- The talent window's Primary and Secondary tabs become words there
+	-- (Spellbook.lua), not red buttons.
+	local parent = button.GetParent and button:GetParent()
+	if parent and parent.tabTemplate == "ClassTalentsFrameTabTemplate" then return false end
 	return button.Left and button.Middle and button.Right
 end
 
@@ -108,6 +112,7 @@ local function dressButtonsIn(frame, depth)
 end
 
 Windows.DressButtonsIn = dressButtonsIn
+Windows.DressButton = dressButton
 
 -- Window tabs stay where Blizzard hangs them, under the window, dressed as
 -- tabs of the window: a dark rounded tab tucked under its edge, the chosen
