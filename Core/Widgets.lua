@@ -957,8 +957,6 @@ end
 
 -- The embossed metal look on a header band (see UI.band).
 local EMBOSS_INSET = 8
--- The window's rounded corner, top to where its sides run straight.
-local EMBOSS_CORNER = 10
 function UI.emboss(frame, header)
 	local tone = sliced(frame, "BACKGROUND", "WindowTop.tga")
 	if tone then
@@ -967,20 +965,23 @@ function UI.emboss(frame, header)
 		tone:SetDrawLayer("BACKGROUND", -5)
 		UI.tint(tone, "accent", 0.09)
 	end
-	-- The sheen runs the header's full width; only its first few pixels
-	-- (a cap) step in, clear of the window's rounded top corners.
-	local cap = frame:CreateTexture(nil, "BACKGROUND", nil, -4)
-	cap:SetTexture(UI.WHITE)
-	cap:SetPoint("TOPLEFT", header, "TOPLEFT", EMBOSS_INSET, -1)
-	cap:SetPoint("TOPRIGHT", header, "TOPRIGHT", -EMBOSS_INSET, -1)
-	cap:SetHeight(EMBOSS_CORNER - 1)
-	UI.gradient(cap, "text", 0.07, "VERTICAL", 0.7, 1)
-	local sheen = frame:CreateTexture(nil, "BACKGROUND", nil, -4)
-	sheen:SetTexture(UI.WHITE)
-	sheen:SetPoint("TOPLEFT", header, "TOPLEFT", 0, -EMBOSS_CORNER)
-	sheen:SetPoint("TOPRIGHT", header, "TOPRIGHT", 0, -EMBOSS_CORNER)
-	sheen:SetPoint("BOTTOM", header, "CENTER")
-	UI.gradient(sheen, "text", 0.07, "VERTICAL", 0, 0.7)
+	-- The sheen runs the header's full width in the header's own rounded
+	-- shape, so its top corners follow the window's.
+	local sheen = sliced(frame, "BACKGROUND", "WindowTop.tga")
+	if sheen then
+		sheen:ClearAllPoints()
+		sheen:SetPoint("TOPLEFT", header, "TOPLEFT", 0, 0)
+		sheen:SetPoint("TOPRIGHT", header, "TOPRIGHT", 0, 0)
+		sheen:SetPoint("BOTTOM", header, "CENTER")
+	else
+		sheen = frame:CreateTexture(nil, "BACKGROUND")
+		sheen:SetTexture(UI.WHITE)
+		sheen:SetPoint("TOPLEFT", header, "TOPLEFT", EMBOSS_INSET, -1)
+		sheen:SetPoint("TOPRIGHT", header, "TOPRIGHT", -EMBOSS_INSET, -1)
+		sheen:SetPoint("BOTTOM", header, "CENTER")
+	end
+	sheen:SetDrawLayer("BACKGROUND", -4)
+	UI.gradient(sheen, "text", 0.07, "VERTICAL", 0, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 3)
 	top:SetTexture(UI.WHITE)
 	UI.pixel(top, "height")
