@@ -226,12 +226,27 @@ local function sideWords(button, side, width)
 	local sub = UI.text(holder, "sans", Stoa.typeSize.caption, "muted", side == "LEFT" and "LEFT" or "RIGHT")
 	sub:SetWidth(width)
 	sub:SetWordWrap(false)
+	-- The equipment manager's little arrow (pick another item for the slot)
+	-- sits right beside the slot, so the words step aside while it shows.
+	local popout = button.popoutButton
+	local function place()
+		local gap = (popout and popout:IsShown()) and 22 or 10
+		name:ClearAllPoints()
+		if side == "LEFT" then
+			name:SetPoint("TOPLEFT", button, "TOPRIGHT", gap, -4)
+		else
+			name:SetPoint("TOPRIGHT", button, "TOPLEFT", -gap, -4)
+		end
+	end
 	if side == "LEFT" then
-		name:SetPoint("TOPLEFT", button, "TOPRIGHT", 10, -4)
 		sub:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
 	else
-		name:SetPoint("TOPRIGHT", button, "TOPLEFT", -10, -4)
 		sub:SetPoint("TOPRIGHT", name, "BOTTOMRIGHT", 0, -4)
+	end
+	place()
+	if popout and popout.HookScript then
+		popout:HookScript("OnShow", place)
+		popout:HookScript("OnHide", place)
 	end
 	button.stoaSide = { name = name, sub = sub }
 	return button.stoaSide
