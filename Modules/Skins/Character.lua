@@ -97,8 +97,8 @@ local function averageText(frame)
 end
 
 -- The character sheet's band reaches down to where the sheet starts and
--- holds two lines on the left: the name, then "Level 4 Priest · Item level
--- 12" in quiet type. Blizzard centres the
+-- holds two lines on the left, close together and centred in it: the name,
+-- then "Level 4 Priest · Item level 12" in quiet type. Blizzard centres the
 -- level line in the middle of the band on every update, so it is seated
 -- again after each one.
 local function seatLevel()
@@ -109,10 +109,20 @@ local function seatLevel()
 	-- other pages have no level line, so their title sits level with the
 	-- tab words (centred 29 below the window's top, see PlaceTabs).
 	local onSheet = (frame.activeSubframe or "PaperDollFrame") == "PaperDollFrame"
+	-- On the sheet the name and the level line sit close together, the
+	-- pair centred up and down in the band.
+	Stoa:SetFont(level, "sans", Stoa.typeSize.body)
+	local GAP = 4
+	local nameHeight = title and (title:GetStringHeight() or 0) or 0
+	if nameHeight <= 0 then nameHeight = Stoa.typeSize.title end
+	local levelHeight = level:GetStringHeight() or 0
+	if levelHeight <= 0 then levelHeight = Stoa.typeSize.body end
+	local band = frame.stoaHeader:GetHeight() or 0
+	local nameTop = math.max(6, math.floor((band - (nameHeight + GAP + levelHeight)) / 2 + 0.5))
 	if title then
 		title:ClearAllPoints()
 		if onSheet then
-			title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -10)
+			title:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -nameTop)
 		else
 			local headerTop, frameTop = frame.stoaHeader:GetTop(), frame:GetTop()
 			local drop = (headerTop and frameTop) and (frameTop - headerTop) or 0
@@ -125,18 +135,16 @@ local function seatLevel()
 	local close = frame.CloseButton or _G.CharacterFrameCloseButton
 	if close then
 		close:ClearAllPoints()
-		close:SetPoint("RIGHT", frame.stoaHeader, "TOPRIGHT", -8, -(10 + Stoa.typeSize.title / 2))
+		close:SetPoint("RIGHT", frame.stoaHeader, "TOPRIGHT", -8, -(nameTop + nameHeight / 2))
 	end
 	level:ClearAllPoints()
 	if title then
-		-- The level line keeps its own spot; the title sits higher above it.
-		level:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -42)
+		level:SetPoint("TOPLEFT", frame.stoaHeader, "TOPLEFT", 18, -(nameTop + nameHeight + GAP))
 	else
 		level:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
 	end
 	level:SetWidth(0)
 	level:SetJustifyH("LEFT")
-	Stoa:SetFont(level, "sans", Stoa.typeSize.body)
 	level:SetTextColor(Stoa:Color("muted"))
 	local average = averageText(frame)
 	average:ClearAllPoints()
