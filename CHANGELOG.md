@@ -6,7 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
-- Window headers: the lighter top half of the header runs to the window's left and right edges, not 8 pixels short of them.
+- Window headers: the lighter top half of the header runs to the window's left and right edges, not 8 pixels short of them, and follows the rounded top corners.
 - Character window: opening it no longer raises an error about the player frame's health text ("secret number"). The stats keep Blizzard's own order for now; putting your role's stats first tainted Blizzard's code.
 - Map: the top of its header is solid like the rest; the raised strip let the world show through.
 - The quest list stays folded through a fight: a kill or loot counted toward a quest no longer opens it again.
