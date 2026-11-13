@@ -470,6 +470,17 @@ local function watchHide(module)
 	module.stoaHideWatched = true
 	-- The tracker hid it itself (nothing left to show): not ours to bring back.
 	hooksecurefunc(module, "Hide", function(self) self.stoaFolded = nil end)
+	-- Every relayout (a kill counted, an item looted) ends with the module
+	-- showing itself again; while the list is folded for a fight it goes
+	-- straight back.
+	if module.EndLayout then
+		hooksecurefunc(module, "EndLayout", function(self)
+			if Top.trackerFocused and self:IsShown() then
+				self:Hide()
+				self.stoaFolded = true
+			end
+		end)
+	end
 end
 
 function Top:FocusTracker()
