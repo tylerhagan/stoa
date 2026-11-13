@@ -924,7 +924,7 @@ local FOOTER_SHADE = 0.32
 -- UI.WINDOW_FAMILIES key.
 -- `plain`: the band is drawn dark like Blizzard's content under it (the
 -- Blizzard windows' treatment), with no shadow line.
-UI.PLAIN_HEADER_DARK = 0.62
+UI.PLAIN_HEADER_DARK = 0.48
 function UI.band(frame, size, family, plain)
 	local header = sliced(frame, "BACKGROUND", "WindowTop.tga")
 	if not header then return nil end

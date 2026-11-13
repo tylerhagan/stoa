@@ -845,6 +845,28 @@ function Spellbook.PaintWaiting(talents)
 	line:SetShown(waiting)
 end
 
+-- The window is sized for its tallest page, so the talents sat under a
+-- band of empty space. While they show, the window is shortened to fit
+-- them (it hangs from its top, and the talents from its bottom, so they
+-- rise with it), and it gets its own height back when they hide. Out of
+-- combat only.
+local TALENTS_TOP_ROOM = 56
+function Spellbook.FitWindow(talents, fit)
+	local frame = talents:GetParent()
+	if not (frame and frame.SetHeight) then return end
+	if InCombatLockdown() then
+		Stoa:AfterCombat(function() guarded(Spellbook.FitWindow, talents, talents:IsShown()) end)
+		return
+	end
+	if fit then
+		frame.stoaFullHeight = frame.stoaFullHeight or frame:GetHeight()
+		local want = math.floor(talents:GetHeight() + 4 + TALENTS_TOP_ROOM)
+		if want < frame.stoaFullHeight and math.abs(frame:GetHeight() - want) > 0.5 then frame:SetHeight(want) end
+	elseif frame.stoaFullHeight then
+		frame:SetHeight(frame.stoaFullHeight)
+	end
+end
+
 local function dressTalents()
 	local frame = PlayerSpellsFrame
 	local talents = frame and frame.TalentsFrame
@@ -859,9 +881,11 @@ local function dressTalents()
 		guarded(Spellbook.DressTrees, self)
 		-- The window's stone rings fight the cards, so talents go without.
 		if frame.stoaStone then frame.stoaStone:SetAlpha(0) end
+		guarded(Spellbook.FitWindow, self, true)
 	end)
-	talents:HookScript("OnHide", function()
+	talents:HookScript("OnHide", function(self)
 		if frame.stoaStone then frame.stoaStone:SetAlpha(1) end
+		guarded(Spellbook.FitWindow, self, false)
 	end)
 	if talents.RefreshTreeHeaders then
 		hooksecurefunc(talents, "RefreshTreeHeaders", function(self) guarded(Spellbook.DressTreeHeaders, self) end)
