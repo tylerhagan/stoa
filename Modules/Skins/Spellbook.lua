@@ -546,7 +546,7 @@ local function treeParts(talents, i)
 	talents.stoaTrees = talents.stoaTrees or {}
 	local parts = talents.stoaTrees[i]
 	if parts then return parts end
-	parts = { rails = {}, labels = {} }
+	parts = { rails = {}, labels = {}, lines = {} }
 	parts.fill = UI.sliced(talents, "BACKGROUND", "CardFill.tga")
 	if parts.fill then
 		parts.fill:SetDrawLayer("BACKGROUND", 1)
@@ -575,6 +575,7 @@ local function hideTree(parts)
 	end
 	for _, tex in ipairs(parts.rails) do tex:Hide() end
 	for _, label in ipairs(parts.labels) do label:Hide() end
+	for _, line in ipairs(parts.lines) do line:Hide() end
 end
 
 function Spellbook.DressTrees(talents)
@@ -609,6 +610,16 @@ function Spellbook.DressTrees(talents)
 			if not tree.maxX or x > tree.maxX then tree.maxX = x end
 		end
 	end
+	-- One width for every card: the closest two trees less a gap, and no
+	-- wider than keeps the outer cards inside the window.
+	local mids = {}
+	for _, tree in ipairs(trees) do
+		if tree.minX then mids[#mids + 1] = (tree.minX + tree.maxX) / 2 end
+	end
+	local cardWidth = 460
+	for k = 2, #mids do cardWidth = math.min(cardWidth, mids[k] - mids[k - 1] - 18) end
+	if mids[1] then cardWidth = math.min(cardWidth, 2 * (mids[1] - left - 14)) end
+	if right and mids[#mids] then cardWidth = math.min(cardWidth, 2 * (right - 14 - mids[#mids])) end
 	for i, header in ipairs(headers) do
 		local parts = treeParts(talents, i)
 		local tree = trees[i]
@@ -616,21 +627,23 @@ function Spellbook.DressTrees(talents)
 		if not (cx and cy and tree.bottom) then
 			hideTree(parts)
 		else
-			-- The card wraps the tree's own columns (Blizzard's header sits
-			-- left of them), with room on the left for the row numbers, and
-			-- the name and points move to its middle.
-			local half = tree.size / 2
-			local x0 = tree.minX - left - half - 50
-			local width = (tree.maxX - left + half + 22) - x0
+			-- The card is centred on the tree's own columns (Blizzard's
+			-- header sits left of them) and as wide as the trees' spacing
+			-- allows, every card the same width, all inside the window. The
+			-- name sits at its top left and the points at its top right.
+			local width = cardWidth
+			local x0 = (tree.minX + tree.maxX) / 2 - left - width / 2
 			cx = left + x0 + width / 2
 			local name, text = header.Name, header.Text
 			if name and text then
 				name:ClearAllPoints()
-				name:SetPoint("RIGHT", talents, "TOPLEFT", x0 + width / 2 - 6, cy - top)
+				name:SetPoint("LEFT", talents, "TOPLEFT", x0 + 18, cy - top)
+				name:SetJustifyH("LEFT")
 				text:ClearAllPoints()
-				text:SetPoint("LEFT", talents, "TOPLEFT", x0 + width / 2 + 6, cy - top)
+				text:SetPoint("RIGHT", talents, "TOPLEFT", x0 + width - 18, cy - top)
+				text:SetJustifyH("RIGHT")
 			end
-			local cardTop = cy - top + 26
+			local cardTop = cy - top + 22
 			local cardBottom = tree.bottom - top - tree.size / 2 - 18
 			if bottom then cardBottom = math.max(cardBottom, bottom - top + 50) end
 			for _, key in ipairs({ "fill", "edge" }) do
@@ -658,8 +671,8 @@ function Spellbook.DressTrees(talents)
 				end
 				local open = (r - 1) <= reached
 				band:ClearAllPoints()
-				band:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 6, y - top + step / 2)
-				band:SetSize(width - 12, math.max(1, step - 2))
+				band:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 1, y - top + step / 2)
+				band:SetSize(width - 2, step)
 				if open then
 					local ar, ag, ab = Stoa:Color("accent")
 					band:SetVertexColor(ar, ag, ab, 0.035)
@@ -667,6 +680,20 @@ function Spellbook.DressTrees(talents)
 					band:SetVertexColor(0, 0, 0, 0.18)
 				end
 				band:Show()
+				-- A hairline along each row's top, brighter once reached.
+				local line = parts.lines[r]
+				if not line then
+					line = talents:CreateTexture(nil, "BACKGROUND", nil, 3)
+					line:SetTexture(UI.WHITE)
+					parts.lines[r] = line
+				end
+				line:ClearAllPoints()
+				line:SetPoint("TOPLEFT", band, "TOPLEFT")
+				line:SetPoint("TOPRIGHT", band, "TOPRIGHT")
+				line:SetHeight(1)
+				local tr, tg, tb = Stoa:Color("text")
+				line:SetVertexColor(tr, tg, tb, open and 0.10 or 0.05)
+				line:Show()
 				local label = parts.labels[r]
 				if not label then
 					label = UI.text(talents, "sans", Stoa.typeSize.caption, "muted", "LEFT")
@@ -675,7 +702,7 @@ function Spellbook.DressTrees(talents)
 					parts.labels[r] = label
 				end
 				label:ClearAllPoints()
-				label:SetPoint("LEFT", talents, "TOPLEFT", x0 + 14, y - top)
+				label:SetPoint("LEFT", talents, "TOPLEFT", x0 + 18, y - top)
 				label:SetText((r - 1) * TIER_POINTS)
 				if open then label:SetTextColor(Stoa:Color("accent")) else label:SetTextColor(Stoa:Color("muted")) end
 				label:SetAlpha(open and 0.75 or 0.6)
@@ -684,12 +711,13 @@ function Spellbook.DressTrees(talents)
 			for r = #ys + 1, #parts.rails do
 				parts.rails[r]:Hide()
 				if parts.labels[r] then parts.labels[r]:Hide() end
+				if parts.lines[r] then parts.lines[r]:Hide() end
 			end
 			-- Toward the next row: a thin bar under the name.
-			local barWidth = width - 120
-			local barY = cy - top - 18
+			local barWidth = width - 36
+			local barY = cy - top - 16
 			parts.track:ClearAllPoints()
-			parts.track:SetPoint("TOPLEFT", talents, "TOPLEFT", cx - left - barWidth / 2, barY)
+			parts.track:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 18, barY)
 			parts.track:SetSize(barWidth, 3)
 			parts.track:Show()
 			local last = (#ys - 1) <= reached
@@ -699,7 +727,7 @@ function Spellbook.DressTrees(talents)
 			parts.bar:SetSize(math.max(0.01, barWidth * share), 3)
 			parts.bar:SetShown(share > 0)
 			parts.next:ClearAllPoints()
-			parts.next:SetPoint("TOP", talents, "TOPLEFT", cx - left, barY - 7)
+			parts.next:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 18, barY - 8)
 			if last then
 				parts.next:SetText("Every row open")
 			else
@@ -796,6 +824,11 @@ local function dressTalents()
 		guarded(Spellbook.PaintTalentTabs, self)
 		guarded(Spellbook.PaintWaiting, self)
 		guarded(Spellbook.DressTrees, self)
+		-- The window's stone rings fight the cards, so talents go without.
+		if frame.stoaStone then frame.stoaStone:SetAlpha(0) end
+	end)
+	talents:HookScript("OnHide", function()
+		if frame.stoaStone then frame.stoaStone:SetAlpha(1) end
 	end)
 	if talents.RefreshTreeHeaders then
 		hooksecurefunc(talents, "RefreshTreeHeaders", function(self) guarded(Spellbook.DressTreeHeaders, self) end)
