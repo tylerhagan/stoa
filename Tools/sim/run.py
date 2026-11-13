@@ -728,6 +728,27 @@ do
 		if not item.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: item not dressed" end
 		spellbook:ToggleTraining()
 		spellbook:ToggleTraining()
+		-- The list view: every spell on one page, a heading and two Smites
+		-- folded to the best rank.
+		spellbook:ShowView("list")
+		local realTypes = rawget(Enum, "SpellBookItemType")
+		rawset(Enum, "SpellBookItemType", { Spell = 1, FutureSpell = 2 })
+		local rows = spellbook:ListRows("")
+		if not (rows[1] and rows[1].heading and rows[2] and rows[2].name == "Smite" and rows[2].rank == "Rank 2" and #rows == 2) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: rows not grouped to the best rank"
+		end
+		if #spellbook:ListRows("zzz") ~= 0 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: search didn't narrow" end
+		if spellbook.list then
+			spellbook.list.IsShown = function() return true end
+			spellbook.list.GetHeight = function() return 400 end
+		end
+		spellbook:FillList()
+		if not (spellbook.list and spellbook.list.compact ~= nil and spellbook.list.rows[2].entry) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: rows not filled"
+		end
+		rawset(Enum, "SpellBookItemType", realTypes)
+		spellbook:ShowView("pages")
+		spellbook:ShowView("list")
 	end
 end
 -- The target plaque: a medallion with a level badge, docked while it rests
