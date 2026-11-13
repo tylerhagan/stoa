@@ -6,6 +6,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Window headers lose their faint brown tint: the dark plate across the top is the same neutral as the rest of STOA.
+- Talents: Primary and Secondary, the search and your unspent points share one row just above the cards, lined up with their edges, and the window's stone rings really stay off the talents page now.
 - Talents, closer to the mock-up: the cards are all one width and fill the window, the tree's name sits top left with its points top right, the bar toward the next row runs the card's width with its line beneath, every row has a hairline along its top, and the window's stone rings stay off the talents page.
 - Talents: each card now wraps its own tree (they sat off to the left, the first one past the window's edge), the tree's name and points sit in the card's middle, and a card no longer trails lines down the screen.
 - Character sheet from the console and At a glance: clicking Gear or a stat opens the sheet again (the secure cover took only the mouse release, and the game acts on the press).

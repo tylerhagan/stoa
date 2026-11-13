@@ -772,6 +772,7 @@ do
 		elseif trees[3].next:GetText() ~= "1 more to open row 5" or trees[2].next:GetText() ~= "5 more to open row 2" then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: next row line wrong: " .. tostring(trees[3].next:GetText())
 		end
+		if not talents.stoaRow then SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: header row not placed" end
 		spellbook.PaintWaiting(talents)
 		if not talents.stoaWaiting then SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: no changes waiting line" end
 		spellbook.PaintTalentTabs(talents)

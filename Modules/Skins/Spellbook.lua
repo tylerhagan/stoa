@@ -579,6 +579,10 @@ local function hideTree(parts)
 end
 
 function Spellbook.DressTrees(talents)
+	-- The window's stone rings fight the cards; the window is dressed after
+	-- the talents first show, so this runs again here.
+	local host = talents.GetParent and talents:GetParent()
+	if host and host.stoaStone and talents:IsVisible() then host.stoaStone:SetAlpha(0) end
 	local headers = talents.treeHeaders
 	for _, rule in ipairs(talents.stoaRules or {}) do rule:Hide() end
 	if not (headers and #headers > 0 and talents.EnumerateAllTalentButtons) then return end
@@ -620,6 +624,7 @@ function Spellbook.DressTrees(talents)
 	for k = 2, #mids do cardWidth = math.min(cardWidth, mids[k] - mids[k - 1] - 18) end
 	if mids[1] then cardWidth = math.min(cardWidth, 2 * (mids[1] - left - 14)) end
 	if right and mids[#mids] then cardWidth = math.min(cardWidth, 2 * (right - 14 - mids[#mids])) end
+	local firstX0, lastRight, rowTop
 	for i, header in ipairs(headers) do
 		local parts = treeParts(talents, i)
 		local tree = trees[i]
@@ -644,6 +649,8 @@ function Spellbook.DressTrees(talents)
 				text:SetJustifyH("RIGHT")
 			end
 			local cardTop = cy - top + 22
+			if not firstX0 then firstX0 = x0 end
+			lastRight, rowTop = x0 + width, cardTop
 			local cardBottom = tree.bottom - top - tree.size / 2 - 18
 			if bottom then cardBottom = math.max(cardBottom, bottom - top + 50) end
 			for _, key in ipairs({ "fill", "edge" }) do
@@ -738,6 +745,32 @@ function Spellbook.DressTrees(talents)
 		end
 	end
 	for i = #headers + 1, #(talents.stoaTrees or {}) do hideTree(talents.stoaTrees[i]) end
+	if firstX0 then
+		talents.stoaRow = { left = firstX0, right = lastRight, y = rowTop + 24 }
+		Spellbook.PlaceHeaderRow(talents)
+	end
+end
+
+-- The window's top as one row just over the cards: Primary and Secondary
+-- at the left, the search in the middle, points left to spend at the
+-- right, each lined up with the cards' edges. Only moved, never resized;
+-- none of them is a protected frame.
+function Spellbook.PlaceHeaderRow(talents)
+	local row = talents.stoaRow
+	if not row then return end
+	local tabs, search, points = talents.TabSystem, talents.SearchBox, talents.ClassCurrencyDisplay
+	if tabs then
+		tabs:ClearAllPoints()
+		tabs:SetPoint("LEFT", talents, "TOPLEFT", row.left - 14, row.y)
+	end
+	if search then
+		search:ClearAllPoints()
+		search:SetPoint("CENTER", talents, "TOPLEFT", (row.left + row.right) / 2, row.y)
+	end
+	if points then
+		points:ClearAllPoints()
+		points:SetPoint("RIGHT", talents, "TOPLEFT", row.right, row.y)
+	end
 end
 
 -- Points left: the label quiet, the number in the display face and accent.
@@ -838,6 +871,10 @@ local function dressTalents()
 	end
 	if talents.UpdateTabs then
 		hooksecurefunc(talents, "UpdateTabs", function(self) guarded(Spellbook.PaintTalentTabs, self) end)
+	end
+	-- Blizzard puts the search back at its corner on each layout.
+	if talents.SetSearchBoxDefaultPosition then
+		hooksecurefunc(talents, "SetSearchBoxDefaultPosition", function(self) guarded(Spellbook.PlaceHeaderRow, self) end)
 	end
 	if talents.SetTab then
 		hooksecurefunc(talents, "SetTab", function(self) hideTalentArt(self) end)
