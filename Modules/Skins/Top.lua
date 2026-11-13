@@ -488,8 +488,10 @@ function Top:FocusTracker()
 	if not tracker or (tracker.IsForbidden and tracker:IsForbidden()) then return end
 	local header = tracker.Header
 	local over = tracker:IsMouseOver() and (self.trackerPeek or (header and header:IsMouseOver()))
-	self.trackerPeek = (Top.inFight and over) or nil
-	local folded = (self.db.trackerFocus and Top.inFight and not over) or false
+	-- The dungeon companion's card takes the list's place while it shows.
+	local hold = (self.db.trackerFocus and Top.inFight) or self.companionHolds
+	self.trackerPeek = ((Top.inFight or self.companionHolds) and over) or nil
+	local folded = (hold and not over) or false
 	for _, module in ipairs(tracker.modules or {}) do
 		if foldable(module) then
 			watchHide(module)
@@ -536,10 +538,11 @@ function Top:OnEnable()
 	-- Hovering the header in a fight opens the list; leaving folds it again.
 	Stoa:On("STOA_TICK", function()
 		local tracker = _G.ObjectiveTrackerFrame
-		if not (tracker and Top.db.trackerFocus) then return end
+		if not (tracker and (Top.db.trackerFocus or Top.companionHolds)) then return end
 		local header = tracker.Header
 		local over = tracker:IsMouseOver() and (Top.trackerPeek or (header and header:IsMouseOver()))
-		local want = (Top.inFight and not over) or false
+		local hold = (Top.db.trackerFocus and Top.inFight) or Top.companionHolds
+		local want = (hold and not over) or false
 		if want ~= (Top.trackerFocused or false) then guarded(Top.FocusTracker, Top) end
 	end)
 	Stoa:On("STOA_THEME_CHANGED", function()
