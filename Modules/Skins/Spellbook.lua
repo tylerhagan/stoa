@@ -12,7 +12,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Spellbook = Stoa:NewModule("Spellbook", { layout = true, view = "list" })
+local Spellbook = Stoa:NewModule("Spellbook", { layout = true, view = "list", talents = true })
 
 local hide = Stoa.frames.hide
 local guarded = Stoa.safe.guarded
@@ -452,13 +452,211 @@ local function dressBook()
 	end)
 end
 
-function Spellbook:OnEnable()
-	if not on() then return end
-	-- The book loads with its own addon the first time it opens.
-	guarded(dressBook)
-	Stoa:On("ADDON_LOADED", function(name)
-		if name == "Blizzard_PlayerSpells" then guarded(dressBook) end
+-- Talents ---------------------------------------------------------------
+-- Forever's talent window is Blizzard's node tree: three classic trees side
+-- by side, Primary and Secondary tabs, loadouts, search and Apply. STOA keeps
+-- every node (learning, refunds, tooltips stay Blizzard's) and redraws around
+-- them: no painted spec art or rings, each tree's name and points spent as
+-- words, quiet rules between the trees, the tabs as words, and a line by
+-- Apply while changes are waiting. Points placed are only a preview until
+-- Apply, so a build can be tried and undone freely.
+
+local function talentsOn()
+	return Spellbook.db and Spellbook.db.talents ~= false
+end
+
+-- The window's painted art; BackgroundBorder stays as the anchor Blizzard
+-- places the trees from, just unseen.
+local TALENT_ART = {
+	"Background", "ClassBackground", "OverlayBackgroundRight", "OverlayBackgroundMid",
+	"Clouds1", "Clouds2", "AirParticlesClose", "AirParticlesFar", "BottomBar",
+	"BackgroundBorder", "DividerHorizontalLeft", "DividerHorizontalRight",
+	"DividerVerticalLeft", "DividerVerticalRight",
+}
+local HEADER_ART = { "MainRing", "TextBackground", "Divider", "Icon" }
+-- Blizzard spaces its tree headers this far apart (Camelot talents).
+local TREE_SPACING = 400
+
+local function hideTalentArt(talents)
+	for _, key in ipairs(TALENT_ART) do
+		local region = talents[key]
+		if region and region.Hide then
+			region:SetAlpha(0)
+			region:Hide()
+		end
+	end
+end
+
+-- One tree's header: "SHADOW  19", the tree with the most points in the
+-- accent, the rest quiet; empty trees dim further.
+function Spellbook.DressTreeHeaders(talents)
+	local headers = talents.treeHeaders
+	if not headers then return end
+	local most, top = 0, nil
+	for i, header in ipairs(headers) do
+		local spent = tonumber(header.Text and header.Text:GetText()) or 0
+		if spent > most then most, top = spent, i end
+	end
+	for i, header in ipairs(headers) do
+		for _, key in ipairs(HEADER_ART) do hide(header[key]) end
+		local name, text = header.Name, header.Text
+		if name and text then
+			if not header.stoaDressed then
+				header.stoaDressed = true
+				Stoa:SetFont(name, "sans", Stoa.typeSize.caption)
+				Stoa:SetFont(text, "serif", Stoa.typeSize.title)
+				name:SetShadowOffset(0, 0)
+				text:SetShadowOffset(0, 0)
+				name:ClearAllPoints()
+				name:SetPoint("RIGHT", header, "CENTER", -6, 0)
+				name:SetJustifyH("RIGHT")
+				text:ClearAllPoints()
+				text:SetPoint("LEFT", header, "CENTER", 6, 0)
+				text:SetJustifyH("LEFT")
+			end
+			name:SetText((name:GetText() or ""):upper())
+			local spent = tonumber(text:GetText()) or 0
+			local token = i == top and "accent" or spent > 0 and "text" or "muted"
+			name:SetTextColor(Stoa:Color(token))
+			text:SetTextColor(Stoa:Color(token))
+		end
+	end
+	-- Quiet rules halfway between neighbouring trees, down to the foot.
+	talents.stoaRules = talents.stoaRules or {}
+	local border = talents.BackgroundBorder
+	local height = border and border.GetHeight and border:GetHeight() or 0
+	for i = 1, #headers - 1 do
+		local rule = talents.stoaRules[i]
+		if not rule then
+			rule = talents:CreateTexture(nil, "BACKGROUND", nil, 1)
+			UI.pixel(rule, "width")
+			UI.paint(rule, "hairline")
+			talents.stoaRules[i] = rule
+		end
+		rule:ClearAllPoints()
+		rule:SetPoint("TOP", headers[i], "CENTER", TREE_SPACING / 2, 10)
+		rule:SetHeight(height > 80 and height - 60 or 560)
+		rule:Show()
+	end
+	for i = #headers, #talents.stoaRules do talents.stoaRules[i]:Hide() end
+end
+
+-- Points left: the label quiet, the number in the display face and accent.
+local function dressCurrency(talents)
+	local display = talents.ClassCurrencyDisplay
+	if not display or display.stoaDressed then return end
+	display.stoaDressed = true
+	hide(display.Border)
+	if display.UnspentLabel then
+		Stoa:SetFont(display.UnspentLabel, "sans", Stoa.typeSize.body)
+		display.UnspentLabel:SetShadowOffset(0, 0)
+		display.UnspentLabel:SetTextColor(Stoa:Color("muted"))
+	end
+	local amount = display.CurrentAmountContainer and display.CurrentAmountContainer.CurrencyAmount
+	if amount then
+		Stoa:SetFont(amount, "serif", Stoa.typeSize.display)
+		amount:SetShadowOffset(0, 0)
+		amount:SetTextColor(Stoa:Color("accent"))
+	end
+end
+
+-- Primary and Secondary as words: the chosen one in the accent with a fine
+-- rule under it. Blizzard's own tab art goes.
+function Spellbook.PaintTalentTabs(talents)
+	local system = talents.TabSystem
+	if not (system and system.GetChildren) then return end
+	for _, tab in ipairs({ system:GetChildren() }) do
+		if not tab.stoaDressed then
+			tab.stoaDressed = true
+			Stoa.frames.strip(tab)
+			local label = tab.Text or (tab.GetFontString and tab:GetFontString())
+			if label then
+				Stoa:SetFont(label, "sans", Stoa.typeSize.label)
+				label:SetShadowOffset(0, 0)
+			end
+			tab.stoaLabel = label
+			local under = tab:CreateTexture(nil, "OVERLAY")
+			UI.pixel(under, "height", 2)
+			UI.paint(under, "accent")
+			under:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", 16, 4)
+			under:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", -16, 4)
+			tab.stoaUnder = under
+			if tab.SetTabSelected then
+				hooksecurefunc(tab, "SetTabSelected", function() guarded(Spellbook.PaintTalentTabs, talents) end)
+			end
+		end
+		Stoa.frames.strip(tab)
+		local chosen = tab.isSelected
+		if chosen == nil and talents.GetTab and tab.tabID then chosen = talents:GetTab() == tab.tabID end
+		if tab.stoaLabel then tab.stoaLabel:SetTextColor(Stoa:Color(chosen and "accent" or "muted")) end
+		tab.stoaUnder:SetShown(chosen and true or false)
+	end
+end
+
+-- "Changes wait for Apply" beside the Apply button while points placed are
+-- still only a preview.
+function Spellbook.PaintWaiting(talents)
+	local apply = talents.ApplyButton
+	if not apply then return end
+	local line = talents.stoaWaiting
+	if not line then
+		line = UI.text(talents, "sans", Stoa.typeSize.body, "accent", "LEFT")
+		line:SetPoint("LEFT", apply, "RIGHT", 16, 0)
+		line:SetText("Changes wait for Apply")
+		talents.stoaWaiting = line
+	end
+	local waiting = false
+	if talents.HasAnyConfigChanges and not (talents.IsInspecting and talents:IsInspecting()) then
+		waiting = talents:HasAnyConfigChanges() and true or false
+	end
+	line:SetShown(waiting)
+end
+
+local function dressTalents()
+	local frame = PlayerSpellsFrame
+	local talents = frame and frame.TalentsFrame
+	if not talents or talents.stoaTalents then return end
+	talents.stoaTalents = true
+	hideTalentArt(talents)
+	-- Blizzard paints the spec art again on spec changes and each show.
+	talents:HookScript("OnShow", function(self)
+		hideTalentArt(self)
+		guarded(Spellbook.PaintTalentTabs, self)
+		guarded(Spellbook.PaintWaiting, self)
 	end)
+	if talents.RefreshTreeHeaders then
+		hooksecurefunc(talents, "RefreshTreeHeaders", function(self) guarded(Spellbook.DressTreeHeaders, self) end)
+	end
+	if talents.UpdateConfigButtonsState then
+		hooksecurefunc(talents, "UpdateConfigButtonsState", function(self) guarded(Spellbook.PaintWaiting, self) end)
+	end
+	if talents.UpdateTabs then
+		hooksecurefunc(talents, "UpdateTabs", function(self) guarded(Spellbook.PaintTalentTabs, self) end)
+	end
+	if talents.SetTab then
+		hooksecurefunc(talents, "SetTab", function(self) hideTalentArt(self) end)
+	end
+	dressCurrency(talents)
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressButtonsIn then windows.DressButtonsIn(talents, 2) end
+	Spellbook.DressTreeHeaders(talents)
+	Spellbook.PaintTalentTabs(talents)
+	Spellbook.PaintWaiting(talents)
+end
+
+local function dressPlayerSpells()
+	if on() then guarded(dressBook) end
+	if talentsOn() then guarded(dressTalents) end
+end
+
+function Spellbook:OnEnable()
+	-- The book and the talents load with their own addon the first time
+	-- either opens.
+	dressPlayerSpells()
+	Stoa:On("ADDON_LOADED", function(name)
+		if name == "Blizzard_PlayerSpells" then dressPlayerSpells() end
+	end)
+	if not on() then return end
 	Stoa:On("STOA_SPELLS_CHANGED", function()
 		guarded(Spellbook.PaintTrainerWord, Spellbook)
 		guarded(Spellbook.FillList, Spellbook)
