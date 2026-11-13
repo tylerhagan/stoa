@@ -326,8 +326,16 @@ end
 
 -- Lifts the panel's fill and edge with the header.
 local function liftPanel(frame, raise)
-	for _, tex in ipairs({ frame.stoaPanelBg, frame.stoaPanelEdge and frame.stoaPanelEdge.edges and frame.stoaPanelEdge.edges[1] }) do
-		if tex and tex.SetTextureSliceMargins then tex:SetPoint("TOPLEFT", 0, raise) end
+	-- The map's fill lives on the map frame under its border frame (the
+	-- canvas sits between them); it rises with the border's header too, or
+	-- the raised strip shows the world through it.
+	local map = _G.WorldMapFrame
+	local mapFill = map and frame == map.BorderFrame and map.stoaMapFill
+	for _, tex in ipairs({ frame.stoaPanelBg, frame.stoaPanelEdge and frame.stoaPanelEdge.edges and frame.stoaPanelEdge.edges[1], mapFill }) do
+		if tex and tex.SetTextureSliceMargins then
+			-- (The map's fill is drawn 2px outside its frame.)
+			if tex == mapFill then tex:SetPoint("TOPLEFT", -2, 2 + raise) else tex:SetPoint("TOPLEFT", 0, raise) end
+		end
 	end
 end
 
