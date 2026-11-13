@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
+- Character window: opening it no longer raises an error about the player frame's health text ("secret number"). The stats keep Blizzard's own order for now; putting your role's stats first tainted Blizzard's code.
 - Map: the top of its header is solid like the rest; the raised strip let the world show through.
 - The quest list stays folded through a fight: a kill or loot counted toward a quest no longer opens it again.
 - Bags: the Grid / Sections word in the combined bag's header works; the bag's title strip (and Blizzard's invisible bag-menu button on it) sat above the header words and caught their clicks. Sort, Junk and Grid / Sections each name what they do on hover.
