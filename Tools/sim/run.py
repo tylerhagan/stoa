@@ -737,15 +737,38 @@ do
 			header.Name:SetText("Tree " .. i)
 			header.Text:SetText(spent)
 			header.MainRing = header:CreateTexture()
+			header.GetCenter = function() return 140 + (i - 1) * 400, 900 end
 			talents.treeHeaders[i] = header
+		end
+		-- Talent buttons in rows 60 apart under each header.
+		talents.GetLeft = function() return 0 end
+		talents.GetTop = function() return 1000 end
+		local buttons = {}
+		for tree = 1, 3 do
+			for row = 1, 7 do
+				local button = CreateFrame("Button", nil, talents)
+				button.GetCenter = function() return 100 + (tree - 1) * 400, 840 - (row - 1) * 60 end
+				button.GetHeight = function() return 40 end
+				buttons[#buttons + 1] = button
+			end
+		end
+		talents.EnumerateAllTalentButtons = function()
+			local i = 0
+			return function() i = i + 1; return buttons[i] end
 		end
 		talents.RefreshTreeHeaders = function() end
 		talents.HasAnyConfigChanges = function() return true end
 		SIM_FIRE("ADDON_LOADED", "Blizzard_PlayerSpells")
 		if not talents.stoaTalents then SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: window not dressed" end
 		spellbook.DressTreeHeaders(talents)
-		if talents.treeHeaders[1].Name:GetText() ~= "TREE 1" or not (talents.stoaRules and talents.stoaRules[2]) then
+		if talents.treeHeaders[1].Name:GetText() ~= "TREE 1" then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: tree headers not dressed"
+		end
+		local trees = talents.stoaTrees
+		if not (trees and trees[3] and #trees[3].rails == 7) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: no tree cards or rails"
+		elseif trees[3].next:GetText() ~= "1 more to open row 5" or trees[2].next:GetText() ~= "5 more to open row 2" then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: next row line wrong: " .. tostring(trees[3].next:GetText())
 		end
 		spellbook.PaintWaiting(talents)
 		if not talents.stoaWaiting then SIM_ERRORS[#SIM_ERRORS + 1] = "Talents: no changes waiting line" end
