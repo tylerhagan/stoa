@@ -114,8 +114,11 @@ function Map:MapLabel()
 	Stoa:SetFont(label, "sans", Stoa.typeSize.caption)
 	label:SetTextColor(Stoa:Color("muted"))
 	if title and title.GetObjectType then
-		-- Beside the title on the window's metal header.
-		label:SetPoint("BOTTOMLEFT", title, "BOTTOMRIGHT", 12, 2)
+		-- Beside the title's words on the window's header (the title's own
+		-- box runs the width of the header, so it follows the words; see
+		-- Map:ShowMapLevels).
+		label.stoaTitle = title
+		label:SetPoint("LEFT", title, "LEFT", 0, 0)
 	else
 		label:SetPoint("TOP", map, "TOP", 0, -28)
 	end
@@ -136,6 +139,17 @@ function Map:ShowMapLevels()
 	end
 	label:SetText(text or "")
 	label:SetShown(text ~= nil)
+	local title = label.stoaTitle
+	if title and title.GetStringWidth then
+		local justify = title.GetJustifyH and title:GetJustifyH() or "LEFT"
+		local width = math.ceil(title:GetStringWidth() or 0)
+		label:ClearAllPoints()
+		if justify == "CENTER" then
+			label:SetPoint("LEFT", title, "CENTER", width / 2 + 12, 0)
+		else
+			label:SetPoint("LEFT", title, "LEFT", width + 12, 0)
+		end
+	end
 end
 
 function Map:SetupLevels()
