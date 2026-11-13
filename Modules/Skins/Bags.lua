@@ -234,10 +234,14 @@ function Bags:SetJunkMode(on)
 	end
 end
 
--- Blizzard lays an invisible button over the whole title strip that opens
--- the bag menu; the header words sit above it so their clicks reach them.
+-- The bag's title strip (TitleContainer, at frame level 510 on Forever, and
+-- Blizzard's invisible bag-menu button over it) takes the mouse; the header
+-- words sit above both so their clicks reach them.
 local function aboveTitle(frame, button)
-	button:SetFrameLevel((frame:GetFrameLevel() or 1) + 10)
+	local level = (frame:GetFrameLevel() or 1) + 10
+	local strip = frame.TitleContainer
+	if strip and strip.GetFrameLevel then level = math.max(level, (strip:GetFrameLevel() or 0) + 5) end
+	button:SetFrameLevel(level)
 end
 
 local function addJunk(frame, parts)
@@ -815,6 +819,12 @@ local function addViewWord(frame, parts)
 	end
 	parts.view = word
 	aboveTitle(frame, word)
+	-- The game can re-level the title strip when the bag opens.
+	frame:HookScript("OnShow", function()
+		for _, key in ipairs({ "sort", "junk", "view" }) do
+			if parts[key] then aboveTitle(frame, parts[key]) end
+		end
+	end)
 end
 Bags.AddViewWord = addViewWord
 
