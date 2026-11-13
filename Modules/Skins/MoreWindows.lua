@@ -47,7 +47,7 @@ local TARGETS = {
 	{ name = "DressUpFrame", panels = { "CustomSetDetailsPanel" } },
 	{ name = "ItemTextFrame" },
 	{ name = "MacroFrame", after = "macro" },
-	{ name = "CollectionsJournal", deep = 3 },
+	{ name = "CollectionsJournal", deep = 3, after = "collections" },
 	{ name = "EncounterJournal" },
 	{ name = "StableFrame" },
 	{ name = "TabardFrame" },
@@ -162,7 +162,7 @@ end
 -- Stoa well instead. Buttons, bars and edit boxes (and their icons) are
 -- never touched, nor are lists and models.
 local KEEP = { Button = true, CheckButton = true, StatusBar = true, EditBox = true, Cooldown = true, ModelScene = true, PlayerModel = true, DressUpModel = true }
-local BACKDROPS = { "Background", "PetBackground", "MountBackground", "BG" }
+local BACKDROPS = { "Background", "PetBackground", "MountBackground", "BG", "YesMountsTex", "NoMountsTex" }
 
 local function clearInside(frame, depth)
 	if not (frame and frame.GetChildren) or depth <= 0 then return end
@@ -174,6 +174,12 @@ local function clearInside(frame, depth)
 				if child.Bg and child.Bg.SetAlpha then child.Bg:SetAlpha(0) end
 			end
 			hide(child.ShadowOverlay)
+			-- A collections page backdrop (toys, heirlooms, appearances): a
+			-- tiled ground with gilded corners and a watermark, all of it art.
+			if child.BackgroundTile then
+				Stoa.frames.strip(child)
+				if not child.stoaWell then UI.well(child, 0) end
+			end
 			for _, key in ipairs(BACKDROPS) do
 				local tex = child[key]
 				if type(tex) == "table" and tex.IsObjectType and tex:IsObjectType("Texture") then
@@ -268,6 +274,36 @@ function AFTER.macro(frame)
 	-- with the accent underline, not tiles.
 	for _, tab in ipairs(frame.stoaTabs or {}) do
 		for _, part in ipairs(tab.stoaTabParts or {}) do part:Hide() end
+	end
+end
+
+-- Collections: each page's count pill ("Total Mounts 2") moves from the top
+-- of the page to the bottom right of the window, in the footer, the same
+-- place on every page.
+local COUNT_PILLS = {
+	{ "MountJournal", "MountCount" }, { "PetJournal", "PetCount" },
+	{ "ToyBox", "progressBar" }, { "HeirloomsJournal", "progressBar" },
+	{ "WardrobeCollectionFrame", "progressBar" },
+}
+local COUNT_INSET = { x = -14, y = 16 }
+local function footPill(frame, page, key)
+	local pill = page[key]
+	if type(pill) ~= "table" or not pill.SetPoint or forbidden(pill) or InCombatLockdown() then return end
+	pill:ClearAllPoints()
+	pill:SetPoint("RIGHT", frame, "BOTTOMRIGHT", COUNT_INSET.x, COUNT_INSET.y)
+end
+
+function AFTER.collections(frame)
+	for _, spot in ipairs(COUNT_PILLS) do
+		local page = _G[spot[1]]
+		if type(page) == "table" and page.HookScript and not forbidden(page) then
+			footPill(frame, page, spot[2])
+			-- Pages lay themselves out again when their tab opens.
+			if not page.stoaPillHooked then
+				page.stoaPillHooked = true
+				page:HookScript("OnShow", function() footPill(frame, page, spot[2]) end)
+			end
+		end
 	end
 end
 
