@@ -570,6 +570,17 @@ local function build()
 	toggle(away, "spin", "Turn the camera", "The camera circles your character slowly while you're away.", true, { words = "afk rotate" })
 	toggle(away, "inInstances", "In dungeons and raids too", "Off, the away screen waits for the open world.", false, { words = "afk instance" })
 	button("awayNow", "See it now", "Shows the away screen without going away. Back or /stoa away closes it.", "Show", command("away"), { cmd = "/stoa away", words = "afk preview" })
+	group = "Your session"
+	local session = of("Session")
+	toggle(session, "onLogout", "Recap when you log out", "While the game counts down to logging out, a card shows what this session brought: time played, levels, experience an hour, gold, quests, deaths and your best find. It never holds up the logout.", true, { words = "session summary recap logout stats" })
+	toggle(session, "onAway", "Recap on the away screen", "When no whispers have come, the away screen shows a short version of this session's numbers where they would be.", false, { words = "session summary recap afk" })
+	button("recapNow", "See this session", "Shows the recap card now.", "Show", command("recap"), { cmd = "/stoa recap", words = "session summary recap" })
+	group = "Dungeon companion"
+	local companion = of("Companion")
+	toggle(companion, "enabled", "Dungeon companion", "Inside a five-player dungeon, out of a fight: the bosses (ticked off as they fall), your quests for it and the loot in it that would be an upgrade for you. The quest list folds to its header while it shows; hover the header to open it.", true, { words = "dungeon instance boss loot quests" , change = function() Stoa.modules.Companion:Refresh() end })
+	choice(companion, "view", "How it shows", "A card where the quest list sits, or one slim line over the console with the bosses as dots and the upgrades on hover. The card's minus and a click on the line switch too.", "card", {
+		{ "card", "Card" }, { "line", "One line" },
+	}, { words = "dungeon companion compact", change = function() Stoa.modules.Companion:Refresh() end })
 	group = "People"
 	local social = of("Social")
 	toggle(social, "acceptFriendInvites", "Accept friend and guild invites", "A party invite from a friend, Battle.net friend or guildmate is taken as it comes, and noted in chat.", true, { words = "party group" })
