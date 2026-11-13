@@ -451,6 +451,8 @@ function Console:BuildSlim(frame)
 	local card = CreateFrame("Frame", "StoaConsoleCard", UIParent)
 	-- Above the quest tracker, which otherwise reads through the card.
 	card:SetFrameStrata("HIGH")
+	card.stoaRise = UI.intro(card, 0, 6, UI.MOTION.open)
+	card:HookScript("OnShow", function(own) own.stoaRise:Play() end)
 	card:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -inset + CARD_PAD, CARD_LIFT)
 	card:EnableMouse(true)
 	local fill = card:CreateTexture(nil, "BACKGROUND")

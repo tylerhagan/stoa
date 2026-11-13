@@ -858,6 +858,70 @@ do
 end
 -- The target plaque: a medallion with a level badge, docked while it rests
 -- on the full console, and a cast bar that shows for the target's cast.
+-- The talent planner: marks over the trees, the row rule, the order, sharing.
+do
+	local planner = Stoa.modules.Planner
+	if planner and planner.enabled then
+		local frame = CreateFrame("Frame", "PlayerSpellsFrame")
+		local talents = CreateFrame("Frame", nil, frame)
+		frame.TalentsFrame = talents
+		local header = CreateFrame("Frame")
+		header.GetCenter = function() return 100, 600 end
+		talents.treeHeaders = { header }
+		-- Two talents in row 1 (2 ranks each), one in row 2.
+		local spots = { [11] = { 80, 500 }, [12] = { 120, 500 }, [21] = { 100, 450 } }
+		local buttons = {}
+		for nodeID, at in pairs(spots) do
+			local button = CreateFrame("Button", nil, talents)
+			button.GetNodeID = function() return nodeID end
+			button.GetCenter = function() return at[1], at[2] end
+			buttons[#buttons + 1] = button
+		end
+		talents.EnumerateAllTalentButtons = function() local i = 0 return function() i = i + 1 return buttons[i] end end
+		talents.GetConfigID = function() return 7 end
+		local savedTraits = C_Traits
+		C_Traits = {
+			GetNodeInfo = function(_, nodeID) return { ID = nodeID, maxRanks = nodeID == 21 and 1 or 5, ranksPurchased = 0, entryIDs = { nodeID * 10 } } end,
+			GetEntryInfo = function(_, entryID) return { definitionID = entryID } end,
+			GetDefinitionInfo = function(def) return { spellID = def } end,
+		}
+		StoaDB.talentPlans = nil
+		planner.db.active = nil
+		planner.level = nil
+		talents:Show()
+		frame:Show()
+		planner:Refresh()
+		planner:SetPlanning(true)
+		local markFor = {}
+		for _, mark in pairs(planner.marks or {}) do markFor[mark.nodeID] = mark end
+		if not (markFor[11] and markFor[21]) then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: no marks over the talents" end
+		if markFor[21] then
+			planner:ClickMark(markFor[21], "LeftButton")
+			if #planner:Active().order ~= 0 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: a second-row talent was planned with no points in the tree" end
+		end
+		for _ = 1, 5 do planner:ClickMark(markFor[11], "LeftButton") end
+		planner:ClickMark(markFor[11], "LeftButton")
+		if #planner:Active().order ~= 5 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: a full talent took another point" end
+		planner:ClickMark(markFor[21], "LeftButton")
+		if #planner:Active().order ~= 6 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the second row didn't open after five points" end
+		planner:ClickMark(markFor[11], "RightButton")
+		if #planner:Active().order ~= 5 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: right-click didn't take a point off" end
+		local text = planner.Encode(planner:Active())
+		local back = planner.Decode(text)
+		if not (back and #back == 5 and back[5].n == 21) then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: a shared plan didn't read back" end
+		if planner.Decode("nonsense") then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: read a plan from nonsense" end
+		local index = planner:Next(talents, planner:Active())
+		if index ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the next point isn't the first pick" end
+		if not (planner.panel and planner.panel:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the panel didn't show beside the talents" end
+		planner:SetPlanning(false)
+		talents:Hide()
+		frame:Hide()
+		C_Traits = savedTraits
+		StoaDB.talentPlans = nil
+		_G.PlayerSpellsFrame = nil
+	end
+end
+
 do
 	local character = Stoa.modules.Character
 	if character and character.enabled and character.LayOut and CharacterFrame then

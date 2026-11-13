@@ -307,6 +307,9 @@ function Tray:Build()
 	tray:SetScript("OnLeave", function() self:Release() end)
 	tray:SetScript("OnHide", colour)
 	tray:Hide()
+	-- Slides out from the handle.
+	tray.stoaRise = UI.intro(tray, -8, 0, UI.MOTION.open)
+	tray:HookScript("OnShow", function(own) own.stoaRise:Play() end)
 	UI.roundPanel(tray, 0.96)
 	self.tray = tray
 	UI.applyTheme()

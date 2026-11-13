@@ -333,6 +333,83 @@ function UI.fade(frame, to, seconds)
 	end))
 end
 
+-- Motion ---------------------------------------------------------------------
+-- STOA's small eased moves, all made with the game's own animation groups
+-- (the client runs them; no addon code per frame). Kept to STOA's own
+-- frames: Blizzard windows and secure buttons are never animated.
+-- Kept swift: nothing waits on them, and a window takes clicks at once.
+UI.MOTION = { rise = 8, quick = 0.1, open = 0.16, grow = 0.14, stagger = 0.015 }
+
+-- Rises (or slides) in from dx, dy short of its place while fading in.
+-- `delay` holds it hidden first, for things that arrive one after another.
+function UI.intro(region, dx, dy, seconds, delay)
+	local group = region:CreateAnimationGroup()
+	local from = group:CreateAnimation("Translation")
+	from:SetOffset(-(dx or 0), -(dy or 0))
+	from:SetDuration(0)
+	from:SetOrder(1)
+	if delay and delay > 0 then
+		local hold = group:CreateAnimation("Alpha")
+		hold:SetFromAlpha(0)
+		hold:SetToAlpha(0)
+		hold:SetDuration(delay)
+		hold:SetOrder(1)
+	end
+	local move = group:CreateAnimation("Translation")
+	move:SetOffset(dx or 0, dy or 0)
+	move:SetDuration(seconds or UI.MOTION.open)
+	move:SetOrder(2)
+	move:SetSmoothing("OUT")
+	local fade = group:CreateAnimation("Alpha")
+	fade:SetFromAlpha(0)
+	fade:SetToAlpha(1)
+	fade:SetDuration(seconds or UI.MOTION.open)
+	fade:SetOrder(2)
+	fade:SetSmoothing("OUT")
+	return group
+end
+
+-- A window of STOA's own rises in each time it opens.
+function UI.riseOnShow(frame)
+	if not frame or frame.stoaRise then return end
+	frame.stoaRise = UI.intro(frame, 0, UI.MOTION.rise, UI.MOTION.open)
+	frame:HookScript("OnShow", function(self) self.stoaRise:Play() end)
+end
+
+function UI.fadeIn(region, seconds)
+	local group = region:CreateAnimationGroup()
+	local fade = group:CreateAnimation("Alpha")
+	fade:SetFromAlpha(0)
+	fade:SetToAlpha(1)
+	fade:SetDuration(seconds or UI.MOTION.quick)
+	fade:SetSmoothing("OUT")
+	return group
+end
+
+-- Shows a region with a quick fade (and hides it at once).
+function UI.softShow(region, on)
+	if on then
+		if region:IsShown() then return end
+		region:Show()
+		region.stoaSoft = region.stoaSoft or UI.fadeIn(region)
+		region.stoaSoft:Play()
+	else
+		region:Hide()
+	end
+end
+
+-- A mark that grows from its middle when it appears (a chosen tab's line).
+function UI.growIn(region, axis)
+	local group = region:CreateAnimationGroup()
+	local scale = group:CreateAnimation("Scale")
+	if axis == "y" then scale:SetScaleFrom(1, 0.1) else scale:SetScaleFrom(0.1, 1) end
+	scale:SetScaleTo(1, 1)
+	scale:SetOrigin("CENTER", 0, 0)
+	scale:SetDuration(UI.MOTION.grow)
+	scale:SetSmoothing("OUT")
+	return group
+end
+
 -- A hidden parent for Blizzard frames Stoa replaces.
 UI.hidden = CreateFrame("Frame")
 UI.hidden:Hide()
@@ -1159,7 +1236,20 @@ function UI.button(parent, label, width, onClick, reloads)
 		end
 		local lit = button.selected or button:IsMouseOver()
 		text:SetTextColor(Stoa:Color(lit and "accent" or "text"))
-		if lit then glow:Set(Stoa:Color("accent")) else glow:Clear() end
+		if lit then
+			glow:Set(Stoa:Color("accent"))
+			-- The edge warms in rather than snapping on.
+			if not button.lit and glow.edges then
+				button.glowIn = button.glowIn or {}
+				for i, tex in ipairs(glow.edges) do
+					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, UI.MOTION.quick)
+					button.glowIn[i]:Play()
+				end
+			end
+		else
+			glow:Clear()
+		end
+		button.lit = lit
 	end
 	function button:SetSelected(selected)
 		self.selected = selected and true or false
