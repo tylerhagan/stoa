@@ -237,6 +237,18 @@ end
 -- The bag's title strip (TitleContainer, at frame level 510 on Forever, and
 -- Blizzard's invisible bag-menu button over it) takes the mouse; the header
 -- words sit above both so their clicks reach them.
+-- A one-line tooltip on a header word, above it.
+local function tip(button, text)
+	button:HookScript("OnEnter", function(own)
+		GameTooltip:SetOwner(own, "ANCHOR_TOP")
+		GameTooltip:SetText(text, 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	button:HookScript("OnLeave", function(own)
+		if GameTooltip:IsOwned(own) then GameTooltip:Hide() end
+	end)
+end
+
 local function aboveTitle(frame, button)
 	local level = (frame:GetFrameLevel() or 1) + 10
 	local strip = frame.TitleContainer
@@ -254,6 +266,7 @@ local function addJunk(frame, parts)
 	end
 	parts.junk = junk
 	aboveTitle(frame, junk)
+	tip(junk, "Mark item as junk")
 end
 
 local function decorateButton(button)
@@ -416,6 +429,7 @@ local function addSort(frame, parts)
 	end
 	parts.sort = sort
 	aboveTitle(frame, sort)
+	tip(sort, "Clean Up")
 end
 
 local function decorateFrame(frame)
@@ -819,6 +833,7 @@ local function addViewWord(frame, parts)
 	end
 	parts.view = word
 	aboveTitle(frame, word)
+	tip(word, "Switch View")
 	-- The game can re-level the title strip when the bag opens.
 	frame:HookScript("OnShow", function()
 		for _, key in ipairs({ "sort", "junk", "view" }) do
