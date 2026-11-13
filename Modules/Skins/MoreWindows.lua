@@ -282,6 +282,17 @@ function AFTER.communities(frame)
 	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key]) end
 end
 
+local function dressMacroSlot(button)
+	if type(button) ~= "table" or button.stoaSlot or forbidden(button) then return end
+	button.stoaSlot = true
+	for _, region in ipairs({ button:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") and region:GetDrawLayer() == "BACKGROUND" then
+			region:SetAlpha(0)
+		end
+	end
+	UI.well(button, 1)
+end
+
 -- Macros: the "Create Macros" line is the window's title, unnamed and in
 -- Blizzard's small yellow; it takes the title's place in the header.
 function AFTER.macro(frame)
@@ -296,6 +307,16 @@ function AFTER.macro(frame)
 			region:ClearAllPoints()
 			region:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
 			region:SetJustifyH("LEFT")
+		end
+	end
+	-- The icon grid's stone slots become dark STOA wells. The grid's buttons
+	-- are made as it scrolls, so each is dressed as it is set up.
+	local selector = frame.MacroSelector
+	if selector and selector.RunSetup and not selector.stoaSlotsHooked then
+		selector.stoaSlotsHooked = true
+		Stoa.SafeHook(selector, "RunSetup", function(_, button) dressMacroSlot(button) end)
+		if selector.EnumerateButtons and selector.initialized then
+			for button in selector:EnumerateButtons() do dressMacroSlot(button) end
 		end
 	end
 	-- Its two tabs sit inside the window under the title, so they are words
