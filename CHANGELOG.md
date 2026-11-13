@@ -6,7 +6,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.1.5
 
-- Talents: the window shortens to fit the talents while they show (no more empty band under the title), and takes its height back for the spellbook. Window headers are a shade lighter.
+- Character window: your name and the level line sit closer together, the pair centred in the header (the close cross stays level with the name).
+- Talents: the window shortens while the talents show, so they rise into the empty band under the title (Blizzard's spec art used to sit there), and it takes its height back for the spellbook. The spec's Activate button moves into the row with the search. Window headers are a shade lighter.
 - Window headers lose their faint brown tint: the dark plate across the top is the same neutral as the rest of STOA.
 - Talents: Primary and Secondary, the search and your unspent points share one row just above the cards, lined up with their edges, and the window's stone rings really stay off the talents page now.
 - Talents, closer to the mock-up: the cards are all one width and fill the window, the tree's name sits top left with its points top right, the bar toward the next row runs the card's width with its line beneath, every row has a hairline along its top, and the window's stone rings stay off the talents page.

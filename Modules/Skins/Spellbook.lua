@@ -845,25 +845,29 @@ function Spellbook.PaintWaiting(talents)
 	line:SetShown(waiting)
 end
 
--- The window is sized for its tallest page, so the talents sat under a
--- band of empty space. While they show, the window is shortened to fit
--- them (it hangs from its top, and the talents from its bottom, so they
--- rise with it), and it gets its own height back when they hide. Out of
--- combat only.
-local TALENTS_TOP_ROOM = 56
-function Spellbook.FitWindow(talents, fit)
+-- The talents page keeps a tall empty band at its top, where Blizzard's spec
+-- art sat. While the talents show, the window is that much shorter: it
+-- hangs from its top and the talents from its bottom, so they rise into
+-- the band. Blizzard sizes the window per tab (UpdateSize), and this runs
+-- after it. Out of combat only; nothing of Blizzard's is written.
+local TALENTS_LIFT = 104
+function Spellbook.FitWindow(talents)
 	local frame = talents:GetParent()
 	if not (frame and frame.SetHeight) then return end
 	if InCombatLockdown() then
-		Stoa:AfterCombat(function() guarded(Spellbook.FitWindow, talents, talents:IsShown()) end)
+		Stoa:AfterCombat(function() guarded(Spellbook.FitWindow, talents) end)
 		return
 	end
-	if fit then
-		frame.stoaFullHeight = frame.stoaFullHeight or frame:GetHeight()
-		local want = math.floor(talents:GetHeight() + 4 + TALENTS_TOP_ROOM)
-		if want < frame.stoaFullHeight and math.abs(frame:GetHeight() - want) > 0.5 then frame:SetHeight(want) end
-	elseif frame.stoaFullHeight then
-		frame:SetHeight(frame.stoaFullHeight)
+	local base = frame.stoaBaseHeight or frame:GetHeight()
+	frame.stoaBaseHeight = base
+	local want = talents:IsShown() and base - TALENTS_LIFT or base
+	if math.abs(frame:GetHeight() - want) > 0.5 then frame:SetHeight(want) end
+	-- The spec's Activate button sat in that band: it joins the row.
+	local active, search = talents.ActiveSpec, talents.SearchBox
+	if talents:IsShown() and active and search and not active.stoaMoved then
+		active.stoaMoved = true
+		active:ClearAllPoints()
+		active:SetPoint("RIGHT", search, "LEFT", -28, 0)
 	end
 end
 
@@ -881,11 +885,11 @@ local function dressTalents()
 		guarded(Spellbook.DressTrees, self)
 		-- The window's stone rings fight the cards, so talents go without.
 		if frame.stoaStone then frame.stoaStone:SetAlpha(0) end
-		guarded(Spellbook.FitWindow, self, true)
+		guarded(Spellbook.FitWindow, self)
 	end)
 	talents:HookScript("OnHide", function(self)
 		if frame.stoaStone then frame.stoaStone:SetAlpha(1) end
-		guarded(Spellbook.FitWindow, self, false)
+		guarded(Spellbook.FitWindow, self)
 	end)
 	if talents.RefreshTreeHeaders then
 		hooksecurefunc(talents, "RefreshTreeHeaders", function(self) guarded(Spellbook.DressTreeHeaders, self) end)
@@ -895,6 +899,12 @@ local function dressTalents()
 	end
 	if talents.UpdateTabs then
 		hooksecurefunc(talents, "UpdateTabs", function(self) guarded(Spellbook.PaintTalentTabs, self) end)
+	end
+	if frame.UpdateSize then
+		hooksecurefunc(frame, "UpdateSize", function(self)
+			self.stoaBaseHeight = self:GetHeight()
+			guarded(Spellbook.FitWindow, talents)
+		end)
 	end
 	-- Blizzard puts the search back at its corner on each layout.
 	if talents.SetSearchBoxDefaultPosition then
