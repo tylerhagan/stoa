@@ -38,9 +38,35 @@ function Companion:Where()
 	if not name or Stoa:IsSecret(name) then return nil end
 	local mapID = C_Map and C_Map.GetBestMapForUnit and call(C_Map.GetBestMapForUnit, "player")
 	local lookup = EJ_GetInstanceForMap or (C_EncounterJournal and C_EncounterJournal.GetInstanceForGameMap)
-	local journal = mapID and plain(call(lookup, mapID))
+	local journal = mapID and lookup and plain(call(lookup, mapID))
 	if journal == 0 then journal = nil end
+	if not journal then journal = self:FindInGuide(instanceID, name) end
 	return { name = name, instanceID = instanceID, mapID = mapID, journal = journal }
+end
+
+-- Forever's dungeons have no maps of their own, so the guide's dungeon is
+-- found by walking its list instead: the same instance id, or the same name.
+-- Each tier is looked at in turn and the guide's own tier is put back.
+local found = {}
+function Companion:FindInGuide(instanceID, name)
+	if found[instanceID] ~= nil then return found[instanceID] or nil end
+	if not (EJ_GetInstanceByIndex and EJ_GetNumTiers and EJ_SelectTier and EJ_GetCurrentTier) then return nil end
+	local guide = _G.EncounterJournal
+	if guide and guide.IsShown and guide:IsShown() then return nil end
+	local before = plain(call(EJ_GetCurrentTier))
+	local hit
+	for tier = 1, plain(call(EJ_GetNumTiers)) or 0 do
+		call(EJ_SelectTier, tier)
+		for i = 1, 200 do
+			local id, title, _, _, _, _, _, _, _, _, mapID = call(EJ_GetInstanceByIndex, i, false)
+			if not id then break end
+			if (mapID and mapID == instanceID) or title == name then hit = id break end
+		end
+		if hit then break end
+	end
+	if before then call(EJ_SelectTier, before) end
+	found[instanceID] = hit or false
+	return hit
 end
 
 -- The run: which bosses fell, kept over a /reload.
@@ -62,9 +88,7 @@ local function guideFree()
 	return not (guide and guide.IsShown and guide:IsShown())
 end
 
--- The game's own bosses for the dungeon, in the guide's order. Where the
--- client lacks the guide's list, the bosses pinned on the dungeon's map
--- stand in.
+-- The game's own bosses for the dungeon, in the guide's order.
 function Companion:Bosses(where)
 	local list = {}
 	if not where.journal or not guideFree() then return list end
@@ -74,13 +98,6 @@ function Companion:Bosses(where)
 			local name, _, _, _, _, _, dungeonEncounterID = call(EJ_GetEncounterInfoByIndex, i, where.journal)
 			if not name then break end
 			list[#list + 1] = { name = name, id = dungeonEncounterID }
-		end
-	end
-	local onMap = C_EncounterJournal and C_EncounterJournal.GetEncountersOnMap
-	if #list == 0 and onMap and EJ_GetEncounterInfo and where.mapID then
-		for _, pin in ipairs(call(onMap, where.mapID) or {}) do
-			local name, _, _, _, _, _, dungeonEncounterID = call(EJ_GetEncounterInfo, pin.encounterID)
-			if name then list[#list + 1] = { name = name, id = dungeonEncounterID } end
 		end
 	end
 	return list

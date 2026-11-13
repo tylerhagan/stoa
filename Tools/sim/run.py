@@ -881,7 +881,13 @@ do
 		if journalFrame then journalFrame:Hide() end
 		IsInInstance = function() return true, "party" end
 		GetInstanceInfo = function() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end
-		EJ_GetInstanceForMap = function() return 63 end
+		-- No dungeon maps in Forever: the guide's list is walked instead.
+		EJ_GetInstanceForMap = function() return nil end
+		local tier = 1
+		EJ_GetNumTiers = function() return 2 end
+		EJ_GetCurrentTier = function() return tier end
+		EJ_SelectTier = function(t) tier = t end
+		EJ_GetInstanceByIndex = function(i) if tier == 2 and i == 1 then return 63, "x", "", 0, 0, 0, 0, 0, "", 0, 36 end end
 		EJ_SelectInstance = function() end
 		local bosses = { "Rhahk'Zor", "Sneed", "Gilnid" }
 		EJ_GetEncounterInfoByIndex = function(i) if bosses[i] then return bosses[i], "", i, 0, "", 63, 100 + i, 36 end end
@@ -902,6 +908,7 @@ do
 		end
 		if not data or #data.quests ~= 2 or data.questsDone ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: expected the 2 Deadmines quests, 1 done" end
 		if not (Stoa.modules.Top and Stoa.modules.Top.companionHolds) then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the quest list wasn't held for the card" end
+		if tier ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the guide's tier wasn't put back" end
 		companion:SetView("line")
 		if not (companion.bar and companion.bar:IsShown()) or companion.card:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the line view didn't replace the card" end
 		companion:SetView("card")
