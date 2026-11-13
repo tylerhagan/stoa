@@ -478,8 +478,6 @@ local TALENT_ART = {
 	"DividerVerticalLeft", "DividerVerticalRight",
 }
 local HEADER_ART = { "MainRing", "TextBackground", "Divider", "Icon" }
--- Blizzard spaces its tree headers this far apart (Camelot talents).
-local TREE_SPACING = 400
 
 local function hideTalentArt(talents)
 	for _, key in ipairs(TALENT_ART) do
@@ -543,7 +541,6 @@ end
 -- a thin bar fills toward the next row. Only STOA's own textures; the
 -- talent buttons are read for their places and never moved.
 local TIER_POINTS = 5
-local CARD_INSET = 12
 
 local function treeParts(talents, i)
 	talents.stoaTrees = talents.stoaTrees or {}
@@ -591,9 +588,13 @@ function Spellbook.DressTrees(talents)
 	for i, header in ipairs(headers) do centres[i] = select(1, header:GetCenter()) end
 	local trees = {}
 	for i = 1, #headers do trees[i] = { rows = {}, bottom = nil, size = 0 } end
+	-- Only buttons inside the window count: pooled spares parked elsewhere
+	-- stretched a card far below it.
+	local right, bottom = talents:GetRight(), talents:GetBottom()
 	for button in talents:EnumerateAllTalentButtons() do
 		local x, y = button:GetCenter()
-		if x and y and button:IsShown() then
+		if x and y and button:IsVisible() and x > left and y < top
+			and (not right or x < right) and (not bottom or y > bottom) then
 			local best, gap = 1, math.huge
 			for i, cx in ipairs(centres) do
 				if cx and math.abs(cx - x) < gap then best, gap = i, math.abs(cx - x) end
@@ -604,6 +605,8 @@ function Spellbook.DressTrees(talents)
 			local size = button:GetHeight() or 0
 			if size > tree.size then tree.size = size end
 			if not tree.bottom or y < tree.bottom then tree.bottom = y end
+			if not tree.minX or x < tree.minX then tree.minX = x end
+			if not tree.maxX or x > tree.maxX then tree.maxX = x end
 		end
 	end
 	for i, header in ipairs(headers) do
@@ -613,10 +616,23 @@ function Spellbook.DressTrees(talents)
 		if not (cx and cy and tree.bottom) then
 			hideTree(parts)
 		else
-			local width = TREE_SPACING - 2 * CARD_INSET
-			local x0 = cx - left - width / 2
+			-- The card wraps the tree's own columns (Blizzard's header sits
+			-- left of them), with room on the left for the row numbers, and
+			-- the name and points move to its middle.
+			local half = tree.size / 2
+			local x0 = tree.minX - left - half - 50
+			local width = (tree.maxX - left + half + 22) - x0
+			cx = left + x0 + width / 2
+			local name, text = header.Name, header.Text
+			if name and text then
+				name:ClearAllPoints()
+				name:SetPoint("RIGHT", talents, "TOPLEFT", x0 + width / 2 - 6, cy - top)
+				text:ClearAllPoints()
+				text:SetPoint("LEFT", talents, "TOPLEFT", x0 + width / 2 + 6, cy - top)
+			end
 			local cardTop = cy - top + 26
 			local cardBottom = tree.bottom - top - tree.size / 2 - 18
+			if bottom then cardBottom = math.max(cardBottom, bottom - top + 50) end
 			for _, key in ipairs({ "fill", "edge" }) do
 				local tex = parts[key]
 				if tex then
