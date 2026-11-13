@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.2.0
 
+- Collections: the count pill (Total Mounts, Total Pets, Total Toys) sits in the bottom right of the window on every page, and the mount scene and toy page lose their painted backdrops and gilded corners.
 - Inside the newly dressed windows: Blizzard's insets, card backdrops and the pet card's painted scene are gone (dark STOA wells instead), the dressing room's item list is a STOA panel, the inbox parchment is gone, AddOn List buttons are dressed, Macros has a proper title and word tabs, and the collections side tabs keep their icons.
 - What's new: past five lines the note splits into two columns side by side, and it names the newly dressed windows.
 - No error on login from the newly dressed windows: STOA passes by the game's own locked frames inside them.
