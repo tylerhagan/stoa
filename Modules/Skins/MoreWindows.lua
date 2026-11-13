@@ -28,7 +28,7 @@ local TARGETS = {
 	{ name = "TalentFrame" },
 	-- Send Mail's To row starts 30px down with the letter close beneath it,
 	-- so the strip stays short to leave the row some air.
-	{ name = "MailFrame", band = 24, parts = { "MailFrameInset", "SendMailMoneyInset", "SendMailMoneyBg" } },
+	{ name = "MailFrame", band = 24, parts = { "MailFrameInset", "SendMailMoneyInset", "SendMailMoneyBg" }, hides = { "InboxFrameBg" } },
 	{ name = "OpenMailFrame", parts = { "OpenMailFrameInset" } },
 	{ name = "AuctionHouseFrame" },
 	{ name = "PVEFrame" },
@@ -42,11 +42,12 @@ local TARGETS = {
 	{ name = "GuildBankFrame", mode = "border" },
 	{ name = "TradeFrame" },
 	{ name = "ProfessionsFrame" },
-	{ name = "ProfessionsBookFrame" },
-	{ name = "DressUpFrame" },
+	{ name = "ProfessionsBookFrame", deep = 2 },
+	-- The item list beside the model is its own panel hanging off the side.
+	{ name = "DressUpFrame", panels = { "CustomSetDetailsPanel" } },
 	{ name = "ItemTextFrame" },
-	{ name = "MacroFrame" },
-	{ name = "CollectionsJournal" },
+	{ name = "MacroFrame", after = "macro" },
+	{ name = "CollectionsJournal", deep = 3 },
 	{ name = "EncounterJournal" },
 	{ name = "StableFrame" },
 	{ name = "TabardFrame" },
@@ -55,7 +56,7 @@ local TARGETS = {
 	{ name = "ItemSocketingFrame" },
 	{ name = "TimeManagerFrame" },
 	{ name = "ChannelFrame" },
-	{ name = "AddonList" },
+	{ name = "AddonList", buttons = { "EnableAllButton", "DisableAllButton", "OkayButton", "CancelButton" } },
 	{ name = "ClickBindingFrame" },
 	-- The game menu and the settings panel are left alone: addons touching
 	-- them are a known cause of blocked-action errors (Edit Mode, logout).
@@ -119,6 +120,7 @@ local function dressFull(frame)
 	if windows and windows.Dress then windows:Dress(frame) else dressBorder(frame) end
 end
 
+local dressInner
 local function dressTarget(target, frame)
 	if target.mode == "border" then
 		dressBorder(frame)
@@ -150,6 +152,63 @@ local function dressTarget(target, frame)
 	for _, partName in ipairs(target.parts or {}) do
 		local part = _G[partName]
 		if type(part) == "table" and not forbidden(part) then hideOwnArt(part) end
+	end
+	dressInner(target, frame)
+end
+
+-- Inside a window: Blizzard's insets (stone and edge), card backdrops
+-- (profession cards, the pet card's painted scene) and their shadowed
+-- corners go, down a few levels; a card that loses its backdrop gets a dark
+-- Stoa well instead. Buttons, bars and edit boxes (and their icons) are
+-- never touched, nor are lists and models.
+local KEEP = { Button = true, CheckButton = true, StatusBar = true, EditBox = true, Cooldown = true, ModelScene = true, PlayerModel = true, DressUpModel = true }
+local BACKDROPS = { "Background", "PetBackground", "MountBackground", "BG" }
+
+local function clearInside(frame, depth)
+	if not (frame and frame.GetChildren) or depth <= 0 then return end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		local kind = not forbidden(child) and child.GetObjectType and child:GetObjectType()
+		if kind and not KEEP[kind] then
+			if child.NineSlice then
+				hide(child.NineSlice)
+				if child.Bg and child.Bg.SetAlpha then child.Bg:SetAlpha(0) end
+			end
+			hide(child.ShadowOverlay)
+			for _, key in ipairs(BACKDROPS) do
+				local tex = child[key]
+				if type(tex) == "table" and tex.IsObjectType and tex:IsObjectType("Texture") then
+					tex:SetAlpha(0)
+					if not child.stoaWell then UI.well(child, 0) end
+				end
+			end
+			clearInside(child, depth - 1)
+		end
+	end
+end
+
+-- A panel of a window's own that hangs outside it: all its art out, a Stoa
+-- panel of its own in.
+local function dressSidePanel(panel)
+	if not panel or forbidden(panel) then return end
+	hideOwnArt(panel)
+	if panel.stoaSidePanel then return end
+	panel.stoaSidePanel = true
+	UI.windowPanel(panel, nil, {})
+end
+
+function dressInner(target, frame)
+	if target.deep then clearInside(frame, target.deep) end
+	for _, key in ipairs(target.panels or {}) do dressSidePanel(frame[key]) end
+	for _, texName in ipairs(target.hides or {}) do
+		local tex = _G[texName]
+		if type(tex) == "table" and tex.SetAlpha then tex:SetAlpha(0) end
+	end
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressButton then
+		for _, key in ipairs(target.buttons or {}) do
+			local button = frame[key]
+			if type(button) == "table" and not forbidden(button) then windows.DressButton(button) end
+		end
 	end
 end
 
@@ -187,6 +246,29 @@ local AFTER = {}
 function AFTER.communities(frame)
 	if InCombatLockdown() or not frame:IsShown() then return end
 	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key]) end
+end
+
+-- Macros: the "Create Macros" line is the window's title, unnamed and in
+-- Blizzard's small yellow; it takes the title's place in the header.
+function AFTER.macro(frame)
+	if frame.stoaMacroTitle or not frame.stoaHeader then return end
+	for _, region in ipairs({ frame:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("FontString") and region:GetText() == CREATE_MACROS then
+			frame.stoaMacroTitle = region
+			Stoa:SetFont(region, "serif", Stoa.typeSize.title)
+			region:SetTextColor(Stoa:Color("text"))
+			region:SetShadowColor(0, 0, 0, 0.9)
+			region:SetShadowOffset(1, -1)
+			region:ClearAllPoints()
+			region:SetPoint("LEFT", frame.stoaHeader, "LEFT", 18, 0)
+			region:SetJustifyH("LEFT")
+		end
+	end
+	-- Its two tabs sit inside the window under the title, so they are words
+	-- with the accent underline, not tiles.
+	for _, tab in ipairs(frame.stoaTabs or {}) do
+		for _, part in ipairs(tab.stoaTabParts or {}) do part:Hide() end
+	end
 end
 
 local afterHooked = false
