@@ -743,6 +743,8 @@ do
 		-- Talent buttons in rows 60 apart under each header.
 		talents.GetLeft = function() return 0 end
 		talents.GetTop = function() return 1000 end
+		talents.GetRight = function() return 1300 end
+		talents.GetBottom = function() return 0 end
 		local buttons = {}
 		for tree = 1, 3 do
 			for row = 1, 7 do
