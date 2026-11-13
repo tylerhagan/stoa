@@ -234,6 +234,12 @@ function Bags:SetJunkMode(on)
 	end
 end
 
+-- Blizzard lays an invisible button over the whole title strip that opens
+-- the bag menu; the header words sit above it so their clicks reach them.
+local function aboveTitle(frame, button)
+	button:SetFrameLevel((frame:GetFrameLevel() or 1) + 10)
+end
+
 local function addJunk(frame, parts)
 	local junk = UI.button(frame, "Junk", 48, function() Bags:SetJunkMode(not Bags.junkMode) end)
 	junk:SetHeight(20)
@@ -388,12 +394,6 @@ local function moneyHover(frame, text)
 	hover:SetScript("OnEnter", function(self) guarded(moneyTooltip, self) end)
 	hover:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	return hover
-end
-
--- Blizzard lays an invisible button over the whole title strip that opens
--- the bag menu; the header words sit above it so their clicks reach them.
-local function aboveTitle(frame, button)
-	button:SetFrameLevel((frame:GetFrameLevel() or 1) + 10)
 end
 
 -- The Sort button, only where Blizzard has something to call.
