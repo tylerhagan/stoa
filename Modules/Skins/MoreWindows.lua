@@ -120,6 +120,31 @@ local function dressFull(frame)
 	if windows and windows.Dress then windows:Dress(frame) else dressBorder(frame) end
 end
 
+-- The map's close cross and maximise button: quiet glyphs, centred in the
+-- header band and set in from the right edge, as on every other window.
+local MAP_BUTTON_INSET = 10
+local function seatMapButtons(border)
+	local header, close = border.stoaHeader, border.CloseButton
+	if not (header and close) or InCombatLockdown() then return end
+	close:ClearAllPoints()
+	close:SetPoint("RIGHT", header, "RIGHT", -MAP_BUTTON_INSET, 0)
+	local maxMin = border.MaximizeMinimizeFrame
+	if maxMin then
+		maxMin:ClearAllPoints()
+		maxMin:SetPoint("RIGHT", close, "LEFT", -2, 0)
+	end
+end
+
+local function dressMapButtons(border)
+	local windows = Stoa.modules.Windows
+	if not windows or border.stoaMapButtons then return end
+	border.stoaMapButtons = true
+	if windows.DressClose then windows.DressClose(border.CloseButton) end
+	if windows.DressMaxMin then windows.DressMaxMin(border.MaximizeMinimizeFrame) end
+	if windows.OnSettle then windows:OnSettle(border, seatMapButtons) end
+	seatMapButtons(border)
+end
+
 local dressInner
 local function dressTarget(target, frame)
 	if target.mode == "border" then
@@ -128,7 +153,10 @@ local function dressTarget(target, frame)
 		-- The border frame holds the stone edge and title, and it is drawn
 		-- above the canvas, so it gets the edge and header only: a fill or
 		-- the stone there would cover the map.
-		if frame.BorderFrame then dressBorder(frame.BorderFrame, true) end
+		if frame.BorderFrame then
+			dressBorder(frame.BorderFrame, true)
+			dressMapButtons(frame.BorderFrame)
+		end
 		-- A panel behind everything, on the map frame itself: its textures
 		-- draw under the canvas and the quest log, so only the margins
 		-- around them (and the gap between) show it.
