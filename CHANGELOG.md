@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.2.0
 
+- Macros: the icon grid's stone slots are dark STOA wells. What's new: the finished-quests line says deeper gold (it changed from pale), and the windows line covers their insides.
 - Map: the zone's level range sits right after the title instead of past the window's edge, and the close and maximise buttons are quiet STOA glyphs, centred in the header and set in from the right.
 - Collections: the count pill (Total Mounts, Total Pets, Total Toys) sits in the bottom right of the window on every page, and the mount scene and toy page lose their painted backdrops and gilded corners.
 - Inside the newly dressed windows: Blizzard's insets, card backdrops and the pet card's painted scene are gone (dark STOA wells instead), the dressing room's item list is a STOA panel, the inbox parchment is gone, AddOn List buttons are dressed, Macros has a proper title and word tabs, and the collections side tabs keep their icons.
