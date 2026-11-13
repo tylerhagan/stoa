@@ -25,6 +25,7 @@ local NOTE = {
 		{ "A new character sheet", "Your gear in two columns with each item's name and item level beside it, the weapons named under the model, calmer stats, the tabs as words in the header, and your durability, titles and equipment sets at the foot. Settings > Dress turns it off." },
 		{ "The spellbook in STOA's dress", "Every spell you know on one scrolling list by school, with its rank, cost, cast time and when the next rank comes. Click to cast, drag to a bar, or switch back to Blizzard's pages. A To train word by the search opens what your trainer has for you beside the book. Settings > Dress turns it off." },
 		{ "The talents in STOA's dress", "Each tree on its own card, a band for every row with the points it needs, a bar toward the next row, each tree's name and points as words, and a line by Apply while changes are waiting. Points you place are only a preview until you press Apply, so try a build and undo it freely. Settings > Dress turns it off." },
+		{ "More windows in STOA's dress", "The bank, trade, professions, the dressing room, macros, collections, the adventure guide, the stable, gem sockets and the other framed windows now match the rest. Window headers are a neutral dark plate, and Shift-drag works anywhere on them." },
 		{ "Your bag in sections", "The combined bag sorts what you carry into sections: new, consumables, trade goods, quest, equipment, other, junk and empty slots. The Grid word in its header switches back to one grid in bag order." },
 		{ "A new target plaque", "A round portrait in a gold ring with the level on a badge, a rounded health bar with the numbers inside, the target's power and its cast. Out of combat it docks on the console's gold rim without the portrait, its target of target tucked in behind it." },
 		{ "Your buffs at hand", "Out of combat, small icons left of the Halo for the long buffs you keep on yourself when one is missing or about to run out, such as Inner Fire, a paladin's aura and blessing, a mage's armor or a shaman's shield. Drawn in your theme's colour. Click one to cast it. Every class but warriors and rogues has some." },
@@ -37,8 +38,11 @@ local NOTE = {
 	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }
 
-local WIDTH = 520
 local PAD = Stoa.space.xl
+-- Up to PER_COLUMN lines sit in one column; past that the lines split over
+-- two columns side by side.
+local PER_COLUMN = 5
+local COLUMN, GAP = 456, 36
 local HEADER, FOOTER = 64, 58
 
 -- A class's name as a small tag in its class colour.
@@ -57,8 +61,11 @@ function WhatsNew.classTag(parent, class)
 end
 
 function WhatsNew:Build()
+	local count = #NOTE.lines
+	local columns = count > PER_COLUMN and 2 or 1
+	local perColumn = math.ceil(count / columns)
 	local page = CreateFrame("Frame", "StoaNewsPage", UIParent)
-	page:SetSize(WIDTH, 240)
+	page:SetSize(PAD * 2 + columns * COLUMN + (columns - 1) * GAP, 240)
 	page:SetPoint("CENTER", 0, 120)
 	page:SetFrameStrata("DIALOG")
 	page:EnableMouse(true)
@@ -75,14 +82,21 @@ function WhatsNew:Build()
 	title:SetText(NOTE.title)
 
 	-- Each line: its name, then what it is, wrapped under the name.
+	page.columns = {}
 	local last
-	local parts = {}
-	for _, line in ipairs(NOTE.lines) do
+	for index, line in ipairs(NOTE.lines) do
+		local column = math.floor((index - 1) / perColumn) + 1
+		local parts = page.columns[column]
+		if not parts then
+			parts = {}
+			page.columns[column] = parts
+			last = nil
+		end
 		local name = UI.text(page, "sans", Stoa.typeSize.label, "text", "LEFT")
 		if last then
 			name:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -12)
 		else
-			name:SetPoint("TOPLEFT", PAD, -(HEADER + 18))
+			name:SetPoint("TOPLEFT", PAD + (column - 1) * (COLUMN + GAP), -(HEADER + 18))
 		end
 		name:SetText(line[1])
 		local tagAfter = name
@@ -93,19 +107,19 @@ function WhatsNew:Build()
 		end
 		local words = UI.text(page, "sans", Stoa.typeSize.body, "muted", "LEFT")
 		words:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -3)
-		words:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+		words:SetWidth(COLUMN)
 		words:SetWordWrap(true)
 		words:SetText(line[2])
 		parts[#parts + 1], parts[#parts + 2] = name, words
 		last = words
 	end
+	-- The foot runs the page's width above the buttons.
 	local foot = UI.text(page, "italic", Stoa.typeSize.body, "muted", "LEFT")
-	foot:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -16)
+	foot:SetPoint("BOTTOMLEFT", PAD, FOOTER + 12)
 	foot:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
 	foot:SetWordWrap(true)
 	foot:SetText(NOTE.foot)
-	parts[#parts + 1] = foot
-	page.parts = parts
+	page.foot = foot
 
 	local settings = UI.button(page, "Open settings", 160, function()
 		page:Hide()
@@ -118,15 +132,22 @@ function WhatsNew:Build()
 	self.page = page
 end
 
--- The page is as tall as its words. Heights the game won't give in the
--- open (it can hide them) are judged at a line and a half each.
+-- The page is as tall as its tallest column. Heights the game won't give
+-- in the open (it can hide them) are judged at a line and a half each.
+local function heightOf(part)
+	local height = Stoa:PlainNumber(part:GetStringHeight())
+	return height and height > 0 and height or 22
+end
+
 function WhatsNew:Fit()
 	local page = self.page
-	local tall = HEADER + 18 + FOOTER + 16
-	for i, part in ipairs(page.parts) do
-		local height = Stoa:PlainNumber(part:GetStringHeight())
-		tall = tall + (height and height > 0 and height or 22) + (i % 2 == 0 and 12 or 3)
+	local tallest = 0
+	for _, parts in ipairs(page.columns) do
+		local tall = 0
+		for i, part in ipairs(parts) do tall = tall + heightOf(part) + (i % 2 == 0 and 12 or 3) end
+		tallest = math.max(tallest, tall)
 	end
+	local tall = HEADER + 18 + tallest + 4 + heightOf(page.foot) + 12 + FOOTER
 	page:SetHeight(math.ceil(tall) + 10)
 end
 
