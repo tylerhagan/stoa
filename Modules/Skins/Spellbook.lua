@@ -862,6 +862,9 @@ function Spellbook.FitWindow(talents)
 	frame.stoaBaseHeight = base
 	local want = talents:IsShown() and base - TALENTS_LIFT or base
 	if math.abs(frame:GetHeight() - want) > 0.5 then frame:SetHeight(want) end
+	-- The lifted page reaches up over the header, where it caught the
+	-- Shift-drag that moves the window: its top no longer takes the mouse.
+	if talents.SetHitRectInsets then talents:SetHitRectInsets(0, 0, talents:IsShown() and TALENTS_LIFT or 0, 0) end
 	-- The spec's Activate button sat in that band: it joins the row.
 	local active, search = talents.ActiveSpec, talents.SearchBox
 	if talents:IsShown() and active and search and not active.stoaMoved then
