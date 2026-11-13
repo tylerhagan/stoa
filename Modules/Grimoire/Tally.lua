@@ -741,18 +741,18 @@ function Tally:SheetProxy()
 	proxy:SetAttribute("type1", "click")
 	proxy:SetAttribute("clickbutton1", _G.CharacterMicroButton)
 	proxy:HookScript("OnClick", function(button, mouse)
-		if mouse == "RightButton" and button.row then self:OpenPicker(button.row) end
+		if mouse == "RightButton" and button.row and button.row.key then self:OpenPicker(button.row) end
 	end)
 	-- The mouse moves from the line onto the cover: the tooltip stays the line's.
 	proxy:SetScript("OnEnter", function(button)
 		local row = button.row
-		if not (row and row.key) then return end
-		row.glow:Show()
-		self:ShowDetail(row)
+		if not (row and button.key) then return end
+		if row.glow then row.glow:Show() end
+		self:ShowDetail(row, button.key)
 	end)
 	proxy:SetScript("OnLeave", function(button)
 		local row = button.row
-		if row then row.glow:Hide() end
+		if row and row.glow then row.glow:Hide() end
 		GameTooltip:Hide()
 		if not InCombatLockdown() then button:Hide() end
 	end)
@@ -763,9 +763,11 @@ function Tally:SheetProxy()
 	return proxy
 end
 
--- Lays the secure button over a line that opens the character sheet.
-function Tally:CoverRow(row)
-	local entry = row.key and ENTRIES[row.key]
+-- Lays the secure button over a line (or the console's gear and bags
+-- readouts, which pass their key) that opens the character sheet.
+function Tally:CoverRow(row, key)
+	key = key or row.key
+	local entry = key and ENTRIES[key]
 	if not (entry and SHEET[entry.open or ""]) or InCombatLockdown() then return end
 	local proxy = self:SheetProxy()
 	if not proxy then return end
@@ -774,7 +776,7 @@ function Tally:CoverRow(row)
 	local left, bottom, width, height = row:GetRect()
 	if not left then return end
 	local ratio = row:GetEffectiveScale() / UIParent:GetEffectiveScale()
-	proxy.row = row
+	proxy.row, proxy.key = row, key
 	proxy:ClearAllPoints()
 	proxy:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * ratio, bottom * ratio)
 	proxy:SetSize(width * ratio, height * ratio)

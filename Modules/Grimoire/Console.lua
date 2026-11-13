@@ -698,6 +698,10 @@ function Console:BuildFellowship(frame, space)
 		button:SetScript("OnEnter", function(own)
 			local glance = Stoa.modules.Tally
 			if glance and glance.ShowDetail then glance:ShowDetail(own, key) end
+			-- Opening the character sheet from STOA's code taints it (an
+			-- error on the player frame's health text), so a secure button
+			-- that clicks the game's Character button covers this one.
+			if glance and glance.CoverRow then glance:CoverRow(own, key) end
 		end)
 		button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 		button:SetScript("OnClick", function()
