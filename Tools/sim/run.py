@@ -783,6 +783,53 @@ do
 		spellbook:ShowView("list")
 	end
 end
+-- Bag sections: a mock combined bag with a potion, a sword, grey junk and
+-- an empty slot gets four labelled sections, and the bag grows for them.
+do
+	local bags = Stoa.modules.Bags
+	if bags and bags.enabled and bags.LayOutSections then
+		local combined = CreateFrame("Frame", "ContainerFrameCombinedBags")
+		combined.MoneyFrame = CreateFrame("Frame", nil, combined)
+		combined.IsShown = function() return true end
+		combined.IsProtected = function() return false end
+		combined.GetColumns = function() return 10 end
+		combined.EnumerateValidItems = function() return ipairs(combined.Items) end
+		local contents = { { itemID = 1, quality = 1 }, { itemID = 2, quality = 3 }, { itemID = 3, quality = 0 }, false }
+		local classes = { [1] = 0, [2] = 2, [3] = 15 }
+		combined.Items = {}
+		for slot = 1, 4 do
+			local button = CreateFrame("Button", nil, combined)
+			button.GetID = function() return slot end
+			button.GetBagID = function() return 0 end
+			button.GetWidth = function() return 37 end
+			button.IsProtected = function() return false end
+			combined.Items[slot] = button
+		end
+		local realInfo, realQuest, realInstant = C_Container.GetContainerItemInfo, C_Container.GetContainerItemQuestInfo, C_Item.GetItemInfoInstant
+		C_Container.GetContainerItemInfo = function(_, slot) return contents[slot] or nil end
+		C_Container.GetContainerItemQuestInfo = function() return {} end
+		C_Item.GetItemInfoInstant = function(id) return id, nil, nil, nil, nil, classes[id], 0 end
+		bags:Dress(combined)
+		bags.AddViewWord(combined, combined.stoaBag)
+		bags.db.bagView = "sections"
+		bags:LayOutSections()
+		local shown = 0
+		for _, label in ipairs(combined.stoaSectionLabels or {}) do
+			if label.name:GetText() then shown = shown + 1 end
+		end
+		if shown ~= 4 or not combined.stoaSectioned or (combined.stoaSectionExtra or 0) <= 0 then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Bag sections: expected 4 sections and a taller bag, got " .. shown
+		end
+		if bags.SectionOf(0, 3) ~= "junk" or bags.SectionOf(0, 2) ~= "equipment" or bags.SectionOf(0, 4) ~= "empty" then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Bag sections: items sorted into the wrong sections"
+		end
+		combined.UpdateItemLayout = function() end
+		bags:SetView("grid")
+		if combined.stoaSectioned then SIM_ERRORS[#SIM_ERRORS + 1] = "Bag sections: grid view didn't undo the sections" end
+		bags:SetView("sections")
+		C_Container.GetContainerItemInfo, C_Container.GetContainerItemQuestInfo, C_Item.GetItemInfoInstant = realInfo, realQuest, realInstant
+	end
+end
 -- The target plaque: a medallion with a level badge, docked while it rests
 -- on the full console, and a cast bar that shows for the target's cast.
 do
