@@ -50,6 +50,7 @@ Modules\QoL\Mail.lua
 Modules\QoL\Bind.lua
 Modules\QoL\Away.lua
 Modules\QoL\Session.lua
+Modules\QoL\Companion.lua
 Modules\QoL\GearSets.lua
 Modules\QoL\Comforts.lua
 Modules\QoL\Chat.lua

@@ -2,14 +2,21 @@
 -- what a play session brought: time played, levels and experience, gold,
 -- quests handed in, deaths and the best thing you picked up. They survive a
 -- /reload (kept in the character's saved settings) and start again at the
--- next login. /stoa recap prints them; the recap card (to come) shows them.
--- Only a handful of events, and nothing runs every frame.
+-- next login. A card shows them when you log out (during the game's own
+-- countdown; it never stops or delays the logout) and on /stoa recap, and
+-- the away screen can show a short version. Only a handful of events, and
+-- nothing runs every frame.
 local _, ns = ...
 local Stoa = ns.Stoa
 
 local Session = Stoa:NewModule("Session", {
 	enabled = true,
+	-- The card during the logout countdown.
+	onLogout = true,
+	-- A short version on the away screen, where no whispers came.
+	onAway = false,
 })
+local UI = Stoa.UI
 
 local call = Stoa.safe.call
 
@@ -90,6 +97,12 @@ function Session:OnEnable()
 		if self.db.now then self.db.now.deaths = self.db.now.deaths + 1 end
 	end)
 	Stoa:On("CHAT_MSG_LOOT", function(text) xpcall(self.NoteLoot, Stoa.catch, self, text) end)
+	-- The game's logout countdown: the card shows beside it. Cancelling the
+	-- logout (moving, or the game's own Cancel) puts it away.
+	Stoa:On("PLAYER_CAMPING", function()
+		if self.db.onLogout and self.db.now then xpcall(self.ShowCard, Stoa.catch, self) end
+	end)
+	Stoa:On("LOGOUT_CANCEL", function() if self.card then self.card:Hide() end end)
 end
 
 local function duration(seconds)
@@ -120,10 +133,86 @@ function Session:Lines()
 	return lines
 end
 
+-- Four short lines for the away screen.
+function Session:Short()
+	local now = self.db.now
+	if not now then return {} end
+	local seconds = time() - now.started
+	local level = plain(call(UnitLevel, "player")) or now.level
+	local money = (plain(call(GetMoney)) or now.money) - now.money
+	local out = {}
+	out[1] = duration(seconds) .. (level ~= now.level and (UI.WIDE_SEP .. "level " .. now.level .. " to " .. level) or "")
+	if seconds >= 600 and now.xp > 0 then
+		out[#out + 1] = ("%s experience an hour"):format(BreakUpLargeNumbers and BreakUpLargeNumbers(math.floor(now.xp / (seconds / 3600))) or math.floor(now.xp / (seconds / 3600)))
+	end
+	out[#out + 1] = ("%s%s gold%s%d quests"):format(money < 0 and "-" or "+", Stoa.Items.money(math.abs(money)), UI.WIDE_SEP, now.quests)
+	if now.best then out[#out + 1] = now.best.link end
+	return out
+end
+
+-- The card ---------------------------------------------------------------------
+
+local CARD_WIDTH = 360
+local PAD = 20
+
+function Session:BuildCard()
+	local card = CreateFrame("Frame", "StoaRecap", UIParent)
+	card:SetWidth(CARD_WIDTH)
+	card:SetFrameStrata("DIALOG")
+	card:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
+	card:Hide()
+	UI.windowPanel(card, nil, { header = 44, plainHeader = true })
+	local title = UI.text(card, "serif", Stoa.typeSize.title, "text", "LEFT")
+	title:SetPoint("LEFT", card, "TOPLEFT", PAD, -22)
+	title:SetText("This session")
+	local who = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	who:SetPoint("RIGHT", card, "TOPRIGHT", -44, -22)
+	local close = CreateFrame("Button", nil, card)
+	close:SetSize(20, 20)
+	close:SetPoint("RIGHT", card, "TOPRIGHT", -12, -22)
+	local cross = UI.glyph(close, "Cross", 14, "muted")
+	cross:SetPoint("CENTER")
+	close:SetScript("OnClick", function() card:Hide() end)
+	close:SetScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("accent")) end)
+	close:SetScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
+	card.who, card.rows = who, {}
+	if UISpecialFrames then table.insert(UISpecialFrames, "StoaRecap") end
+	self.card = card
+end
+
+function Session:ShowCard()
+	if not self.card then self:BuildCard() end
+	local card = self.card
+	local lines = self:Lines()
+	card.who:SetText(Stoa.safe.plain(UnitName("player")) or "")
+	for _, row in ipairs(card.rows) do row.label:Hide() row.value:Hide() end
+	local y = -44 - 14
+	for i, line in ipairs(lines) do
+		local row = card.rows[i]
+		if not row then
+			row = {
+				label = UI.text(card, "sans", Stoa.typeSize.body, "muted", "LEFT"),
+				value = UI.text(card, "sans", Stoa.typeSize.label, "text", "RIGHT"),
+			}
+			card.rows[i] = row
+		end
+		row.label:ClearAllPoints()
+		row.label:SetPoint("TOPLEFT", PAD, y)
+		row.value:ClearAllPoints()
+		row.value:SetPoint("TOPRIGHT", -PAD, y)
+		row.label:SetText(line[1])
+		row.value:SetText(line[2])
+		if line[1] == "Gold" then row.value:SetTextColor(Stoa:Color("accent")) else row.value:SetTextColor(Stoa:Color("text")) end
+		row.label:Show()
+		row.value:Show()
+		y = y - 22
+	end
+	card:SetHeight(-y + PAD - 4)
+	card:Show()
+end
+
 Stoa.commands.recap = function()
 	if not Session.enabled then return end
-	local lines = Session:Lines()
-	if #lines == 0 then Stoa:Print("No session yet.") return end
-	Stoa:Print("This session:")
-	for _, line in ipairs(lines) do print(("  %s: %s"):format(line[1], line[2])) end
+	if not Session.db.now then Stoa:Print("No session yet.") return end
+	Session:ShowCard()
 end
