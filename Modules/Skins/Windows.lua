@@ -337,6 +337,13 @@ local function liftPanel(frame, raise)
 			if tex == mapFill then tex:SetPoint("TOPLEFT", -2, 2 + raise) else tex:SetPoint("TOPLEFT", 0, raise) end
 		end
 	end
+	-- The raised strip lies outside the window's own edge, so a click (or a
+	-- Shift-drag to move it) on its top part went through to the world:
+	-- the window's clickable area reaches up to cover it.
+	if frame.SetHitRectInsets and frame.GetHitRectInsets and not mapFill and not InCombatLockdown() then
+		local left, right, _, bottom = frame:GetHitRectInsets()
+		pcall(frame.SetHitRectInsets, frame, left or 0, right or 0, -raise, bottom or 0)
+	end
 end
 
 function Windows:Settle(frame)
