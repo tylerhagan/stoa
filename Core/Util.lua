@@ -127,12 +127,12 @@ Stoa.frames = {}
 
 -- Makes a frame or region see-through without hiding it.
 function Stoa.frames.hide(region)
-	if region and region.SetAlpha then region:SetAlpha(0) end
+	if region and region.SetAlpha and not (region.IsForbidden and region:IsForbidden()) then region:SetAlpha(0) end
 end
 
 -- Hides a frame's own textures, leaving its children (buttons, text, items).
 function Stoa.frames.strip(frame)
-	if not (frame and frame.GetRegions) then return end
+	if not (frame and frame.GetRegions) or (frame.IsForbidden and frame:IsForbidden()) then return end
 	for _, region in ipairs({ frame:GetRegions() }) do
 		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
 	end

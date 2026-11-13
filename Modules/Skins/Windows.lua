@@ -14,14 +14,21 @@ local Windows = Stoa:NewModule("Windows")
 
 local strip = Stoa.frames.strip
 
+-- Some windows hold the game's own secure frames (the store, the shop
+-- inside collections): asking a forbidden frame anything is an error, so
+-- every walk over a window's children passes them by.
+local function forbidden(frame)
+	return frame.IsForbidden and frame:IsForbidden()
+end
+
 -- Strips the plain frames inside a window too, down a few levels, leaving
 -- buttons, bars and edit boxes (and their icons) alone.
 local KEEP = { Button = true, CheckButton = true, StatusBar = true, EditBox = true, Cooldown = true }
 local function stripInside(frame, depth)
 	if not (frame and frame.GetChildren) or depth <= 0 then return end
 	for _, child in ipairs({ frame:GetChildren() }) do
-		local kind = child.GetObjectType and child:GetObjectType()
-		if not KEEP[kind] then
+		local kind = not forbidden(child) and child.GetObjectType and child:GetObjectType()
+		if kind and not KEEP[kind] then
 			strip(child)
 			stripInside(child, depth - 1)
 		end
@@ -104,10 +111,12 @@ end
 local function dressButtonsIn(frame, depth)
 	if not (frame and frame.GetChildren) or depth <= 0 then return end
 	for _, child in ipairs({ frame:GetChildren() }) do
-		if child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
-			dressButton(child)
+		if not forbidden(child) then
+			if child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
+				dressButton(child)
+			end
+			dressButtonsIn(child, depth - 1)
 		end
-		dressButtonsIn(child, depth - 1)
 	end
 end
 
@@ -465,8 +474,10 @@ end
 local function unblackAll(parent, depth)
 	if not (parent and parent.GetChildren) or (depth or 0) > 4 then return end
 	for _, child in ipairs({ parent:GetChildren() }) do
-		if child.IsObjectType and child:IsObjectType("Button") then unblack(child) end
-		unblackAll(child, (depth or 0) + 1)
+		if not forbidden(child) then
+			if child.IsObjectType and child:IsObjectType("Button") then unblack(child) end
+			unblackAll(child, (depth or 0) + 1)
+		end
 	end
 end
 
