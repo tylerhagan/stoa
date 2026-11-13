@@ -858,6 +858,36 @@ do
 end
 -- The target plaque: a medallion with a level badge, docked while it rests
 -- on the full console, and a cast bar that shows for the target's cast.
+-- The Characters window: rows, the search across characters, the side panel.
+do
+	local alts = Stoa.Alts
+	if alts and StoaDB then
+		StoaDB.alts = StoaDB.alts or {}
+		StoaDB.alts["Valen - Test"] = { name = "Valen", realm = "Test", class = "PALADIN", level = 42, money = 381200, seen = time() - 7200,
+			bags = { [14047] = 12 }, bank = { [14047] = 40, [2589] = 3 }, gear = { [1] = "|cff1eff00|Hitem:10:0|h[Helm]|h|r" }, raceID = 1, sex = 2, ilvl = 36 }
+		local saved = C_Item.GetItemNameByID
+		C_Item.GetItemNameByID = function(id) return ({ [14047] = "Runecloth", [2589] = "Linen Cloth" })[id] end
+		if not alts.page then alts:Build() end
+		alts.page:Show()
+		if not (alts.page and alts.page:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: the window didn't open" end
+		local shown = 0
+		for _, row in ipairs(alts.rows or {}) do if row:IsShown() then shown = shown + 1 end end
+		if shown < 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: no rows" end
+		alts:ShowTab("search")
+		alts.box:SetText("rune")
+		alts:Search()
+		local hit = alts.found and alts.found[1]
+		if not (hit and hit.total == 52 and #(alts.found) == 1) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: search didn't find 52 runecloth" end
+		alts:ShowTab("list")
+		alts:Pick(StoaDB.alts["Valen - Test"])
+		if not (alts.side and alts.side:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: the side panel didn't open" end
+		alts:Pick(nil)
+		alts.page:Hide()
+		C_Item.GetItemNameByID = saved
+		StoaDB.alts["Valen - Test"] = nil
+	end
+end
+
 do
 	local character = Stoa.modules.Character
 	if character and character.enabled and character.LayOut and CharacterFrame then
