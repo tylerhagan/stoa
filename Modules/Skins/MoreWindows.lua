@@ -373,65 +373,71 @@ end
 -- short accent bar on the side that meets the window. The tabs cast their
 -- profession's spell, so they are never moved; only their art changes.
 local function sideTabChosen(tab)
+	local selected = tab.SelectedTexture
+	if selected and selected.IsShown then return selected:IsShown() and true or false end
 	if tab.GetChecked then return tab:GetChecked() and true or false end
 	return tab.stoaChecked and true or false
 end
 
 local function paintSideTab(tab)
+	if not tab.stoaSideFill then return end
 	local chosen = sideTabChosen(tab)
 	tab.stoaSideBar:SetShown(chosen)
-	tab.stoaSideFill:SetVertexColor(0, 0, 0, chosen and 0.5 or 0.72)
-	local icon = tab.Icon or tab.icon
+	local r, g, b = Stoa:Color("panel")
+	local lift = chosen and 0.06 or 0
+	tab.stoaSideFill:SetVertexColor(r + lift, g + lift, b + lift, 1)
+	tab.stoaSideRim:SetVertexColor(Stoa:Color(chosen and "accent" or "hairline"))
+	local icon = tab.Icon
 	if icon and icon.SetDesaturated then
-		icon:SetDesaturated(not chosen)
-		icon:SetAlpha(chosen and 1 or 0.8)
+		icon:SetDesaturated(false)
+		icon:SetAlpha(chosen and 1 or 0.7)
 	end
 end
 
+-- Blizzard's side tab (LargeSideTabButtonTemplate): Background, the Icon
+-- cut by Mask to the tab's shape, SelectedTexture, a pulsing TabGlow and
+-- HighlightTexture. Its art goes clear (by vertex alpha, which the glow's
+-- animation doesn't touch), the icon loses the mask and keeps Blizzard's
+-- placing, and a square tile with a hairline rim sits behind it.
+local SIDE_ART = { "Background", "SelectedTexture", "TabGlow", "HighlightTexture" }
 local function dressSideTab(tab)
-	if type(tab) ~= "table" or not tab.GetRegions or forbidden(tab) or tab.stoaSideTab then return end
+	if type(tab) ~= "table" or not tab.CreateTexture or forbidden(tab) or tab.stoaSideTab then return end
+	local icon = tab.Icon
+	if not icon then return end
 	tab.stoaSideTab = true
-	local icon = tab.Icon or tab.icon
-	for _, region in ipairs({ tab:GetRegions() }) do
-		if region ~= icon and region.IsObjectType and region:IsObjectType("Texture") then
-			-- Without a named icon, the one texture set from a file (not an
-			-- atlas) on the artwork layer is the icon.
-			local keep = not icon and region:GetDrawLayer() == "ARTWORK" and not (region.GetAtlas and region:GetAtlas())
-			if keep then icon = region else region:SetAlpha(0) end
-		end
-	end
-	tab.Icon = tab.Icon or icon
-	for _, key in ipairs({ "SelectedTexture", "HighlightTexture", "Background", "Border" }) do
+	for _, key in ipairs(SIDE_ART) do
 		local part = tab[key]
-		if type(part) == "table" and part.SetAlpha then part:SetAlpha(0) end
+		if type(part) == "table" and part.SetVertexColor then part:SetVertexColor(1, 1, 1, 0) end
 	end
-	if icon then
-		icon:ClearAllPoints()
-		icon:SetPoint("CENTER", 1, 0)
-		icon:SetSize(30, 30)
-		icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-		icon:SetDrawLayer("ARTWORK", 1)
-	end
-	local fill = tab:CreateTexture(nil, "BACKGROUND", nil, -7)
-	fill:SetTexture(UI.WHITE)
-	fill:SetPoint("CENTER", icon or tab, "CENTER")
-	fill:SetSize(38, 38)
-	local rim = tab:CreateTexture(nil, "BACKGROUND")
-	rim:SetPoint("TOPLEFT", fill, -1, 1)
-	rim:SetPoint("BOTTOMRIGHT", fill, 1, -1)
+	if tab.Mask and icon.RemoveMaskTexture then pcall(icon.RemoveMaskTexture, icon, tab.Mask) end
+	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	local size = 34
+	icon:SetSize(size, size)
+	local rim = tab:CreateTexture(nil, "BACKGROUND", nil, 1)
 	rim:SetTexture(UI.WHITE)
-	UI.tint(rim, "hairline")
-	rim:SetDrawLayer("BACKGROUND", -8)
+	rim:SetPoint("TOPLEFT", icon, -4, 4)
+	rim:SetPoint("BOTTOMRIGHT", icon, 4, -4)
+	local fill = tab:CreateTexture(nil, "BACKGROUND", nil, 2)
+	fill:SetTexture(UI.WHITE)
+	fill:SetPoint("TOPLEFT", rim, 1, -1)
+	fill:SetPoint("BOTTOMRIGHT", rim, -1, 1)
+	-- The open one: a short accent bar on the side facing the window.
 	local bar = tab:CreateTexture(nil, "OVERLAY")
 	bar:SetTexture(UI.WHITE)
 	bar:SetWidth(2)
-	bar:SetPoint("TOPRIGHT", fill, "TOPLEFT", -1, -6)
-	bar:SetPoint("BOTTOMRIGHT", fill, "BOTTOMLEFT", -1, 6)
+	bar:SetPoint("TOPRIGHT", rim, "TOPLEFT", -2, -8)
+	bar:SetPoint("BOTTOMRIGHT", rim, "BOTTOMLEFT", -2, 8)
 	UI.tint(bar, "accent")
-	tab.stoaSideFill, tab.stoaSideBar = fill, bar
-	UI.applyTheme()
+	tab.stoaSideFill, tab.stoaSideRim, tab.stoaSideBar = fill, rim, bar
 	if tab.SetChecked then hooksecurefunc(tab, "SetChecked", function(self, on) self.stoaChecked = on paintSideTab(self) end) end
+	if tab.SelectedTexture then
+		hooksecurefunc(tab.SelectedTexture, "Show", function() paintSideTab(tab) end)
+		hooksecurefunc(tab.SelectedTexture, "Hide", function() paintSideTab(tab) end)
+		hooksecurefunc(tab.SelectedTexture, "SetShown", function() paintSideTab(tab) end)
+	end
 	tab:HookScript("OnShow", paintSideTab)
+	tab:HookScript("OnEnter", function(self) if not sideTabChosen(self) then self.Icon:SetAlpha(1) end end)
+	tab:HookScript("OnLeave", paintSideTab)
 	paintSideTab(tab)
 end
 
