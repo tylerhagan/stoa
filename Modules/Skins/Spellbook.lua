@@ -1036,7 +1036,7 @@ end
 -- hangs from its top and the talents from its bottom, so they rise into
 -- the band. Blizzard sizes the window per tab (UpdateSize), and this runs
 -- after it. Out of combat only; nothing of Blizzard's is written.
-local TALENTS_LIFT = 104
+local TALENTS_LIFT = 94
 function Spellbook.FitWindow(talents)
 	local frame = talents:GetParent()
 	if not (frame and frame.SetHeight) then return end

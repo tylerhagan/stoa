@@ -41,7 +41,7 @@ local TARGETS = {
 	{ name = "BankFrame" },
 	{ name = "GuildBankFrame", mode = "border" },
 	{ name = "TradeFrame" },
-	{ name = "ProfessionsFrame" },
+	{ name = "ProfessionsFrame", after = "professions" },
 	{ name = "ProfessionsBookFrame", deep = 2 },
 	-- The item list beside the model is its own panel hanging off the side.
 	{ name = "DressUpFrame", panels = { "CustomSetDetailsPanel" } },
@@ -56,7 +56,7 @@ local TARGETS = {
 	{ name = "ItemSocketingFrame" },
 	{ name = "TimeManagerFrame" },
 	{ name = "ChannelFrame" },
-	{ name = "AddonList", buttons = { "EnableAllButton", "DisableAllButton", "OkayButton", "CancelButton" } },
+	{ name = "AddonList", buttons = { "EnableAllButton", "DisableAllButton", "OkayButton", "CancelButton" }, after = "addons" },
 	{ name = "ClickBindingFrame" },
 	-- The game menu and the settings panel are left alone: addons touching
 	-- them are a known cause of blocked-action errors (Edit Mode, logout).
@@ -257,7 +257,8 @@ local COMMUNITIES_PARTS = {
 	"VoiceChatHeadset", "Chat", "MemberList",
 }
 
-local function dropTops(part)
+local function dropTops(part, amount)
+	amount = amount or COMMUNITIES_DROP
 	if not (part and part.GetNumPoints) or forbidden(part) then return end
 	part.stoaDropped = part.stoaDropped or {}
 	local points = {}
@@ -266,7 +267,7 @@ local function dropTops(part)
 	for _, p in ipairs(points) do
 		local point, y = p[1], p[5] or 0
 		if type(point) == "string" and point:find("^TOP") and part.stoaDropped[point] ~= y then
-			p[5] = y - COMMUNITIES_DROP
+			p[5] = y - amount
 			part.stoaDropped[point] = p[5]
 			moved = true
 		end
@@ -277,6 +278,7 @@ local function dropTops(part)
 end
 
 local AFTER = {}
+local wardrobeTabs
 function AFTER.communities(frame)
 	if InCombatLockdown() or not frame:IsShown() then return end
 	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key]) end
@@ -343,6 +345,7 @@ local function footPill(frame, page, key)
 end
 
 function AFTER.collections(frame)
+	wardrobeTabs()
 	for _, spot in ipairs(COUNT_PILLS) do
 		local page = _G[spot[1]]
 		if type(page) == "table" and page.HookScript and not forbidden(page) then
@@ -353,6 +356,141 @@ function AFTER.collections(frame)
 				page:HookScript("OnShow", function() footPill(frame, page, spot[2]) end)
 			end
 		end
+	end
+end
+
+-- Add-ons: the character dropdown, "Load out of date AddOns" and the
+-- search start just under the title, half under the header band; they
+-- (and the usage block under them, which the list hangs from) sit lower.
+local ADDONS_DROP = 14
+function AFTER.addons(frame)
+	if InCombatLockdown() then return end
+	for _, key in ipairs({ "Dropdown", "ForceLoad", "SearchBox", "Performance" }) do dropTops(frame[key], ADDONS_DROP) end
+end
+
+-- Professions: the tall tiles down the right (the overview and one per
+-- profession) are dark STOA tiles with the icon kept; the open one has a
+-- short accent bar on the side that meets the window. The tabs cast their
+-- profession's spell, so they are never moved; only their art changes.
+local function sideTabChosen(tab)
+	if tab.GetChecked then return tab:GetChecked() and true or false end
+	return tab.stoaChecked and true or false
+end
+
+local function paintSideTab(tab)
+	local chosen = sideTabChosen(tab)
+	tab.stoaSideBar:SetShown(chosen)
+	tab.stoaSideFill:SetVertexColor(0, 0, 0, chosen and 0.5 or 0.72)
+	local icon = tab.Icon or tab.icon
+	if icon and icon.SetDesaturated then
+		icon:SetDesaturated(not chosen)
+		icon:SetAlpha(chosen and 1 or 0.8)
+	end
+end
+
+local function dressSideTab(tab)
+	if type(tab) ~= "table" or not tab.GetRegions or forbidden(tab) or tab.stoaSideTab then return end
+	tab.stoaSideTab = true
+	local icon = tab.Icon or tab.icon
+	for _, region in ipairs({ tab:GetRegions() }) do
+		if region ~= icon and region.IsObjectType and region:IsObjectType("Texture") then
+			-- Without a named icon, the one texture set from a file (not an
+			-- atlas) on the artwork layer is the icon.
+			local keep = not icon and region:GetDrawLayer() == "ARTWORK" and not (region.GetAtlas and region:GetAtlas())
+			if keep then icon = region else region:SetAlpha(0) end
+		end
+	end
+	tab.Icon = tab.Icon or icon
+	for _, key in ipairs({ "SelectedTexture", "HighlightTexture", "Background", "Border" }) do
+		local part = tab[key]
+		if type(part) == "table" and part.SetAlpha then part:SetAlpha(0) end
+	end
+	if icon then
+		icon:ClearAllPoints()
+		icon:SetPoint("CENTER", 1, 0)
+		icon:SetSize(30, 30)
+		icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		icon:SetDrawLayer("ARTWORK", 1)
+	end
+	local fill = tab:CreateTexture(nil, "BACKGROUND", nil, -8)
+	fill:SetTexture(UI.WHITE)
+	fill:SetPoint("CENTER", icon or tab, "CENTER")
+	fill:SetSize(38, 38)
+	local rim = tab:CreateTexture(nil, "BORDER")
+	rim:SetPoint("TOPLEFT", fill, -1, 1)
+	rim:SetPoint("BOTTOMRIGHT", fill, 1, -1)
+	rim:SetTexture(UI.WHITE)
+	UI.tint(rim, "hairline")
+	rim:SetDrawLayer("BACKGROUND", -9)
+	local bar = tab:CreateTexture(nil, "OVERLAY")
+	bar:SetTexture(UI.WHITE)
+	bar:SetWidth(2)
+	bar:SetPoint("TOPRIGHT", fill, "TOPLEFT", -1, -6)
+	bar:SetPoint("BOTTOMRIGHT", fill, "BOTTOMLEFT", -1, 6)
+	UI.tint(bar, "accent")
+	tab.stoaSideFill, tab.stoaSideBar = fill, bar
+	UI.applyTheme()
+	if tab.SetChecked then hooksecurefunc(tab, "SetChecked", function(self, on) self.stoaChecked = on paintSideTab(self) end) end
+	tab:HookScript("OnShow", paintSideTab)
+	paintSideTab(tab)
+end
+
+function AFTER.professions(frame)
+	dressSideTab(frame.ProfessionsOverviewTab)
+	for _, tab in ipairs(frame.rightProfessionTabs or {}) do dressSideTab(tab) end
+end
+
+-- Appearances: its Items and Sets tabs sit inside the page under the title,
+-- so they are words with the accent underline like the macro tabs, not
+-- gold tiles (Forever shows only Items).
+local function paintWordTab(tab)
+	local text = tab.Text or (tab.GetFontString and tab:GetFontString())
+	local chosen = tab.stoaWordLine and (tab.isSelected or (tab.IsEnabled and not tab:IsEnabled()))
+	if text then text:SetTextColor(Stoa:Color(chosen and "text" or "muted")) end
+	if tab.stoaWordLine then tab.stoaWordLine:SetShown(chosen and true or false) end
+end
+
+local function wordTab(tab)
+	if type(tab) ~= "table" or not tab.GetRegions or forbidden(tab) or tab.stoaWordTab then return end
+	tab.stoaWordTab = true
+	for _, region in ipairs({ tab:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
+	end
+	for _, key in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
+		local tex = tab[key] and tab[key](tab)
+		if tex then tex:SetAlpha(0) end
+	end
+	local text = tab.Text or (tab.GetFontString and tab:GetFontString())
+	if not text then return end
+	Stoa:SetFont(text, "sans", Stoa.typeSize.body)
+	text:SetShadowOffset(0, 0)
+	local line = tab:CreateTexture(nil, "OVERLAY")
+	line:SetTexture(UI.WHITE)
+	line:SetHeight(2)
+	line:SetPoint("TOPLEFT", text, "BOTTOMLEFT", 0, -4)
+	line:SetPoint("TOPRIGHT", text, "BOTTOMRIGHT", 0, -4)
+	UI.tint(line, "accent")
+	tab.stoaWordLine = line
+	UI.applyTheme()
+	tab:HookScript("OnShow", paintWordTab)
+	tab:HookScript("OnEnter", function(self) local t = self.Text or self:GetFontString() if t and not self.stoaWordLine:IsShown() then t:SetTextColor(Stoa:Color("accent")) end end)
+	tab:HookScript("OnLeave", paintWordTab)
+	if tab.SetEnabled then hooksecurefunc(tab, "SetEnabled", paintWordTab) end
+	if tab.Enable then hooksecurefunc(tab, "Enable", paintWordTab) end
+	if tab.Disable then hooksecurefunc(tab, "Disable", paintWordTab) end
+	paintWordTab(tab)
+end
+
+function wardrobeTabs()
+	local page = rawget(_G, "WardrobeCollectionFrame")
+	if type(page) ~= "table" or forbidden(page) then return end
+	wordTab(page.ItemsTab)
+	wordTab(page.SetsTab)
+	if page.ClickTab and not page.stoaTabsHooked then
+		page.stoaTabsHooked = true
+		hooksecurefunc(page, "ClickTab", function()
+			for _, tab in ipairs({ page.ItemsTab, page.SetsTab }) do if type(tab) == "table" and tab.stoaWordLine then paintWordTab(tab) end end
+		end)
 	end
 end
 

@@ -1489,8 +1489,11 @@ function UI.plaqueStep(frame)
 		-- Up to where the art's own line starts: the line is see-through,
 		-- so an overlap would show as a brighter spot.
 		top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - STEP_LEAD, 1)
+		-- The art hangs from the plain line, not from the frame's bottom:
+		-- measured from two edges, the two lines rounded to different
+		-- pixels and showed a small bump where they met.
 		step:ClearAllPoints()
-		step:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - STEP_LEAD, 0)
+		step:SetPoint("TOPLEFT", top, "TOPRIGHT", 0, 1)
 	end
 	function slab:SetShown(on)
 		for _, part in ipairs(parts) do part:SetShown(on) end
