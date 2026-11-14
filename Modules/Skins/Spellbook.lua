@@ -122,8 +122,10 @@ end
 -- book's top row switches back to them. Each row is a secure spell button,
 -- so a click casts, a drag puts it on a bar and Shift-click links it. Rows
 -- are filled out of combat only (a secure button can't change in a fight).
-local ROW_H, ROWS, LIST_TOP, LIST_BOTTOM = 32, 16, 72, 28
+local ROW_H, ROWS, LIST_TOP, LIST_BOTTOM = 28, 18, 56, 28
 local COLS = { rank = 90, cost = 80, cast = 70, next = 120 }
+-- A heading row's words sit a little low, near its rule.
+local HEAD_Y = -4
 local COL_ORDER = { "next", "cast", "cost", "rank" }
 -- Narrower than this (the book's compact one-page size) the list drops
 -- the cost and cast columns so the names keep room.
@@ -244,14 +246,19 @@ local function buildRow(list, i)
 	hover:Hide()
 	row.hover = hover
 	row.icon = row:CreateTexture(nil, "ARTWORK")
-	row.icon:SetSize(ROW_H - 6, ROW_H - 6)
+	row.icon:SetSize(ROW_H - 8, ROW_H - 8)
 	row.icon:SetPoint("LEFT", 4, 0)
 	row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	-- A dark rim a pixel round the icon, so it sits in the page.
+	row.rim = row:CreateTexture(nil, "BORDER")
+	row.rim:SetPoint("TOPLEFT", row.icon, -1, 1)
+	row.rim:SetPoint("BOTTOMRIGHT", row.icon, 1, -1)
+	row.rim:SetColorTexture(0, 0, 0, 0.7)
 	row.name = UI.text(row, "sans", Stoa.typeSize.label, "text", "LEFT")
 	row.name:SetPoint("LEFT", row.icon, "RIGHT", 10, 0)
 	row.name:SetWordWrap(false)
 	row.head = UI.text(row, "sans", Stoa.typeSize.micro, "accent", "LEFT")
-	row.head:SetPoint("BOTTOMLEFT", 4, 6)
+	row.head:SetPoint("LEFT", 4, HEAD_Y)
 	row.rule = row:CreateTexture(nil, "BORDER")
 	row.rule:SetHeight(1)
 	row.rule:SetPoint("BOTTOMLEFT")
@@ -311,7 +318,6 @@ function Spellbook:FillList()
 	local compact = (list:GetWidth() or 0) < WIDE
 	if list.compact ~= compact then
 		list.compact = compact
-		placeColumns(list.heads, list, compact, "BOTTOMRIGHT", 6)
 		for _, row in ipairs(list.rows) do
 			local leftmost = placeColumns(row, row, compact, "RIGHT")
 			row.name:ClearAllPoints()
@@ -331,6 +337,7 @@ function Spellbook:FillList()
 			row.head:SetShown(heading)
 			row.rule:SetShown(heading)
 			row.icon:SetShown(not heading)
+			row.rim:SetShown(not heading)
 			row.name:SetShown(not heading)
 			for _, key in ipairs(COL_ORDER) do row[key]:SetShown(not heading and not row[key].stoaSkip) end
 			if heading then
@@ -346,6 +353,22 @@ function Spellbook:FillList()
 				row.next:SetTextColor(Stoa:Color(entry.trainNow and "accent" or "muted"))
 				row:SetAttribute("spell", not entry.passive and entry.spellID or nil)
 			end
+		end
+	end
+	-- The column names ride on the first school heading in view, level
+	-- with it, instead of floating over the list.
+	local first
+	for _, row in ipairs(list.rows) do
+		if row:IsShown() and row.entry and row.entry.heading then first = row break end
+	end
+	for _, key in ipairs(COL_ORDER) do
+		local fs = list.heads[key]
+		fs:ClearAllPoints()
+		if first and not first[key].stoaSkip then
+			fs:SetPoint("LEFT", first[key], "LEFT", 0, HEAD_Y)
+			fs:Show()
+		else
+			fs:Hide()
 		end
 	end
 	list.empty:SetShown(#rows == 0)
@@ -578,6 +601,10 @@ local function hideTree(parts)
 	for _, line in ipairs(parts.lines) do line:Hide() end
 end
 
+-- The card's head (name and points, the bar, the "more to open" line)
+-- sits this much higher than Blizzard's header, for room between them.
+local HEAD_LIFT = 8
+
 function Spellbook.DressTrees(talents)
 	-- The window's stone rings fight the cards; the window is dressed after
 	-- the talents first show, so this runs again here.
@@ -642,13 +669,13 @@ function Spellbook.DressTrees(talents)
 			local name, text = header.Name, header.Text
 			if name and text then
 				name:ClearAllPoints()
-				name:SetPoint("LEFT", talents, "TOPLEFT", x0 + 18, cy - top)
+				name:SetPoint("LEFT", talents, "TOPLEFT", x0 + 18, cy - top + HEAD_LIFT)
 				name:SetJustifyH("LEFT")
 				text:ClearAllPoints()
-				text:SetPoint("RIGHT", talents, "TOPLEFT", x0 + width - 18, cy - top)
+				text:SetPoint("RIGHT", talents, "TOPLEFT", x0 + width - 18, cy - top + HEAD_LIFT)
 				text:SetJustifyH("RIGHT")
 			end
-			local cardTop = cy - top + 22
+			local cardTop = cy - top + 22 + HEAD_LIFT
 			if not firstX0 then firstX0 = x0 end
 			lastRight, rowTop = x0 + width, cardTop
 			local cardBottom = tree.bottom - top - tree.size / 2 - 18
@@ -722,7 +749,7 @@ function Spellbook.DressTrees(talents)
 			end
 			-- Toward the next row: a thin bar under the name.
 			local barWidth = width - 36
-			local barY = cy - top - 16
+			local barY = cy - top - 12
 			parts.track:ClearAllPoints()
 			parts.track:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 18, barY)
 			parts.track:SetSize(barWidth, 3)
@@ -734,7 +761,7 @@ function Spellbook.DressTrees(talents)
 			parts.bar:SetSize(math.max(0.01, barWidth * share), 3)
 			parts.bar:SetShown(share > 0)
 			parts.next:ClearAllPoints()
-			parts.next:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 18, barY - 8)
+			parts.next:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 18, barY - 12)
 			if last then
 				parts.next:SetText("Every row open")
 			else
