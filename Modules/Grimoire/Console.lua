@@ -23,6 +23,8 @@ local Console = Stoa:NewModule("Grimoire", {
 	manaRule = true,
 	castCost = true,
 	formMana = true,
+	-- Faint lines between the console's sections.
+	dividers = true,
 })
 
 local SPINE_HEIGHT = 22
@@ -1492,9 +1494,10 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 	end
 	local pageWidth = Stoa:PlainNumber(self.rightPage:GetWidth()) or 0
 	spots[3] = { barsRight, width - inset - pageWidth }
+	local on = self.db.dividers ~= false
 	for i, div in ipairs(dividers) do
 		local spot = spots[i]
-		if spot and spot[2] - spot[1] >= DIVIDER_ROOM then
+		if on and spot and spot[2] - spot[1] >= DIVIDER_ROOM then
 			div:ClearAllPoints()
 			div:SetPoint("TOP", self.frame, "TOPLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), top + 2)
 			div:SetPoint("BOTTOM", self.frame, "BOTTOMLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), 16)

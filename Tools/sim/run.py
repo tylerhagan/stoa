@@ -869,6 +869,10 @@ do
 			console:PlaceDividers(3440, 1700, 1700)
 			assert(not console.dividers[3]:IsShown(), "a line in a gap too narrow for it")
 			console:PaintDividers()
+			console.db.dividers = false
+			console:PlaceDividers(3440, 400, 400)
+			assert(not console.dividers[3]:IsShown(), "a line shows with the setting off")
+			console.db.dividers = true
 		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Console dividers: " .. e end
 	end
