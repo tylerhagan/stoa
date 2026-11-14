@@ -804,6 +804,9 @@ do
 		if not (spellbook.list and spellbook.list.rows[1].entry and spellbook.list.rows[1].entry.heading and spellbook.list.rows[2].entry) then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: rows not filled"
 		end
+		if spellbook.SchoolLabel("Shadow Magic") ~= "Shadow" or spellbook.SchoolLabel("SHADOW MAGIC") ~= "Shadow" or spellbook.SchoolLabel("Holy") ~= "Holy" then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: Shadow Magic not shortened"
+		end
 		if rows[1].count ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: heading has no count" end
 		if not (spellbook.tools and spellbook.tools.box and spellbook.tools.words[1]) then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: no STOA toolbar"

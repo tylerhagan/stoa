@@ -180,6 +180,16 @@ local function nextRanks()
 	return out
 end
 
+-- A few school names Forever spells out longer than players say them
+-- (the priest's "Shadow Magic" is Shadow); shown short in STOA's words,
+-- headings and talent cards. The game's own names are left as they are.
+local SHORT_SCHOOL = { ["Shadow Magic"] = "Shadow" }
+local function schoolLabel(name)
+	if type(name) ~= "string" then return name end
+	return SHORT_SCHOOL[name] or SHORT_SCHOOL[name:gsub("(%a)(%w*)", function(a, b) return a:upper() .. b:lower() end)] or name
+end
+Spellbook.SchoolLabel = schoolLabel
+
 -- The schools in the book's order, by name.
 function Spellbook:Schools()
 	local out, book = {}, C_SpellBook
@@ -219,7 +229,7 @@ function Spellbook:ListRows(filter, school)
 				end
 			end
 			if #names > 0 then
-				rows[#rows + 1] = { heading = (info.name or ""):upper(), count = #names }
+				rows[#rows + 1] = { heading = (schoolLabel(info.name) or ""):upper(), count = #names }
 				table.sort(names, function(a, b)
 					local pa, pb = byName[a].passive, byName[b].passive
 					if pa ~= pb then return not pa end
@@ -503,7 +513,7 @@ function Spellbook:PaintSchools()
 			tools.words[i] = word
 		end
 		word.school = i > 1 and label or nil
-		word.text:SetText(label)
+		word.text:SetText(schoolLabel(label))
 		local width = word.text:GetStringWidth()
 		if not width or Stoa:IsSecret(width) or width <= 0 then width = #label * 7 end
 		width = math.ceil(width)
@@ -698,7 +708,7 @@ function Spellbook.DressTreeHeaders(talents)
 				text:SetPoint("LEFT", header, "CENTER", 6, 0)
 				text:SetJustifyH("LEFT")
 			end
-			name:SetText((name:GetText() or ""):upper())
+			name:SetText((schoolLabel(name:GetText()) or ""):upper())
 			local spent = tonumber(text:GetText()) or 0
 			local token = i == top and "accent" or spent > 0 and "text" or "muted"
 			name:SetTextColor(Stoa:Color(token))
