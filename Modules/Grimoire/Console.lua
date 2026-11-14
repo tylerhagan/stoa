@@ -1410,11 +1410,26 @@ function Console:BuildDividers(frame)
 		lower:SetWidth(1)
 		lower:SetPoint("TOP", div, "CENTER")
 		lower:SetPoint("BOTTOM")
+		-- Depth: a dark crease just left of the gold, so the line reads as
+		-- tooled into the leather (light from the top right), and a dark
+		-- seat a pixel wider under the diamond.
+		local creaseUp, creaseDown = div:CreateTexture(nil, "BORDER"), div:CreateTexture(nil, "BORDER")
+		creaseUp:SetWidth(1)
+		creaseUp:SetPoint("TOPRIGHT", upper, "TOPLEFT")
+		creaseUp:SetPoint("BOTTOMRIGHT", upper, "BOTTOMLEFT")
+		creaseDown:SetWidth(1)
+		creaseDown:SetPoint("TOPRIGHT", lower, "TOPLEFT")
+		creaseDown:SetPoint("BOTTOMRIGHT", lower, "BOTTOMLEFT")
+		local seat = div:CreateTexture(nil, "ARTWORK")
+		seat:SetSize(7, 7)
+		seat:SetPoint("CENTER", -0.5, -0.5)
+		seat:SetRotation(math.rad(45))
 		local mark = div:CreateTexture(nil, "OVERLAY")
-		mark:SetSize(4, 4)
+		mark:SetSize(5, 5)
 		mark:SetPoint("CENTER")
 		mark:SetRotation(math.rad(45))
 		div.upper, div.lower, div.mark = upper, lower, mark
+		div.creaseUp, div.creaseDown, div.seat = creaseUp, creaseDown, seat
 		div:Hide()
 		self.dividers[i] = div
 	end
@@ -1430,14 +1445,25 @@ function Console:PaintDividers()
 		div.lower:SetColorTexture(1, 1, 1, 1)
 		-- Clear at the ends, strongest at the diamond.
 		if CreateColor and div.upper.SetGradient then
-			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, 0.65)
+			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, 0.4)
 			pcall(div.upper.SetGradient, div.upper, "VERTICAL", solid, clear)
 			pcall(div.lower.SetGradient, div.lower, "VERTICAL", clear, solid)
 		else
 			div.upper:SetColorTexture(r, g, b, 0.3)
 			div.lower:SetColorTexture(r, g, b, 0.3)
 		end
-		div.mark:SetColorTexture(r, g, b, 0.55)
+		div.mark:SetColorTexture(r, g, b, 0.7)
+		div.seat:SetColorTexture(0, 0, 0, 0.55)
+		for _, crease in ipairs({ div.creaseUp, div.creaseDown }) do
+			crease:SetColorTexture(1, 1, 1, 1)
+			if CreateColor and crease.SetGradient then
+				local clear, dark = CreateColor(0, 0, 0, 0), CreateColor(0, 0, 0, 0.5)
+				local top, bottom = crease == div.creaseUp and dark or clear, crease == div.creaseUp and clear or dark
+				pcall(crease.SetGradient, crease, "VERTICAL", top, bottom)
+			else
+				crease:SetColorTexture(0, 0, 0, 0.35)
+			end
+		end
 	end
 end
 
@@ -1448,7 +1474,7 @@ local DIVIDER_ROOM = 24
 function Console:PlaceDividers(width, leftClear, rightClear)
 	local dividers = self.dividers
 	if not dividers then return end
-	local inset = self:PageInset()
+	local inset, top = self:PageInset()
 	local centre = width / 2
 	local spots = {}
 	local tally = Stoa.modules.Tally
@@ -1470,8 +1496,8 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 		local spot = spots[i]
 		if spot and spot[2] - spot[1] >= DIVIDER_ROOM then
 			div:ClearAllPoints()
-			div:SetPoint("TOP", self.frame, "TOPLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), -14)
-			div:SetPoint("BOTTOM", self.frame, "BOTTOMLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), 10)
+			div:SetPoint("TOP", self.frame, "TOPLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), top + 2)
+			div:SetPoint("BOTTOM", self.frame, "BOTTOMLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), 16)
 			div:Show()
 		else
 			div:Hide()
