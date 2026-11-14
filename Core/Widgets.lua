@@ -1471,6 +1471,13 @@ function UI.plaqueStep(frame)
 	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueStepLines")
 	lines:SetAllPoints(step)
 	local parts = { body, top, step, lines }
+	-- The plain line is drawn on whole pixels and the art's line is not, so
+	-- where they met one looked thicker or a pixel off. Neither snaps now,
+	-- so both lines are drawn the same way.
+	for _, part in ipairs(parts) do
+		if part.SetSnapToPixelGrid then part:SetSnapToPixelGrid(false) end
+		if part.SetTexelSnappingBias then part:SetTexelSnappingBias(0) end
+	end
 	for _, part in ipairs({ body, step }) do
 		part:SetVertexColor(Stoa:Color("panel"))
 		UI.tint(part, "panel", 1)
