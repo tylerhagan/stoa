@@ -665,10 +665,28 @@ function Console:BuildFellowship(frame, space)
 	local ready = column(readyCol, "Ready")
 	local role = text(readyCol, "serif", Stoa.typeSize.title, "accent")
 	role:SetPoint("TOPLEFT", ready, "BOTTOMLEFT", 0, -6)
-	local note = text(readyCol, "italic", Stoa.typeSize.label, "danger")
+	-- Small jobs (Jobs below): a gold diamond and "3 small jobs", the list
+	-- on hover. Nothing shows when there's nothing to do.
+	local note = CreateFrame("Button", nil, readyCol)
+	note:SetSize(COLUMN_WIDTH, 13)
 	note:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -3)
-	note:SetWidth(COLUMN_WIDTH)
-	note:SetWordWrap(false)
+	note:RegisterForClicks("RightButtonUp")
+	local mark = note:CreateTexture(nil, "ARTWORK")
+	mark:SetSize(5, 5)
+	mark:SetPoint("LEFT", 1, 0)
+	mark:SetRotation(math.rad(45))
+	local words = text(note, "sans", Stoa.typeSize.label, "accent")
+	words:SetPoint("LEFT", mark, "RIGHT", 6, 0)
+	words:SetWordWrap(false)
+	note.mark, note.words = mark, words
+	note:SetScript("OnEnter", function(own) self:ShowJobs(own) end)
+	note:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	-- Right-click: the new spells are seen, stop listing them.
+	note:SetScript("OnClick", function(own)
+		Stoa.char.newSpells = nil
+		self:UpdateJobs()
+		if own:IsMouseOver() and own:IsShown() then self:ShowJobs(own) end
+	end)
 	-- Gear: the most worn piece as ten cells, its share on the right.
 	local Figures = Stoa.Figures
 	local gear = CreateFrame("Button", nil, readyCol)
@@ -1064,12 +1082,7 @@ function Console:UpdateSeal()
 	self.roleText:SetText(label)
 	if self.roleWord then
 		self.roleWord:SetText(role and Stoa.ROLE_LABELS[role] or "")
-		local note = ""
-		if missing and #missing > 0 then
-			note = (table.concat(missing, "\1"):lower():gsub("^%l", string.upper):gsub("\1", UI.SEP))
-		end
-		self.roleNote:SetText(note)
-		self.roleNote:SetShown(note ~= "")
+		self:UpdateJobs()
 	end
 	if self.groupBuffs then self.groupBuffs:SetText(Stoa.groupBuffLine or "") end
 end
@@ -1123,6 +1136,171 @@ function Console:UpdateOnline()
 		self.onlineNames:SetText(table.concat(names, ", "))
 	end
 	self:UpdateSlim()
+end
+
+-- Small jobs ----------------------------------------------------------------
+-- One quiet line in the Ready column for the little things worth doing
+-- before you head out: a missing self-buff, gear about to break, talent
+-- points, a new spell not on a bar, restock items you're short of, a slot
+-- you've emptied. Read from what STOA already knows, on the game's events.
+
+local safeCall = Stoa.safe.call
+local JOB_SLOTS = {
+	[1] = "HEADSLOT", [2] = "NECKSLOT", [3] = "SHOULDERSLOT", [5] = "CHESTSLOT", [6] = "WAISTSLOT",
+	[7] = "LEGSSLOT", [8] = "FEETSLOT", [9] = "WRISTSLOT", [10] = "HANDSSLOT", [11] = "FINGER0SLOT",
+	[12] = "FINGER1SLOT", [13] = "TRINKET0SLOT", [14] = "TRINKET1SLOT", [15] = "BACKSLOT",
+	[16] = "MAINHANDSLOT", [17] = "SECONDARYHANDSLOT", [18] = "RANGEDSLOT",
+}
+local SLOT_WORDS = { HEADSLOT = "Head", NECKSLOT = "Neck", SHOULDERSLOT = "Shoulder", CHESTSLOT = "Chest",
+	WAISTSLOT = "Waist", LEGSSLOT = "Legs", FEETSLOT = "Feet", WRISTSLOT = "Wrist", HANDSSLOT = "Hands",
+	FINGER0SLOT = "Ring", FINGER1SLOT = "Ring", TRINKET0SLOT = "Trinket", TRINKET1SLOT = "Trinket",
+	BACKSLOT = "Back", MAINHANDSLOT = "Main hand", SECONDARYHANDSLOT = "Off hand", RANGEDSLOT = "Ranged" }
+
+local function slotWord(slot)
+	local key = JOB_SLOTS[slot]
+	local word = _G[key]
+	return (type(word) == "string" and word ~= "") and word or SLOT_WORDS[key]
+end
+
+-- Spells you learn from now on, by name, until one is on a bar. The first
+-- look only remembers what you know, so nothing old is listed.
+function Console:NoteSpells()
+	local spells = Stoa.Spells
+	if not (spells and spells.each and Stoa.char) then return end
+	local char = Stoa.char
+	local first = char.knownSpells == nil
+	local seen = char.knownSpells or {}
+	char.knownSpells = seen
+	for name in spells.each() do
+		if not seen[name] then
+			seen[name] = true
+			if not first then
+				char.newSpells = char.newSpells or {}
+				char.newSpells[name] = true
+			end
+		end
+	end
+	self:ClearPlaced()
+end
+
+-- A new spell on any bar (any rank) is off the list.
+function Console:ClearPlaced()
+	local new = Stoa.char and Stoa.char.newSpells
+	if not (new and next(new) and GetActionInfo) then return end
+	local name = Stoa.Spells.name
+	for slot = 1, 120 do
+		local kind, id = safeCall(GetActionInfo, slot)
+		if kind == "spell" and id then
+			local word = name(id)
+			if type(word) == "string" and not Stoa:IsSecret(word) and new[word] then new[word] = nil end
+		end
+	end
+	if not next(new) then Stoa.char.newSpells = nil end
+end
+
+local function twoHanded()
+	local link = GetInventoryItemLink and safeCall(GetInventoryItemLink, "player", 16)
+	if not link or not (C_Item and C_Item.GetItemInfoInstant) then return false end
+	local _, _, _, equipLoc = safeCall(C_Item.GetItemInfoInstant, link)
+	return equipLoc == "INVTYPE_2HWEAPON"
+end
+
+-- The list: { words, hint, warn }.
+function Console:Jobs()
+	local list = {}
+	local function add(words, hint, warn) list[#list + 1] = { words, hint, warn } end
+	for _, word in ipairs(Stoa.missingBuffs or {}) do
+		add((tostring(word):lower():gsub("^%l", string.upper)), "missing", true)
+	end
+	-- Gear about to break (the Gear row shows the share; this names it).
+	if GetInventoryItemDurability then
+		local worst, where
+		for slot in pairs(JOB_SLOTS) do
+			local current, max = safeCall(GetInventoryItemDurability, slot)
+			current, max = Stoa:PlainNumber(current), Stoa:PlainNumber(max)
+			if current and max and max > 0 and (not worst or current / max < worst) then worst, where = current / max, slot end
+		end
+		if worst and worst <= 0 then
+			add(slotWord(where) .. " is broken", "repair", true)
+		elseif worst and worst < 0.25 then
+			add(("%s at %d%%"):format(slotWord(where), math.floor(worst * 100 + 0.5)), "repair", true)
+		end
+	end
+	local talents = C_ClassTalents and C_ClassTalents.HasUnspentTalentPoints
+	if talents and safeCall(talents) then
+		add("Talent points to spend", "talents")
+	elseif not talents and UnitCharacterPoints and (Stoa:PlainNumber(safeCall(UnitCharacterPoints, "player")) or 0) > 0 then
+		add("Talent points to spend", "talents")
+	end
+	local new = Stoa.char and Stoa.char.newSpells
+	if new and next(new) then
+		local names = {}
+		for name in pairs(new) do names[#names + 1] = name end
+		table.sort(names)
+		if #names > 2 then
+			add(#names .. " new spells not on a bar", "spellbook")
+		else
+			for _, name in ipairs(names) do add(name .. " not on a bar", "spellbook") end
+		end
+	end
+	local restock = Stoa.Restock
+	local wants = restock and Stoa.modules.Restock and Stoa.modules.Restock.db.enabled and Stoa.char and Stoa.char.restock
+	if wants and C_Item and C_Item.GetItemCount then
+		for id, want in pairs(wants) do
+			local have = Stoa:PlainNumber(safeCall(C_Item.GetItemCount, id, false)) or 0
+			if type(want) == "number" and have < want then
+				add(("%d %s short"):format(want - have, restock.name(id) or "items"), "next vendor")
+			end
+		end
+	end
+	-- A slot you've worn something in that's empty now (not the off hand
+	-- behind a two-hander).
+	if GetInventoryItemID and Stoa.char then
+		local worn = Stoa.char.wornSlots or {}
+		Stoa.char.wornSlots = worn
+		local both = twoHanded()
+		for slot in pairs(JOB_SLOTS) do
+			if safeCall(GetInventoryItemID, "player", slot) then
+				worn[slot] = true
+			elseif worn[slot] and not (slot == 17 and both) then
+				add(slotWord(slot) .. " slot is empty", "character")
+			end
+		end
+	end
+	return list
+end
+
+function Console:UpdateJobs()
+	local note = self.roleNote
+	if not (note and note.words) then return end
+	if InCombatLockdown() then note:Hide() return end
+	local list = self:Jobs()
+	self.jobList = list
+	if #list == 0 then note:Hide() return end
+	local warn = false
+	for _, job in ipairs(list) do warn = warn or job[3] end
+	local tone = warn and "danger" or "accent"
+	note.words:SetText(#list == 1 and list[1][1] or ("%d small jobs"):format(#list))
+	note.words:SetTextColor(Stoa:Color(tone))
+	note.mark:SetColorTexture(Stoa:Color(tone))
+	if not note:IsShown() then
+		note:Show()
+		if UI.fadeIn then UI.fadeIn(note) end
+	end
+end
+
+function Console:ShowJobs(owner)
+	local list = self.jobList
+	if not list or #list == 0 then return end
+	GameTooltip:SetOwner(owner, "ANCHOR_TOP")
+	GameTooltip:AddLine("Small jobs")
+	local mr, mg, mb = Stoa:Color("muted")
+	for _, job in ipairs(list) do
+		local r, g, b = Stoa:Color(job[3] and "danger" or "text")
+		GameTooltip:AddDoubleLine(job[1], job[2], r, g, b, mr, mg, mb)
+	end
+	if Stoa.char and Stoa.char.newSpells then GameTooltip:AddLine("Right-click to clear the new spells.", mr, mg, mb) end
+	GameTooltip:Show()
 end
 
 -- Gear wear (the most worn piece) and free bag slots.
@@ -1538,8 +1716,23 @@ function Console:OnEnable()
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:Settle("low") end)
 	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() end)
 	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
-		Stoa:On(event, function() self:UpdateKit() end)
+		Stoa:On(event, function() self:UpdateKit() self:UpdateJobs() end)
 	end
+	-- Small jobs: talents, new spells, bars, combat.
+	Stoa:On("STOA_SPELLS_CHANGED", function() self:NoteSpells() self:UpdateJobs() end)
+	for _, event in ipairs({ "TRAIT_CONFIG_UPDATED", "PLAYER_TALENT_UPDATE", "CHARACTER_POINTS_CHANGED", "PLAYER_REGEN_ENABLED" }) do
+		Stoa:On(event, function() self:UpdateJobs() end)
+	end
+	Stoa:On("PLAYER_REGEN_DISABLED", function() if self.roleNote then self.roleNote:Hide() end end)
+	Stoa:On("ACTIONBAR_SLOT_CHANGED", function()
+		if self.barsQueued or not (Stoa.char and Stoa.char.newSpells) then return end
+		self.barsQueued = true
+		C_Timer.After(0.5, function()
+			self.barsQueued = nil
+			self:ClearPlaced()
+			self:UpdateJobs()
+		end)
+	end)
 	Stoa:On("FRIENDLIST_UPDATE", function() self:UpdateOnline() end)
 	Stoa:On("BN_FRIEND_INFO_CHANGED", function() self:UpdateOnline() end)
 	Stoa:On("GUILD_ROSTER_UPDATE", function() self:UpdateOnline() end)
