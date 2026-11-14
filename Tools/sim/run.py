@@ -801,9 +801,17 @@ do
 			spellbook.list.GetHeight = function() return 400 end
 		end
 		spellbook:FillList()
-		if not (spellbook.list and spellbook.list.compact ~= nil and spellbook.list.rows[2].entry) then
+		if not (spellbook.list and spellbook.list.rows[1].entry and spellbook.list.rows[1].entry.heading and spellbook.list.rows[2].entry) then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: rows not filled"
 		end
+		if rows[1].count ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: heading has no count" end
+		if not (spellbook.tools and spellbook.tools.box and spellbook.tools.words[1]) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: no STOA toolbar"
+		end
+		spellbook.tools.box:SetText("zzz")
+		spellbook:FillList()
+		if spellbook.list.rows[1]:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: STOA search didn't narrow" end
+		spellbook.tools.box:SetText("")
 		rawset(Enum, "SpellBookItemType", realTypes)
 		spellbook:ShowView("pages")
 		spellbook:ShowView("list")
