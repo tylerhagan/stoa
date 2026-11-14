@@ -125,7 +125,7 @@ end
 -- Blizzard's is moved. Each row is a secure spell button, so a click casts,
 -- a drag puts it on a bar and Shift-click links it. Rows are filled out of
 -- combat only (a secure button can't change in a fight).
-local ROW_H, HEAD_H, ROWS, LIST_TOP, LIST_BOTTOM, TOOLS_TOP, TOOLS_H = 38, 30, 18, 58, 24, 14, 30
+local ROW_H, HEAD_H, ROWS, LIST_TOP, LIST_BOTTOM, TOOLS_TOP, TOOLS_H = 38, 36, 18, 58, 24, 14, 30
 local ICON = 26
 
 local call = Stoa.safe.call
@@ -325,13 +325,14 @@ local function buildRow(list)
 	row.detail:SetWordWrap(false)
 	-- A school heading: its name in the accent, the count quiet, a rule.
 	row.head = UI.text(row, "sans", Stoa.typeSize.micro, "accent", "LEFT")
-	row.head:SetPoint("BOTTOMLEFT", 2, 7)
+	row.head:SetPoint("BOTTOMLEFT", 2, 13)
 	row.count = UI.text(row, "sans", Stoa.typeSize.micro, "muted", "LEFT")
 	row.count:SetPoint("LEFT", row.head, "RIGHT", 8, 0)
 	row.rule = row:CreateTexture(nil, "BORDER")
 	row.rule:SetHeight(1)
-	row.rule:SetPoint("BOTTOMLEFT")
-	row.rule:SetPoint("BOTTOMRIGHT")
+	-- A little air between the rule and the first spell under it.
+	row.rule:SetPoint("BOTTOMLEFT", 0, 6)
+	row.rule:SetPoint("BOTTOMRIGHT", 0, 6)
 	row.rule:SetTexture(UI.WHITE)
 	UI.tint(row.rule, "hairline")
 	row:SetScript("OnEnter", function(self)
