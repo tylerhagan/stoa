@@ -1411,7 +1411,7 @@ function Console:BuildDividers(frame)
 		lower:SetPoint("TOP", div, "CENTER")
 		lower:SetPoint("BOTTOM")
 		local mark = div:CreateTexture(nil, "OVERLAY")
-		mark:SetSize(5, 5)
+		mark:SetSize(4, 4)
 		mark:SetPoint("CENTER")
 		mark:SetRotation(math.rad(45))
 		div.upper, div.lower, div.mark = upper, lower, mark
@@ -1430,14 +1430,14 @@ function Console:PaintDividers()
 		div.lower:SetColorTexture(1, 1, 1, 1)
 		-- Clear at the ends, strongest at the diamond.
 		if CreateColor and div.upper.SetGradient then
-			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, 0.4)
+			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, 0.65)
 			pcall(div.upper.SetGradient, div.upper, "VERTICAL", solid, clear)
 			pcall(div.lower.SetGradient, div.lower, "VERTICAL", clear, solid)
 		else
 			div.upper:SetColorTexture(r, g, b, 0.3)
 			div.lower:SetColorTexture(r, g, b, 0.3)
 		end
-		div.mark:SetColorTexture(r, g, b, 0.7)
+		div.mark:SetColorTexture(r, g, b, 0.55)
 	end
 end
 
@@ -1448,7 +1448,7 @@ local DIVIDER_ROOM = 24
 function Console:PlaceDividers(width, leftClear, rightClear)
 	local dividers = self.dividers
 	if not dividers then return end
-	local inset, top = self:PageInset()
+	local inset = self:PageInset()
 	local centre = width / 2
 	local spots = {}
 	local tally = Stoa.modules.Tally
@@ -1470,8 +1470,8 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 		local spot = spots[i]
 		if spot and spot[2] - spot[1] >= DIVIDER_ROOM then
 			div:ClearAllPoints()
-			div:SetPoint("TOP", self.frame, "TOPLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), top + 2)
-			div:SetPoint("BOTTOM", self.frame, "BOTTOMLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), 16)
+			div:SetPoint("TOP", self.frame, "TOPLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), -14)
+			div:SetPoint("BOTTOM", self.frame, "BOTTOMLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), 10)
 			div:Show()
 		else
 			div:Hide()
