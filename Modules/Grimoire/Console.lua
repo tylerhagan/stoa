@@ -135,7 +135,7 @@ function Console:Build()
 	self:BuildSeal(frame)
 	self:BuildNotes(frame, space)
 	self:BuildFellowship(frame, space)
-	if slim then self:BuildSlim(frame) end
+	if slim then self:BuildSlim(frame) else self:BuildDividers(frame) end
 
 	UI.applyTheme()
 	Stoa:On("STOA_THEME_CHANGED", function()
@@ -1393,6 +1393,92 @@ function Console:CentreClear()
 	return left + CLEAR_MARGIN, right + CLEAR_MARGIN
 end
 
+-- Dividers: a faint gold hairline in each gap between the console's zones
+-- (chat, At a glance, the bars round the seal, the pages), fading out at
+-- both ends, with a small diamond at its middle. Placed by FitPages.
+function Console:BuildDividers(frame)
+	local holder = CreateFrame("Frame", nil, frame)
+	holder:SetAllPoints()
+	self.dividers = {}
+	for i = 1, 3 do
+		local div = CreateFrame("Frame", nil, holder)
+		div:SetWidth(5)
+		local upper, lower = div:CreateTexture(nil, "ARTWORK"), div:CreateTexture(nil, "ARTWORK")
+		upper:SetWidth(1)
+		upper:SetPoint("TOP")
+		upper:SetPoint("BOTTOM", div, "CENTER")
+		lower:SetWidth(1)
+		lower:SetPoint("TOP", div, "CENTER")
+		lower:SetPoint("BOTTOM")
+		local mark = div:CreateTexture(nil, "OVERLAY")
+		mark:SetSize(5, 5)
+		mark:SetPoint("CENTER")
+		mark:SetRotation(math.rad(45))
+		div.upper, div.lower, div.mark = upper, lower, mark
+		div:Hide()
+		self.dividers[i] = div
+	end
+	self:PaintDividers()
+	self:AddPage(holder)
+end
+
+function Console:PaintDividers()
+	if not self.dividers then return end
+	local r, g, b = Stoa:Color("accent")
+	for _, div in ipairs(self.dividers) do
+		div.upper:SetColorTexture(1, 1, 1, 1)
+		div.lower:SetColorTexture(1, 1, 1, 1)
+		-- Clear at the ends, strongest at the diamond.
+		if CreateColor and div.upper.SetGradient then
+			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, 0.4)
+			pcall(div.upper.SetGradient, div.upper, "VERTICAL", solid, clear)
+			pcall(div.lower.SetGradient, div.lower, "VERTICAL", clear, solid)
+		else
+			div.upper:SetColorTexture(r, g, b, 0.3)
+			div.lower:SetColorTexture(r, g, b, 0.3)
+		end
+		div.mark:SetColorTexture(r, g, b, 0.7)
+	end
+end
+
+-- Puts each hairline in the middle of its gap, or hides it when the gap
+-- is too narrow or one side is missing. x is from the console's left.
+local DIVIDER_ROOM = 24
+
+function Console:PlaceDividers(width, leftClear, rightClear)
+	local dividers = self.dividers
+	if not dividers then return end
+	local inset, top = self:PageInset()
+	local centre = width / 2
+	local spots = {}
+	local tally = Stoa.modules.Tally
+	local glance = tally and tally.enabled and tally.page
+	local glanceShown = glance and glance:IsShown()
+	local chatRight = self.db.houseChat and (inset + 440) or nil
+	local barsLeft, barsRight = centre - leftClear + CLEAR_MARGIN, centre + rightClear - CLEAR_MARGIN
+	if glanceShown then
+		local gl = inset + 484
+		local gr = gl + (Stoa:PlainNumber(glance:GetWidth()) or 0)
+		if chatRight then spots[1] = { chatRight, gl } end
+		spots[2] = { gr, barsLeft }
+	elseif chatRight then
+		spots[2] = { chatRight, barsLeft }
+	end
+	local pageWidth = Stoa:PlainNumber(self.rightPage:GetWidth()) or 0
+	spots[3] = { barsRight, width - inset - pageWidth }
+	for i, div in ipairs(dividers) do
+		local spot = spots[i]
+		if spot and spot[2] - spot[1] >= DIVIDER_ROOM then
+			div:ClearAllPoints()
+			div:SetPoint("TOP", self.frame, "TOPLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), top + 2)
+			div:SetPoint("BOTTOM", self.frame, "BOTTOMLEFT", math.floor((spot[1] + spot[2]) / 2 + 0.5), 16)
+			div:Show()
+		else
+			div:Hide()
+		end
+	end
+end
+
 -- Which right-page columns fit, right to left. Company goes first; then
 -- Journey at the level cap, Ready while you level.
 local PAGE_GAPS = { COLUMN_GAP, 24 }
@@ -1436,6 +1522,10 @@ function Console:FitPages()
 	if self.slimCard then self.slimCard:SetSize(page:GetWidth() + CARD_PAD * 2, page:GetHeight() + CARD_PAD * 2) end
 	if Stoa.modules.Tally and Stoa.modules.Tally.Fit then Stoa.modules.Tally:Fit() end
 	if self.ReplaceChat then self:ReplaceChat() end
+	if not self.slimCard then
+		local leftClear = self:CentreClear()
+		self:PlaceDividers(width, leftClear, rightClear)
+	end
 end
 
 -- Runs a moment after anything that moves the centre or the screen.
@@ -1536,7 +1626,7 @@ function Console:OnEnable()
 	end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:CheckLowHealth() end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:Settle("low") end)
-	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() end)
+	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDividers() end)
 	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
 		Stoa:On(event, function() self:UpdateKit() end)
 	end

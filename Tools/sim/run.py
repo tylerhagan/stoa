@@ -858,6 +858,21 @@ do
 end
 -- The target plaque: a medallion with a level badge, docked while it rests
 -- on the full console, and a cast bar that shows for the target's cast.
+-- Console dividers: a hairline in each wide gap, none in a narrow one.
+do
+	local console = Stoa.modules.Grimoire
+	if console and console.dividers and console.PlaceDividers then
+		local ok, e = xpcall(function()
+			console:PlaceDividers(3440, 400, 400)
+			assert(console.dividers[3]:IsShown(), "no line between the bars and the pages")
+			assert(console.dividers[2]:IsShown(), "no line before the bars")
+			console:PlaceDividers(3440, 1700, 1700)
+			assert(not console.dividers[3]:IsShown(), "a line in a gap too narrow for it")
+			console:PaintDividers()
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Console dividers: " .. e end
+	end
+end
 do
 	local character = Stoa.modules.Character
 	if character and character.enabled and character.LayOut and CharacterFrame then
