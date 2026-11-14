@@ -85,6 +85,9 @@ function Spells.Scan()
 	Stoa:Fire("STOA_SPELLS_CHANGED")
 end
 
+-- Every spell you know by name (the best rank's entry as the value).
+function Spells.each() return pairs(best) end
+
 -- The highest rank you know of the spell with this ID or name, or nil when
 -- you know none.
 function Spells.best(spell)

@@ -858,6 +858,45 @@ do
 end
 -- The target plaque: a medallion with a level badge, docked while it rests
 -- on the full console, and a cast bar that shows for the target's cast.
+-- Small jobs: a missing buff, talent points, a new spell, restock short and
+-- an emptied slot make one line; a spell put on a bar drops off.
+do
+	local console = Stoa.modules.Grimoire
+	if console and console.roleNote and console.UpdateJobs then
+		local ok, e = xpcall(function()
+			local real = { C_ClassTalents, C_Item.GetItemCount, GetInventoryItemID, GetActionInfo, Stoa.missingBuffs, Stoa.Spells.each, Stoa.Spells.name }
+			Stoa.char.knownSpells, Stoa.char.newSpells, Stoa.char.wornSlots = nil, nil, nil
+			local names = { "Smite" }
+			Stoa.Spells.each = function() local t = {} for _, n in ipairs(names) do t[n] = { id = 1 } end return pairs(t) end
+			console:NoteSpells()
+			assert(not Stoa.char.newSpells, "the first look listed old spells")
+			names[2] = "Holy Fire"
+			console:NoteSpells()
+			assert(Stoa.char.newSpells and Stoa.char.newSpells["Holy Fire"], "a new spell wasn't noted")
+			Stoa.missingBuffs = { "INNER FIRE" }
+			C_ClassTalents = { HasUnspentTalentPoints = function() return true end }
+			C_Item.GetItemCount = function() return 4 end
+			Stoa.char.restock = { [17029] = 10 }
+			Stoa.char.wornSlots = { [11] = true }
+			local list = console:Jobs()
+			assert(#list == 5, "jobs: " .. #list)
+			console:UpdateJobs()
+			assert(console.roleNote:IsShown(), "the jobs line is hidden")
+			assert(console.roleNote.words:GetText() == "5 small jobs", "line reads " .. tostring(console.roleNote.words:GetText()))
+			console:ShowJobs(console.roleNote)
+			GetActionInfo = function(slot) if slot == 7 then return "spell", 42 end end
+			Stoa.Spells.name = function(id) return id == 42 and "Holy Fire" or nil end
+			console:ClearPlaced()
+			assert(not Stoa.char.newSpells, "a spell on a bar stayed listed")
+			Stoa.missingBuffs, C_ClassTalents, Stoa.char.restock, Stoa.char.wornSlots = nil, nil, {}, nil
+			C_ClassTalents = real[1]
+			console:UpdateJobs()
+			assert(not console.roleNote:IsShown(), "the line shows with nothing to do")
+			C_ClassTalents, C_Item.GetItemCount, GetInventoryItemID, GetActionInfo, Stoa.missingBuffs, Stoa.Spells.each, Stoa.Spells.name = unpack(real, 1, 7)
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Small jobs: " .. e end
+	end
+end
 do
 	local character = Stoa.modules.Character
 	if character and character.enabled and character.LayOut and CharacterFrame then
