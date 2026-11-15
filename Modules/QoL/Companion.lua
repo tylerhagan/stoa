@@ -70,6 +70,33 @@ function Companion:FindInGuide(instanceID, name)
 	return hit
 end
 
+local function guideFreeNow()
+	local guide = _G.EncounterJournal
+	return not (guide and guide.IsShown and guide:IsShown())
+end
+
+-- Every dungeon in the guide, as { id, name }, for the preview command:
+-- the first whose name holds `part` (any case), and the full list.
+function Companion:SearchGuide(part)
+	if not (EJ_GetInstanceByIndex and EJ_GetNumTiers and EJ_SelectTier and EJ_GetCurrentTier) or not guideFreeNow() then return nil, {} end
+	part = (part or ""):lower()
+	local before = plain(call(EJ_GetCurrentTier))
+	local hit, names = nil, {}
+	for tier = 1, plain(call(EJ_GetNumTiers)) or 0 do
+		call(EJ_SelectTier, tier)
+		for i = 1, 200 do
+			local id, title = call(EJ_GetInstanceByIndex, i, false)
+			if not id then break end
+			if type(title) == "string" then
+				names[#names + 1] = title
+				if not hit and part ~= "" and title:lower():find(part, 1, true) then hit = { id = id, name = title } end
+			end
+		end
+	end
+	if before then call(EJ_SelectTier, before) end
+	return hit, names
+end
+
 -- The run: which bosses fell, kept over a /reload.
 function Companion:Run(where)
 	local run = self.db.run
@@ -509,19 +536,22 @@ Stoa.commands.companion = function(rest)
 		return
 	end
 	if rest ~= "" then
-		local journal = Companion:FindInGuide("preview:" .. rest:lower(), rest)
-		if not journal then
-			Stoa:Print(("No dungeon called %q in the Adventure Guide. Close the guide and use its full name, like The Deadmines."):format(rest))
+		local hit, names = Companion:SearchGuide(rest)
+		if not hit then
+			if #names == 0 then
+				Stoa:Print("Couldn't read the Adventure Guide. If its window is open, close it and try again.")
+			else
+				Stoa:Print(("No dungeon matches %q. The guide has: %s."):format(rest, table.concat(names, ", ")))
+			end
 			return
 		end
-		local title = EJ_GetInstanceInfo and plain(call(EJ_GetInstanceInfo, journal)) or rest
-		Companion.preview = { name = type(title) == "string" and title or rest, instanceID = "preview:" .. rest:lower(), journal = journal }
+		Companion.preview = { name = hit.name, instanceID = "preview:" .. hit.id, journal = hit.id }
 		Companion:Refresh()
-		Stoa:Print("Previewing the companion for " .. Companion.preview.name .. ". /stoa companion off ends it.")
+		Stoa:Print("Previewing the companion for " .. hit.name .. ". /stoa companion off ends it.")
 		return
 	end
 	if not Companion:Where() then
-		Stoa:Print("The dungeon companion shows inside five-player dungeons. Try /stoa companion The Deadmines for a preview.")
+		Stoa:Print("The dungeon companion shows inside five-player dungeons. Try /stoa companion stockade (any part of a dungeon's name) for a preview.")
 		return
 	end
 	Companion:Refresh()
