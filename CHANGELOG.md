@@ -20,7 +20,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Combat bar: stays up with the rest of the combat look and leaves half a second before the calm ends.
 - Gold an hour and loot value on the console survive a /reload.
 - RestedXP guide: pale check boxes with an accent tick.
-- Fixes: hover washes no longer flash solid white; the READY heading no longer goes blank after a loading screen.
+- Your surname shows beside your name on the session recap, the away screen and the Characters window's side panel.
+- Fixes: hover washes no longer flash solid white; the READY heading no longer goes blank after a loading screen; the settings page you're on is no longer a white row in the list.
 
 ## 1.2.0
 
