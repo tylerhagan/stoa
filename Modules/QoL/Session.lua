@@ -107,12 +107,14 @@ end
 
 local function duration(seconds)
 	seconds = math.max(0, math.floor(seconds or 0))
+	if seconds < 60 then return "Under a minute" end
 	local h, m = math.floor(seconds / 3600), math.floor(seconds / 60) % 60
 	if h > 0 then return ("%dh %02dm"):format(h, m) end
 	return ("%dm"):format(m)
 end
 
--- The numbers, ready to show: each entry is { label, words }.
+-- The numbers, ready to show: each entry is { label, words }. Time and
+-- level always show; the rest only once there is something to count.
 function Session:Lines()
 	local now = self.db.now
 	if not now then return {} end
@@ -126,9 +128,9 @@ function Session:Lines()
 	if seconds >= 600 and now.xp > 0 then
 		add("Experience an hour", BreakUpLargeNumbers and BreakUpLargeNumbers(math.floor(now.xp / (seconds / 3600))) or tostring(math.floor(now.xp / (seconds / 3600))))
 	end
-	add("Gold", (money < 0 and "-" or "+") .. Stoa.Items.money(math.abs(money)))
-	add("Quests handed in", tostring(now.quests))
-	add("Deaths", tostring(now.deaths))
+	if money ~= 0 then add("Gold", (money < 0 and "-" or "+") .. Stoa.Items.money(math.abs(money))) end
+	if now.quests > 0 then add("Quests handed in", tostring(now.quests)) end
+	if now.deaths > 0 then add("Deaths", tostring(now.deaths)) end
 	if now.best then add("Best find", now.best.link) end
 	return lines
 end
@@ -145,7 +147,10 @@ function Session:Short()
 	if seconds >= 600 and now.xp > 0 then
 		out[#out + 1] = ("%s experience an hour"):format(BreakUpLargeNumbers and BreakUpLargeNumbers(math.floor(now.xp / (seconds / 3600))) or math.floor(now.xp / (seconds / 3600)))
 	end
-	out[#out + 1] = ("%s%s gold%s%d quests"):format(money < 0 and "-" or "+", Stoa.Items.money(math.abs(money)), UI.WIDE_SEP, now.quests)
+	local parts = {}
+	if money ~= 0 then parts[#parts + 1] = ("%s%s gold"):format(money < 0 and "-" or "+", Stoa.Items.money(math.abs(money))) end
+	if now.quests > 0 then parts[#parts + 1] = ("%d quests"):format(now.quests) end
+	if #parts > 0 then out[#out + 1] = table.concat(parts, UI.WIDE_SEP) end
 	if now.best then out[#out + 1] = now.best.link end
 	return out
 end
