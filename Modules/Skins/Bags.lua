@@ -857,6 +857,129 @@ function Bags:ApplyMode()
 	self.db.appliedMode = self.db.bagMode
 end
 
+-- The bag search also looks through every other character's bags and bank
+-- (Core/Alts.lua): a small line over the bag says who else holds a match,
+-- and clicking it opens the Characters window searched for the same words.
+local function placesOf(who)
+	local where = {}
+	if who.Bags then where[#where + 1] = "bags" end
+	if who.Bank then where[#where + 1] = "bank" end
+	return table.concat(where, " and ")
+end
+
+local function elsewhereWords(found)
+	local names, seen, first = {}, {}, nil
+	for _, hit in ipairs(found) do
+		for _, who in ipairs(hit.holders) do
+			local name = who.entry.name or "?"
+			if not seen[name] then
+				seen[name] = true
+				names[#names + 1] = who.entry
+				first = first or who
+			end
+		end
+	end
+	if #names == 0 then return nil end
+	local function painted(entry)
+		local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class or ""]
+		return color and color.colorStr and ("|c" .. color.colorStr .. entry.name .. "|r") or entry.name
+	end
+	if #names == 1 then
+		return "Also on " .. painted(names[1]) .. Stoa:Hex("muted") .. " (" .. placesOf(first) .. ")|r"
+	elseif #names == 2 then
+		return "Also on " .. painted(names[1]) .. " and " .. painted(names[2])
+	end
+	return "Also on " .. painted(names[1]) .. " and " .. (#names - 1) .. " others"
+end
+
+function Bags:BuildElsewhere()
+	local line = CreateFrame("Button", "StoaBagElsewhere", UIParent)
+	line:SetHeight(22)
+	line:SetFrameStrata("HIGH")
+	UI.surface(line, "card")
+	local text = UI.text(line, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	text:SetPoint("LEFT", 10, 0)
+	local go = UI.text(line, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	go:SetPoint("LEFT", text, "RIGHT", 8, 0)
+	go:SetText("Show ›")
+	line.text, line.go = text, go
+	line:SetScript("OnEnter", function(own)
+		own.go:SetTextColor(Stoa:Color("accent"))
+		GameTooltip:SetOwner(own, "ANCHOR_TOP")
+		GameTooltip:AddLine("On your other characters")
+		for i, hit in ipairs(own.found or {}) do
+			if i > 8 then break end
+			for _, who in ipairs(hit.holders) do
+				local n = (who.Bags or 0) + (who.Bank or 0)
+				GameTooltip:AddDoubleLine(hit.name, who.entry.name .. "  " .. n, 1, 1, 1, Stoa:Color("muted"))
+			end
+		end
+		GameTooltip:AddLine("Click to open in Characters", Stoa:Color("muted"))
+		GameTooltip:Show()
+	end)
+	line:SetScript("OnLeave", function(own)
+		own.go:SetTextColor(Stoa:Color("muted"))
+		GameTooltip:Hide()
+	end)
+	line:SetScript("OnClick", function(own)
+		if Stoa.Alts and Stoa.Alts.OpenSearch then Stoa.Alts:OpenSearch(own.query) end
+	end)
+	line:Hide()
+	self.elsewhere = line
+	return line
+end
+
+function Bags:ShowElsewhere()
+	local box = BagItemSearchBox
+	local alts = Stoa.Alts
+	local line = self.elsewhere
+	local bag = box and box.anchorBag
+	local query = box and strtrim(box:GetText() or ""):lower() or ""
+	if not (alts and alts.find and bag and bag:IsVisible()) or #query < 2 then
+		if line then line:Hide() end
+		return
+	end
+	local found, waiting = alts.find(query, alts.me())
+	local words = elsewhereWords(found)
+	if not words then
+		if line then line:Hide() end
+		-- Names still loading: look once more shortly.
+		if waiting and not self.searchAgain then
+			self.searchAgain = true
+			C_Timer.After(0.5, function()
+				self.searchAgain = false
+				guarded(self.ShowElsewhere, self)
+			end)
+		end
+		return
+	end
+	line = line or self:BuildElsewhere()
+	line.query, line.found = query, found
+	line.text:SetText(words)
+	line:SetWidth(math.ceil(line.text:GetStringWidth() + line.go:GetStringWidth() + 28))
+	line:ClearAllPoints()
+	line:SetPoint("BOTTOMRIGHT", bag, "TOPRIGHT", 0, 6)
+	UI.softShow(line, true)
+end
+
+function Bags:WatchSearch()
+	local box = BagItemSearchBox
+	if not (box and box.HookScript) or self.watchingSearch then return end
+	self.watchingSearch = true
+	local pending = false
+	box:HookScript("OnTextChanged", function()
+		if pending then return end
+		pending = true
+		C_Timer.After(0.2, function()
+			pending = false
+			guarded(Bags.ShowElsewhere, Bags)
+		end)
+	end)
+	box:HookScript("OnHide", function()
+		if Bags.elsewhere then Bags.elsewhere:Hide() end
+	end)
+end
+
 function Bags:OnEnable()
 	guarded(function() self:ApplyMode() end)
 	self.frames = allFrames()
@@ -882,6 +1005,8 @@ function Bags:OnEnable()
 			hooksecurefunc(frame, "UpdateSearchBox", function(f) guarded(placeSearch, f) end)
 		end
 	end
+
+	self:WatchSearch()
 
 	-- The reagent section is seated again whenever the game re-places,
 	-- re-sizes or re-lays the bags.
