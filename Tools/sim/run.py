@@ -949,6 +949,9 @@ do
 		C_Traits = savedTraits
 		StoaDB.talentPlans = nil
 		_G.PlayerSpellsFrame = nil
+	end
+end
+
 -- The Characters window: rows, the search across characters, the side panel.
 do
 	local alts = Stoa.Alts

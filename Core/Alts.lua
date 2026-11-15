@@ -306,48 +306,12 @@ local function liveLocks(entry)
 end
 
 -- Motion -------------------------------------------------------------------------
--- Small eased moves, made with the game's own animation groups (no per-frame
--- addon code): a window rises in, the side panel slides out from the
+-- Small eased moves from the shared helpers in Core/Widgets.lua (animation
+-- groups, no per-frame addon code): a window rises in, the side panel slides out from the
 -- window's edge, hover lifts fade, the tab mark grows from its middle and
 -- search results arrive one after another.
 
-local function intro(region, dx, dy, seconds, delay)
-	local group = region:CreateAnimationGroup()
-	local from = group:CreateAnimation("Translation")
-	from:SetOffset(-dx, -dy)
-	from:SetDuration(0)
-	from:SetOrder(1)
-	local move = group:CreateAnimation("Translation")
-	move:SetOffset(dx, dy)
-	move:SetDuration(seconds)
-	move:SetOrder(2)
-	move:SetSmoothing("OUT")
-	local fade = group:CreateAnimation("Alpha")
-	fade:SetFromAlpha(0)
-	fade:SetToAlpha(1)
-	fade:SetDuration(seconds)
-	fade:SetOrder(2)
-	fade:SetSmoothing("OUT")
-	if delay and delay > 0 then
-		-- Held hidden at the start point until its turn comes.
-		local hold = group:CreateAnimation("Alpha")
-		hold:SetFromAlpha(0)
-		hold:SetToAlpha(0)
-		hold:SetDuration(delay)
-		hold:SetOrder(1)
-	end
-	return group
-end
-
-local function fadeIn(region, seconds)
-	local group = region:CreateAnimationGroup()
-	local fade = group:CreateAnimation("Alpha")
-	fade:SetFromAlpha(0)
-	fade:SetToAlpha(1)
-	fade:SetDuration(seconds)
-	fade:SetSmoothing("OUT")
-	return group
-end
+local intro, fadeIn = UI.intro, UI.fadeIn
 
 local function lift(row, on)
 	if on then
@@ -441,13 +405,7 @@ local function tabWord(page, label, onClick)
 	mark:SetPoint("BOTTOMLEFT", 0, 0)
 	mark:SetPoint("BOTTOMRIGHT", 0, 0)
 	tab.text, tab.mark = text, mark
-	local grow = mark:CreateAnimationGroup()
-	local scale = grow:CreateAnimation("Scale")
-	scale:SetScaleFrom(0.1, 1)
-	scale:SetScaleTo(1, 1)
-	scale:SetOrigin("CENTER", 0, 0)
-	scale:SetDuration(0.14)
-	scale:SetSmoothing("OUT")
+	local grow = UI.growIn(mark)
 	function tab:SetSelected(on)
 		if on and not self.on then grow:Play() end
 		self.on = on
