@@ -393,7 +393,7 @@ function Stoa:SetVision(name)
 end
 
 -- "daylit" is the accent under the time of day (Modules/Grimoire/Console.lua
--- sets Stoa.daylight): the same hue, only its lightness and saturation move.
+-- sets Stoa.daylight): its light moved, and the sky's colour blended in.
 local function toHsl(r, g, b)
 	local mx, mn = math.max(r, g, b), math.min(r, g, b)
 	local h, s, l = 0, 0, (mx + mn) / 2
@@ -427,7 +427,8 @@ function Stoa:Color(token)
 		if not day then return r, g, b, a end
 		local h, s, l = toHsl(r, g, b)
 		r, g, b = toRgb(h, clamp(s * (1 + day.s)), clamp(l + day.l))
-		return r, g, b, a
+		local m = day.mix or 0
+		return r + (day.r - r) * m, g + (day.g - g) * m, b + (day.b - b) * m, a
 	end
 	return unpack(theme[token] or theme.danger)
 end
