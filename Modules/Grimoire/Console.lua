@@ -206,7 +206,57 @@ function Console:BuildArt(frame)
 	medallion:SetSize(MEDALLION_WIDTH * MEDALLION_SCALE, 512 * MEDALLION_SCALE)
 	medallion:SetPoint("TOP", frame, "TOP", 0, MEDALLION_LINE * MEDALLION_SCALE)
 	gold(medallion, "MedallionLines", -2)
+	self:BuildSheen(frame)
 	return parts
+end
+
+-- The sky's light on the top edge: a one-pixel sheen along the panel's top
+-- line, clear at the ends, and a faint glow just above it. Cold moonlight
+-- at night, warm at dawn and dusk, almost nothing by day (UpdateDaylight).
+-- Under the medallion, so the seal's arch stays clean.
+function Console:BuildSheen(frame)
+	local sheen = {}
+	for i, half in ipairs({ "LEFT", "RIGHT" }) do
+		local lineTex = frame:CreateTexture(nil, "BACKGROUND", nil, -4)
+		lineTex:SetHeight(1)
+		lineTex:SetPoint("TOP" .. half, frame, "TOP" .. half, 0, 0)
+		lineTex:SetPoint(i == 1 and "TOPRIGHT" or "TOPLEFT", frame, "TOP", 0, 0)
+		if lineTex.SetSnapToPixelGrid then
+			lineTex:SetSnapToPixelGrid(false)
+			lineTex:SetTexelSnappingBias(0)
+		end
+		sheen[#sheen + 1] = { tex = lineTex, kind = "line", fromLeft = i == 1 }
+	end
+	local glow = frame:CreateTexture(nil, "BACKGROUND", nil, -4)
+	glow:SetHeight(10)
+	glow:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, 0)
+	glow:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 0, 0)
+	sheen[#sheen + 1] = { tex = glow, kind = "glow" }
+	self.sheen = sheen
+end
+
+function Console:PaintSheen(light)
+	if not self.sheen then return end
+	for _, part in ipairs(self.sheen) do
+		local tex = part.tex
+		if not light or light.line <= 0.01 then
+			tex:Hide()
+		else
+			tex:SetColorTexture(1, 1, 1, 1)
+			local r, g, b = light.r, light.g, light.b
+			if CreateColor and tex.SetGradient then
+				if part.kind == "glow" then
+					pcall(tex.SetGradient, tex, "VERTICAL", CreateColor(r, g, b, light.glow), CreateColor(r, g, b, 0))
+				else
+					local clear, lit = CreateColor(r, g, b, 0), CreateColor(r, g, b, light.line)
+					pcall(tex.SetGradient, tex, "HORIZONTAL", part.fromLeft and clear or lit, part.fromLeft and lit or clear)
+				end
+			else
+				tex:SetColorTexture(r, g, b, part.kind == "glow" and light.glow * 0.5 or light.line * 0.6)
+			end
+			tex:Show()
+		end
+	end
 end
 
 function Console:BuildSeal(frame)
@@ -1582,37 +1632,47 @@ end
 -- theme's hue but takes the light of the game's clock: pale at dawn, full at
 -- midday, deeper at dusk, dim at night. Checked once a minute; a step this
 -- small every few minutes is never seen happening.
+-- Per key hour: lightness and saturation moves for the gold, then the
+-- sheen's colour and its line and glow strengths.
 local DAYLIGHT = {
-	{ 0, -0.16, -0.40 }, { 5, -0.16, -0.40 }, { 6.5, 0.07, -0.18 }, { 9, 0.02, 0 },
-	{ 13, 0.05, 0.04 }, { 17, 0.02, 0 }, { 19.5, -0.06, 0.12 }, { 21.5, -0.16, -0.40 }, { 24, -0.16, -0.40 },
+	{ 0,    -0.16, -0.40, 0.62, 0.76, 1.00, 0.55, 0.20 },
+	{ 5,    -0.16, -0.40, 0.62, 0.76, 1.00, 0.55, 0.20 },
+	{ 6.5,   0.07, -0.18, 1.00, 0.78, 0.72, 0.38, 0.12 },
+	{ 9,     0.02,  0.00, 1.00, 0.96, 0.88, 0.14, 0.03 },
+	{ 13,    0.05,  0.04, 1.00, 0.97, 0.90, 0.16, 0.04 },
+	{ 17,    0.02,  0.00, 1.00, 0.96, 0.88, 0.14, 0.03 },
+	{ 19.5, -0.06,  0.12, 1.00, 0.62, 0.36, 0.42, 0.14 },
+	{ 21.5, -0.16, -0.40, 0.62, 0.76, 1.00, 0.55, 0.20 },
+	{ 24,   -0.16, -0.40, 0.62, 0.76, 1.00, 0.55, 0.20 },
 }
 
+-- The light at an hour: { l, s, r, g, b, line, glow }.
 function Console.lightAt(hour)
+	local a, b = DAYLIGHT[1], DAYLIGHT[2]
 	for i = 1, #DAYLIGHT - 1 do
-		local a, b = DAYLIGHT[i], DAYLIGHT[i + 1]
-		if hour <= b[1] then
-			local t = (hour - a[1]) / (b[1] - a[1])
-			return a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t
-		end
+		a, b = DAYLIGHT[i], DAYLIGHT[i + 1]
+		if hour <= b[1] then break end
 	end
-	return DAYLIGHT[1][2], DAYLIGHT[1][3]
+	local t = math.max(0, math.min(1, (hour - a[1]) / (b[1] - a[1])))
+	local v = {}
+	for k = 2, 8 do v[k - 1] = a[k] + (b[k] - a[k]) * t end
+	return { l = v[1], s = v[2], r = v[3], g = v[4], b = v[5], line = v[6], glow = v[7] }
 end
 
 function Console:UpdateDaylight()
 	local light = nil
 	if self.db.daylight ~= false and GetGameTime then
 		local hour, minute = GetGameTime()
-		if type(hour) == "number" then
-			local l, s = Console.lightAt(hour + (minute or 0) / 60)
-			light = { l = l, s = s }
-		end
+		if type(hour) == "number" then light = Console.lightAt(hour + (minute or 0) / 60) end
 	end
 	local was = Stoa.daylight
-	if was and light and math.abs(was.l - light.l) < 0.004 and math.abs(was.s - light.s) < 0.01 then return end
+	if was and light and math.abs(was.l - light.l) < 0.004 and math.abs(was.s - light.s) < 0.01
+		and math.abs(was.line - light.line) < 0.01 then return end
 	if not was and not light then return end
 	Stoa.daylight = light
 	UI.applyTheme()
 	self:PaintDividers()
+	self:PaintSheen(light)
 end
 
 function Console:OnEnable()
