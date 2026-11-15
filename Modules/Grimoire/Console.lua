@@ -1574,6 +1574,9 @@ function Console:SetOpen(open, instant)
 		end
 		for _, part in ipairs(self.archParts) do
 			UI.fadeTo(part, open and progress or 1 - progress)
+			-- Hidden once folded: the gold lines' gradient keeps its own
+			-- alpha through a repaint, so a fade alone left the ring showing.
+			part:SetShown(open or progress < 1)
 		end
 		UI.fadeTo(self.bridge, open and 1 - progress or progress)
 		for _, part in ipairs(self.tabArt or {}) do
