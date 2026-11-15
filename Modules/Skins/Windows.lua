@@ -700,26 +700,28 @@ local function dressTrainerBar()
 	end
 end
 
--- The Settings dropdown: STOA's small rounded button, its words in STOA's
--- type, a quiet chevron in place of Blizzard's gold arrow art.
+-- The Settings dropdown: a quiet word with a chevron, no button art,
+-- warming to the accent under the mouse (it lives in the footer).
 local function dressDropdownButton(dropdown)
 	if not dropdown or dropdown.stoaDressed then return end
 	dropdown.stoaDressed = true
 	if dropdown.Background then dropdown.Background:SetAlpha(0) end
-	UI.roundPanel(dropdown, 0.95)
-	local edge = UI.roundBorder(dropdown, "CardEdge.tga", 1)
+	dropdown.resizeToText = false
+	dropdown:SetSize(76, 22)
 	local chevron = UI.text(dropdown, "sans", Stoa.typeSize.label, "muted", "RIGHT")
-	chevron:SetPoint("RIGHT", -8, 0)
+	chevron:SetPoint("RIGHT", -2, 0)
 	chevron:SetText("›")
 	local function paint(over)
 		local text = dropdown.Text
 		if text then
 			Stoa:SetFont(text, "sans", Stoa.typeSize.label)
 			text:SetShadowOffset(0, 0)
-			text:SetTextColor(Stoa:Color(over and "accent" or "text"))
+			text:SetJustifyH("RIGHT")
+			text:ClearAllPoints()
+			text:SetPoint("RIGHT", chevron, "LEFT", -5, 0)
+			text:SetTextColor(Stoa:Color(over and "accent" or "muted"))
 		end
 		chevron:SetTextColor(Stoa:Color(over and "accent" or "muted"))
-		if over then edge:Set(Stoa:Color("accent")) else edge:Clear() end
 	end
 	dropdown:HookScript("OnEnter", function() paint(true) end)
 	dropdown:HookScript("OnLeave", function() paint(false) end)
@@ -745,23 +747,20 @@ local function dressTrainer()
 	end
 	frame:HookScript("OnShow", rows)
 	rows()
-	-- Blizzard hangs its Settings/Filters dropdown at the top right, where
-	-- Stoa's header seats the close button: it moves in beside the close.
+	-- Blizzard hangs its Settings/Filters dropdown at the top right, over
+	-- the trainer's name (often a long one). It moves down into the footer,
+	-- just left of Train.
 	Windows:OnSettle(frame, function()
-		local dropdown, close = frame.FilterDropdown, frame.CloseButton or _G.ClassTrainerFrameCloseButton
-		if dropdown and close and dropdown.ClearAllPoints then
+		local dropdown, train = frame.FilterDropdown, frame.TrainButton
+		if dropdown and train and dropdown.ClearAllPoints then
 			dropdown:ClearAllPoints()
-			dropdown:SetPoint("RIGHT", close, "LEFT", -8, 0)
-			-- The title strip is Blizzard's TitleContainer, a mouse-taking
-			-- frame at level 510; moved under it, the dropdown never saw a
-			-- click. It sits above the strip now, like the close button.
-			local strip = frame.TitleContainer
-			local above = (strip and strip.GetFrameLevel and strip:GetFrameLevel() or 0) + 1
-			if close.GetFrameLevel then above = math.max(above, close:GetFrameLevel()) end
-			if dropdown.GetFrameLevel and dropdown:GetFrameLevel() < above then dropdown:SetFrameLevel(above) end
+			dropdown:SetPoint("RIGHT", train, "LEFT", -12, 0)
+			if dropdown.GetFrameLevel and train.GetFrameLevel and dropdown:GetFrameLevel() < train:GetFrameLevel() then
+				dropdown:SetFrameLevel(train:GetFrameLevel())
+			end
 		end
 		-- Your money sits at the left of the footer, level with Train.
-		local money, train = frame.money, frame.TrainButton
+		local money = frame.money
 		if money and money.ClearAllPoints then
 			local lift = train and train.GetHeight and (train:GetHeight() / 2) or 11
 			money:ClearAllPoints()
