@@ -45,9 +45,21 @@ local function dressHeader(header)
 	local rule = header:CreateTexture(nil, "ARTWORK")
 	rule:SetTexture(UI.WHITE)
 	rule:SetHeight(1)
-	rule:SetPoint("BOTTOMLEFT", header.Border, "BOTTOMLEFT", 24, 4)
-	rule:SetPoint("BOTTOMRIGHT", header.Border, "BOTTOMRIGHT", 0, 4)
+	rule:SetPoint("TOPLEFT", header.Text, "BOTTOMLEFT", 0, -8)
+	rule:SetPoint("RIGHT", header.Border, "RIGHT", 0, 0)
 	UI.tint(rule, "hairline")
+	-- The school's short name ("Shadow" for "Shadow Magic"), as in the list.
+	local function shorten(fs, text)
+		if fs.stoaRenaming or not Spellbook.SchoolLabel then return end
+		local short = Spellbook.SchoolLabel(text)
+		if short and short ~= text then
+			fs.stoaRenaming = true
+			fs:SetText(short)
+			fs.stoaRenaming = nil
+		end
+	end
+	hooksecurefunc(header.Text, "SetText", shorten)
+	shorten(header.Text, header.Text:GetText())
 end
 
 local function dressHeadersBeside(item)
