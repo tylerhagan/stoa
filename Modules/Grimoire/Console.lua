@@ -212,6 +212,46 @@ function Console:BuildArt(frame)
 end
 
 
+-- A faint reflection over the portrait, as if it sat under glass: a cap of
+-- light across the top, the portrait's circle cut by a larger circle set
+-- above it, fading downwards. Its colour follows the time of day
+-- (PaintDaylit): moonlight at night, warm at dawn and dusk.
+function Console:BuildGlass(seal, size)
+	local glass = seal:CreateTexture(nil, "ARTWORK", nil, 3)
+	glass:SetSize(size, size)
+	glass:SetPoint("CENTER")
+	glass:SetColorTexture(1, 1, 1, 1)
+	local round = seal:CreateMaskTexture()
+	round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	round:SetAllPoints(glass)
+	glass:AddMaskTexture(round)
+	local cap = seal:CreateMaskTexture()
+	cap:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	cap:SetSize(size * 1.3, size * 1.3)
+	cap:SetPoint("CENTER", glass, "CENTER", -size * 0.08, size * 0.52)
+	glass:AddMaskTexture(cap)
+	self.glass = glass
+	self:PaintGlass()
+end
+
+function Console:PaintGlass()
+	local glass = self.glass
+	if not glass then return end
+	local light = Stoa.daylight
+	local m = light and light.mix or 0
+	local r, g, b = 1, 0.98, 0.94
+	if light then
+		r, g, b = 1 + (light.r - 1) * 0.7, 1 + (light.g - 1) * 0.7, 1 + (light.b - 1) * 0.7
+	end
+	-- Strongest under the moon; barely there at midday.
+	local alpha = 0.06 + 0.10 * math.min(1, m / 0.6)
+	if CreateColor and glass.SetGradient then
+		pcall(glass.SetGradient, glass, "VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, alpha))
+	else
+		glass:SetColorTexture(r, g, b, alpha * 0.6)
+	end
+end
+
 function Console:BuildSeal(frame)
 	-- With the leather art the seal sits in the art's arch, a size larger,
 	-- and the arch's own gold ring stands in for the seal's outer rings.
@@ -257,6 +297,7 @@ function Console:BuildSeal(frame)
 	local portrait = circle(seal, "ARTWORK", 0, size)
 	portrait:SetPoint("CENTER")
 	self.portrait = portrait
+	self:BuildGlass(seal, size)
 
 	-- The progress ring, the level plate, the moment glow (BuildRing).
 	self:BuildRing(seal, portrait, size)
@@ -1626,6 +1667,7 @@ function Console:PaintDaylit()
 		end
 	end
 	self:PaintDividers()
+	self:PaintGlass()
 end
 
 function Console:UpdateDaylight()
