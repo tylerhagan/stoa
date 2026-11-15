@@ -1,9 +1,9 @@
 -- Stoa: the talent planner. Plans a build point by point over the game's own
 -- talent trees, for levels you haven't reached yet: each planned talent
 -- carries the level it's taken at, your next point glows in the trees, and a
--- panel beside the window lists the order, shows the build at any level and
--- shares plans as text. Plans are kept per class (account-wide), several
--- per class, each with a name.
+-- panel beside the window lists the order and shows the build at any level.
+-- Plans are kept per class (account-wide), several per class, each with a
+-- name.
 --
 -- STOA never spends a point: you click the talent as always. "Make game
 -- loadout" hands the plan, up to your level, to the game's own loadout
@@ -83,28 +83,6 @@ function Planner:DeletePlan()
 	end
 	self.db.active = plans[1] and plans[1].name or nil
 	self:Refresh()
-end
-
--- "STOA1:" then each point as a node id (and the choice taken, after a dot).
-function Planner.Encode(plan)
-	local parts = {}
-	for _, pick in ipairs(plan.order) do
-		parts[#parts + 1] = pick.e and (pick.n .. "." .. pick.e) or tostring(pick.n)
-	end
-	return "STOA1:" .. table.concat(parts, ",")
-end
-
-function Planner.Decode(text)
-	text = text and strtrim(text) or ""
-	local body = text:match("^STOA1:(.*)$")
-	if not body then return nil end
-	local order = {}
-	for piece in body:gmatch("[^,]+") do
-		local node, entry = piece:match("^(%d+)%.?(%d*)$")
-		if not node then return nil end
-		order[#order + 1] = { n = tonumber(node), e = tonumber(entry) }
-	end
-	return order
 end
 
 -- The trees ---------------------------------------------------------------------
@@ -618,54 +596,16 @@ function Planner:BuildPanel()
 	empty:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
 	panel.empty = empty
 
-	-- The game's loadout, and sharing.
+	-- The game's loadout.
 	local y = -162 - LIST_ROWS * 24 - 16
 	local loadout = UI.button(panel, "Make game loadout", PANEL_WIDTH - PAD * 2, function() self:MakeLoadout() end)
 	loadout:SetPoint("TOPLEFT", PAD, y)
 	panel.loadout = loadout
-	local share = CreateFrame("EditBox", nil, panel)
-	share:SetAutoFocus(false)
-	share:SetHeight(26)
-	share:SetPoint("TOPLEFT", PAD, y - 40)
-	share:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
-	share:SetTextInsets(10, 10, 0, 0)
-	Stoa:SetFont(share, "sans", Stoa.typeSize.caption)
-	share:SetTextColor(Stoa:Color("text"))
-	local shareBack = UI.pillFill(share, 0)
-	shareBack:SetVertexColor(0, 0, 0, 0.4)
-	local shareHint = UI.text(share, "sans", Stoa.typeSize.caption, "muted")
-	shareHint:SetPoint("LEFT", 10, 0)
-	shareHint:SetText("Paste a plan here and press Enter")
-	share:SetScript("OnTextChanged", function(box) shareHint:SetShown(box:GetText() == "" and not box:HasFocus()) end)
-	share:SetScript("OnEditFocusGained", function() shareHint:Hide() end)
-	share:SetScript("OnEditFocusLost", function(box) shareHint:SetShown(box:GetText() == "") end)
-	share:SetScript("OnEscapePressed", function(box) box:SetText("") box:ClearFocus() end)
-	share:SetScript("OnEnterPressed", function(box)
-		local order = Planner.Decode(box:GetText())
-		if order then
-			self:NewPlan("Pasted plan", order)
-			box:SetText("")
-			self:Say("Plan added.")
-		else
-			self:Say("That isn't a STOA plan.")
-		end
-		box:ClearFocus()
-		self:Refresh()
-	end)
-	local copy = wordButton(panel, "Copy this plan", function()
-		local active = self:Active()
-		if not active then return end
-		share:SetText(Planner.Encode(active))
-		share:SetFocus()
-		share:HighlightText()
-		self:Say("Selected: press Ctrl+C to copy.")
-	end)
-	copy:SetPoint("TOPLEFT", share, "BOTTOMLEFT", 0, -8)
 	local note = UI.text(panel, "sans", Stoa.typeSize.caption, "muted", "LEFT")
-	note:SetPoint("TOPLEFT", copy, "BOTTOMLEFT", 0, -8)
+	note:SetPoint("TOPLEFT", loadout, "BOTTOMLEFT", 0, -10)
 	note:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
 	panel.note = note
-	panel:SetHeight(-y + 40 + 28 + 26 + 20)
+	panel:SetHeight(-y + 28 + 10 + 30 + 14)
 	self.panel = panel
 end
 

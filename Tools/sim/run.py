@@ -1000,10 +1000,6 @@ do
 		if #planner:Active().order ~= 6 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the second row didn't open after five points" end
 		planner:ClickMark(markFor[11], "RightButton")
 		if #planner:Active().order ~= 5 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: right-click didn't take a point off" end
-		local text = planner.Encode(planner:Active())
-		local back = planner.Decode(text)
-		if not (back and #back == 5 and back[5].n == 21) then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: a shared plan didn't read back" end
-		if planner.Decode("nonsense") then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: read a plan from nonsense" end
 		local index = planner:Next(talents, planner:Active())
 		if index ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the next point isn't the first pick" end
 		if not (planner.panel and planner.panel:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the panel didn't show beside the talents" end
