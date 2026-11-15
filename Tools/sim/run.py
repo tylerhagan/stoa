@@ -437,6 +437,31 @@ do
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Pull countdown: " .. e end
 end
+-- Trainer window: the skill bar, the Settings dropdown and the rows dressed.
+do
+	if Stoa.modules.Windows then
+		local frame = CreateFrame("Frame", "ClassTrainerFrame", UIParent)
+		local bar = CreateFrame("StatusBar", "ClassTrainerStatusBar", frame)
+		for _, suffix in ipairs({ "Left", "Right", "Middle", "Background" }) do bar:CreateTexture("ClassTrainerStatusBar" .. suffix) end
+		bar.rankText = bar:CreateFontString("ClassTrainerStatusBarSkillRank")
+		frame.FilterDropdown = CreateFrame("Button", nil, frame)
+		frame.FilterDropdown.Background = frame.FilterDropdown:CreateTexture()
+		frame.FilterDropdown.Text = frame.FilterDropdown:CreateFontString()
+		local step = CreateFrame("Button", nil, frame)
+		step.icon = step:CreateTexture()
+		step.selectedTex = step:CreateTexture()
+		step.disabledBG = step:CreateTexture()
+		frame.skillStepButton = step
+		local ok, err = pcall(Stoa.modules.Windows.DressTrainer)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: " .. tostring(err) end
+		if not bar.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: skill bar not dressed" end
+		if not frame.FilterDropdown.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: Settings dropdown not dressed" end
+		if not step.stoaRow then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: skill row not dressed" end
+		frame:Hide()
+		_G.ClassTrainerFrame, _G.ClassTrainerStatusBar = nil, nil
+	end
+end
+
 -- Settings window: every page and a search drawn, every setting changed
 -- and put back, the lists added to and taken from, a dropdown by keys.
 do

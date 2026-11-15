@@ -643,11 +643,108 @@ local function dressMerchant()
 	hide(MerchantBuyBackItemNameFrame)
 end
 
+-- One trainer row (and the skill-step row above the list): Blizzard's
+-- framed row art goes, the hover and the chosen row become soft washes.
+local function dressTrainerRow(button)
+	if not button or button.stoaRow then return end
+	button.stoaRow = true
+	local normal = button.GetNormalTexture and button:GetNormalTexture()
+	if normal then normal:SetAlpha(0) end
+	local over = button.GetHighlightTexture and button:GetHighlightTexture()
+	if over then
+		over:SetTexture(UI.WHITE)
+		over:SetTexCoord(0, 1, 0, 1)
+		over:SetBlendMode("BLEND")
+		over:SetVertexColor(1, 1, 1, 0.05)
+	end
+	local chosen = button.selectedTex
+	if chosen then
+		chosen:SetTexture(UI.WHITE)
+		chosen:SetTexCoord(0, 1, 0, 1)
+		chosen:SetBlendMode("BLEND")
+		chosen:ClearAllPoints()
+		chosen:SetAllPoints(button)
+		chosen:SetDrawLayer("BACKGROUND", 1)
+		local r, g, b = Stoa:Color("accent")
+		chosen:SetVertexColor(r, g, b, 0.12)
+	end
+	if button.disabledBG then button.disabledBG:SetAlpha(0) end
+	if button.icon and not button.stoaRim then
+		button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		button.stoaRim = UI.roundBorder(button, "CardEdge.tga", 1)
+	end
+end
+
+-- The skill bar under the title: a thin rounded STOA bar, the numbers in
+-- STOA's type, Blizzard's framed blue bar gone.
+local function dressTrainerBar()
+	local bar = ClassTrainerStatusBar
+	if not bar or bar.stoaDressed then return end
+	bar.stoaDressed = true
+	for _, suffix in ipairs({ "Left", "Right", "Middle" }) do hide(_G["ClassTrainerStatusBar" .. suffix]) end
+	local ground = _G.ClassTrainerStatusBarBackground
+	if ground then
+		ground:SetColorTexture(1, 1, 1, 1)
+		ground:SetVertexColor(0, 0, 0, 0.45)
+	end
+	bar:SetStatusBarTexture(UI.WHITE)
+	local r, g, b = Stoa:Color("accent")
+	bar:SetStatusBarColor(r, g, b, 0.55)
+	bar:SetHeight(14)
+	local rank = bar.rankText or _G.ClassTrainerStatusBarSkillRank
+	if rank then
+		Stoa:SetFont(rank, "sans", Stoa.typeSize.caption)
+		rank:SetTextColor(Stoa:Color("text"))
+		rank:SetShadowOffset(1, -1)
+		rank:SetShadowColor(0, 0, 0, 0.8)
+	end
+end
+
+-- The Settings dropdown: STOA's small rounded button, its words in STOA's
+-- type, a quiet chevron in place of Blizzard's gold arrow art.
+local function dressDropdownButton(dropdown)
+	if not dropdown or dropdown.stoaDressed then return end
+	dropdown.stoaDressed = true
+	if dropdown.Background then dropdown.Background:SetAlpha(0) end
+	UI.roundPanel(dropdown, 0.95)
+	local edge = UI.roundBorder(dropdown, "CardEdge.tga", 1)
+	local chevron = UI.text(dropdown, "sans", Stoa.typeSize.label, "muted", "RIGHT")
+	chevron:SetPoint("RIGHT", -8, 0)
+	chevron:SetText("›")
+	local function paint(over)
+		local text = dropdown.Text
+		if text then
+			Stoa:SetFont(text, "sans", Stoa.typeSize.label)
+			text:SetShadowOffset(0, 0)
+			text:SetTextColor(Stoa:Color(over and "accent" or "text"))
+		end
+		chevron:SetTextColor(Stoa:Color(over and "accent" or "muted"))
+		if over then edge:Set(Stoa:Color("accent")) else edge:Clear() end
+	end
+	dropdown:HookScript("OnEnter", function() paint(true) end)
+	dropdown:HookScript("OnLeave", function() paint(false) end)
+	dropdown:HookScript("OnShow", function() paint(false) end)
+	dropdown:HookScript("OnMouseUp", function() paint(dropdown:IsMouseOver()) end)
+	paint(false)
+end
+
 local function dressTrainer()
 	local frame = ClassTrainerFrame
 	if not frame then return end
 	Windows:Dress(frame)
 	stripInside(frame, 4)
+	dressTrainerBar()
+	dressDropdownButton(frame.FilterDropdown)
+	dressTrainerRow(frame.skillStepButton)
+	local box = frame.ScrollBox
+	local function rows()
+		if box and box.ForEachFrame then box:ForEachFrame(function(row) Stoa.safe.guarded(dressTrainerRow, row) end) end
+	end
+	if box and box.RegisterCallback and ScrollBoxListMixin and ScrollBoxListMixin.Event then
+		box:RegisterCallback(ScrollBoxListMixin.Event.OnDataRangeChanged, rows, Windows)
+	end
+	frame:HookScript("OnShow", rows)
+	rows()
 	-- Blizzard hangs its Settings/Filters dropdown at the top right, where
 	-- Stoa's header seats the close button: it moves in beside the close.
 	Windows:OnSettle(frame, function()
@@ -672,6 +769,8 @@ local function dressTrainer()
 		end
 	end)
 end
+
+Windows.DressTrainer = dressTrainer
 
 local function dressBags()
 	if ContainerFrameCombinedBags then Windows:Dress(ContainerFrameCombinedBags) end
