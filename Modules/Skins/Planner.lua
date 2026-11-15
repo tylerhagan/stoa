@@ -451,7 +451,6 @@ function Planner:BuildPanel()
 	name:SetAutoFocus(false)
 	name:SetHeight(26)
 	name:SetPoint("LEFT", panel, "TOPLEFT", PAD - 4, -24)
-	name:SetPoint("RIGHT", panel, "TOPRIGHT", -64, -24)
 	name:SetMaxLetters(32)
 	name:SetTextInsets(4, 4, 0, 0)
 	Stoa:SetFont(name, "serif", Stoa.typeSize.title)
@@ -470,8 +469,11 @@ function Planner:BuildPanel()
 	local back = wordButton(panel, "<", function() self:Step(-1) end)
 	local forth = wordButton(panel, ">", function() self:Step(1) end)
 	forth:SetPoint("RIGHT", panel, "TOPRIGHT", -PAD, -24)
-	back:SetPoint("RIGHT", forth, "LEFT", -10, 0)
-	panel.name, panel.back, panel.forth = name, back, forth
+	local which = UI.text(panel, "sans", Stoa.typeSize.caption, "muted")
+	which:SetPoint("RIGHT", forth, "LEFT", -6, 0)
+	back:SetPoint("RIGHT", which, "LEFT", -6, 0)
+	name:SetPoint("RIGHT", back, "LEFT", -6, 0)
+	panel.name, panel.back, panel.forth, panel.which = name, back, forth, which
 
 	-- Plan / Done, New, Delete.
 	local plan = wordButton(panel, "Plan", function() self:SetPlanning(not self.planning) end)
@@ -480,7 +482,26 @@ function Planner:BuildPanel()
 		self:NewPlan()
 		self:SetPlanning(true)
 	end)
-	new:SetPoint("LEFT", plan, "RIGHT", 16, 0)
+	new:SetPoint("LEFT", plan, "RIGHT", 14, 0)
+	new:SetScript("OnEnter", function(own)
+		own.text:SetTextColor(Stoa:Color("accent"))
+		GameTooltip:SetOwner(own, "ANCHOR_BOTTOM")
+		GameTooltip:AddLine("Plan ahead from the talents you have.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	new:HookScript("OnLeave", GameTooltip_Hide)
+	local blank = wordButton(panel, "Blank", function()
+		self:NewPlan("Full build", {})
+		self:SetPlanning(true)
+	end)
+	blank:SetPoint("LEFT", new, "RIGHT", 14, 0)
+	blank:SetScript("OnEnter", function(own)
+		own.text:SetTextColor(Stoa:Color("accent"))
+		GameTooltip:SetOwner(own, "ANCHOR_BOTTOM")
+		GameTooltip:AddLine("A whole build from level 10, for another spec, a respec or an alt.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	blank:HookScript("OnLeave", GameTooltip_Hide)
 	local clear = wordButton(panel, "Reset", function()
 		local active = self:Active()
 		if active then
@@ -491,9 +512,9 @@ function Planner:BuildPanel()
 		end
 		self:Refresh()
 	end)
-	clear:SetPoint("LEFT", new, "RIGHT", 16, 0)
+	clear:SetPoint("LEFT", blank, "RIGHT", 14, 0)
 	local delete = wordButton(panel, "Delete", function() self:DeletePlan() end)
-	delete:SetPoint("LEFT", clear, "RIGHT", 16, 0)
+	delete:SetPoint("LEFT", clear, "RIGHT", 14, 0)
 	panel.plan = plan
 
 	-- The level the trees show the build at.
@@ -683,9 +704,13 @@ function Planner:Refresh()
 	panel:Show()
 	local plan = self:Active()
 	if not panel.name:HasFocus() then panel.name:SetText(plan and plan.name or "No plan") end
-	local many = #store() > 1
+	local plans = store()
+	local many = #plans > 1
 	panel.back:SetShown(many)
 	panel.forth:SetShown(many)
+	local index = 1
+	for i, other in ipairs(plans) do if other == plan then index = i end end
+	panel.which:SetText(many and ("%d of %d"):format(index, #plans) or "")
 	panel.plan.text:SetText(self.planning and "Done" or "Plan")
 	panel.plan.lit = self.planning
 	panel.plan.text:SetTextColor(Stoa:Color(self.planning and "accent" or "text"))
