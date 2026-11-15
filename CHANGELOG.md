@@ -6,6 +6,11 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.2.0
 
+- Spellbook list, redone: two-line rows (name, then rank, cost and cast time), Next at and Train now as pills, a count beside each school, passives last, and STOA's own school words and search across the top in List view (Blizzard's fade out under them and come back for Pages). The priest's Shadow Magic reads Shadow. Pages view headings lose the parchment smudge and red divider.
+- Console: faint gold dividers with a small diamond between chat, At a glance, the action bars and the pages, with a switch in Settings > Console.
+- Talents: more room between each tree's name, its bar and the next-row line, and the Primary, search and Unspent row sits a little lower.
+- Tabs inside windows (macros and others) no longer get the button dress; the profession tabs are dark tiles with their icons whole and a gold edge on the open one; Appearances' Items tab is a word, and it, the search and Filter sit lower; the AddOn List's top row sits clear of the header.
+- Target of target, docked: its straight gold line and its curve meet without a bump.
 - Macros: the icon grid's stone slots are dark STOA wells. What's new: the finished-quests line says deeper gold (it changed from pale), and the windows line covers their insides.
 - Map: the zone's level range sits right after the title instead of past the window's edge, and the close and maximise buttons are quiet STOA glyphs, centred in the header and set in from the right.
 - Collections: the count pill (Total Mounts, Total Pets, Total Toys) sits in the bottom right of the window on every page, and the mount scene and toy page lose their painted backdrops and gilded corners.

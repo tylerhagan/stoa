@@ -29,6 +29,47 @@ local function hideBook(book)
 	for _, key in ipairs(ART) do hide(book[key]) end
 end
 
+-- A school's heading on Blizzard's pages ("Shadow", "Name Matches" in a
+-- search): the parchment smudge and the red divider go, the name is in
+-- STOA's serif in the accent over a plain hairline. Blizzard makes these
+-- as the pages fill, beside the spells, so each spell dressed looks for
+-- new headings next to it.
+local function dressHeader(header)
+	if header.stoaHeader or not (header.Text and header.Border) then return end
+	header.stoaHeader = true
+	hide(header.Backplate)
+	header.Border:SetAlpha(0)
+	Stoa:SetFont(header.Text, "serif", Stoa.typeSize.name)
+	header.Text:SetShadowOffset(0, 0)
+	header.Text:SetTextColor(Stoa:Color("accent"))
+	local rule = header:CreateTexture(nil, "ARTWORK")
+	rule:SetTexture(UI.WHITE)
+	rule:SetHeight(1)
+	rule:SetPoint("TOPLEFT", header.Text, "BOTTOMLEFT", 0, -8)
+	rule:SetPoint("RIGHT", header.Border, "RIGHT", 0, 0)
+	UI.tint(rule, "hairline")
+	-- The school's short name ("Shadow" for "Shadow Magic"), as in the list.
+	local function shorten(fs, text)
+		if fs.stoaRenaming or not Spellbook.SchoolLabel then return end
+		local short = Spellbook.SchoolLabel(text)
+		if short and short ~= text then
+			fs.stoaRenaming = true
+			fs:SetText(short)
+			fs.stoaRenaming = nil
+		end
+	end
+	hooksecurefunc(header.Text, "SetText", shorten)
+	shorten(header.Text, header.Text:GetText())
+end
+
+local function dressHeadersBeside(item)
+	local parent = item.GetParent and item:GetParent()
+	if not (parent and parent.GetChildren) then return end
+	for _, child in ipairs({ parent:GetChildren() }) do
+		if not child.stoaHeader and child.Backplate and child.Border and child.Text and not child.Name then dressHeader(child) end
+	end
+end
+
 -- One spell: its name in STOA's type and light, the rank or "Passive"
 -- under it quiet, "Available at level 30" or "Trainable" in the accent.
 -- Blizzard fades unlearned ones by alpha, which this keeps.
@@ -41,6 +82,7 @@ function Spellbook.DressItem(item)
 		if item.SubName then Stoa:SetFont(item.SubName, "sans", Stoa.typeSize.caption) end
 		if item.RequiredLevel then Stoa:SetFont(item.RequiredLevel, "sans", Stoa.typeSize.caption) end
 	end
+	dressHeadersBeside(item)
 	item.Name:SetTextColor(Stoa:Color("text"))
 	if item.SubName then item.SubName:SetTextColor(Stoa:Color("muted")) end
 	if item.RequiredLevel then item.RequiredLevel:SetTextColor(Stoa:Color("accent")) end
@@ -116,37 +158,18 @@ function Spellbook:ToggleTraining()
 end
 
 -- The list view ----------------------------------------------------------
--- Every spell you know on one scrolling page, grouped by school: its rank,
--- what it costs, its cast time and when its next rank comes (or "Train now").
--- It lies over Blizzard's pages, which fade out under it; a word on the
--- book's top row switches back to them. Each row is a secure spell button,
--- so a click casts, a drag puts it on a bar and Shift-click links it. Rows
--- are filled out of combat only (a secure button can't change in a fight).
-local ROW_H, ROWS, LIST_TOP, LIST_BOTTOM = 32, 16, 72, 28
-local COLS = { rank = 90, cost = 80, cast = 70, next = 120 }
-local COL_ORDER = { "next", "cast", "cost", "rank" }
--- Narrower than this (the book's compact one-page size) the list drops
--- the cost and cast columns so the names keep room.
-local WIDE = 700
+-- Every spell you know on one scrolling page, grouped by school. Each row is
+-- two lines: the name, then its rank, cost and cast time, quiet. When its
+-- next rank comes ("Next at 26") or "Train now" sits in a pill on the right.
+-- Passives close each school, in grey. In this view STOA's own toolbar
+-- (school words and a search box) lies over Blizzard's school icons and
+-- search, which fade out under it and come back for Pages; nothing of
+-- Blizzard's is moved. Each row is a secure spell button, so a click casts,
+-- a drag puts it on a bar and Shift-click links it. Rows are filled out of
+-- combat only (a secure button can't change in a fight).
+local ROW_H, HEAD_H, ROWS, LIST_TOP, LIST_BOTTOM, TOOLS_TOP, TOOLS_H = 38, 36, 18, 58, 24, 14, 30
+local ICON = 26
 
--- Seats one set of column texts (a row's, or the headings) from the right,
--- leaving out cost and cast when compact. Returns the leftmost one.
-local function placeColumns(set, parent, compact, point, y)
-	local x, leftmost = 0, nil
-	for _, key in ipairs(COL_ORDER) do
-		local fs = set[key]
-		local skip = compact and (key == "cost" or key == "cast")
-		fs.stoaSkip = skip
-		fs:ClearAllPoints()
-		if not skip then
-			fs:SetPoint(point, parent, point == "RIGHT" and "RIGHT" or "TOPRIGHT", -x, y or 0)
-			x = x + COLS[key] + 12
-			leftmost = fs
-		end
-		fs:SetShown(not skip)
-	end
-	return leftmost
-end
 local call = Stoa.safe.call
 local bank = function() return Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player end
 
@@ -167,7 +190,20 @@ local function costText(spellID, passive)
 	local amount = first and Stoa:PlainNumber(first.cost)
 	if not amount or amount <= 0 then return "" end
 	local mana = Enum and Enum.PowerType and first.type == Enum.PowerType.Mana
-	return mana and tostring(amount) or (amount .. " " .. tostring(first.name or ""):lower())
+	return amount .. " " .. (mana and "mana" or tostring(first.name or ""):lower())
+end
+
+-- The quiet second line: rank, cost and cast time, or what a passive is.
+local function detailText(entry)
+	if entry.passive then
+		local rank = entry.rank or ""
+		return rank ~= "" and rank or (rawget(_G, "SPELL_PASSIVE") or "Passive")
+	end
+	local parts = {}
+	for _, part in ipairs({ entry.rank or "", costText(entry.spellID), castText(entry.spellID) }) do
+		if part ~= "" then parts[#parts + 1] = part end
+	end
+	return table.concat(parts, UI.SEP)
 end
 
 -- When the next rank of each spell comes, by name: the level, or true when
@@ -186,16 +222,40 @@ local function nextRanks()
 	return out
 end
 
--- Your spells as rows: a heading per school, then its spells by name, the
--- best rank of each. Search text narrows them by name.
-function Spellbook:ListRows(filter)
+-- A few school names Forever spells out longer than players say them
+-- (the priest's "Shadow Magic" is Shadow); shown short in STOA's words,
+-- headings and talent cards. The game's own names are left as they are.
+local SHORT_SCHOOL = { ["Shadow Magic"] = "Shadow" }
+local function schoolLabel(name)
+	if type(name) ~= "string" then return name end
+	return SHORT_SCHOOL[name] or SHORT_SCHOOL[name:gsub("(%a)(%w*)", function(a, b) return a:upper() .. b:lower() end)] or name
+end
+Spellbook.SchoolLabel = schoolLabel
+
+-- The schools in the book's order, by name.
+function Spellbook:Schools()
+	local out, book = {}, C_SpellBook
+	if not (book and book.GetNumSpellBookSkillLines) then return out end
+	for line = 1, call(book.GetNumSpellBookSkillLines) or 0 do
+		local info = call(book.GetSpellBookSkillLineInfo, line)
+		if type(info) == "table" and not info.shouldHide and not info.offSpecID and info.name and (info.numSpellBookItems or 0) > 0 then
+			out[#out + 1] = info.name
+		end
+	end
+	return out
+end
+
+-- Your spells as rows: a heading per school (with its count), then its
+-- spells by name, the best rank of each, passives last. Search text narrows
+-- them by name; a school name keeps only that school.
+function Spellbook:ListRows(filter, school)
 	local rows, book = {}, C_SpellBook
 	if not (book and book.GetNumSpellBookSkillLines) then return rows end
 	filter = filter and filter ~= "" and filter:lower() or nil
 	local upcoming = nextRanks()
 	for line = 1, call(book.GetNumSpellBookSkillLines) or 0 do
 		local info = call(book.GetSpellBookSkillLineInfo, line)
-		if type(info) == "table" and not info.shouldHide and not info.offSpecID then
+		if type(info) == "table" and not info.shouldHide and not info.offSpecID and (not school or info.name == school) then
 			local byName, names = {}, {}
 			local first = info.itemIndexOffset or 0
 			for slot = first + 1, first + (info.numSpellBookItems or 0) do
@@ -207,17 +267,22 @@ function Spellbook:ListRows(filter)
 					if not byName[item.name] then names[#names + 1] = item.name end
 					-- The book lists ranks low to high: the last is the best.
 					byName[item.name] = { slot = slot, spellID = item.spellID, name = item.name, icon = item.iconID,
-						rank = item.subName, passive = item.isPassive }
+						rank = item.subName, passive = item.isPassive and true or false }
 				end
 			end
 			if #names > 0 then
-				rows[#rows + 1] = { heading = (info.name or ""):upper() }
-				table.sort(names)
+				rows[#rows + 1] = { heading = (schoolLabel(info.name) or ""):upper(), count = #names }
+				table.sort(names, function(a, b)
+					local pa, pb = byName[a].passive, byName[b].passive
+					if pa ~= pb then return not pa end
+					return a < b
+				end)
 				for _, name in ipairs(names) do
 					local entry = byName[name]
 					local nextAt = upcoming[name]
-					entry.next = nextAt == true and "Train now" or (nextAt and ("Next at " .. nextAt)) or ""
 					entry.trainNow = nextAt == true
+					entry.nextAt = type(nextAt) == "number" and nextAt or nil
+					entry.next = entry.trainNow and "Train now" or (entry.nextAt and ("Next at " .. entry.nextAt)) or ""
 					rows[#rows + 1] = entry
 				end
 			end
@@ -226,11 +291,31 @@ function Spellbook:ListRows(filter)
 	return rows
 end
 
-local function buildRow(list, i)
+-- "Next at 26" quiet in an outlined pill; "Train now" dark on the accent.
+local function setPill(pill, entry)
+	if entry.next == "" or entry.passive then
+		pill:Hide()
+		return
+	end
+	pill.text:SetText(entry.next)
+	if entry.trainNow then
+		pill.fill:SetVertexColor(Stoa:Color("accent"))
+		pill.text:SetTextColor(0.08, 0.08, 0.09)
+		pill.edge:Clear()
+	else
+		pill.fill:SetVertexColor(0, 0, 0, 0.3)
+		pill.text:SetTextColor(Stoa:Color("muted"))
+		pill.edge:Set(Stoa:Color("hairline"))
+	end
+	local width = pill.text:GetStringWidth()
+	if not width or Stoa:IsSecret(width) or width <= 0 then width = #entry.next * 6 end
+	pill:SetWidth(math.floor(width + 16 + 0.5))
+	pill:Show()
+end
+
+local function buildRow(list)
 	local row = CreateFrame("Button", nil, list, "SecureActionButtonTemplate")
 	row:SetHeight(ROW_H)
-	row:SetPoint("TOPLEFT", 0, -(i - 1) * ROW_H)
-	row:SetPoint("TOPRIGHT", 0, -(i - 1) * ROW_H)
 	-- On release only, so pressing to drag a spell doesn't cast it.
 	row:RegisterForClicks("AnyUp")
 	row:SetAttribute("useOnKeyDown", false)
@@ -238,35 +323,64 @@ local function buildRow(list, i)
 	-- A plain click casts; Shift-click links instead (in PostClick).
 	row:SetAttribute("type1", "spell")
 	row:SetAttribute("shift-type1", "stoalink")
+	-- Under the mouse: a faint lift and a short accent edge at the left.
 	local hover = row:CreateTexture(nil, "BACKGROUND")
 	hover:SetAllPoints()
-	hover:SetColorTexture(1, 1, 1, 0.05)
+	hover:SetColorTexture(1, 1, 1, 0.045)
 	hover:Hide()
 	row.hover = hover
+	local edge = row:CreateTexture(nil, "ARTWORK")
+	edge:SetWidth(2)
+	edge:SetPoint("TOPLEFT", 0, -7)
+	edge:SetPoint("BOTTOMLEFT", 0, 7)
+	edge:SetTexture(UI.WHITE)
+	UI.tint(edge, "accent")
+	edge:Hide()
+	row.edge = edge
 	row.icon = row:CreateTexture(nil, "ARTWORK")
-	row.icon:SetSize(ROW_H - 6, ROW_H - 6)
-	row.icon:SetPoint("LEFT", 4, 0)
+	row.icon:SetSize(ICON, ICON)
+	row.icon:SetPoint("LEFT", 8, 0)
 	row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	-- A dark rim a pixel round the icon, so it sits in the page.
+	row.rim = row:CreateTexture(nil, "BORDER")
+	row.rim:SetPoint("TOPLEFT", row.icon, -1, 1)
+	row.rim:SetPoint("BOTTOMRIGHT", row.icon, 1, -1)
+	row.rim:SetColorTexture(0, 0, 0, 0.7)
+	-- The pill on the right, then the two lines between it and the icon.
+	local pill = CreateFrame("Frame", nil, row)
+	pill:SetHeight(18)
+	pill:SetPoint("RIGHT", -8, 0)
+	pill.fill = UI.pillFill(pill, 0)
+	pill.edge = UI.pillEdge(pill, 0)
+	pill.text = pill:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(pill.text, "sans", Stoa.typeSize.caption)
+	pill.text:SetPoint("CENTER", 0, 0)
+	pill:Hide()
+	row.pill = pill
 	row.name = UI.text(row, "sans", Stoa.typeSize.label, "text", "LEFT")
-	row.name:SetPoint("LEFT", row.icon, "RIGHT", 10, 0)
+	row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 11, 0)
+	row.name:SetPoint("RIGHT", pill, "LEFT", -10, 0)
 	row.name:SetWordWrap(false)
+	row.detail = UI.text(row, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	row.detail:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 11, 0)
+	row.detail:SetPoint("RIGHT", pill, "LEFT", -10, 0)
+	row.detail:SetWordWrap(false)
+	-- A school heading: its name in the accent, the count quiet, a rule.
 	row.head = UI.text(row, "sans", Stoa.typeSize.micro, "accent", "LEFT")
-	row.head:SetPoint("BOTTOMLEFT", 4, 6)
+	row.head:SetPoint("BOTTOMLEFT", 2, 13)
+	row.count = UI.text(row, "sans", Stoa.typeSize.micro, "muted", "LEFT")
+	row.count:SetPoint("LEFT", row.head, "RIGHT", 8, 0)
 	row.rule = row:CreateTexture(nil, "BORDER")
 	row.rule:SetHeight(1)
-	row.rule:SetPoint("BOTTOMLEFT")
-	row.rule:SetPoint("BOTTOMRIGHT")
-	row.rule:SetColorTexture(1, 1, 1)
-	UI.tint(row.rule, "accent", 0.25)
-	for _, key in ipairs(COL_ORDER) do
-		local fs = UI.text(row, "sans", Stoa.typeSize.body, "muted", "LEFT")
-		fs:SetWidth(COLS[key])
-		fs:SetWordWrap(false)
-		row[key] = fs
-	end
+	-- A little air between the rule and the first spell under it.
+	row.rule:SetPoint("BOTTOMLEFT", 0, 6)
+	row.rule:SetPoint("BOTTOMRIGHT", 0, 6)
+	row.rule:SetTexture(UI.WHITE)
+	UI.tint(row.rule, "hairline")
 	row:SetScript("OnEnter", function(self)
 		if not self.entry or self.entry.heading then return end
 		self.hover:Show()
+		self.edge:Show()
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		if GameTooltip.SetSpellBookItem then
 			pcall(GameTooltip.SetSpellBookItem, GameTooltip, self.entry.slot, bank())
@@ -277,6 +391,7 @@ local function buildRow(list, i)
 	end)
 	row:SetScript("OnLeave", function(self)
 		self.hover:Hide()
+		self.edge:Hide()
 		GameTooltip:Hide()
 	end)
 	row:SetScript("OnDragStart", function(self)
@@ -297,6 +412,11 @@ local function buildRow(list, i)
 	return row
 end
 
+local function searchText()
+	local box = Spellbook.tools and Spellbook.tools.box
+	return box and box:GetText() or ""
+end
+
 function Spellbook:FillList()
 	local list = self.list
 	if not (list and list:IsShown()) then return end
@@ -304,51 +424,153 @@ function Spellbook:FillList()
 		self.fillAfterCombat = true
 		return
 	end
-	local book = PlayerSpellsFrame and PlayerSpellsFrame.SpellBookFrame
-	local search = book and book.SearchBox and book.SearchBox:GetText()
-	local rows = self:ListRows(search)
+	self:PaintSchools()
+	local rows = self:ListRows(searchText(), self.school)
 	self.rows = rows
-	local compact = (list:GetWidth() or 0) < WIDE
-	if list.compact ~= compact then
-		list.compact = compact
-		placeColumns(list.heads, list, compact, "BOTTOMRIGHT", 6)
-		for _, row in ipairs(list.rows) do
-			local leftmost = placeColumns(row, row, compact, "RIGHT")
-			row.name:ClearAllPoints()
-			row.name:SetPoint("LEFT", row.icon, "RIGHT", 10, 0)
-			row.name:SetPoint("RIGHT", leftmost, "LEFT", -12, 0)
-		end
-	end
-	local shown = math.max(1, math.floor((list:GetHeight() or ROW_H * ROWS) / ROW_H))
-	shown = math.min(shown, ROWS)
-	self.offset = math.min(self.offset or 0, math.max(#rows - shown, 0))
+	-- Rows differ in height (headings are shorter), so they're stacked
+	-- from the scroll offset until the list is full.
+	local room = list:GetHeight() or (ROW_H * 12)
+	if Stoa:IsSecret(room) or room <= 0 then room = ROW_H * 12 end
+	self.offset = math.min(self.offset or 0, math.max(#rows - 1, 0))
+	local y, used = 0, 0
 	for i, row in ipairs(list.rows) do
-		local entry = i <= shown and rows[i + self.offset] or nil
+		local entry = rows[i + self.offset]
+		local height = entry and (entry.heading and HEAD_H or ROW_H) or ROW_H
+		if entry and y + height > room then entry = nil end
 		row.entry = entry
 		row:SetShown(entry and true or false)
 		if entry then
+			used = i
+			row:ClearAllPoints()
+			row:SetPoint("TOPLEFT", 0, -y)
+			row:SetPoint("TOPRIGHT", 0, -y)
+			row:SetHeight(height)
+			y = y + height
 			local heading = entry.heading and true or false
-			row.head:SetShown(heading)
-			row.rule:SetShown(heading)
-			row.icon:SetShown(not heading)
-			row.name:SetShown(not heading)
-			for _, key in ipairs(COL_ORDER) do row[key]:SetShown(not heading and not row[key].stoaSkip) end
+			for _, key in ipairs({ "head", "count", "rule" }) do row[key]:SetShown(heading) end
+			for _, key in ipairs({ "icon", "rim", "name", "detail" }) do row[key]:SetShown(not heading) end
 			if heading then
 				row.head:SetText(entry.heading)
+				row.count:SetText(entry.count or "")
+				row.pill:Hide()
 				row:SetAttribute("spell", nil)
 			else
 				row.icon:SetTexture(entry.icon)
+				row.icon:SetDesaturated(entry.passive)
+				row.icon:SetAlpha(entry.passive and 0.75 or 1)
 				row.name:SetText(entry.name)
-				row.rank:SetText(entry.rank or "")
-				row.cost:SetText(costText(entry.spellID, entry.passive))
-				row.cast:SetText(castText(entry.spellID, entry.passive))
-				row.next:SetText(entry.next)
-				row.next:SetTextColor(Stoa:Color(entry.trainNow and "accent" or "muted"))
+				row.name:SetTextColor(Stoa:Color(entry.passive and "muted" or "text"))
+				row.detail:SetText(detailText(entry))
+				setPill(row.pill, entry)
 				row:SetAttribute("spell", not entry.passive and entry.spellID or nil)
 			end
 		end
 	end
+	self.shownRows = used
 	list.empty:SetShown(#rows == 0)
+end
+
+-- The toolbar: school words at the left (All first), the search at the
+-- right. It takes the mouse over its strip, so Blizzard's faded controls
+-- under it can't be clicked by mistake.
+local function wordButton(parent, label)
+	local word = CreateFrame("Button", nil, parent)
+	word:SetHeight(TOOLS_H)
+	word.text = UI.text(word, "sans", Stoa.typeSize.body, "muted", "LEFT")
+	word.text:SetPoint("LEFT")
+	word.text:SetText(label)
+	word.line = word:CreateTexture(nil, "ARTWORK")
+	word.line:SetHeight(2)
+	word.line:SetPoint("TOPLEFT", word.text, "BOTTOMLEFT", 0, -5)
+	word.line:SetPoint("TOPRIGHT", word.text, "BOTTOMRIGHT", 0, -5)
+	word.line:SetTexture(UI.WHITE)
+	UI.tint(word.line, "accent")
+	word.line:Hide()
+	word:SetScript("OnEnter", function(self) if not self.chosen then self.text:SetTextColor(Stoa:Color("text")) end end)
+	word:SetScript("OnLeave", function(self) if not self.chosen then self.text:SetTextColor(Stoa:Color("muted")) end end)
+	return word
+end
+
+local function buildTools(book)
+	local tools = CreateFrame("Frame", nil, book)
+	tools:SetPoint("TOPLEFT", book, "TOPLEFT", 40, -TOOLS_TOP)
+	tools:SetPoint("TOPRIGHT", book, "TOPRIGHT", -40, -TOOLS_TOP)
+	tools:SetHeight(TOOLS_H)
+	tools:SetFrameLevel(book:GetFrameLevel() + 60)
+	tools:EnableMouse(true)
+	local box = CreateFrame("EditBox", nil, tools)
+	box:SetAutoFocus(false)
+	box:SetSize(170, 24)
+	box:SetPoint("RIGHT", 0, 0)
+	box:SetMaxLetters(40)
+	box:SetTextInsets(10, 10, 0, 0)
+	Stoa:SetFont(box, "sans", Stoa.typeSize.body)
+	box:SetTextColor(Stoa:Color("text"))
+	local back = UI.pillFill(box, 0)
+	back:SetVertexColor(0, 0, 0, 0.35)
+	local edge = UI.pillEdge(box, 0)
+	local hint = UI.text(box, "sans", Stoa.typeSize.body, "muted")
+	hint:SetPoint("LEFT", 10, 0)
+	hint:SetText("Search spells")
+	local function paintBox()
+		hint:SetShown(box:GetText() == "" and not box:HasFocus())
+		edge:Set(Stoa:Color(box:HasFocus() and "accent" or "hairline"))
+	end
+	box:SetScript("OnEditFocusGained", paintBox)
+	box:SetScript("OnEditFocusLost", paintBox)
+	box:SetScript("OnEscapePressed", function(self) self:SetText("") self:ClearFocus() end)
+	box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+	box:SetScript("OnTextChanged", function()
+		paintBox()
+		Spellbook.offset = 0
+		guarded(Spellbook.FillList, Spellbook)
+	end)
+	paintBox()
+	tools.box = box
+	tools.words = {}
+	tools:Hide()
+	return tools
+end
+
+-- The school words, made as the schools are known; the chosen one in the
+-- text colour over a short accent line.
+function Spellbook:PaintSchools()
+	local tools = self.tools
+	if not tools then return end
+	local schools = self:Schools()
+	if self.school and not tContains(schools, self.school) then self.school = nil end
+	local labels = { "All" }
+	for _, name in ipairs(schools) do labels[#labels + 1] = name end
+	local room = tools:GetWidth()
+	if not room or Stoa:IsSecret(room) or room <= 0 then room = 600 end
+	local x, limit = 0, room - 190
+	for i, label in ipairs(labels) do
+		local word = tools.words[i]
+		if not word then
+			word = wordButton(tools, label)
+			word:SetScript("OnClick", function(self)
+				Spellbook.school = self.school
+				Spellbook.offset = 0
+				guarded(Spellbook.FillList, Spellbook)
+			end)
+			tools.words[i] = word
+		end
+		word.school = i > 1 and label or nil
+		word.text:SetText(schoolLabel(label))
+		local width = word.text:GetStringWidth()
+		if not width or Stoa:IsSecret(width) or width <= 0 then width = #label * 7 end
+		width = math.ceil(width)
+		word:SetWidth(width)
+		word:ClearAllPoints()
+		word:SetPoint("LEFT", tools, "LEFT", x, 0)
+		local fits = x + width <= limit
+		word:SetShown(fits)
+		x = x + width + 16
+		word.chosen = word.school == self.school
+		word.text:SetTextColor(Stoa:Color(word.chosen and "text" or "muted"))
+		word.line:SetShown(word.chosen)
+	end
+	for i = #labels + 1, #tools.words do tools.words[i]:Hide() end
 end
 
 local function buildList(book)
@@ -362,25 +584,35 @@ local function buildList(book)
 	for i = 1, ROWS do list.rows[i] = buildRow(list, i) end
 	list:SetScript("OnMouseWheel", function(_, delta)
 		if InCombatLockdown() then return end
-		local shown = math.min(ROWS, math.max(1, math.floor(list:GetHeight() / ROW_H)))
-		local maxOffset = math.max(#(Spellbook.rows or {}) - shown, 0)
+		local maxOffset = math.max(#(Spellbook.rows or {}) - (Spellbook.shownRows or 1), 0)
 		Spellbook.offset = math.min(math.max((Spellbook.offset or 0) - delta * 3, 0), maxOffset)
 		Spellbook:FillList()
 	end)
 	list:SetScript("OnSizeChanged", function() Spellbook:FillList() end)
-	-- Column names along the top.
-	list.heads = {}
-	for _, key in ipairs(COL_ORDER) do
-		local fs = UI.text(list, "sans", Stoa.typeSize.micro, "muted", "LEFT")
-		fs:SetWidth(COLS[key])
-		fs:SetText(({ next = "NEXT RANK", cast = "CAST", cost = "COST", rank = "RANK" })[key])
-		list.heads[key] = fs
-	end
 	list.empty = UI.text(list, "sans", Stoa.typeSize.body, "muted", "CENTER")
 	list.empty:SetPoint("TOP", 0, -40)
 	list.empty:SetText("No spells match.")
 	list:Hide()
 	return list
+end
+
+-- Blizzard's own controls across the book's top (school tabs, search,
+-- settings, the help plate, the rotation button) fade out under STOA's
+-- toolbar in List view, by alpha only; nothing is hidden or moved.
+local BOOK_TOP = { "CategoryTabSystem", "SearchBox", "SettingsDropdown", "HelpPlateButton", "AssistedCombatRotationSpellFrame" }
+local function fadeBookTop(book, faded)
+	for _, key in ipairs(BOOK_TOP) do
+		local child = book[key]
+		if child and child.SetAlpha then
+			if faded then
+				child.stoaFaded = true
+				child:SetAlpha(0)
+			elseif child.stoaFaded then
+				child.stoaFaded = nil
+				child:SetAlpha(1)
+			end
+		end
+	end
 end
 
 -- List or Blizzard's pages, remembered.
@@ -391,8 +623,11 @@ function Spellbook:ShowView(view)
 	self.db.view = view
 	local listOn = view == "list"
 	if listOn and not self.list then self.list = buildList(book) end
+	if listOn and not self.tools then self.tools = buildTools(book) end
 	if self.list then self.list:SetShown(listOn) end
+	if self.tools then self.tools:SetShown(listOn) end
 	if book.PagedSpellsFrame then book.PagedSpellsFrame:SetAlpha(listOn and 0 or 1) end
+	fadeBookTop(book, listOn)
 	local word = PlayerSpellsFrame.stoaViewWord
 	if word then
 		word.text:SetText(listOn and "Pages" or "List")
@@ -516,7 +751,7 @@ function Spellbook.DressTreeHeaders(talents)
 				text:SetPoint("LEFT", header, "CENTER", 6, 0)
 				text:SetJustifyH("LEFT")
 			end
-			name:SetText((name:GetText() or ""):upper())
+			name:SetText((schoolLabel(name:GetText()) or ""):upper())
 			local spent = tonumber(text:GetText()) or 0
 			local token = i == top and "accent" or spent > 0 and "text" or "muted"
 			name:SetTextColor(Stoa:Color(token))
@@ -577,6 +812,10 @@ local function hideTree(parts)
 	for _, label in ipairs(parts.labels) do label:Hide() end
 	for _, line in ipairs(parts.lines) do line:Hide() end
 end
+
+-- The card's head (name and points, the bar, the "more to open" line)
+-- sits this much higher than Blizzard's header, for room between them.
+local HEAD_LIFT = 8
 
 function Spellbook.DressTrees(talents)
 	-- The window's stone rings fight the cards; the window is dressed after
@@ -642,13 +881,13 @@ function Spellbook.DressTrees(talents)
 			local name, text = header.Name, header.Text
 			if name and text then
 				name:ClearAllPoints()
-				name:SetPoint("LEFT", talents, "TOPLEFT", x0 + 18, cy - top)
+				name:SetPoint("LEFT", talents, "TOPLEFT", x0 + 18, cy - top + HEAD_LIFT)
 				name:SetJustifyH("LEFT")
 				text:ClearAllPoints()
-				text:SetPoint("RIGHT", talents, "TOPLEFT", x0 + width - 18, cy - top)
+				text:SetPoint("RIGHT", talents, "TOPLEFT", x0 + width - 18, cy - top + HEAD_LIFT)
 				text:SetJustifyH("RIGHT")
 			end
-			local cardTop = cy - top + 22
+			local cardTop = cy - top + 22 + HEAD_LIFT
 			if not firstX0 then firstX0 = x0 end
 			lastRight, rowTop = x0 + width, cardTop
 			local cardBottom = tree.bottom - top - tree.size / 2 - 18
@@ -722,7 +961,7 @@ function Spellbook.DressTrees(talents)
 			end
 			-- Toward the next row: a thin bar under the name.
 			local barWidth = width - 36
-			local barY = cy - top - 16
+			local barY = cy - top - 12
 			parts.track:ClearAllPoints()
 			parts.track:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 18, barY)
 			parts.track:SetSize(barWidth, 3)
@@ -734,7 +973,7 @@ function Spellbook.DressTrees(talents)
 			parts.bar:SetSize(math.max(0.01, barWidth * share), 3)
 			parts.bar:SetShown(share > 0)
 			parts.next:ClearAllPoints()
-			parts.next:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 18, barY - 8)
+			parts.next:SetPoint("TOPLEFT", talents, "TOPLEFT", x0 + 18, barY - 12)
 			if last then
 				parts.next:SetText("Every row open")
 			else
@@ -850,7 +1089,7 @@ end
 -- hangs from its top and the talents from its bottom, so they rise into
 -- the band. Blizzard sizes the window per tab (UpdateSize), and this runs
 -- after it. Out of combat only; nothing of Blizzard's is written.
-local TALENTS_LIFT = 104
+local TALENTS_LIFT = 94
 function Spellbook.FitWindow(talents)
 	local frame = talents:GetParent()
 	if not (frame and frame.SetHeight) then return end

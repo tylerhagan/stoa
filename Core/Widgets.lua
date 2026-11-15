@@ -1471,6 +1471,13 @@ function UI.plaqueStep(frame)
 	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueStepLines")
 	lines:SetAllPoints(step)
 	local parts = { body, top, step, lines }
+	-- The plain line is drawn on whole pixels and the art's line is not, so
+	-- where they met one looked thicker or a pixel off. Neither snaps now,
+	-- so both lines are drawn the same way.
+	for _, part in ipairs(parts) do
+		if part.SetSnapToPixelGrid then part:SetSnapToPixelGrid(false) end
+		if part.SetTexelSnappingBias then part:SetTexelSnappingBias(0) end
+	end
 	for _, part in ipairs({ body, step }) do
 		part:SetVertexColor(Stoa:Color("panel"))
 		UI.tint(part, "panel", 1)
@@ -1489,8 +1496,11 @@ function UI.plaqueStep(frame)
 		-- Up to where the art's own line starts: the line is see-through,
 		-- so an overlap would show as a brighter spot.
 		top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - STEP_LEAD, 1)
+		-- The art hangs from the plain line, not from the frame's bottom:
+		-- measured from two edges, the two lines rounded to different
+		-- pixels and showed a small bump where they met.
 		step:ClearAllPoints()
-		step:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - STEP_LEAD, 0)
+		step:SetPoint("TOPLEFT", top, "TOPRIGHT", 0, 1)
 	end
 	function slab:SetShown(on)
 		for _, part in ipairs(parts) do part:SetShown(on) end

@@ -53,8 +53,13 @@ local PANEL_PARTS = { "Left", "Middle", "Right", "LeftSeparator", "RightSeparato
 local function isPanelButton(button)
 	-- The talent window's Primary and Secondary tabs become words there
 	-- (Spellbook.lua), not red buttons.
+	-- Tabs anywhere (the macro window's General/Character tabs and the
+	-- like) are words with an underline, never boxed keys.
+	if button.stoaTabParts or button.LeftActive or button.MiddleActive then return false end
 	local parent = button.GetParent and button:GetParent()
-	if parent and parent.tabTemplate == "ClassTalentsFrameTabTemplate" then return false end
+	if parent and parent.tabTemplate then return false end
+	local name = button.GetName and button:GetName()
+	if type(name) == "string" and name:find("Tab%d+$") then return false end
 	return button.Left and button.Middle and button.Right
 end
 
