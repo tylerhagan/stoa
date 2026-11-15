@@ -1626,20 +1626,21 @@ end
 -- Time of day --------------------------------------------------------------
 -- The console's gold (top edge, medallion, seal ring, section lines) takes
 -- the colour of the game's clock: rose at dawn, the theme's own colour by
--- day, amber at dusk, moonlit silver-blue at night. The sky's colour is
--- blended into the theme's, so a teal theme still reads as teal. Checked
+-- day, amber at dusk, moonlit blue at night. The sky's colour is blended
+-- into the theme's. Night leans well into the blue: gold and blue mixed
+-- half and half would only give grey. Checked
 -- once a minute; a step this small is never seen happening.
 -- Per key hour: lightness, saturation, then the sky's colour and how much
 -- of it is blended in.
 local DAYLIGHT = {
-	{ 0,    -0.06, -0.30, 0.60, 0.72, 0.86, 0.60 },
-	{ 5,    -0.06, -0.30, 0.60, 0.72, 0.86, 0.60 },
+	{ 0, 0.02, 0.00, 0.50, 0.72, 1.00, 0.85 },
+	{ 5, 0.02, 0.00, 0.50, 0.72, 1.00, 0.85 },
 	{ 6.5,   0.05, -0.10, 0.92, 0.70, 0.62, 0.45 },
 	{ 9,     0.00,  0.00, 1.00, 1.00, 1.00, 0.00 },
 	{ 17,    0.00,  0.00, 1.00, 1.00, 1.00, 0.00 },
 	{ 19.5, -0.03,  0.10, 0.90, 0.52, 0.22, 0.50 },
-	{ 21.5, -0.06, -0.30, 0.60, 0.72, 0.86, 0.60 },
-	{ 24,   -0.06, -0.30, 0.60, 0.72, 0.86, 0.60 },
+	{ 21.5, 0.02, 0.00, 0.50, 0.72, 1.00, 0.85 },
+	{ 24, 0.02, 0.00, 0.50, 0.72, 1.00, 0.85 },
 }
 
 -- The light at an hour: { l, s, r, g, b, mix }.
