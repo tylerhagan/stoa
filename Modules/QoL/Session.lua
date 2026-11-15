@@ -252,7 +252,7 @@ function Session:ShowCard()
 	if not self.card then self:BuildCard() end
 	local card = self.card
 	local now = self.db.now
-	card.who:SetText(Stoa.safe.plain(UnitName("player")) or "")
+	card.who:SetText(Stoa.fullName() or "")
 	card.who:SetTextColor(classColour())
 	local tr, tg, tb = Stoa:Color("text")
 	card.rule:SetVertexColor(tr, tg, tb, 0.1)

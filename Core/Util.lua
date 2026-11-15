@@ -121,6 +121,19 @@ function Stoa.aura.left(aura)
 	return expires - GetTime()
 end
 
+-- Your name with your surname, where the realm has them (WoW Forever's
+-- unique names): UnitName gives the surname as its second value there.
+function Stoa.fullName()
+	local name, surname = UnitName("player")
+	name = Stoa.safe and Stoa.safe.plain and Stoa.safe.plain(name) or name
+	if not name then return nil end
+	local unique = RegionalUniqueNamesEnabled and RegionalUniqueNamesEnabled()
+	if unique and type(surname) == "string" and surname ~= "" and not (Stoa.IsSecret and Stoa:IsSecret(surname)) then
+		return name .. " " .. surname, surname
+	end
+	return name
+end
+
 -- Frames --------------------------------------------------------------------
 
 Stoa.frames = {}
