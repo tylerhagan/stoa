@@ -492,6 +492,12 @@ function wardrobeTabs()
 	if type(page) ~= "table" or forbidden(page) then return end
 	wordTab(page.ItemsTab)
 	wordTab(page.SetsTab)
+	-- The Items word and the search (the filter hangs from it) sat tight
+	-- under the header band; they start a little lower.
+	if not InCombatLockdown() then
+		dropTops(page.ItemsTab, 10)
+		dropTops(page.SearchBox, 10)
+	end
 	if page.ClickTab and not page.stoaTabsHooked then
 		page.stoaTabsHooked = true
 		hooksecurefunc(page, "ClickTab", function()
