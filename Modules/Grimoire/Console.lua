@@ -230,10 +230,21 @@ function Console:BuildSeal(frame)
 	button:SetAttribute("unit", "player")
 	button:SetAttribute("type1", "target")
 	button:SetAttribute("type2", "togglemenu")
+	-- Shift-click opens your Characters window (a custom action: the secure
+	-- template calls the "_characters" function for it; out of combat only,
+	-- as the button is).
+	button:SetAttribute("shift-type1", "characters")
+	button:SetAttribute("_characters", function()
+		if Stoa.Alts and Stoa.Alts.Toggle then Stoa.Alts:Toggle() end
+	end)
 	button:RegisterForClicks("AnyUp")
 	button:SetScript("OnEnter", function(self)
 		GameTooltip_SetDefaultAnchor(GameTooltip, self)
 		GameTooltip:SetUnit("player")
+		local mr, mg, mb = Stoa:Color("muted")
+		local ar, ag, ab = Stoa:Color("accent")
+		GameTooltip:AddDoubleLine("Shift-click", "Characters", mr, mg, mb, ar, ag, ab)
+		GameTooltip:Show()
 	end)
 	button:SetScript("OnLeave", GameTooltip_Hide)
 	RegisterStateDriver(button, "visibility", "[combat] hide; show")
