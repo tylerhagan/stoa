@@ -104,7 +104,7 @@ function Companion:Quests(where)
 						end
 					end
 				end
-				list[#list + 1] = { name = info.title, done = done, progress = progress }
+				list[#list + 1] = { name = info.title, id = info.questID, done = done, progress = progress }
 			end
 		end
 	end
@@ -277,6 +277,33 @@ local function makeRow(card)
 	row.right = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	row.left:SetWordWrap(false)
 	row.right:SetWordWrap(false)
+	-- A quest's row opens its details in the quest log (out of a fight;
+	-- the card hides in one anyway).
+	local hit = CreateFrame("Button", nil, card)
+	local glow = hit:CreateTexture(nil, "BACKGROUND")
+	glow:SetAllPoints()
+	glow:SetTexture(UI.WHITE)
+	glow:Hide()
+	hit:SetScript("OnEnter", function(self)
+		local r, g, b = Stoa:Color("text")
+		glow:SetVertexColor(r, g, b, 0.06)
+		glow:Show()
+		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+		GameTooltip:SetText(row.left:GetText() or "")
+		GameTooltip:AddLine("Click for the quest's details.", 0.6, 0.6, 0.6)
+		GameTooltip:Show()
+	end)
+	hit:SetScript("OnLeave", function()
+		glow:Hide()
+		GameTooltip:Hide()
+	end)
+	hit:SetScript("OnClick", function()
+		if InCombatLockdown() or not row.questID then return end
+		local open = _G.QuestMapFrame_OpenToQuestDetails or _G.QuestLog_OpenToQuest
+		if open then xpcall(open, Stoa.catch, row.questID) end
+	end)
+	hit:Hide()
+	row.hit = hit
 	return row
 end
 
@@ -291,7 +318,7 @@ function Companion:FillCard(data)
 	self:FillStrip(data.bosses)
 
 	for i, head in ipairs(card.heads) do head:Hide() card.rules[i]:Hide() end
-	for _, row in ipairs(card.lines) do row.mark:Hide() row.left:Hide() row.right:Hide() end
+	for _, row in ipairs(card.lines) do row.mark:Hide() row.left:Hide() row.right:Hide() row.hit:Hide() end
 	card.band:Hide()
 	card.bandBar:Hide()
 	local y = -(HEADER + (bosses > 0 and 46 or 34))
@@ -307,7 +334,7 @@ function Companion:FillCard(data)
 		y = y - 8 - 18
 	end
 	-- state: "done", "next" or nil (still to come).
-	local function row(left, right, state)
+	local function row(left, right, state, questID)
 		rows = rows + 1
 		local r = card.lines[rows]
 		if not r then
@@ -351,6 +378,13 @@ function Companion:FillCard(data)
 			card.band:Show()
 			card.bandBar:Show()
 		end
+		r.questID = questID
+		if questID then
+			r.hit:ClearAllPoints()
+			r.hit:SetPoint("TOPLEFT", card, "TOPLEFT", PAD - 8, y)
+			r.hit:SetPoint("BOTTOMRIGHT", card, "TOPRIGHT", -PAD + 8, y - ROW_H)
+			r.hit:Show()
+		end
 		r.mark:Show()
 		r.left:Show()
 		r.right:Show()
@@ -366,9 +400,9 @@ function Companion:FillCard(data)
 		row(boss.name, boss.dead and "Done" or (boss.next and "Next") or "", boss.dead and "done" or (boss.next and "next"))
 	end
 	if #data.quests > 0 then
-		head("Your quests here")
+		head("Dungeon quests")
 		for _, quest in ipairs(data.quests) do
-			row(quest.name, quest.done and "Ready" or quest.progress, quest.done and "done")
+			row(quest.name, quest.done and "Ready" or quest.progress, quest.done and "done", quest.id)
 		end
 	end
 	card:SetHeight(-y + PAD)
