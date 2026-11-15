@@ -392,8 +392,44 @@ function Stoa:SetVision(name)
 	self:Fire("STOA_THEME_CHANGED", self.db.theme)
 end
 
+-- "daylit" is the accent under the time of day (Modules/Grimoire/Console.lua
+-- sets Stoa.daylight): its light moved, and the sky's colour blended in.
+local function toHsl(r, g, b)
+	local mx, mn = math.max(r, g, b), math.min(r, g, b)
+	local h, s, l = 0, 0, (mx + mn) / 2
+	if mx ~= mn then
+		local d = mx - mn
+		s = l > 0.5 and d / (2 - mx - mn) or d / (mx + mn)
+		if mx == r then h = (g - b) / d + (g < b and 6 or 0)
+		elseif mx == g then h = (b - r) / d + 2
+		else h = (r - g) / d + 4 end
+		h = h / 6
+	end
+	return h, s, l
+end
+
+local function toRgb(h, s, l)
+	local a = s * math.min(l, 1 - l)
+	local function f(n)
+		local k = (n + h * 12) % 12
+		return l - a * math.max(-1, math.min(k - 3, 9 - k, 1))
+	end
+	return f(0), f(8), f(4)
+end
+
+local function clamp(v) return math.max(0, math.min(1, v)) end
+
 function Stoa:Color(token)
 	local theme = self:Theme()
+	if token == "daylit" then
+		local r, g, b, a = unpack(theme.accent)
+		local day = self.daylight
+		if not day then return r, g, b, a end
+		local h, s, l = toHsl(r, g, b)
+		r, g, b = toRgb(h, clamp(s * (1 + day.s)), clamp(l + day.l))
+		local m = day.mix or 0
+		return r + (day.r - r) * m, g + (day.g - g) * m, b + (day.b - b) * m, a
+	end
 	return unpack(theme[token] or theme.danger)
 end
 

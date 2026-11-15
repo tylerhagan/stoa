@@ -233,12 +233,52 @@ local function hookArrow(addon)
 	hooksecurefunc(arrow, "UpdateVisuals", stoaArrow)
 end
 
+-- RestedXP's step check boxes: its dark-mode box is a near-black square that
+-- vanishes on the dark panel, so the STOA theme draws a pale outlined box
+-- with an accent tick instead. Re-applied each time a step line is bound,
+-- after RestedXP sets its own textures.
+local CHECK_BOX = UI.MEDIA .. "Textures\\GlyphBox"
+local CHECK_TICK = UI.MEDIA .. "Textures\\GlyphTick"
+
+local function stoaCheck(elementFrame)
+	local button = type(elementFrame) == "table" and elementFrame.button
+	if not (button and button.SetNormalTexture) then return end
+	local profile = restedxpProfile()
+	if not (profile and profile.activeTheme == RXP_THEME) then
+		-- Another theme: RestedXP has put its own art back; undo the tint.
+		if button.stoaTinted then
+			button.stoaTinted = nil
+			for _, texture in ipairs({ button:GetNormalTexture(), button:GetCheckedTexture(), button:GetDisabledCheckedTexture() }) do
+				texture:SetVertexColor(1, 1, 1, 1)
+			end
+		end
+		return
+	end
+	button.stoaTinted = true
+	button:SetNormalTexture(CHECK_BOX)
+	button:SetCheckedTexture(CHECK_TICK)
+	button:SetDisabledCheckedTexture(CHECK_TICK)
+	local r, g, b = Stoa:Color("text")
+	button:GetNormalTexture():SetVertexColor(r, g, b, 0.75)
+	local ar, ag, ab = Stoa:Color("accent")
+	button:GetCheckedTexture():SetVertexColor(ar, ag, ab, 1)
+	local disabled = button:GetDisabledCheckedTexture()
+	if disabled then disabled:SetVertexColor(ar, ag, ab, 0.6) end
+end
+
+local function hookChecks(addon)
+	if addon.stoaChecksHooked or type(addon.BindActiveStepElement) ~= "function" then return end
+	addon.stoaChecksHooked = true
+	hooksecurefunc(addon, "BindActiveStepElement", stoaCheck)
+end
+
 -- Redraws RestedXP in whichever theme it has selected.
 local function restedxpRefresh()
 	local addon = restedxp()
 	local profile = restedxpProfile()
 	if not (addon and profile) then return end
 	hookArrow(addon)
+	hookChecks(addon)
 	local arrow = addon.arrowFrame
 	if type(arrow) == "table" and type(arrow.UpdateVisuals) == "function" then
 		C_Timer.After(0, function() pcall(arrow.UpdateVisuals, arrow) end)

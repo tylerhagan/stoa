@@ -45,7 +45,7 @@ local TARGETS = {
 	{ name = "ProfessionsBookFrame", deep = 2 },
 	-- The item list beside the model is its own panel hanging off the side.
 	{ name = "DressUpFrame", panels = { "CustomSetDetailsPanel" } },
-	{ name = "ItemTextFrame" },
+	{ name = "ItemTextFrame", after = "book" },
 	{ name = "MacroFrame", after = "macro" },
 	{ name = "CollectionsJournal", deep = 3, after = "collections" },
 	{ name = "EncounterJournal" },
@@ -504,6 +504,81 @@ function wardrobeTabs()
 			for _, tab in ipairs({ page.ItemsTab, page.SetsTab }) do if type(tab) == "table" and tab.stoaWordLine then paintWordTab(tab) end end
 		end)
 	end
+end
+
+-- Books, letters and plaques: Blizzard colours the words for its parchment
+-- (dark brown, or orange on some materials), which reads poorly on STOA's
+-- dark page, so the words take STOA's text colour. Previous, the page
+-- number and Next sat across the header band's edge; they move to a row
+-- along the foot of the page.
+local function paintBook()
+	local text = _G.ItemTextPageText
+	if not (text and text.SetTextColor) then return end
+	local r, g, b = Stoa:Color("text")
+	text:SetTextColor("P", r, g, b)
+	local ar, ag, ab = Stoa:Color("accent")
+	for _, tag in ipairs({ "H1", "H2", "H3" }) do text:SetTextColor(tag, ar, ag, ab) end
+	for _, key in ipairs({ "ItemTextFramePageBg", "ItemTextMaterialTopLeft", "ItemTextMaterialTopRight", "ItemTextMaterialBotLeft", "ItemTextMaterialBotRight" }) do
+		local art = _G[key]
+		if art and art.SetAlpha then art:SetAlpha(0) end
+	end
+end
+
+local BOOK_FOOT = 36
+local function seatBook(frame)
+	if InCombatLockdown() then return end
+	local scroll = _G.ItemTextScrollFrame
+	if scroll and scroll.SetPoint then
+		scroll:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 6, BOOK_FOOT + 4)
+	end
+	local prev, nextPage, page = _G.ItemTextPrevPageButton, _G.ItemTextNextPageButton, _G.ItemTextCurrentPage
+	if prev then
+		prev:ClearAllPoints()
+		prev:SetPoint("CENTER", frame, "BOTTOMLEFT", 30, BOOK_FOOT / 2)
+	end
+	if nextPage then
+		nextPage:ClearAllPoints()
+		nextPage:SetPoint("CENTER", frame, "BOTTOMRIGHT", -30, BOOK_FOOT / 2)
+	end
+	if page then
+		page:ClearAllPoints()
+		page:SetPoint("CENTER", frame, "BOTTOM", 0, BOOK_FOOT / 2)
+	end
+end
+
+function AFTER.book(frame)
+	if not frame.stoaBook then
+		frame.stoaBook = true
+		local rule = UI.line(frame, "hairline")
+		rule:SetPoint("BOTTOMLEFT", 14, BOOK_FOOT)
+		rule:SetPoint("BOTTOMRIGHT", -14, BOOK_FOOT)
+		local page = _G.ItemTextCurrentPage
+		if page then
+			Stoa:SetFont(page, "sans", Stoa.typeSize.caption)
+			page:SetTextColor(Stoa:Color("muted"))
+		end
+		for _, button in ipairs({ _G.ItemTextPrevPageButton, _G.ItemTextNextPageButton }) do
+			local word = button and button.GetFontString and button:GetFontString()
+			if not word and button then
+				for _, region in ipairs({ button:GetRegions() }) do
+					if region.IsObjectType and region:IsObjectType("FontString") then word = region end
+				end
+			end
+			if word then
+				Stoa:SetFont(word, "sans", Stoa.typeSize.body)
+				word:SetTextColor(Stoa:Color("text"))
+			end
+		end
+		-- The game sets colours and the scroll frame's place on every page.
+		frame:HookScript("OnEvent", function(own, event)
+			if event == "ITEM_TEXT_BEGIN" or event == "ITEM_TEXT_READY" then
+				xpcall(paintBook, Stoa.catch)
+				xpcall(seatBook, Stoa.catch, own)
+			end
+		end)
+	end
+	paintBook()
+	seatBook(frame)
 end
 
 local afterHooked = false

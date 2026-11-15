@@ -437,6 +437,50 @@ do
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Pull countdown: " .. e end
 end
+-- Console time of day: night blends in a cold sky, midday is the theme's own.
+do
+	local console = Stoa.modules.Grimoire
+	if console and console.lightAt then
+		if console.lightAt(13).mix ~= 0 then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: midday isn't the theme's colour" end
+		local night = console.lightAt(1)
+		if not (night.b > night.r and night.mix > 0.3) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: night isn't cold" end
+		Stoa.daylight = night
+		local r, g, b = Stoa:Color("daylit")
+		local ar, ag, ab = Stoa:Color("accent")
+		if not (b - r > ab - ar) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: night accent isn't cooler" end
+		Stoa.daylight = nil
+		console.previewHour = 1
+		console:UpdateDaylight()
+		if not (Stoa.daylight and Stoa.daylight.mix > 0.3) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: preview hour not shown" end
+		console.previewHour = nil
+		console:UpdateDaylight()
+	end
+end
+-- Trainer window: the skill bar, the Settings dropdown and the rows dressed.
+do
+	if Stoa.modules.Windows then
+		local frame = CreateFrame("Frame", "ClassTrainerFrame", UIParent)
+		local bar = CreateFrame("StatusBar", "ClassTrainerStatusBar", frame)
+		for _, suffix in ipairs({ "Left", "Right", "Middle", "Background" }) do bar:CreateTexture("ClassTrainerStatusBar" .. suffix) end
+		bar.rankText = bar:CreateFontString("ClassTrainerStatusBarSkillRank")
+		frame.FilterDropdown = CreateFrame("Button", nil, frame)
+		frame.FilterDropdown.Background = frame.FilterDropdown:CreateTexture()
+		frame.FilterDropdown.Text = frame.FilterDropdown:CreateFontString()
+		local step = CreateFrame("Button", nil, frame)
+		step.icon = step:CreateTexture()
+		step.selectedTex = step:CreateTexture()
+		step.disabledBG = step:CreateTexture()
+		frame.skillStepButton = step
+		local ok, err = pcall(Stoa.modules.Windows.DressTrainer)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: " .. tostring(err) end
+		if not bar.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: skill bar not dressed" end
+		if not frame.FilterDropdown.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: Settings dropdown not dressed" end
+		if not step.stoaRow then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: skill row not dressed" end
+		frame:Hide()
+		_G.ClassTrainerFrame, _G.ClassTrainerStatusBar = nil, nil
+	end
+end
+
 -- Settings window: every page and a search drawn, every setting changed
 -- and put back, the lists added to and taken from, a dropdown by keys.
 do
@@ -867,6 +911,70 @@ do
 		C_Container.GetContainerItemInfo, C_Container.GetContainerItemQuestInfo, C_Item.GetItemInfoInstant = realInfo, realQuest, realInstant
 	end
 end
+-- The session recap: counts quests and deaths, shows the card.
+do
+	local session = Stoa.modules.Session
+	if session and session.enabled then
+		session:Start()
+		fire("QUEST_TURNED_IN", 1, 100, 0)
+		fire("PLAYER_DEAD")
+		drain()
+		local now = session.db.now
+		if not now or now.quests ~= 1 or now.deaths ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Session: quests or deaths not counted" end
+		SlashCmdList.STOA("recap")
+		if not (session.card and session.card:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Session: /stoa recap didn't show the card" end
+		session.card:Hide()
+	end
+end
+-- The dungeon companion: bosses from STOA's list, quests under the
+-- dungeon's header, a boss ticked off by its kill's name, wings, the
+-- preview command, the card and the slim line.
+do
+	local companion = Stoa.modules.Companion
+	if companion and companion.enabled then
+		local saved = { IsInInstance, GetInstanceInfo, C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete }
+		IsInInstance = function() return true, "party" end
+		local where = "The Deadmines"
+		GetInstanceInfo = function() return where, "party", 1, "Normal", 5, 0, false, 36 end
+		local log = { { isHeader = true, title = "Westfall" }, { title = "Elsewhere", questID = 1 }, { isHeader = true, title = "The Deadmines" }, { title = "Red Silk Bandanas", questID = 2 }, { title = "Oh Brother...", questID = 3 } }
+		C_QuestLog.GetNumQuestLogEntries = function() return #log, 2 end
+		C_QuestLog.GetInfo = function(i) return log[i] end
+		C_QuestLog.IsComplete = function(id) return id == 3 end
+		companion.db.run = nil
+		companion.db.view = "card"
+		companion:Refresh()
+		fire("ENCOUNTER_END", 101, "Rhahk'Zor", 1, 5, 1)
+		drain()
+		companion:Refresh()
+		local data = companion.data
+		if not (companion.card and companion.card:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the card didn't show in a dungeon" end
+		if not data or #data.bosses ~= 7 or data.down ~= 1 or not data.nextBoss or data.nextBoss.name ~= "Sneed" then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: bosses wrong (expected 7, 1 down, Sneed next), got " .. (data and (#data.bosses .. " " .. data.down .. " " .. tostring(data.nextBoss and data.nextBoss.name)) or "no data")
+		end
+		if not data or #data.quests ~= 2 or data.questsDone ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: expected the 2 Deadmines quests, 1 done" end
+		if not (Stoa.modules.Top and Stoa.modules.Top.companionHolds) then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the quest list wasn't held for the card" end
+		-- Wings: every wing until a kill shows which one you're in.
+		where = "Scarlet Monastery"
+		companion.db.run = nil
+		companion:Refresh()
+		local all = companion.data and #companion.data.bosses or 0
+		fire("ENCOUNTER_END", 201, "Arcanist Doan", 1, 5, 1)
+		drain()
+		companion:Refresh()
+		data = companion.data
+		if all ~= 8 or not data or #data.bosses ~= 2 or data.down ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: wings wrong (" .. all .. " then " .. (data and #data.bosses or 0) .. ")" end
+		companion:SetView("line")
+		if not (companion.bar and companion.bar:IsShown()) or companion.card:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the line view didn't replace the card" end
+		companion:SetView("card")
+		IsInInstance, GetInstanceInfo, C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete = unpack(saved)
+		companion:Refresh()
+		if companion.card:IsShown() or (Stoa.modules.Top and Stoa.modules.Top.companionHolds) then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: still showing outside the dungeon" end
+		SlashCmdList.STOA("companion stockade")
+		if not (companion.card:IsShown() and companion.data and companion.data.where.name == "The Stockade") then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the preview didn't show The Stockade" end
+		SlashCmdList.STOA("companion off")
+		if companion.card:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the preview didn't end" end
+	end
+end
 -- The target plaque: a medallion with a level badge, docked while it rests
 -- on the full console, and a cast bar that shows for the target's cast.
 -- Console dividers: a hairline in each wide gap, none in a narrow one.
@@ -927,6 +1035,113 @@ do
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Small jobs: " .. e end
 	end
 end
+-- The talent planner: marks over the trees, the row rule, the order, sharing.
+do
+	local planner = Stoa.modules.Planner
+	if planner and planner.enabled then
+		local frame = CreateFrame("Frame", "PlayerSpellsFrame")
+		local talents = CreateFrame("Frame", nil, frame)
+		frame.TalentsFrame = talents
+		local header = CreateFrame("Frame")
+		header.GetCenter = function() return 100, 600 end
+		talents.treeHeaders = { header }
+		-- Two talents in row 1 (2 ranks each), one in row 2.
+		local spots = { [11] = { 80, 500 }, [12] = { 120, 500 }, [21] = { 100, 450 } }
+		local buttons = {}
+		for nodeID, at in pairs(spots) do
+			local button = CreateFrame("Button", nil, talents)
+			button.GetNodeID = function() return nodeID end
+			button.GetCenter = function() return at[1], at[2] end
+			buttons[#buttons + 1] = button
+		end
+		talents.EnumerateAllTalentButtons = function() local i = 0 return function() i = i + 1 return buttons[i] end end
+		talents.GetConfigID = function() return 7 end
+		local savedTraits = C_Traits
+		C_Traits = {
+			GetNodeInfo = function(_, nodeID) return { ID = nodeID, maxRanks = nodeID == 21 and 1 or 5, ranksPurchased = 0, entryIDs = { nodeID * 10 } } end,
+			GetEntryInfo = function(_, entryID) return { definitionID = entryID } end,
+			GetDefinitionInfo = function(def) return { spellID = def } end,
+		}
+		StoaDB.talentPlans = nil
+		planner.db.active = nil
+		planner.level = nil
+		talents:Show()
+		frame:Show()
+		planner:Refresh()
+		planner:SetPlanning(true)
+		local markFor = {}
+		for _, mark in pairs(planner.marks or {}) do markFor[mark.nodeID] = mark end
+		if not (markFor[11] and markFor[21]) then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: no marks over the talents" end
+		if markFor[21] then
+			planner:ClickMark(markFor[21], "LeftButton")
+			if #planner:Active().order ~= 0 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: a second-row talent was planned with no points in the tree" end
+		end
+		for _ = 1, 5 do planner:ClickMark(markFor[11], "LeftButton") end
+		planner:ClickMark(markFor[11], "LeftButton")
+		if #planner:Active().order ~= 5 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: a full talent took another point" end
+		planner:ClickMark(markFor[21], "LeftButton")
+		if #planner:Active().order ~= 6 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the second row didn't open after five points" end
+		planner:ClickMark(markFor[11], "RightButton")
+		if #planner:Active().order ~= 5 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: right-click didn't take a point off" end
+		local index = planner:Next(talents, planner:Active())
+		if index ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the next point isn't the first pick" end
+		if not (planner.panel and planner.panel:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Planner: the panel didn't show beside the talents" end
+		planner:SetPlanning(false)
+		talents:Hide()
+		frame:Hide()
+		C_Traits = savedTraits
+		StoaDB.talentPlans = nil
+		_G.PlayerSpellsFrame = nil
+	end
+end
+
+-- The Characters window: rows, the search across characters, the side panel.
+do
+	local alts = Stoa.Alts
+	if alts and StoaDB then
+		StoaDB.alts = StoaDB.alts or {}
+		StoaDB.alts["Valen - Test"] = { name = "Valen", realm = "Test", class = "PALADIN", level = 42, money = 381200, seen = time() - 7200,
+			bags = { [14047] = 12 }, bank = { [14047] = 40, [2589] = 3 }, gear = { [1] = "|cff1eff00|Hitem:10:0|h[Helm]|h|r" }, raceID = 1, sex = 2, ilvl = 36 }
+		local saved = C_Item.GetItemNameByID
+		C_Item.GetItemNameByID = function(id) return ({ [14047] = "Runecloth", [2589] = "Linen Cloth" })[id] end
+		if not alts.page then alts:Build() end
+		alts.page:Show()
+		if not (alts.page and alts.page:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: the window didn't open" end
+		local shown = 0
+		for _, row in ipairs(alts.rows or {}) do if row:IsShown() then shown = shown + 1 end end
+		if shown < 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: no rows" end
+		alts:ShowTab("search")
+		alts.box:SetText("rune")
+		alts:Search()
+		local hit = alts.found and alts.found[1]
+		if not (hit and hit.total == 52 and #(alts.found) == 1) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: search didn't find 52 runecloth" end
+		-- The bag search's line: other characters holding a match.
+		local bags = Stoa.modules.Bags
+		if bags and bags.ShowElsewhere then
+			local bag = CreateFrame("Frame", "SimBag", UIParent)
+			bag:Show()
+			_G.BagItemSearchBox = CreateFrame("EditBox", "SimBagSearch", bag)
+			BagItemSearchBox.anchorBag = bag
+			BagItemSearchBox:SetText("rune")
+			bags:ShowElsewhere()
+			if not (bags.elsewhere and bags.elsewhere:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the other-characters line didn't show" end
+			bags.elsewhere:Click()
+			if not (alts.box:GetText() == "rune" and alts.tab == "search") then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the line didn't open Characters searched" end
+			BagItemSearchBox:SetText("")
+			bags:ShowElsewhere()
+			if bags.elsewhere:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the line stayed after clearing" end
+			_G.BagItemSearchBox = nil
+		end
+		alts:ShowTab("list")
+		alts:Pick(StoaDB.alts["Valen - Test"])
+		if not (alts.side and alts.side:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: the side panel didn't open" end
+		alts:Pick(nil)
+		alts.page:Hide()
+		C_Item.GetItemNameByID = saved
+		StoaDB.alts["Valen - Test"] = nil
+	end
+end
+
 do
 	local character = Stoa.modules.Character
 	if character and character.enabled and character.LayOut and CharacterFrame then

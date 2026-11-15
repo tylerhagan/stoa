@@ -211,6 +211,7 @@ local function build()
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "dividers", "Lines between the console's sections", "A faint gold line with a small diamond between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
+	toggle(console, "daylight", "Light from the time of day", "The console's gold catches the sky's colour from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk, moonlit blue at night, with a faint glass reflection on your portrait. Off keeps the gold as it is. /stoa daylight 23 previews an hour.", true, { words = "time of day daylight night dusk dawn", change = function() local c = Stoa.modules.Grimoire; if c and c.UpdateDaylight then c:UpdateDaylight() end end })
 	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner without their stone frames, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
 	group = "At a glance"
 	toggle(of("Tally"), "enabled", "At a glance, beside the chat", "Up to eight numbers you choose (stats, gear, gold, professions, other addons' feeds) to the right of chat on the console.", true, { id = "glanceOn", reload = true, words = "tally numbers data text broker titan" })
@@ -403,6 +404,7 @@ local function build()
 	toggle(of("Character"), "layout", "STOA's character layout", "A wider sheet: each item's name in its quality colour and its item level beside its slot, the weapons named under the model, the stats on a quiet column, the tabs as words in the header and your durability in a footer. Off keeps Blizzard's layout, dressed.", true, { id = "characterLayout", reload = true, words = "paper doll gear item names stats" })
 	toggle(of("Spellbook"), "layout", "STOA's spellbook", "The spellbook without its parchment, opening as one scrolling list of your spells with rank, cost, cast time and next rank (a word switches to Blizzard's pages), and a To train word by the search that opens the training page beside the book.", true, { id = "spellbook", reload = true, words = "spells book ranks trainer training" })
 	toggle(of("Spellbook"), "talents", "STOA's talents", "The talent trees without their painted spec art: each tree's name and points spent as words, quiet rules between the trees, Primary and Secondary as words, and a line by Apply while changes are waiting.", true, { id = "talents", reload = true, words = "talent trees spec points loadout apply" })
+	toggle(of("Planner"), "enabled", "Talent planner", "A panel beside your talents to plan a build point by point, for levels you haven't reached yet. Planned talents show the level you take them at and your next point glows. Several named plans per class, shared as text, and Make game loadout hands the plan to the game's own loadouts. STOA never spends a point for you.", true, { reload = true, words = "talent planner plan build loadout respec order level" })
 	toggle(of("Top"), "enabled", "Restyle the top of the screen", "Buffs as cropped icons with quiet timers, the quest tracker in STOA's type, and the minimap's zone header on a dark panel.", true, { id = "top", reload = true, words = "buffs auras objective tracker" })
 	toggle(of("Top"), "buffList", "Buffs as a list", "Each buff's name and time left beside its icon, easy to scan before a pull. Works best with the buff frame set to one column in Edit Mode.", false, { words = "auras", change = refresh("Top", "RefreshBuffList") })
 	toggle(of("Top"), "trackerFocus", "Fold quest list in combat", "In a fight the quest tracker folds to its header and comes back after. Hover the header to open it.", true, { words = "objective tracker fade collapse hide combat focus", change = refresh("Top", "FocusTracker") })
@@ -571,6 +573,17 @@ local function build()
 	toggle(away, "spin", "Turn the camera", "The camera circles your character slowly while you're away.", true, { words = "afk rotate" })
 	toggle(away, "inInstances", "In dungeons and raids too", "Off, the away screen waits for the open world.", false, { words = "afk instance" })
 	button("awayNow", "See it now", "Shows the away screen without going away. Back or /stoa away closes it.", "Show", command("away"), { cmd = "/stoa away", words = "afk preview" })
+	group = "Your session"
+	local session = of("Session")
+	toggle(session, "onLogout", "Recap when you log out", "While the game counts down to logging out, a card shows what this session brought: time played, levels, experience an hour, gold, quests, deaths and your best find. It never holds up the logout.", true, { words = "session summary recap logout stats" })
+	toggle(session, "onAway", "Recap on the away screen", "When no whispers have come, the away screen shows a short version of this session's numbers where they would be.", false, { words = "session summary recap afk" })
+	button("recapNow", "See this session", "Shows the recap card now.", "Show", command("recap"), { cmd = "/stoa recap", words = "session summary recap" })
+	group = "Dungeon companion"
+	local companion = of("Companion")
+	toggle(companion, "enabled", "Dungeon companion", "Inside a five-player dungeon, out of a fight: the bosses (ticked off as they fall) and your quests for it. /stoa companion and part of a dungeon's name previews it anywhere. The quest list folds to its header while it shows; hover the header to open it.", true, { words = "dungeon instance boss quests preview" , change = function() Stoa.modules.Companion:Refresh() end })
+	choice(companion, "view", "How it shows", "A card where the quest list sits, or one slim line over the console with the bosses as dots and the upgrades on hover. The card's minus and a click on the line switch too.", "card", {
+		{ "card", "Card" }, { "line", "One line" },
+	}, { words = "dungeon companion compact", change = function() Stoa.modules.Companion:Refresh() end })
 	group = "People"
 	local social = of("Social")
 	toggle(social, "acceptFriendInvites", "Accept friend and guild invites", "A party invite from a friend, Battle.net friend or guildmate is taken as it comes, and noted in chat.", true, { words = "party group" })
@@ -671,7 +684,7 @@ local function build()
 	button("backup", "Backup", "All of STOA's settings as one line of text to keep safe, and a place to paste one back.", "Open", function() Stoa.Backup:Show() end, { cmd = "/stoa backup", words = "profile export import string" })
 	button("shareLayout", "Share layout", "A shorter line with where your frames sit and the look, to post for others. Paste one on the backup page to use it.", "Copy", function() Stoa.Backup:ShowLayout() end, { cmd = "/stoa layout", words = "export import string profile" })
 	group = "Your characters"
-	button("alts", "Characters", "Every character you've played with STOA: level, rest earned since you last played them, raid lockouts and gold. /stoa alts forget <name> drops one.", "Open", command("alts"), { cmd = "/stoa alts", words = "alts altoholic gold lockouts saved instances rested" })
+	button("alts", "Characters", "Every character you've played with STOA: level, where they are, gold, rest, raid lockouts and item level. Search finds an item in any character's bags or bank, and clicking a character shows their gear. /stoa alts forget <name> drops one.", "Open", command("alts"), { cmd = "/stoa alts", words = "alts altoholic gold lockouts saved instances rested search find item where gear model" })
 	toggle(of("Alts"), "tooltipCounts", "Count items on every character", "Item tooltips add how many your other characters carry and keep in the bank, from when each last played.", true, { words = "alts bags bank tooltip owned" })
 	toggle(of("GearSets"), "enabled", "Gear for each spec", "Put on an equipment set in a spec and STOA puts it back on whenever you change to that spec, after any fight. A set assigned to a spec in the equipment manager always wins.", true, { id = "gearSetsOn", scope = "This character", words = "equipment manager dual spec swap outfit" })
 	group = "Keys"

@@ -52,3 +52,17 @@ save("Shift", arrow, 32, 32)
 # line of text like a letter. Dimmer than the words beside it.
 x, y = grid(16, 32)
 save("Dot", np.hypot(x - 0.25, y - 0.52) <= 0.085, 16, 32, alpha=0.6)
+# A check box for other addons' step lists (RestedXP): a rounded hairline
+# square over a faint fill, and the tick that goes in it.
+x, y = grid(32, 32)
+inner, radius = 0.33, 0.1
+qx = np.maximum(np.abs(x - 0.5) - (inner - radius), 0)
+qy = np.maximum(np.abs(y - 0.5) - (inner - radius), 0)
+edge = np.hypot(qx, qy) - radius
+box = (np.abs(edge) <= 0.045) * 1.0 + ((edge < -0.045) * 0.16)
+cover = box.reshape(32, SCALE, 32, SCALE).mean(axis=(1, 3))
+img = np.zeros((32, 32, 4), dtype=np.uint8)
+img[..., :3] = 255
+img[..., 3] = np.round(np.clip(cover, 0, 1) * 255).astype(np.uint8)
+Image.fromarray(img, "RGBA").save(f"{OUT}/GlyphBox.tga")
+save("Tick", stroke(x, y, (0.3, 0.52), (0.44, 0.66), 0.06) | stroke(x, y, (0.44, 0.66), (0.72, 0.36), 0.06), 32, 32)

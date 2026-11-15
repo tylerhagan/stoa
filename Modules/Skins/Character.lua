@@ -503,7 +503,52 @@ function Character:PlaceTabs()
 			previous = tab
 		end
 	end
+	self:PlaceAllCharacters(previous)
 	self:PaintTabs()
+end
+
+-- "All characters" left of the tab words, set apart by a short rule: STOA's
+-- Characters window,
+-- where every character's gold, rest, gear and bags are. STOA's own word,
+-- not one of Blizzard's tabs, so clicking it touches nothing of theirs.
+function Character:PlaceAllCharacters(firstTab)
+	local frame = CharacterFrame
+	if not (frame and Stoa.Alts) then return end
+	local word = frame.stoaAllCharacters
+	if not word then
+		word = CreateFrame("Button", nil, frame)
+		word:SetHeight(28)
+		local text = UI.text(word, "sans", Stoa.typeSize.body, "muted", "LEFT")
+		text:SetPoint("LEFT", 0, 1)
+		text:SetText("All characters")
+		word:SetWidth(math.ceil(text:GetStringWidth() or 90) + 4)
+		word.text = text
+		word:SetScript("OnClick", function() Stoa.Alts:Toggle() end)
+		word:SetScript("OnEnter", function(own)
+			own.text:SetTextColor(Stoa:Color("accent"))
+			GameTooltip:SetOwner(own, "ANCHOR_BOTTOM")
+			GameTooltip:AddLine("All characters", 1, 1, 1)
+			GameTooltip:AddLine("Gold, rest, gear and bags on every character you've played.", 0.8, 0.8, 0.8, true)
+			GameTooltip:Show()
+		end)
+		word:SetScript("OnLeave", function(own)
+			own.text:SetTextColor(Stoa:Color("muted"))
+			GameTooltip_Hide()
+		end)
+		local rule = word:CreateTexture(nil, "ARTWORK")
+		rule:SetSize(1, 14)
+		rule:SetPoint("LEFT", word, "RIGHT", 13, 1)
+		rule:SetColorTexture(1, 1, 1)
+		UI.tint(rule, "text", 0.18)
+		frame.stoaAllCharacters = word
+	end
+	word:ClearAllPoints()
+	if firstTab then
+		word:SetPoint("RIGHT", firstTab, "LEFT", -27, 0)
+	else
+		word:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -52, -15)
+	end
+	word:Show()
 end
 
 local function hideArt()

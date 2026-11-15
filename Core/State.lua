@@ -18,8 +18,9 @@ local GROUP_HOLD = 20
 -- One timing for the change between the two states, shared by the console
 -- fold, the Halo, the combat bar and the console's action bars, so they
 -- all move together: into a fight quickly, back to the world a little
--- slower.
-Stoa.TRANSITION = { into = 0.3, out = 0.5 }
+-- slower. On the way out the combat bar starts `lead` seconds ahead of
+-- the rest (STOA_CALM_ENDING).
+Stoa.TRANSITION = { into = 0.3, out = 0.5, lead = 0.5 }
 
 Stoa.STATE_WORLD = WORLD
 Stoa.STATE_COMBAT = COMBAT
@@ -125,12 +126,17 @@ Stoa:On("PLAYER_REGEN_ENABLED", function()
 	setCombatLayout(false)
 	if calmTimer then calmTimer:Cancel() end
 	-- The calm seconds count only while the group is calm too.
-	local calm, waited = 0, 0
+	local calm, waited, leaving = 0, 0, false
 	calmTimer = Stoa:NewTicker(CALM_STEP, function()
 		if InCombatLockdown() then return end
 		waited = waited + CALM_STEP
 		local ok, fighting = pcall(groupFighting)
 		if not (ok and fighting) or waited >= GROUP_HOLD then calm = calm + CALM_STEP end
+		-- The combat bar leaves first, TRANSITION.lead seconds ahead.
+		if not leaving and calm >= Stoa:CalmSeconds() - Stoa.TRANSITION.lead then
+			leaving = true
+			Stoa:Fire("STOA_CALM_ENDING")
+		end
 		if calm >= Stoa:CalmSeconds() then
 			calmTimer:Cancel()
 			calmTimer = nil

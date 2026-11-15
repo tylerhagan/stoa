@@ -178,7 +178,7 @@ local PROFESSIONS = {
 	Mining = true, Skinning = true, Tailoring = true,
 }
 
-local function readProfessions()
+function Stoa.readProfessions()
 	local found = {}
 	if GetProfessions and GetProfessionInfo then
 		local one, two, _, fishing, cooking, firstAid = call(GetProfessions)
@@ -414,7 +414,9 @@ local ENTRIES = {
 	gold = { label = "Gold", group = "Kit", value = money, detail = function(add)
 		local copper = plain(call(GetMoney))
 		if copper and session.money then add("This session", moneyText(copper - session.money)) end
-	end, open = "money" },
+		local alts = Stoa.Alts
+		if alts and alts.totalMoney then add("On all characters", moneyText(alts.totalMoney())) end
+	end, action = "Characters", open = function() if Stoa.Alts then Stoa.Alts:Toggle() end end },
 
 	prof1 = profession("prof1", "Profession"),
 	prof2 = profession("prof2", "Second profession"),
@@ -826,7 +828,7 @@ function Tally:BuildRow(page, index)
 		end
 	end)
 	row:SetScript("OnEnter", function(button)
-		button.glow:Show()
+		UI.softShow(button.glow, true)
 		local object = button.key and feed(button.key)
 		if button.key and not object and ENTRIES[button.key] then
 			self:ShowDetail(button)
@@ -845,7 +847,7 @@ function Tally:BuildRow(page, index)
 		end
 	end)
 	row:SetScript("OnLeave", function(button)
-		button.glow:Hide()
+		UI.softShow(button.glow, false)
 		local object = button.key and feed(button.key)
 		if object and object.OnLeave then call(object.OnLeave, button) end
 		GameTooltip:Hide()
@@ -899,7 +901,7 @@ end
 
 function Tally:Refresh()
 	if not self.rows or InCombatLockdown() then return end
-	professions = readProfessions()
+	professions = Stoa.readProfessions()
 	local shown = (self.columns or 2) * ROWS_PER_COLUMN
 	local keys = self:Chosen()
 	if self.where then

@@ -309,13 +309,13 @@ function Bar:Layout()
 		self.groupOffset = offset
 		Stoa:Fire("STOA_COMBAT_LAYOUT", Stoa:CombatLayout())
 	end
-	-- Laid out again during practice combat (the rows setting changed): the
-	-- drivers above only show the row in a real fight, so show it by hand.
-	if Stoa:IsPractising() and Stoa:GetState() == Stoa.STATE_COMBAT and not InCombatLockdown() then
-		for _, button in ipairs(self.shown) do
-			UnregisterStateDriver(button, "visibility")
-			button:Show()
-		end
+	-- Laid out again while the combat look is still up but the game's fight
+	-- is over (practice combat, or the calm seconds after a fight; a layout
+	-- queued during the fight runs the moment it ends): the drivers above
+	-- only show the row in a real fight, so hold it up by hand until the
+	-- state goes back to the world.
+	if Stoa:GetState() == Stoa.STATE_COMBAT and not InCombatLockdown() and not self:Taken() then
+		self:HoldUp()
 	end
 	self:UpdateAll()
 end
@@ -441,6 +441,22 @@ function Bar:UpdateAll()
 	self:UpdateState()
 end
 
+-- A vehicle, possess or override bar has the row.
+function Bar:Taken()
+	return (HasOverrideActionBar and HasOverrideActionBar())
+		or (HasVehicleActionBar and HasVehicleActionBar())
+		or (IsPossessBarVisible and IsPossessBarVisible())
+end
+
+-- Shows the filled buttons without their drivers (out of combat only).
+function Bar:HoldUp()
+	if InCombatLockdown() then return end
+	for _, button in ipairs(self.shown or {}) do
+		UnregisterStateDriver(button, "visibility")
+		button:Show()
+	end
+end
+
 function Bar:OnEnable()
 	self:Build()
 	local function layout()
@@ -484,30 +500,45 @@ function Bar:OnEnable()
 	-- buttons are held up by hand until then, and the state change back to
 	-- the world lays the row out again with its drivers.
 	Stoa:On("PLAYER_REGEN_ENABLED", function()
-		if InCombatLockdown() or Stoa:GetState() ~= Stoa.STATE_COMBAT then return end
-		local taken = (HasOverrideActionBar and HasOverrideActionBar())
-			or (HasVehicleActionBar and HasVehicleActionBar())
-			or (IsPossessBarVisible and IsPossessBarVisible())
-		if taken then return end
-		for _, button in ipairs(self.shown or {}) do
-			UnregisterStateDriver(button, "visibility")
-			button:Show()
-		end
+		if InCombatLockdown() or Stoa:GetState() ~= Stoa.STATE_COMBAT or self:Taken() then return end
+		self:HoldUp()
 	end)
 	-- /stoa combat practice: the game only shows the row in real combat,
 	-- so the filled buttons are shown by hand while practising.
 	-- The row fades with the Halo and the console (Stoa.TRANSITION): in as
 	-- the fight starts, out as the calm ends, then it is laid out again.
 	local pager = self.pager
+	-- The row leaves first: it starts fading TRANSITION.lead seconds before
+	-- the calm ends and the rest of the combat look goes. A new fight in
+	-- that moment brings it straight back.
+	local leaving = false
+	Stoa:On("STOA_CALM_ENDING", function()
+		if Stoa:IsPractising() or Stoa:GetState() ~= Stoa.STATE_COMBAT then return end
+		leaving = true
+		UI.fade(pager, 0, Stoa.TRANSITION.out)
+	end)
+	Stoa:On("PLAYER_REGEN_DISABLED", function()
+		if not leaving then return end
+		leaving = false
+		UI.fade(pager, 1, Stoa.TRANSITION.into)
+	end)
 	Stoa:On("STOA_STATE_CHANGED", function(state)
 		if state == Stoa.STATE_COMBAT then
+			leaving = false
 			pager:SetAlpha(0)
 			UI.fade(pager, 1, Stoa.TRANSITION.into)
 		end
 		if InCombatLockdown() then return end
 		if state == Stoa.STATE_WORLD and not Stoa:IsPractising() then
-			UI.fade(pager, 0, Stoa.TRANSITION.out)
-			C_Timer.After(Stoa.TRANSITION.out, function()
+			-- Already on its way out when the calm ran its course.
+			local wait = Stoa.TRANSITION.out
+			if leaving then
+				wait = math.max(0, Stoa.TRANSITION.out - Stoa.TRANSITION.lead)
+			else
+				UI.fade(pager, 0, Stoa.TRANSITION.out)
+			end
+			leaving = false
+			C_Timer.After(wait, function()
 				if Stoa:GetState() ~= Stoa.STATE_WORLD or InCombatLockdown() then return end
 				layout()
 				pager:SetAlpha(1)
@@ -515,10 +546,7 @@ function Bar:OnEnable()
 			return
 		end
 		if Stoa:IsPractising() then
-			for _, button in ipairs(self.shown or {}) do
-				UnregisterStateDriver(button, "visibility")
-				button:Show()
-			end
+			self:HoldUp()
 		else
 			layout()
 		end
