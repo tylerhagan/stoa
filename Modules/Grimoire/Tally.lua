@@ -826,7 +826,7 @@ function Tally:BuildRow(page, index)
 		end
 	end)
 	row:SetScript("OnEnter", function(button)
-		button.glow:Show()
+		UI.softShow(button.glow, true)
 		local object = button.key and feed(button.key)
 		if button.key and not object and ENTRIES[button.key] then
 			self:ShowDetail(button)
@@ -845,7 +845,7 @@ function Tally:BuildRow(page, index)
 		end
 	end)
 	row:SetScript("OnLeave", function(button)
-		button.glow:Hide()
+		UI.softShow(button.glow, false)
 		local object = button.key and feed(button.key)
 		if object and object.OnLeave then call(object.OnLeave, button) end
 		GameTooltip:Hide()

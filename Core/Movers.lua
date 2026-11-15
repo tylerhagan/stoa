@@ -589,6 +589,7 @@ local function buildBar()
 	local UI = Stoa.UI
 	bar = CreateFrame("Frame", "StoaMoverBar", UIParent)
 	bar:SetSize(BAR_WIDTH, 78)
+	UI.riseOnShow(bar)
 	bar:SetPoint("TOP", UIParent, "TOP", 0, -90)
 	bar:SetFrameStrata("FULLSCREEN_DIALOG")
 	bar:EnableMouse(true)
