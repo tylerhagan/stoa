@@ -481,6 +481,39 @@ do
 	end
 end
 
+-- Tips: the Ready line shows a teaser with no jobs, right-click marks it.
+do
+	local console, tips = Stoa.modules.Grimoire, Stoa.modules.Tips
+	if console and console.roleNote and tips and tips.enabled then
+		local ok, e = xpcall(function()
+			local real = { console.Jobs }
+			console.Jobs = function() return {} end
+			StoaDB.tipsSeen, tips.current, tips.started = nil, nil, nil
+			console:UpdateJobs()
+			local note = console.roleNote
+			assert(note:IsShown() and note.tip, "no tip on an empty Ready line")
+			local first = note.tip[1]
+			assert(note.words:GetText() == note.tip[2], "teaser reads " .. tostring(note.words:GetText()))
+			note:GetScript("OnEnter")(note)
+			note:GetScript("OnClick")(note, "RightButton")
+			assert(StoaDB.tipsSeen[first], "right-click didn't mark the tip")
+			assert(note.tip and note.tip[1] ~= first, "the next tip didn't take its place")
+			for _, tip in ipairs(tips.LIST) do assert(tips:Where(tip), "no place for tip " .. tip[1]) end
+			for _, tip in ipairs(tips.LIST) do StoaDB.tipsSeen[tip[1]] = true end
+			console:UpdateJobs()
+			assert(not note:IsShown(), "the line shows with every tip marked")
+			StoaDB.tipsSeen, tips.current = nil, nil
+			console.Jobs = real[1]
+			local away = Stoa.modules.Away
+			if away then
+				away:Build()
+				away:NextTip()
+				assert((away.tip:GetText() or "") ~= "", "no tip on the away screen")
+			end
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Tips: " .. e end
+	end
+end
 -- Settings window: every page and a search drawn, every setting changed
 -- and put back, the lists added to and taken from, a dropdown by keys.
 do
@@ -1028,8 +1061,11 @@ do
 			assert(not Stoa.char.newSpells, "a spell on a bar stayed listed")
 			Stoa.missingBuffs, C_ClassTalents, Stoa.char.restock, Stoa.char.wornSlots = nil, nil, {}, nil
 			C_ClassTalents = real[1]
+			local tips = Stoa.modules.Tips
+			if tips then tips.db.enabled = false end
 			console:UpdateJobs()
 			assert(not console.roleNote:IsShown(), "the line shows with nothing to do")
+			if tips then tips.db.enabled = true end
 			C_ClassTalents, C_Item.GetItemCount, GetInventoryItemID, GetActionInfo, Stoa.missingBuffs, Stoa.Spells.each, Stoa.Spells.name = unpack(real, 1, 7)
 		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Small jobs: " .. e end
