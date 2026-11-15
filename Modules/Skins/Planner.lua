@@ -303,6 +303,16 @@ local function newMark(talents, button)
 	local number = UI.text(tag, "sans", Stoa.typeSize.caption, "accent")
 	number:SetPoint("CENTER", 0, 0)
 	tag:Hide()
+	-- Under the talent: points planned of the most it takes, as 3/5.
+	local count = CreateFrame("Frame", nil, mark)
+	count:SetSize(30, 15)
+	count:SetPoint("TOP", mark, "BOTTOM", 0, -2)
+	local countFill = UI.pillFill(count, 0)
+	countFill:SetVertexColor(0, 0, 0, 0.85)
+	local countText = UI.text(count, "sans", Stoa.typeSize.caption, "muted")
+	countText:SetPoint("CENTER", 0, 0)
+	count:Hide()
+	mark.count, mark.countText = count, countText
 	-- The next point breathes, gently.
 	local glow = UI.roundBorder(mark, "CardEdge.tga", 2, 5)
 	local breathe = mark:CreateAnimationGroup()
@@ -392,6 +402,17 @@ function Planner:PaintMarks()
 		else
 			mark.glow:Clear()
 			mark.breathe:Stop()
+		end
+		-- Planned of max: shown on planned talents, and on every talent while planning.
+		local info = nodeInfo(talents, nodeID)
+		local max = info and info.maxRanks or 1
+		if planned or self.planning then
+			mark.countText:SetText(("%d/%d"):format(planned or 0, max))
+			mark.countText:SetTextColor(Stoa:Color(planned == max and "accent" or (planned and "text" or "muted")))
+			mark.count:SetWidth(math.max(26, (mark.countText:GetStringWidth() or 20) + 12))
+			mark.count:Show()
+		else
+			mark.count:Hide()
 		end
 		-- While planning, talents the plan leaves out step back.
 		mark.veil:SetShown(self.planning and not planned)
