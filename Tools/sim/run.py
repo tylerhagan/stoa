@@ -437,6 +437,25 @@ do
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Pull countdown: " .. e end
 end
+-- Console time of day: night blends in a cold sky, midday is the theme's own.
+do
+	local console = Stoa.modules.Grimoire
+	if console and console.lightAt then
+		if console.lightAt(13).mix ~= 0 then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: midday isn't the theme's colour" end
+		local night = console.lightAt(1)
+		if not (night.b > night.r and night.mix > 0.3) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: night isn't cold" end
+		Stoa.daylight = night
+		local r, g, b = Stoa:Color("daylit")
+		local ar, ag, ab = Stoa:Color("accent")
+		if not (b - r > ab - ar) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: night accent isn't cooler" end
+		Stoa.daylight = nil
+		console.previewHour = 1
+		console:UpdateDaylight()
+		if not (Stoa.daylight and Stoa.daylight.mix > 0.3) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: preview hour not shown" end
+		console.previewHour = nil
+		console:UpdateDaylight()
+	end
+end
 -- Trainer window: the skill bar, the Settings dropdown and the rows dressed.
 do
 	if Stoa.modules.Windows then

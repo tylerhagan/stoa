@@ -25,6 +25,8 @@ local Console = Stoa:NewModule("Grimoire", {
 	formMana = true,
 	-- Faint lines between the console's sections.
 	dividers = true,
+	-- The console's gold follows the game's time of day.
+	daylight = true,
 })
 
 local SPINE_HEIGHT = 22
@@ -172,7 +174,9 @@ function Console:BuildArt(frame)
 	local function gold(base, file, sublevel)
 		local lines = layer(file, sublevel)
 		lines:SetAllPoints(base)
-		UI.tint(lines, "accent")
+		-- Painted by PaintDaylit: the theme's gold, lit from above.
+		self.daylitParts = self.daylitParts or {}
+		table.insert(self.daylitParts, { region = lines, vertex = true })
 	end
 
 	local leather = layer("Leather", -6)
@@ -205,6 +209,48 @@ function Console:BuildArt(frame)
 	medallion:SetPoint("TOP", frame, "TOP", 0, MEDALLION_LINE * MEDALLION_SCALE)
 	gold(medallion, "MedallionLines", -2)
 	return parts
+end
+
+
+-- A faint reflection over the portrait, as if it sat under glass: a cap of
+-- light across the top, the portrait's circle cut by a larger circle set
+-- above it, fading downwards. Its colour follows the time of day
+-- (PaintDaylit): moonlight at night, warm at dawn and dusk.
+function Console:BuildGlass(seal, size)
+	local glass = seal:CreateTexture(nil, "ARTWORK", nil, 3)
+	glass:SetSize(size, size)
+	glass:SetPoint("CENTER")
+	glass:SetColorTexture(1, 1, 1, 1)
+	local round = seal:CreateMaskTexture()
+	round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	round:SetAllPoints(glass)
+	glass:AddMaskTexture(round)
+	local cap = seal:CreateMaskTexture()
+	cap:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	cap:SetSize(size * 1.3, size * 1.3)
+	cap:SetPoint("CENTER", glass, "CENTER", -size * 0.08, size * 0.52)
+	glass:AddMaskTexture(cap)
+	self.glass = glass
+	self:PaintGlass()
+end
+
+function Console:PaintGlass()
+	local glass = self.glass
+	if not glass then return end
+	glass:SetShown(self.db.daylight ~= false)
+	local light = Stoa.daylight
+	local m = light and light.mix or 0
+	local r, g, b = 1, 0.98, 0.94
+	if light then
+		r, g, b = 1 + (light.r - 1) * 0.7, 1 + (light.g - 1) * 0.7, 1 + (light.b - 1) * 0.7
+	end
+	-- Strongest under the moon; barely there at midday.
+	local alpha = 0.06 + 0.10 * math.min(1, m / 0.6)
+	if CreateColor and glass.SetGradient then
+		pcall(glass.SetGradient, glass, "VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, alpha))
+	else
+		glass:SetColorTexture(r, g, b, alpha * 0.6)
+	end
 end
 
 function Console:BuildSeal(frame)
@@ -255,12 +301,16 @@ function Console:BuildSeal(frame)
 		local gap = circle(seal, "BORDER", 1, size + 10, "panel")
 		gap:SetPoint("CENTER")
 	end
-	local ring = circle(seal, "BORDER", 2, size + 4, "accent")
+	local ring = circle(seal, "BORDER", 2, size + 4)
 	ring:SetPoint("CENTER")
+	self.daylitParts = self.daylitParts or {}
+	-- The ring hugs the portrait, so it only takes a touch of the sky.
+	table.insert(self.daylitParts, { region = ring, weight = 0.3 })
 
 	local portrait = circle(seal, "ARTWORK", 0, size)
 	portrait:SetPoint("CENTER")
 	self.portrait = portrait
+	self:BuildGlass(seal, size)
 
 	-- The progress ring, the level plate, the moment glow (BuildRing).
 	self:BuildRing(seal, portrait, size)
@@ -1586,6 +1636,82 @@ end
 
 -- Lifecycle -----------------------------------------------------------------
 
+-- Time of day --------------------------------------------------------------
+-- The console's gold (top edge, medallion, seal ring, section lines) takes
+-- the colour of the game's clock: rose at dawn, the theme's own colour by
+-- day, amber at dusk, moonlit blue at night. The sky's colour is blended
+-- into the theme's. Night leans well into the blue: gold and blue mixed
+-- half and half would only give grey. Checked
+-- once a minute; a step this small is never seen happening.
+-- Per key hour: lightness, saturation, then the sky's colour and how much
+-- of it is blended in.
+local DAYLIGHT = {
+	{ 0, 0.02, 0.00, 0.50, 0.72, 1.00, 0.85 },
+	{ 5, 0.02, 0.00, 0.50, 0.72, 1.00, 0.85 },
+	{ 6.5,   0.05, -0.10, 0.92, 0.70, 0.62, 0.45 },
+	{ 9,     0.00,  0.00, 1.00, 1.00, 1.00, 0.00 },
+	{ 17,    0.00,  0.00, 1.00, 1.00, 1.00, 0.00 },
+	{ 19.5, -0.03,  0.10, 0.90, 0.52, 0.22, 0.50 },
+	{ 21.5, 0.02, 0.00, 0.50, 0.72, 1.00, 0.85 },
+	{ 24, 0.02, 0.00, 0.50, 0.72, 1.00, 0.85 },
+}
+
+-- The light at an hour: { l, s, r, g, b, mix }.
+function Console.lightAt(hour)
+	local a, b = DAYLIGHT[1], DAYLIGHT[2]
+	for i = 1, #DAYLIGHT - 1 do
+		a, b = DAYLIGHT[i], DAYLIGHT[i + 1]
+		if hour <= b[1] then break end
+	end
+	local t = math.max(0, math.min(1, (hour - a[1]) / (b[1] - a[1])))
+	local v = {}
+	for k = 2, 7 do v[k - 1] = a[k] + (b[k] - a[k]) * t end
+	return { l = v[1], s = v[2], r = v[3], g = v[4], b = v[5], mix = v[6] }
+end
+
+-- Repaints only the console's own gold. (The theme's full repaint would
+-- also reset colours other modules set since, such as the target's bar.)
+function Console:PaintDaylit()
+	-- Light from above: the sky's colour on the top, the theme's own gold
+	-- underneath, so only the upper half of each piece catches it.
+	local r, g, b, a = Stoa:Color("daylit")
+	local ar, ag, ab, aa = Stoa:Color("accent")
+	local lit = Stoa.daylight and CreateColor and CreateColor(r, g, b, a)
+	local base = lit and CreateColor(ar, ag, ab, aa)
+	for _, part in ipairs(self.daylitParts or {}) do
+		local region = part.region
+		if not part.vertex then region:SetColorTexture(1, 1, 1, 1) end
+		if lit and region.SetGradient then
+			local top = lit
+			if part.weight then
+				local w = part.weight
+				top = CreateColor(ar + (r - ar) * w, ag + (g - ag) * w, ab + (b - ab) * w, a)
+			end
+			pcall(region.SetGradient, region, "VERTICAL", base, top)
+		elseif part.vertex then
+			region:SetVertexColor(ar, ag, ab, aa)
+		else
+			region:SetColorTexture(ar, ag, ab, aa)
+		end
+	end
+	self:PaintDividers()
+	self:PaintGlass()
+end
+
+function Console:UpdateDaylight()
+	local light = nil
+	if self.db.daylight ~= false and GetGameTime then
+		local hour, minute = GetGameTime()
+		if self.previewHour then hour, minute = self.previewHour, 0 end
+		if type(hour) == "number" then light = Console.lightAt(hour + (minute or 0) / 60) end
+	end
+	local was = Stoa.daylight
+	if was and light and math.abs(was.l - light.l) < 0.004 and math.abs(was.mix - light.mix) < 0.01 then return end
+	if not was and not light then return end
+	Stoa.daylight = light
+	self:PaintDaylit()
+end
+
 function Console:OnEnable()
 	self:Build()
 	Stoa.notesInConsole = true
@@ -1671,7 +1797,10 @@ function Console:OnEnable()
 	end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:CheckLowHealth() end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:Settle("low") end)
-	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDividers() end)
+	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDaylit() end)
+	self:UpdateDaylight()
+	self:PaintDaylit()
+	C_Timer.NewTicker(60, function() self:UpdateDaylight() end)
 	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
 		Stoa:On(event, function() self:UpdateKit() end)
 	end
@@ -1697,4 +1826,20 @@ function Console:OnEnable()
 		end
 	end
 	self:FitPages()
+end
+
+-- /stoa daylight 23 shows the console as it looks at that hour, without
+-- waiting for it; /stoa daylight goes back to the game's clock.
+Stoa.commands.daylight = function(rest)
+	local console = Stoa.modules.Grimoire
+	if not (console and console.UpdateDaylight) then return end
+	local hour = tonumber(rest and rest:match("^%s*(%d+%.?%d*)"))
+	console.previewHour = hour and hour >= 0 and hour < 24 and hour or nil
+	console:UpdateDaylight()
+	if console.previewHour then
+		Stoa:Print(("Console light shown as at %02d:00. /stoa daylight goes back to the game's clock."):format(math.floor(console.previewHour)))
+	else
+		local h, m = GetGameTime()
+		Stoa:Print(("Console light follows the game's clock (%02d:%02d now)."):format(h or 0, m or 0))
+	end
 end
