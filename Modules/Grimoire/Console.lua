@@ -1894,22 +1894,24 @@ function Console:PaintDaylit()
 	-- underneath, so only the upper half of each piece catches it.
 	local r, g, b, a = Stoa:Color("daylit")
 	local ar, ag, ab, aa = Stoa:Color("accent")
-	local lit = Stoa.daylight and CreateColor and CreateColor(r, g, b, a)
-	local base = lit and CreateColor(ar, ag, ab, aa)
+	local lit = Stoa.daylight and CreateColor and true
 	for _, part in ipairs(self.daylitParts or {}) do
 		local region = part.region
+		-- A texture's colour carries its alpha, so a part faded by the fold
+		-- (folded in a fight, or riding) keeps its fade through a repaint.
+		local fade = region.stoaFade or 1
 		if not part.vertex then region:SetColorTexture(1, 1, 1, 1) end
 		if lit and region.SetGradient then
-			local top = lit
+			local top = CreateColor(r, g, b, a * fade)
 			if part.weight then
 				local w = part.weight
-				top = CreateColor(ar + (r - ar) * w, ag + (g - ag) * w, ab + (b - ab) * w, a)
+				top = CreateColor(ar + (r - ar) * w, ag + (g - ag) * w, ab + (b - ab) * w, a * fade)
 			end
-			pcall(region.SetGradient, region, "VERTICAL", base, top)
+			pcall(region.SetGradient, region, "VERTICAL", CreateColor(ar, ag, ab, aa * fade), top)
 		elseif part.vertex then
-			region:SetVertexColor(ar, ag, ab, aa)
+			region:SetVertexColor(ar, ag, ab, aa * fade)
 		else
-			region:SetColorTexture(ar, ag, ab, aa)
+			region:SetColorTexture(ar, ag, ab, aa * fade)
 		end
 	end
 	self:PaintDividers()

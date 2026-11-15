@@ -1,9 +1,11 @@
 -- Stoa Grimoire: riding. On a mount or a flight out of a fight, the console
 -- folds to a slim travel line: your speed on the left with the zone beside
 -- it, and the next stop of the quest you follow on the right, with how far
--- it is and a bar filling as you close in. Chat lifts free above the line
--- (as on the Slim console), and the action bars and pages fade back. A
--- fight, getting off or landing brings the full console back.
+-- it is and a bar filling as you close in. Chat steps back to a feed like
+-- the loot feed: the newest few lines over the line, each fading after a
+-- few seconds. The action bars and pages fade back. A fight, getting off or
+-- landing brings the full console back; pressing Enter to type brings the
+-- chat back while you write.
 --
 -- Lean: one check on the mount and taxi events, and a speed and distance
 -- read twice a second only while riding. The full console only; Slim is a
@@ -140,6 +142,110 @@ local function fadeBars(alpha)
 	end
 end
 
+-- The chat feed --------------------------------------------------------------
+-- The chat windows go clear (and let clicks through to the world), and the
+-- newest lines of the main window show above the line instead, fading out.
+
+local FEED_LINES = 4
+local FEED_SECONDS = 10
+local FEED_FADE = 2
+local FEED_WIDTH = 440
+
+local function chatParts()
+	local parts = {}
+	for i = 1, (NUM_CHAT_WINDOWS or 10) do
+		local frame = _G["ChatFrame" .. i]
+		if frame then parts[#parts + 1] = frame end
+	end
+	for _, name in ipairs({ "StoaChatRail", "StoaChatTabs", "ChatFrame1EditBox" }) do
+		if _G[name] then parts[#parts + 1] = _G[name] end
+	end
+	return parts
+end
+
+local function typing()
+	local box = ChatFrame1EditBox
+	return box and box.HasFocus and box:HasFocus()
+end
+
+function Console:ClearChat(clear)
+	if InCombatLockdown() then clear = false end
+	for _, part in ipairs(chatParts()) do
+		if not (part.IsForbidden and part:IsForbidden()) then
+			if clear then
+				if part.stoaRideAlpha == nil then
+					part.stoaRideAlpha = part:GetAlpha()
+					part.stoaRideMouse = part.IsMouseEnabled and part:IsMouseEnabled()
+				end
+				part:SetAlpha(0)
+				if part.stoaRideMouse then part:EnableMouse(false) end
+			elseif part.stoaRideAlpha ~= nil then
+				part:SetAlpha(part.stoaRideAlpha)
+				if part.stoaRideMouse then part:EnableMouse(true) end
+				part.stoaRideAlpha, part.stoaRideMouse = nil, nil
+			end
+		end
+	end
+	if self.feed then self.feed:SetShown(clear) end
+end
+
+function Console:BuildFeed()
+	local feed = CreateFrame("Frame", "StoaRideFeed", UIParent)
+	feed:SetSize(FEED_WIDTH, 120)
+	feed:SetFrameStrata("LOW")
+	feed:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (self:PageInset()), RIDE_HEIGHT + 12)
+	feed.rows, feed.entries = {}, {}
+	for i = 1, FEED_LINES do
+		local fs = UI.text(feed, "sans", Stoa.typeSize.body, "text", "LEFT")
+		UI.legible(fs)
+		fs:SetWidth(FEED_WIDTH)
+		fs:SetWordWrap(true)
+		fs:SetMaxLines(2)
+		if i == 1 then
+			fs:SetPoint("BOTTOMLEFT", feed, "BOTTOMLEFT", 0, 0)
+		else
+			fs:SetPoint("BOTTOMLEFT", feed.rows[i - 1], "TOPLEFT", 0, 4)
+		end
+		fs:Hide()
+		feed.rows[i] = fs
+	end
+	feed:Hide()
+	self.feed = feed
+end
+
+-- Newest at the bottom, nearest the line; each fades out at the end.
+function Console:RenderFeed()
+	local feed = self.feed
+	if not feed then return end
+	local now = GetTime()
+	local live = {}
+	for _, entry in ipairs(feed.entries) do
+		if now - entry.at < FEED_SECONDS then live[#live + 1] = entry end
+	end
+	feed.entries = live
+	for i, fs in ipairs(feed.rows) do
+		local entry = live[#live - (i - 1)]
+		if entry then
+			fs:SetText(entry.text)
+			fs:SetTextColor(entry.r, entry.g, entry.b)
+			local left = FEED_SECONDS - (now - entry.at)
+			fs:SetAlpha(left < FEED_FADE and math.max(left / FEED_FADE, 0) or 1)
+			fs:Show()
+		else
+			fs:SetText("")
+			fs:Hide()
+		end
+	end
+end
+
+function Console:FeedLine(text, r, g, b)
+	local feed = self.feed
+	if not (self.riding and feed) or type(text) ~= "string" or Stoa:IsSecret(text) then return end
+	table.insert(feed.entries, { text = text, r = tonumber(r) or 1, g = tonumber(g) or 1, b = tonumber(b) or 1, at = GetTime() })
+	while #feed.entries > FEED_LINES do table.remove(feed.entries, 1) end
+	self:RenderFeed()
+end
+
 -- Into or out of the travel line. The console's own fold does the motion;
 -- this decides its height and what rides on it.
 function Console:SetRiding(on)
@@ -148,12 +254,15 @@ function Console:SetRiding(on)
 	self.riding = on
 	if on and not self.ride then self:BuildRide() end
 	fadeBars(on and 0 or 1)
-	if self.ReplaceChat then self:ReplaceChat() end
+	if on and not self.feed then self:BuildFeed() end
+	if self.feed then self.feed.entries = {} self:RenderFeed() end
+	self:ClearChat(on and not typing())
 	if on then
 		self:FillRide()
 		UI.softShow(self.ride, true)
 		self.rideTicker = self.rideTicker or C_Timer.NewTicker(TICK, function()
 			xpcall(self.FillRide, Stoa.catch, self)
+			xpcall(self.RenderFeed, Stoa.catch, self)
 		end)
 	else
 		if self.ride then self.ride:Hide() end
@@ -173,6 +282,18 @@ Stoa:On("STOA_READY", function()
 	end
 	-- A fight takes the travel line away before anything else.
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Console:SetRiding(false) end)
+	-- The newest lines of the main chat window feed the travel line's list.
+	if ChatFrame1 and ChatFrame1.AddMessage then
+		hooksecurefunc(ChatFrame1, "AddMessage", function(_, text, r, g, b)
+			if Console.riding then xpcall(Console.FeedLine, Stoa.catch, Console, text, r, g, b) end
+		end)
+	end
+	-- Typing brings the chat back until you're done.
+	local box = ChatFrame1EditBox
+	if box and box.HookScript then
+		box:HookScript("OnEditFocusGained", function() if Console.riding then Console:ClearChat(false) end end)
+		box:HookScript("OnEditFocusLost", function() if Console.riding then Console:ClearChat(true) end end)
+	end
 	Console:CheckRiding()
 end)
 
