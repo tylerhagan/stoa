@@ -383,6 +383,16 @@ function UI.fadeIn(region, seconds)
 	fade:SetToAlpha(1)
 	fade:SetDuration(seconds or UI.MOTION.quick)
 	fade:SetSmoothing("OUT")
+	-- A texture's alpha is its colour's alpha: a faint hover wash (white at
+	-- 5%) would fade up to solid white. So the fade ends at the alpha the
+	-- region rests at, read the first time it plays (after any tint).
+	group:SetScript("OnPlay", function()
+		if region.stoaRestAlpha == nil then
+			local alpha = region.GetAlpha and region:GetAlpha()
+			region.stoaRestAlpha = (type(alpha) == "number" and not Stoa:IsSecret(alpha)) and alpha or 1
+		end
+		fade:SetToAlpha(region.stoaRestAlpha)
+	end)
 	return group
 end
 
