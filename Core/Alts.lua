@@ -323,12 +323,7 @@ local function crest(parent, size)
 	-- can't take tex coords, so the round sheet does the rounding).
 	local icon = holder:CreateTexture(nil, "ARTWORK")
 	icon:SetAllPoints()
-	local ring = holder:CreateTexture(nil, "BACKGROUND")
-	ring:SetPoint("TOPLEFT", -2, 2)
-	ring:SetPoint("BOTTOMRIGHT", 2, -2)
-	ring:SetTexture(UI.WHITE)
-	if ring.SetMask then pcall(ring.SetMask, ring, "Interface\\CharacterFrame\\TempPortraitAlphaMask") end
-	holder.icon, holder.ring = icon, ring
+	holder.icon = icon
 	function holder:Set(entry)
 		local coords = CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[entry.class or ""]
 		if coords then
@@ -337,8 +332,6 @@ local function crest(parent, size)
 		else
 			icon:SetTexture(nil)
 		end
-		local r, g, b = classColour(entry)
-		ring:SetVertexColor(r, g, b, 0.85)
 	end
 	return holder
 end
