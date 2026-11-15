@@ -292,7 +292,8 @@ function Console:BuildSeal(frame)
 	local ring = circle(seal, "BORDER", 2, size + 4)
 	ring:SetPoint("CENTER")
 	self.daylitParts = self.daylitParts or {}
-	table.insert(self.daylitParts, { region = ring })
+	-- The ring hugs the portrait, so it only takes a touch of the sky.
+	table.insert(self.daylitParts, { region = ring, weight = 0.3 })
 
 	local portrait = circle(seal, "ARTWORK", 0, size)
 	portrait:SetPoint("CENTER")
@@ -1669,7 +1670,12 @@ function Console:PaintDaylit()
 		local region = part.region
 		if not part.vertex then region:SetColorTexture(1, 1, 1, 1) end
 		if lit and region.SetGradient then
-			pcall(region.SetGradient, region, "VERTICAL", base, lit)
+			local top = lit
+			if part.weight then
+				local w = part.weight
+				top = CreateColor(ar + (r - ar) * w, ag + (g - ag) * w, ab + (b - ab) * w, a)
+			end
+			pcall(region.SetGradient, region, "VERTICAL", base, top)
 		elseif part.vertex then
 			region:SetVertexColor(ar, ag, ab, aa)
 		else
