@@ -725,9 +725,22 @@ function Planner:MakeLoadout()
 		ranks[pick.n] = (ranks[pick.n] or 0) + 1
 		entries[pick.n] = pick.e
 	end
+	-- Nothing to do when your talents already are the plan up to your level.
+	local same = true
+	for nodeID, count in pairs(ranks) do
+		local info = nodeInfo(talents, nodeID)
+		if (info and (info.ranksPurchased or info.currentRank) or 0) ~= count then same = false break end
+	end
+	if same then
+		self:Say(("Your talents already match this plan up to level %d. Spend each new point on the glowing talent as you level."):format(level))
+		return
+	end
 	local list = {}
 	for nodeID, count in pairs(ranks) do
-		list[#list + 1] = { nodeID = nodeID, ranksPurchased = count, ranksGranted = 0, selectionEntryID = entries[nodeID] }
+		-- The game wants the entry for every talent, not only choice ones.
+		local info = nodeInfo(talents, nodeID)
+		local entry = entries[nodeID] or (info and info.entryIDs and info.entryIDs[1])
+		list[#list + 1] = { nodeID = nodeID, ranksPurchased = count, ranksGranted = 0, selectionEntryID = entry }
 	end
 	local ok, success, err = pcall(C_ClassTalents.ImportLoadout, configID(talents), list, plan.name)
 	if ok and success then
