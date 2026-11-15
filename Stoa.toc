@@ -40,6 +40,7 @@ Core\CooldownManager.lua
 Data\FlightTimes.lua
 Data\TrainerSpells.lua
 Data\EditModeLayout.lua
+Data\Dungeons.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
@@ -49,6 +50,8 @@ Modules\QoL\Restock.lua
 Modules\QoL\Mail.lua
 Modules\QoL\Bind.lua
 Modules\QoL\Away.lua
+Modules\QoL\Session.lua
+Modules\QoL\Companion.lua
 Modules\QoL\GearSets.lua
 Modules\QoL\Comforts.lua
 Modules\QoL\Chat.lua
