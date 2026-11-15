@@ -33,6 +33,7 @@ local function record()
 	local entry = all[key] or {}
 	all[key] = entry
 	entry.name, entry.realm = name, realm
+	entry.surname = select(2, Stoa.fullName())
 	local _, classFile = UnitClass("player")
 	entry.class = classFile
 	entry.faction = plain(UnitFactionGroup("player"))
@@ -1104,7 +1105,7 @@ end
 
 function Alts:FillSide(entry)
 	local side = self.side
-	side.name:SetText(entry.name)
+	side.name:SetText(entry.surname and (entry.name .. " " .. entry.surname) or entry.name)
 	paintName(side.name, entry)
 	local about = {}
 	if entry.level then about[#about + 1] = "Level " .. entry.level end

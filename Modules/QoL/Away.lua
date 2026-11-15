@@ -109,7 +109,7 @@ end
 
 function Away:Fill()
 	local plain = Stoa.safe.plain
-	self.name:SetText(plain(UnitName("player")) or "")
+	self.name:SetText(Stoa.fullName() or "")
 	local level = plain(UnitLevel("player")) or ""
 	local className = UnitClass("player") or ""
 	local zone = GetRealZoneText and GetRealZoneText() or ""
