@@ -129,6 +129,14 @@ end
 
 function Away:FillWhispers()
 	local list = self.whispers or {}
+	-- With no whispers, the session's numbers can sit there instead.
+	local session = Stoa.modules.Session
+	if #list == 0 and session and session.enabled and session.db.onAway and session.db.now then
+		local short = session:Short()
+		self.heard:SetText("THIS SESSION")
+		for i, fs in ipairs(self.lines) do fs:SetText(short[i] or "") end
+		return
+	end
 	self.heard:SetText(#list > 0 and "WHILE YOU WERE AWAY" or "")
 	for i, fs in ipairs(self.lines) do
 		local entry = list[#list - i + 1]

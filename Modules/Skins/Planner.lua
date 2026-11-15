@@ -1,9 +1,9 @@
 -- Stoa: the talent planner. Plans a build point by point over the game's own
 -- talent trees, for levels you haven't reached yet: each planned talent
 -- carries the level it's taken at, your next point glows in the trees, and a
--- panel beside the window lists the order, shows the build at any level and
--- shares plans as text. Plans are kept per class (account-wide), several
--- per class, each with a name.
+-- panel beside the window lists the order and shows the build at any level.
+-- Plans are kept per class (account-wide), several per class, each with a
+-- name.
 --
 -- STOA never spends a point: you click the talent as always. "Make game
 -- loadout" hands the plan, up to your level, to the game's own loadout
@@ -58,7 +58,7 @@ function Planner:NewPlan(name, order)
 		n = n + 1
 		pick = base .. " " .. n
 	end
-	local plan = { name = pick, order = order or {} }
+	local plan = { name = pick, order = order or self:CurrentOrder() }
 	plans[#plans + 1] = plan
 	self.db.active = plan.name
 	return plan
@@ -83,28 +83,6 @@ function Planner:DeletePlan()
 	end
 	self.db.active = plans[1] and plans[1].name or nil
 	self:Refresh()
-end
-
--- "STOA1:" then each point as a node id (and the choice taken, after a dot).
-function Planner.Encode(plan)
-	local parts = {}
-	for _, pick in ipairs(plan.order) do
-		parts[#parts + 1] = pick.e and (pick.n .. "." .. pick.e) or tostring(pick.n)
-	end
-	return "STOA1:" .. table.concat(parts, ",")
-end
-
-function Planner.Decode(text)
-	text = text and strtrim(text) or ""
-	local body = text:match("^STOA1:(.*)$")
-	if not body then return nil end
-	local order = {}
-	for piece in body:gmatch("[^,]+") do
-		local node, entry = piece:match("^(%d+)%.?(%d*)$")
-		if not node then return nil end
-		order[#order + 1] = { n = tonumber(node), e = tonumber(entry) }
-	end
-	return order
 end
 
 -- The trees ---------------------------------------------------------------------
@@ -195,13 +173,42 @@ end
 -- How the plan stands at a level: ranks per talent, the pick index each
 -- talent was last raised at, and points per tree.
 local function tally(plan, upTo)
-	local ranks, at = {}, {}
+	local ranks, at, levels = {}, {}, {}
 	for i, pick in ipairs(plan and plan.order or {}) do
 		if i > upTo then break end
 		ranks[pick.n] = (ranks[pick.n] or 0) + 1
-		at[pick.n] = i
+		at[pick.n] = at[pick.n] or i
+		levels[pick.n] = levels[pick.n] or {}
+		table.insert(levels[pick.n], FIRST_LEVEL - 1 + i)
 	end
-	return ranks, at
+	return ranks, at, levels
+end
+
+-- The talents you have now, as a plan's opening points: row by row, top
+-- first, so every point is legal where it sits. The game doesn't keep the
+-- order you took them in, so this is an order that works, not your history.
+function Planner:CurrentOrder()
+	local talents = talentsFrame()
+	local layout = talents and self:Layout(talents) or {}
+	local spots = {}
+	for nodeID, spot in pairs(layout) do
+		local info = nodeInfo(talents, nodeID)
+		local have = info and (info.ranksPurchased or info.currentRank or info.activeRank) or 0
+		if have > 0 then
+			local entry = info.entryIDs and #info.entryIDs > 1 and (info.activeEntry and info.activeEntry.entryID or info.entryIDs[1]) or nil
+			spots[#spots + 1] = { n = nodeID, e = entry, have = have, row = spot.row, tree = spot.tree, x = select(1, spot.button:GetCenter()) or 0 }
+		end
+	end
+	table.sort(spots, function(a, b)
+		if a.row ~= b.row then return a.row < b.row end
+		if a.tree ~= b.tree then return a.tree < b.tree end
+		return a.x < b.x
+	end)
+	local order = {}
+	for _, spot in ipairs(spots) do
+		for _ = 1, spot.have do order[#order + 1] = { n = spot.n, e = spot.e } end
+	end
+	return order
 end
 
 -- Whether a point can go here next: room in the talent, and enough points
@@ -267,12 +274,23 @@ local function newMark(talents, button)
 	veil:Hide()
 	local tag = CreateFrame("Frame", nil, mark)
 	tag:SetSize(22, 15)
-	tag:SetPoint("BOTTOMRIGHT", 6, -5)
+	-- Top left: the game's own rank count sits bottom right.
+	tag:SetPoint("TOPLEFT", -6, 5)
 	local fill = UI.pillFill(tag, 0)
 	fill:SetVertexColor(0, 0, 0, 0.85)
 	local number = UI.text(tag, "sans", Stoa.typeSize.caption, "accent")
 	number:SetPoint("CENTER", 0, 0)
 	tag:Hide()
+	-- Under the talent: points planned of the most it takes, as 3/5.
+	local count = CreateFrame("Frame", nil, mark)
+	count:SetSize(30, 15)
+	count:SetPoint("TOP", mark, "BOTTOM", 0, -2)
+	local countFill = UI.pillFill(count, 0)
+	countFill:SetVertexColor(0, 0, 0, 0.85)
+	local countText = UI.text(count, "sans", Stoa.typeSize.caption, "muted")
+	countText:SetPoint("CENTER", 0, 0)
+	count:Hide()
+	mark.count, mark.countText = count, countText
 	-- The next point breathes, gently.
 	local glow = UI.roundBorder(mark, "CardEdge.tga", 2, 5)
 	local breathe = mark:CreateAnimationGroup()
@@ -291,7 +309,12 @@ local function newMark(talents, button)
 		local spell = own.nodeID and nodeSpell(talents, own.nodeID)
 		GameTooltip:SetOwner(own, "ANCHOR_RIGHT")
 		if spell then GameTooltip:SetSpellByID(spell) else GameTooltip:AddLine(nodeName(talents, own.nodeID)) end
-		GameTooltip:AddLine("Click to plan a point here; right-click to take one off.", 0.8, 0.8, 0.8, true)
+		if own.levels and own.levels ~= "" then
+			GameTooltip:AddLine("Planned at level " .. own.levels, Stoa:Color("accent"))
+		end
+		if Planner.planning then
+			GameTooltip:AddLine("Click to plan a point here; right-click to take one off.", 0.8, 0.8, 0.8, true)
+		end
 		GameTooltip:Show()
 	end)
 	mark:SetScript("OnLeave", GameTooltip_Hide)
@@ -325,7 +348,7 @@ function Planner:PaintMarks()
 	self.marks = self.marks or {}
 	local plan = self:Active()
 	local upTo = (self.level or MAX_LEVEL) - FIRST_LEVEL + 1
-	local ranks, at = tally(plan, math.max(0, upTo))
+	local ranks, at, levels = tally(plan, math.max(0, upTo))
 	local nextIndex, nextPick = self:Next(talents, plan)
 	for _, mark in pairs(self.marks) do mark:Hide() end
 	for nodeID, spot in pairs(layout) do
@@ -335,6 +358,7 @@ function Planner:PaintMarks()
 			self.marks[spot.button] = mark
 		end
 		mark.nodeID = nodeID
+		mark.levels = levels[nodeID] and table.concat(levels[nodeID], ", ") or nil
 		mark:EnableMouse(self.planning and true or false)
 		local planned = ranks[nodeID]
 		local isNext = nextPick and nextPick.n == nodeID
@@ -356,6 +380,17 @@ function Planner:PaintMarks()
 		else
 			mark.glow:Clear()
 			mark.breathe:Stop()
+		end
+		-- Planned of max: shown on planned talents, and on every talent while planning.
+		local info = nodeInfo(talents, nodeID)
+		local max = info and info.maxRanks or 1
+		if planned or self.planning then
+			mark.countText:SetText(("%d/%d"):format(planned or 0, max))
+			mark.countText:SetTextColor(Stoa:Color(planned == max and "accent" or (planned and "text" or "muted")))
+			mark.count:SetWidth(math.max(26, (mark.countText:GetStringWidth() or 20) + 12))
+			mark.count:Show()
+		else
+			mark.count:Hide()
 		end
 		-- While planning, talents the plan leaves out step back.
 		mark.veil:SetShown(self.planning and not planned)
@@ -394,7 +429,6 @@ function Planner:BuildPanel()
 	name:SetAutoFocus(false)
 	name:SetHeight(26)
 	name:SetPoint("LEFT", panel, "TOPLEFT", PAD - 4, -24)
-	name:SetPoint("RIGHT", panel, "TOPRIGHT", -64, -24)
 	name:SetMaxLetters(32)
 	name:SetTextInsets(4, 4, 0, 0)
 	Stoa:SetFont(name, "serif", Stoa.typeSize.title)
@@ -410,11 +444,42 @@ function Planner:BuildPanel()
 		self:Refresh()
 	end)
 	name:SetScript("OnEscapePressed", function(box) box:ClearFocus() self:Refresh() end)
+	-- An underline and a hover hint say the name is yours to change.
+	local under = UI.line(name, "hairline")
+	under:SetPoint("BOTTOMLEFT", 4, 0)
+	under:SetPoint("BOTTOMRIGHT", -4, 0)
+	under:SetAlpha(0.5)
+	local function lit(on)
+		UI.paint(under, on and "accent" or "muted")
+		under:SetAlpha(on and 1 or 0.5)
+	end
+	lit(false)
+	name:SetScript("OnEnter", function(box)
+		lit(true)
+		if not box:HasFocus() then
+			GameTooltip:SetOwner(box, "ANCHOR_BOTTOMLEFT")
+			GameTooltip:AddLine("Click to rename this plan, then press Enter.", 1, 1, 1, true)
+			GameTooltip:Show()
+		end
+	end)
+	name:SetScript("OnLeave", function(box)
+		if not box:HasFocus() then lit(false) end
+		GameTooltip:Hide()
+	end)
+	name:SetScript("OnEditFocusGained", function(box)
+		lit(true)
+		GameTooltip:Hide()
+		box:HighlightText()
+	end)
+	name:SetScript("OnEditFocusLost", function() lit(false) end)
 	local back = wordButton(panel, "<", function() self:Step(-1) end)
 	local forth = wordButton(panel, ">", function() self:Step(1) end)
 	forth:SetPoint("RIGHT", panel, "TOPRIGHT", -PAD, -24)
-	back:SetPoint("RIGHT", forth, "LEFT", -10, 0)
-	panel.name, panel.back, panel.forth = name, back, forth
+	local which = UI.text(panel, "sans", Stoa.typeSize.caption, "muted")
+	which:SetPoint("RIGHT", forth, "LEFT", -6, 0)
+	back:SetPoint("RIGHT", which, "LEFT", -6, 0)
+	name:SetPoint("RIGHT", back, "LEFT", -6, 0)
+	panel.name, panel.back, panel.forth, panel.which = name, back, forth, which
 
 	-- Plan / Done, New, Delete.
 	local plan = wordButton(panel, "Plan", function() self:SetPlanning(not self.planning) end)
@@ -423,15 +488,39 @@ function Planner:BuildPanel()
 		self:NewPlan()
 		self:SetPlanning(true)
 	end)
-	new:SetPoint("LEFT", plan, "RIGHT", 16, 0)
-	local clear = wordButton(panel, "Clear", function()
+	new:SetPoint("LEFT", plan, "RIGHT", 14, 0)
+	new:SetScript("OnEnter", function(own)
+		own.text:SetTextColor(Stoa:Color("accent"))
+		GameTooltip:SetOwner(own, "ANCHOR_BOTTOM")
+		GameTooltip:AddLine("Plan ahead from the talents you have.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	new:HookScript("OnLeave", GameTooltip_Hide)
+	local blank = wordButton(panel, "Blank", function()
+		self:NewPlan("Full build", {})
+		self:SetPlanning(true)
+	end)
+	blank:SetPoint("LEFT", new, "RIGHT", 14, 0)
+	blank:SetScript("OnEnter", function(own)
+		own.text:SetTextColor(Stoa:Color("accent"))
+		GameTooltip:SetOwner(own, "ANCHOR_BOTTOM")
+		GameTooltip:AddLine("A whole build from level 10, for another spec, a respec or an alt.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	blank:HookScript("OnLeave", GameTooltip_Hide)
+	local clear = wordButton(panel, "Reset", function()
 		local active = self:Active()
-		if active then wipe(active.order) end
+		if active then
+			wipe(active.order)
+			for _, pick in ipairs(self:CurrentOrder()) do active.order[#active.order + 1] = pick end
+			self.level = nil
+			self:Say("Back to the talents you have now.")
+		end
 		self:Refresh()
 	end)
-	clear:SetPoint("LEFT", new, "RIGHT", 16, 0)
+	clear:SetPoint("LEFT", blank, "RIGHT", 14, 0)
 	local delete = wordButton(panel, "Delete", function() self:DeletePlan() end)
-	delete:SetPoint("LEFT", clear, "RIGHT", 16, 0)
+	delete:SetPoint("LEFT", clear, "RIGHT", 14, 0)
 	panel.plan = plan
 
 	-- The level the trees show the build at.
@@ -490,7 +579,7 @@ function Planner:BuildPanel()
 		row:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
 		local level = UI.text(row, "sans", Stoa.typeSize.body, "muted", "LEFT")
 		level:SetPoint("LEFT")
-		level:SetWidth(28)
+		level:SetWidth(34)
 		local what = UI.text(row, "sans", Stoa.typeSize.body, "text", "LEFT")
 		what:SetPoint("LEFT", level, "RIGHT", 6, 0)
 		what:SetPoint("RIGHT")
@@ -507,54 +596,16 @@ function Planner:BuildPanel()
 	empty:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
 	panel.empty = empty
 
-	-- The game's loadout, and sharing.
+	-- The game's loadout.
 	local y = -162 - LIST_ROWS * 24 - 16
 	local loadout = UI.button(panel, "Make game loadout", PANEL_WIDTH - PAD * 2, function() self:MakeLoadout() end)
 	loadout:SetPoint("TOPLEFT", PAD, y)
 	panel.loadout = loadout
-	local share = CreateFrame("EditBox", nil, panel)
-	share:SetAutoFocus(false)
-	share:SetHeight(26)
-	share:SetPoint("TOPLEFT", PAD, y - 40)
-	share:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
-	share:SetTextInsets(10, 10, 0, 0)
-	Stoa:SetFont(share, "sans", Stoa.typeSize.caption)
-	share:SetTextColor(Stoa:Color("text"))
-	local shareBack = UI.pillFill(share, 0)
-	shareBack:SetVertexColor(0, 0, 0, 0.4)
-	local shareHint = UI.text(share, "sans", Stoa.typeSize.caption, "muted")
-	shareHint:SetPoint("LEFT", 10, 0)
-	shareHint:SetText("Paste a plan here and press Enter")
-	share:SetScript("OnTextChanged", function(box) shareHint:SetShown(box:GetText() == "" and not box:HasFocus()) end)
-	share:SetScript("OnEditFocusGained", function() shareHint:Hide() end)
-	share:SetScript("OnEditFocusLost", function(box) shareHint:SetShown(box:GetText() == "") end)
-	share:SetScript("OnEscapePressed", function(box) box:SetText("") box:ClearFocus() end)
-	share:SetScript("OnEnterPressed", function(box)
-		local order = Planner.Decode(box:GetText())
-		if order then
-			self:NewPlan("Pasted plan", order)
-			box:SetText("")
-			self:Say("Plan added.")
-		else
-			self:Say("That isn't a STOA plan.")
-		end
-		box:ClearFocus()
-		self:Refresh()
-	end)
-	local copy = wordButton(panel, "Copy this plan", function()
-		local active = self:Active()
-		if not active then return end
-		share:SetText(Planner.Encode(active))
-		share:SetFocus()
-		share:HighlightText()
-		self:Say("Selected: press Ctrl+C to copy.")
-	end)
-	copy:SetPoint("TOPLEFT", share, "BOTTOMLEFT", 0, -8)
 	local note = UI.text(panel, "sans", Stoa.typeSize.caption, "muted", "LEFT")
-	note:SetPoint("TOPLEFT", copy, "BOTTOMLEFT", 0, -8)
+	note:SetPoint("TOPLEFT", loadout, "BOTTOMLEFT", 0, -10)
 	note:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
 	panel.note = note
-	panel:SetHeight(-y + 40 + 28 + 26 + 20)
+	panel:SetHeight(-y + 28 + 10 + 30 + 14)
 	self.panel = panel
 end
 
@@ -586,7 +637,8 @@ function Planner:FillList()
 			shown = shown + 1
 			local was = row.pick
 			row.pick = pick
-			row.level:SetText(tostring(FIRST_LEVEL - 1 + index))
+			local at = FIRST_LEVEL - 1 + index
+			row.level:SetText(at <= (Stoa:PlainNumber(UnitLevel("player")) or 0) and "Now" or tostring(at))
 			row.level:SetTextColor(Stoa:Color(i == 1 and "accent" or "muted"))
 			row.what:SetText(nodeName(talents, pick.n, pick.e))
 			row.what:SetTextColor(Stoa:Color(within and "text" or "muted"))
@@ -620,17 +672,21 @@ function Planner:Refresh()
 	panel:Show()
 	local plan = self:Active()
 	if not panel.name:HasFocus() then panel.name:SetText(plan and plan.name or "No plan") end
-	local many = #store() > 1
+	local plans = store()
+	local many = #plans > 1
 	panel.back:SetShown(many)
 	panel.forth:SetShown(many)
+	local index = 1
+	for i, other in ipairs(plans) do if other == plan then index = i end end
+	panel.which:SetText(many and ("%d of %d"):format(index, #plans) or "")
 	panel.plan.text:SetText(self.planning and "Done" or "Plan")
 	panel.plan.lit = self.planning
 	panel.plan.text:SetTextColor(Stoa:Color(self.planning and "accent" or "text"))
 	panel.plan:SetWidth((panel.plan.text:GetStringWidth() or 30) + 2)
 	if not self.level then
 		local level = Stoa:PlainNumber(UnitLevel("player")) or FIRST_LEVEL
-		self.level = math.max(FIRST_LEVEL, math.min(MAX_LEVEL, plan and (FIRST_LEVEL - 1 + #plan.order) or level))
-		if self.level < FIRST_LEVEL then self.level = MAX_LEVEL end
+		-- Open on today's build; planning moves the slider along as the plan grows.
+		self.level = math.max(FIRST_LEVEL, math.min(MAX_LEVEL, level))
 	end
 	self.painting = true
 	panel.slider:SetValue(self.level)
@@ -662,9 +718,22 @@ function Planner:MakeLoadout()
 		ranks[pick.n] = (ranks[pick.n] or 0) + 1
 		entries[pick.n] = pick.e
 	end
+	-- Nothing to do when your talents already are the plan up to your level.
+	local same = true
+	for nodeID, count in pairs(ranks) do
+		local info = nodeInfo(talents, nodeID)
+		if (info and (info.ranksPurchased or info.currentRank) or 0) ~= count then same = false break end
+	end
+	if same then
+		self:Say(("Your talents already match this plan up to level %d. Spend each new point on the glowing talent as you level."):format(level))
+		return
+	end
 	local list = {}
 	for nodeID, count in pairs(ranks) do
-		list[#list + 1] = { nodeID = nodeID, ranksPurchased = count, ranksGranted = 0, selectionEntryID = entries[nodeID] }
+		-- The game wants the entry for every talent, not only choice ones.
+		local info = nodeInfo(talents, nodeID)
+		local entry = entries[nodeID] or (info and info.entryIDs and info.entryIDs[1])
+		list[#list + 1] = { nodeID = nodeID, ranksPurchased = count, ranksGranted = 0, selectionEntryID = entry }
 	end
 	local ok, success, err = pcall(C_ClassTalents.ImportLoadout, configID(talents), list, plan.name)
 	if ok and success then
