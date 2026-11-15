@@ -4,6 +4,24 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.3.0
+
+- Characters window (/stoa alts, or Settings > Your characters): every character you've played with STOA in one list with level, place, gold, rest, lockouts and item level. Search finds an item in any character's bags or bank, and clicking a character shows their model and gear, each item in its quality colour.
+- Bags: typing in the bag search also says which of your other characters hold a match ("Also on ..."), and Show opens the search in the Characters window.
+- Dungeon companion: inside a five-player dungeon, out of a fight, a card where the quest list sits shows the bosses (ticked off as they fall, by wing where a dungeon has them) and your quests for it. It can be a slim line over the console instead. /stoa companion and part of a name previews it.
+- Session recap: while the game counts down to logging out, a card shows time played, levels, experience an hour, gold, quests, deaths and your best find. /stoa recap shows it any time, and the away screen can show a short version.
+- Talent planner: a panel beside the talents to plan a build point by point for levels you haven't reached, with named plans per class, share strings and Make game loadout. A Talent planner word on the talent window opens and closes it. STOA never spends a point for you.
+- Small jobs: the console's Ready column gathers a missing self-buff, gear about to break, talent points to spend, new spells not on a bar, restock items short and an emptied slot into one line, listed on hover. Right-click clears the new spells.
+- Console light from the time of day: the gold catches the sky from above as the game's clock turns (rose at dawn, your colour at midday, amber at dusk, moonlit blue at night) with a faint glass reflection on your portrait. Settings > Console turns it off; /stoa daylight 23 previews an hour.
+- Motion: STOA's own windows, settings, menus and cards rise and fade in swiftly. Blizzard's windows are left as they are.
+- Trainer window: a slim skill bar, quiet rows with a soft highlight, and Settings as a word in the footer beside Train.
+- Experience bar: rested shows as fine blue stripes over the finished-quests stretch instead of vanishing behind it.
+- Books and letters: the words read in STOA's text colour, with the page turns in a row along the foot.
+- Combat bar: stays up with the rest of the combat look and leaves half a second before the calm ends.
+- Gold an hour and loot value on the console survive a /reload.
+- RestedXP guide: pale check boxes with an accent tick.
+- Fixes: hover washes no longer flash solid white; the READY heading no longer goes blank after a loading screen.
+
 ## 1.2.0
 
 - Console medallion: the shield and your class mark sit in the Halo's order, shield on the left, mark (Inner Fire's flame and the others) on the right.
