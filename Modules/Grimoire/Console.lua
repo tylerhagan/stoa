@@ -174,7 +174,7 @@ function Console:BuildArt(frame)
 	local function gold(base, file, sublevel)
 		local lines = layer(file, sublevel)
 		lines:SetAllPoints(base)
-		UI.tint(lines, "daylit")
+		-- Painted by PaintDaylit: the theme's gold, lit from above.
 		self.daylitParts = self.daylitParts or {}
 		table.insert(self.daylitParts, { region = lines, vertex = true })
 	end
@@ -289,7 +289,7 @@ function Console:BuildSeal(frame)
 		local gap = circle(seal, "BORDER", 1, size + 10, "panel")
 		gap:SetPoint("CENTER")
 	end
-	local ring = circle(seal, "BORDER", 2, size + 4, "daylit")
+	local ring = circle(seal, "BORDER", 2, size + 4)
 	ring:SetPoint("CENTER")
 	self.daylitParts = self.daylitParts or {}
 	table.insert(self.daylitParts, { region = ring })
@@ -1494,7 +1494,7 @@ end
 
 function Console:PaintDividers()
 	if not self.dividers then return end
-	local r, g, b = Stoa:Color("daylit")
+	local r, g, b = Stoa:Color("accent")
 	for _, div in ipairs(self.dividers) do
 		div.upper:SetColorTexture(1, 1, 1, 1)
 		div.lower:SetColorTexture(1, 1, 1, 1)
@@ -1659,12 +1659,21 @@ end
 -- Repaints only the console's own gold. (The theme's full repaint would
 -- also reset colours other modules set since, such as the target's bar.)
 function Console:PaintDaylit()
+	-- Light from above: the sky's colour on the top, the theme's own gold
+	-- underneath, so only the upper half of each piece catches it.
 	local r, g, b, a = Stoa:Color("daylit")
+	local ar, ag, ab, aa = Stoa:Color("accent")
+	local lit = Stoa.daylight and CreateColor and CreateColor(r, g, b, a)
+	local base = lit and CreateColor(ar, ag, ab, aa)
 	for _, part in ipairs(self.daylitParts or {}) do
-		if part.vertex then
-			part.region:SetVertexColor(r, g, b, a)
+		local region = part.region
+		if not part.vertex then region:SetColorTexture(1, 1, 1, 1) end
+		if lit and region.SetGradient then
+			pcall(region.SetGradient, region, "VERTICAL", base, lit)
+		elseif part.vertex then
+			region:SetVertexColor(ar, ag, ab, aa)
 		else
-			part.region:SetColorTexture(r, g, b, a)
+			region:SetColorTexture(ar, ag, ab, aa)
 		end
 	end
 	self:PaintDividers()
@@ -1770,8 +1779,9 @@ function Console:OnEnable()
 	end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:CheckLowHealth() end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:Settle("low") end)
-	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDividers() end)
+	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDaylit() end)
 	self:UpdateDaylight()
+	self:PaintDaylit()
 	C_Timer.NewTicker(60, function() self:UpdateDaylight() end)
 	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
 		Stoa:On(event, function() self:UpdateKit() end)
