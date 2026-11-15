@@ -1035,6 +1035,50 @@ do
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Small jobs: " .. e end
 	end
 end
+-- Riding: mounting folds the full console to the travel line with chat
+-- lifted and the bars faded; a fight brings it all back.
+do
+	local console = Stoa.modules.Grimoire
+	if console and console.frame and console.CheckRiding and not console.db.slim then
+		local ok, e = xpcall(function()
+			local real = { IsMounted, C_SuperTrack, C_QuestLog.GetDistanceSqToQuest, C_QuestLog.GetTitleForQuestID, GetUnitSpeed }
+			local realBar = MultiBarBottomLeft
+			local bar = CreateFrame("Frame")
+			MultiBarBottomLeft = bar
+			local alpha = 0.8
+			bar.SetAlpha = function(_, a) alpha = a end
+			bar.GetAlpha = function() return alpha end
+			IsMounted = function() return true end
+			GetUnitSpeed = function() return 14 end
+			C_SuperTrack = { GetSuperTrackedQuestID = function() return 99 end }
+			C_QuestLog.GetDistanceSqToQuest = function() return 400 * 400 end
+			C_QuestLog.GetTitleForQuestID = function() return "Wanted: Hogger" end
+			fire("PLAYER_MOUNT_DISPLAY_CHANGED")
+			assert(console.riding, "mounting didn't start riding")
+			assert(console.ride and console.ride:IsShown(), "the travel line is hidden")
+			assert(console.ride.speed:GetText() == "200", "speed reads " .. tostring(console.ride.speed:GetText()))
+			assert(console.ride.far:GetText() == "400 yd", "distance reads " .. tostring(console.ride.far:GetText()))
+			assert(bar:GetAlpha() == 0, "the bars stayed up")
+			local setHeight, height = console.frame.SetHeight, nil
+			console.frame.SetHeight = function(f, h) height = h return setHeight(f, h) end
+			console:SetOpen(true, true)
+			console.frame.SetHeight = setHeight
+			assert(height == console.RIDE_HEIGHT, "riding height " .. tostring(height))
+			local lockdown = InCombatLockdown
+			InCombatLockdown = function() return true end
+			console:CheckRiding()
+			InCombatLockdown = lockdown
+			assert(not console.riding, "a fight left the travel line up")
+			assert(math.abs(bar:GetAlpha() - 0.8) < 0.01, "the bars came back at " .. bar:GetAlpha())
+			IsMounted, C_SuperTrack, C_QuestLog.GetDistanceSqToQuest, C_QuestLog.GetTitleForQuestID, GetUnitSpeed = unpack(real, 1, 5)
+			MultiBarBottomLeft = realBar
+			fire("PLAYER_MOUNT_DISPLAY_CHANGED")
+			assert(not console.riding, "getting off left the travel line up")
+			console:SetOpen(true, true)
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Riding: " .. e end
+	end
+end
 -- The talent planner: marks over the trees, the row rule, the order, sharing.
 do
 	local planner = Stoa.modules.Planner

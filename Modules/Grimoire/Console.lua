@@ -25,6 +25,8 @@ local Console = Stoa:NewModule("Grimoire", {
 	formMana = true,
 	-- Faint lines between the console's sections.
 	dividers = true,
+	-- On a mount, the console folds to a travel line (Riding.lua).
+	riding = true,
 	-- The console's gold follows the game's time of day.
 	daylight = true,
 })
@@ -1512,14 +1514,18 @@ end
 -- The console is not a secure frame, so it can resize in combat.
 
 function Console:SetOpen(open, instant)
-	local target = open and self:OpenHeight() or SPINE_HEIGHT
+	-- Riding (Riding.lua): folded look, but a band tall enough for the
+	-- travel line, and the seal halfway between open and folded.
+	local riding = open and self.riding
+	if riding then open = false end
+	local target = riding and (self.RIDE_HEIGHT or SLIM_HEIGHT) or (open and self:OpenHeight() or SPINE_HEIGHT)
 	local frame = self.frame
 	local from = frame:GetHeight()
 	local start = GetTime()
 
 	local pagesAlpha = open and 1 or 0
 	-- The slim seal is small already, so it shrinks less into the spine.
-	local sealScale = open and 1 or (self.db.slim and 0.6 or 0.4)
+	local sealScale = open and 1 or ((self.db.slim or riding) and 0.6 or 0.4)
 	if self.slimCard and not open then self.slimCard:Hide() end
 
 	local function step(progress)
@@ -1908,7 +1914,7 @@ function Console:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("PLAYER_UPDATE_RESTING", function() self:UpdateSeal() end)
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
-	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant) end)
+	Stoa:On("STOA_STATE_CHANGED", function() self:Refold() end)
 
 	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
 		if unit == "player" then self:UpdateSeal() end

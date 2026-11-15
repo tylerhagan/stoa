@@ -67,6 +67,7 @@ Modules\QoL\Layout.lua
 
 Modules\Grimoire\Console.lua
 Modules\Grimoire\Housing.lua
+Modules\Grimoire\Riding.lua
 Modules\Grimoire\Minimap.lua
 Modules\Grimoire\Tray.lua
 Modules\Grimoire\Tally.lua

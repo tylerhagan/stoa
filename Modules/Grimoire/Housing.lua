@@ -60,9 +60,12 @@ local function placeChat()
 	local chat = ChatFrame1
 	if not chat then return end
 	placing = true
-	if Console.db.slim or Console.bare then
+	-- Riding (Riding.lua) folds the console to a travel line, so the chat
+	-- lifts free above it as on the Slim console.
+	if Console.db.slim or Console.bare or Console.riding then
+		local base = Console.bare and 0 or (Console.riding and Console.RIDE_HEIGHT) or Console:OpenHeight()
 		chat:ClearAllPoints()
-		chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), (Console.bare and 0 or Console:OpenHeight()) + SLIM_CHAT_LIFT)
+		chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), base + SLIM_CHAT_LIFT)
 		chat:SetSize(CHAT_WIDTH, SLIM_CHAT_HEIGHT)
 		placing = false
 		return
