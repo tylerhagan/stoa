@@ -732,7 +732,8 @@ end
 
 local function dressTrainer()
 	local frame = ClassTrainerFrame
-	if not frame then return end
+	if not frame or frame.stoaTrainer then return end
+	frame.stoaTrainer = true
 	Windows:Dress(frame)
 	stripInside(frame, 4)
 	dressTrainerBar()
@@ -861,13 +862,17 @@ function Windows:OnEnable()
 	guarded(dressTooltips)
 	guarded(dressReadyCheck)
 	-- The trainer window loads with its own addon the first time it opens.
-	if ClassTrainerFrame then
+	-- Forever's trainer addon has a bootstrap part that loads at startup,
+	-- so its ADDON_LOADED can come before STOA listens and not again when
+	-- the window itself loads. Opening a trainer dresses it as a backstop.
+	if ClassTrainerFrame then guarded(dressTrainer) end
+	Stoa:On("ADDON_LOADED", function(name)
+		if name == "Blizzard_TrainerUI" then guarded(dressTrainer) end
+	end)
+	Stoa:On("TRAINER_SHOW", function()
 		guarded(dressTrainer)
-	else
-		Stoa:On("ADDON_LOADED", function(name)
-			if name == "Blizzard_TrainerUI" then guarded(dressTrainer) end
-		end)
-	end
+		C_Timer.After(0, function() guarded(dressTrainer) end)
+	end)
 	Stoa:On("STOA_THEME_CHANGED", function() UI.applyTheme() end)
 	-- Quest and gossip buttons are made when a panel first opens.
 	for _, frame in ipairs({ QuestFrame, GossipFrame, MerchantFrame }) do

@@ -471,8 +471,9 @@ do
 		step.selectedTex = step:CreateTexture()
 		step.disabledBG = step:CreateTexture()
 		frame.skillStepButton = step
-		local ok, err = pcall(Stoa.modules.Windows.DressTrainer)
-		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: " .. tostring(err) end
+		-- Opening a trainer dresses it, even when the trainer addon's load
+		-- was missed (Forever loads its bootstrap part at startup).
+		fire("TRAINER_SHOW")
 		if not bar.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: skill bar not dressed" end
 		if not frame.FilterDropdown.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: Settings dropdown not dressed" end
 		if not step.stoaRow then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: skill row not dressed" end
