@@ -32,6 +32,7 @@ local function plain(value) return Stoa:PlainNumber(value) end
 
 -- The dungeon you are in, or nil: its name, map, Adventure Guide id.
 function Companion:Where()
+	if self.preview then return self.preview end
 	local inside, kind = IsInInstance()
 	if not inside or kind ~= "party" then return nil end
 	local name, _, _, _, _, _, _, instanceID = GetInstanceInfo()
@@ -60,7 +61,7 @@ function Companion:FindInGuide(instanceID, name)
 		for i = 1, 200 do
 			local id, title, _, _, _, _, _, _, _, _, mapID = call(EJ_GetInstanceByIndex, i, false)
 			if not id then break end
-			if (mapID and mapID == instanceID) or title == name then hit = id break end
+			if (mapID and mapID == instanceID) or (type(title) == "string" and title:lower() == name:lower()) then hit = id break end
 		end
 		if hit then break end
 	end
@@ -474,7 +475,10 @@ end
 
 function Companion:OnEnable()
 	local function soon() self:Soon() end
-	Stoa:On("PLAYER_ENTERING_WORLD", soon)
+	Stoa:On("PLAYER_ENTERING_WORLD", function()
+		self.preview = nil
+		soon()
+	end)
 	Stoa:On("ZONE_CHANGED_NEW_AREA", soon)
 	Stoa:On("QUEST_LOG_UPDATE", function() if self.data then soon() end end)
 	local function freshLoot()
@@ -495,9 +499,29 @@ function Companion:OnEnable()
 end
 
 -- /stoa companion shows it now in any dungeon you're in, or says why not.
-Stoa.commands.companion = function()
+-- /stoa companion <dungeon> previews that dungeon's card anywhere (its
+-- bosses, your quests for it and its loot); /stoa companion off ends it.
+Stoa.commands.companion = function(rest)
+	rest = rest and strtrim(rest) or ""
+	if rest:lower() == "off" then
+		Companion.preview = nil
+		Companion:Refresh()
+		return
+	end
+	if rest ~= "" then
+		local journal = Companion:FindInGuide("preview:" .. rest:lower(), rest)
+		if not journal then
+			Stoa:Print(("No dungeon called %q in the Adventure Guide. Close the guide and use its full name, like The Deadmines."):format(rest))
+			return
+		end
+		local title = EJ_GetInstanceInfo and plain(call(EJ_GetInstanceInfo, journal)) or rest
+		Companion.preview = { name = type(title) == "string" and title or rest, instanceID = "preview:" .. rest:lower(), journal = journal }
+		Companion:Refresh()
+		Stoa:Print("Previewing the companion for " .. Companion.preview.name .. ". /stoa companion off ends it.")
+		return
+	end
 	if not Companion:Where() then
-		Stoa:Print("The dungeon companion shows inside five-player dungeons.")
+		Stoa:Print("The dungeon companion shows inside five-player dungeons. Try /stoa companion The Deadmines for a preview.")
 		return
 	end
 	Companion:Refresh()
