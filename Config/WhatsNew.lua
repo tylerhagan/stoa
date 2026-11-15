@@ -30,7 +30,7 @@ local NOTE = {
 		{ "Light from the time of day", "The console's gold catches the sky from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk and moonlit blue at night, with a glass glint on your portrait. /stoa daylight 23 previews an hour." },
 		{ "Smoother, tidier", "STOA's windows, settings and cards rise in swiftly, the trainer window is tidied with Settings in its footer, rested shows as blue stripes on the experience bar, and books and letters read clearly." },
 	},
-	foot = "Each can be switched off in the settings. /stoa news shows this again.\n\nMy characters have waited long enough whilst I polished their interface. Updates will be slower from now on, though anything broken still gets fixed quickly.",
+	foot = "Each can be switched off in the settings. /stoa news shows this again.\n\nMy characters have waited long enough whilst I polished their interface. Updates will be slower until I reach 60, though anything broken still gets fixed quickly.",
 }
 
 local PAD = Stoa.space.xl
