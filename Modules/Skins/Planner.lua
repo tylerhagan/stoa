@@ -58,7 +58,7 @@ function Planner:NewPlan(name, order)
 		n = n + 1
 		pick = base .. " " .. n
 	end
-	local plan = { name = pick, order = order or {} }
+	local plan = { name = pick, order = order or self:CurrentOrder() }
 	plans[#plans + 1] = plan
 	self.db.active = plan.name
 	return plan
@@ -195,13 +195,42 @@ end
 -- How the plan stands at a level: ranks per talent, the pick index each
 -- talent was last raised at, and points per tree.
 local function tally(plan, upTo)
-	local ranks, at = {}, {}
+	local ranks, at, levels = {}, {}, {}
 	for i, pick in ipairs(plan and plan.order or {}) do
 		if i > upTo then break end
 		ranks[pick.n] = (ranks[pick.n] or 0) + 1
-		at[pick.n] = i
+		at[pick.n] = at[pick.n] or i
+		levels[pick.n] = levels[pick.n] or {}
+		table.insert(levels[pick.n], FIRST_LEVEL - 1 + i)
 	end
-	return ranks, at
+	return ranks, at, levels
+end
+
+-- The talents you have now, as a plan's opening points: row by row, top
+-- first, so every point is legal where it sits. The game doesn't keep the
+-- order you took them in, so this is an order that works, not your history.
+function Planner:CurrentOrder()
+	local talents = talentsFrame()
+	local layout = talents and self:Layout(talents) or {}
+	local spots = {}
+	for nodeID, spot in pairs(layout) do
+		local info = nodeInfo(talents, nodeID)
+		local have = info and (info.ranksPurchased or info.currentRank or info.activeRank) or 0
+		if have > 0 then
+			local entry = info.entryIDs and #info.entryIDs > 1 and (info.activeEntry and info.activeEntry.entryID or info.entryIDs[1]) or nil
+			spots[#spots + 1] = { n = nodeID, e = entry, have = have, row = spot.row, tree = spot.tree, x = select(1, spot.button:GetCenter()) or 0 }
+		end
+	end
+	table.sort(spots, function(a, b)
+		if a.row ~= b.row then return a.row < b.row end
+		if a.tree ~= b.tree then return a.tree < b.tree end
+		return a.x < b.x
+	end)
+	local order = {}
+	for _, spot in ipairs(spots) do
+		for _ = 1, spot.have do order[#order + 1] = { n = spot.n, e = spot.e } end
+	end
+	return order
 end
 
 -- Whether a point can go here next: room in the talent, and enough points
@@ -267,7 +296,8 @@ local function newMark(talents, button)
 	veil:Hide()
 	local tag = CreateFrame("Frame", nil, mark)
 	tag:SetSize(22, 15)
-	tag:SetPoint("BOTTOMRIGHT", 6, -5)
+	-- Top left: the game's own rank count sits bottom right.
+	tag:SetPoint("TOPLEFT", -6, 5)
 	local fill = UI.pillFill(tag, 0)
 	fill:SetVertexColor(0, 0, 0, 0.85)
 	local number = UI.text(tag, "sans", Stoa.typeSize.caption, "accent")
@@ -291,7 +321,12 @@ local function newMark(talents, button)
 		local spell = own.nodeID and nodeSpell(talents, own.nodeID)
 		GameTooltip:SetOwner(own, "ANCHOR_RIGHT")
 		if spell then GameTooltip:SetSpellByID(spell) else GameTooltip:AddLine(nodeName(talents, own.nodeID)) end
-		GameTooltip:AddLine("Click to plan a point here; right-click to take one off.", 0.8, 0.8, 0.8, true)
+		if own.levels and own.levels ~= "" then
+			GameTooltip:AddLine("Planned at level " .. own.levels, Stoa:Color("accent"))
+		end
+		if Planner.planning then
+			GameTooltip:AddLine("Click to plan a point here; right-click to take one off.", 0.8, 0.8, 0.8, true)
+		end
 		GameTooltip:Show()
 	end)
 	mark:SetScript("OnLeave", GameTooltip_Hide)
@@ -325,7 +360,7 @@ function Planner:PaintMarks()
 	self.marks = self.marks or {}
 	local plan = self:Active()
 	local upTo = (self.level or MAX_LEVEL) - FIRST_LEVEL + 1
-	local ranks, at = tally(plan, math.max(0, upTo))
+	local ranks, at, levels = tally(plan, math.max(0, upTo))
 	local nextIndex, nextPick = self:Next(talents, plan)
 	for _, mark in pairs(self.marks) do mark:Hide() end
 	for nodeID, spot in pairs(layout) do
@@ -335,6 +370,7 @@ function Planner:PaintMarks()
 			self.marks[spot.button] = mark
 		end
 		mark.nodeID = nodeID
+		mark.levels = levels[nodeID] and table.concat(levels[nodeID], ", ") or nil
 		mark:EnableMouse(self.planning and true or false)
 		local planned = ranks[nodeID]
 		local isNext = nextPick and nextPick.n == nodeID
@@ -424,9 +460,14 @@ function Planner:BuildPanel()
 		self:SetPlanning(true)
 	end)
 	new:SetPoint("LEFT", plan, "RIGHT", 16, 0)
-	local clear = wordButton(panel, "Clear", function()
+	local clear = wordButton(panel, "Reset", function()
 		local active = self:Active()
-		if active then wipe(active.order) end
+		if active then
+			wipe(active.order)
+			for _, pick in ipairs(self:CurrentOrder()) do active.order[#active.order + 1] = pick end
+			self.level = nil
+			self:Say("Back to the talents you have now.")
+		end
 		self:Refresh()
 	end)
 	clear:SetPoint("LEFT", new, "RIGHT", 16, 0)
@@ -490,7 +531,7 @@ function Planner:BuildPanel()
 		row:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
 		local level = UI.text(row, "sans", Stoa.typeSize.body, "muted", "LEFT")
 		level:SetPoint("LEFT")
-		level:SetWidth(28)
+		level:SetWidth(34)
 		local what = UI.text(row, "sans", Stoa.typeSize.body, "text", "LEFT")
 		what:SetPoint("LEFT", level, "RIGHT", 6, 0)
 		what:SetPoint("RIGHT")
@@ -586,7 +627,8 @@ function Planner:FillList()
 			shown = shown + 1
 			local was = row.pick
 			row.pick = pick
-			row.level:SetText(tostring(FIRST_LEVEL - 1 + index))
+			local at = FIRST_LEVEL - 1 + index
+			row.level:SetText(at <= (Stoa:PlainNumber(UnitLevel("player")) or 0) and "Now" or tostring(at))
 			row.level:SetTextColor(Stoa:Color(i == 1 and "accent" or "muted"))
 			row.what:SetText(nodeName(talents, pick.n, pick.e))
 			row.what:SetTextColor(Stoa:Color(within and "text" or "muted"))
@@ -629,8 +671,8 @@ function Planner:Refresh()
 	panel.plan:SetWidth((panel.plan.text:GetStringWidth() or 30) + 2)
 	if not self.level then
 		local level = Stoa:PlainNumber(UnitLevel("player")) or FIRST_LEVEL
-		self.level = math.max(FIRST_LEVEL, math.min(MAX_LEVEL, plan and (FIRST_LEVEL - 1 + #plan.order) or level))
-		if self.level < FIRST_LEVEL then self.level = MAX_LEVEL end
+		-- Open on today's build; planning moves the slider along as the plan grows.
+		self.level = math.max(FIRST_LEVEL, math.min(MAX_LEVEL, level))
 	end
 	self.painting = true
 	panel.slider:SetValue(self.level)
