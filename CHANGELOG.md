@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.2.0
 
+- Console medallion: the shield and your class mark sit in the Halo's order, shield on the left, mark (Inner Fire's flame and the others) on the right.
 - Spellbook list, redone: two-line rows (name, then rank, cost and cast time), Next at and Train now as pills, a count beside each school, passives last, and STOA's own school words and search across the top in List view (Blizzard's fade out under them and come back for Pages). The priest's Shadow Magic reads Shadow. Pages view headings lose the parchment smudge and red divider.
 - Console: faint gold dividers with a small diamond between chat, At a glance, the action bars and the pages, with a switch in Settings > Console.
 - Talents: more room between each tree's name, its bar and the next-row line, and the Primary, search and Unspent row sits a little lower.

@@ -882,15 +882,18 @@ function Console:PlaceCrest()
 	-- nudged by half of it to sit centred.
 	local drop = math.max(2, math.floor(size * 0.1 + 0.5))
 	local nudge = math.floor(drop / 2 + 0.5)
+	-- With the art they line up from the right, so the class mark comes
+	-- first: shield on the left, mark on the right, as on the Halo.
+	local order = { mark, shield }
 	local shown = {}
-	for _, gauge in ipairs({ shield, mark }) do
+	for _, gauge in ipairs(order) do
 		if gauge then
 			gauge:ClearAllPoints()
 			if gauge:IsShown() then shown[#shown + 1] = gauge end
 		end
 	end
 	-- Hidden ones still need a place for when they show.
-	for _, gauge in ipairs({ shield, mark }) do
+	for _, gauge in ipairs(order) do
 		if gauge and not gauge:IsShown() then shown[#shown + 1] = gauge end
 	end
 	if self:Art() then
