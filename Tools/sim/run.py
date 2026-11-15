@@ -882,31 +882,21 @@ do
 		session.card:Hide()
 	end
 end
--- The dungeon companion: bosses from the guide, quests under the dungeon's
--- header, a boss ticked off when it falls, the card and the slim line.
+-- The dungeon companion: bosses from STOA's list, quests under the
+-- dungeon's header, a boss ticked off by its kill's name, wings, the
+-- preview command, the card and the slim line.
 do
 	local companion = Stoa.modules.Companion
 	if companion and companion.enabled then
-		local saved = { IsInInstance, GetInstanceInfo, EJ_GetInstanceForMap, EJ_GetEncounterInfoByIndex, EJ_SelectInstance, C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete }
-		local journalFrame = _G.EncounterJournal
-		if journalFrame then journalFrame:Hide() end
+		local saved = { IsInInstance, GetInstanceInfo, C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete }
 		IsInInstance = function() return true, "party" end
-		GetInstanceInfo = function() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end
-		-- No dungeon maps in Forever: the guide's list is walked instead.
-		EJ_GetInstanceForMap = function() return nil end
-		local tier = 1
-		EJ_GetNumTiers = function() return 2 end
-		EJ_GetCurrentTier = function() return tier end
-		EJ_SelectTier = function(t) tier = t end
-		EJ_GetInstanceByIndex = function(i) if tier == 2 and i == 1 then return 63, "x", "", 0, 0, 0, 0, 0, "", 0, 36 end end
-		EJ_SelectInstance = function() end
-		local bosses = { "Rhahk'Zor", "Sneed", "Gilnid" }
-		EJ_GetEncounterInfoByIndex = function(i) if bosses[i] then return bosses[i], "", i, 0, "", 63, 100 + i, 36 end end
+		local where = "The Deadmines"
+		GetInstanceInfo = function() return where, "party", 1, "Normal", 5, 0, false, 36 end
 		local log = { { isHeader = true, title = "Westfall" }, { title = "Elsewhere", questID = 1 }, { isHeader = true, title = "The Deadmines" }, { title = "Red Silk Bandanas", questID = 2 }, { title = "Oh Brother...", questID = 3 } }
 		C_QuestLog.GetNumQuestLogEntries = function() return #log, 2 end
 		C_QuestLog.GetInfo = function(i) return log[i] end
 		C_QuestLog.IsComplete = function(id) return id == 3 end
-		companion.db.run, companion.cache = nil, nil
+		companion.db.run = nil
 		companion.db.view = "card"
 		companion:Refresh()
 		fire("ENCOUNTER_END", 101, "Rhahk'Zor", 1, 5, 1)
@@ -914,18 +904,31 @@ do
 		companion:Refresh()
 		local data = companion.data
 		if not (companion.card and companion.card:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the card didn't show in a dungeon" end
-		if not data or #data.bosses ~= 3 or data.down ~= 1 or not data.nextBoss or data.nextBoss.name ~= "Sneed" then
-			SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: bosses wrong (expected 3, 1 down, Sneed next), got " .. (data and (#data.bosses .. " " .. data.down .. " " .. tostring(data.nextBoss and data.nextBoss.name)) or "no data")
+		if not data or #data.bosses ~= 7 or data.down ~= 1 or not data.nextBoss or data.nextBoss.name ~= "Sneed" then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: bosses wrong (expected 7, 1 down, Sneed next), got " .. (data and (#data.bosses .. " " .. data.down .. " " .. tostring(data.nextBoss and data.nextBoss.name)) or "no data")
 		end
 		if not data or #data.quests ~= 2 or data.questsDone ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: expected the 2 Deadmines quests, 1 done" end
 		if not (Stoa.modules.Top and Stoa.modules.Top.companionHolds) then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the quest list wasn't held for the card" end
-		if tier ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the guide's tier wasn't put back" end
+		-- Wings: every wing until a kill shows which one you're in.
+		where = "Scarlet Monastery"
+		companion.db.run = nil
+		companion:Refresh()
+		local all = companion.data and #companion.data.bosses or 0
+		fire("ENCOUNTER_END", 201, "Arcanist Doan", 1, 5, 1)
+		drain()
+		companion:Refresh()
+		data = companion.data
+		if all ~= 8 or not data or #data.bosses ~= 2 or data.down ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: wings wrong (" .. all .. " then " .. (data and #data.bosses or 0) .. ")" end
 		companion:SetView("line")
 		if not (companion.bar and companion.bar:IsShown()) or companion.card:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the line view didn't replace the card" end
 		companion:SetView("card")
-		IsInInstance, GetInstanceInfo, EJ_GetInstanceForMap, EJ_GetEncounterInfoByIndex, EJ_SelectInstance, C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete = unpack(saved)
+		IsInInstance, GetInstanceInfo, C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete = unpack(saved)
 		companion:Refresh()
 		if companion.card:IsShown() or (Stoa.modules.Top and Stoa.modules.Top.companionHolds) then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: still showing outside the dungeon" end
+		SlashCmdList.STOA("companion stockade")
+		if not (companion.card:IsShown() and companion.data and companion.data.where.name == "The Stockade") then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the preview didn't show The Stockade" end
+		SlashCmdList.STOA("companion off")
+		if companion.card:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the preview didn't end" end
 	end
 end
 -- The target plaque: a medallion with a level badge, docked while it rests

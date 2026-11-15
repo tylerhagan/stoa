@@ -578,7 +578,7 @@ local function build()
 	button("recapNow", "See this session", "Shows the recap card now.", "Show", command("recap"), { cmd = "/stoa recap", words = "session summary recap" })
 	group = "Dungeon companion"
 	local companion = of("Companion")
-	toggle(companion, "enabled", "Dungeon companion", "Inside a five-player dungeon, out of a fight: the bosses (ticked off as they fall), your quests for it and the loot in it that would be an upgrade for you. The quest list folds to its header while it shows; hover the header to open it.", true, { words = "dungeon instance boss loot quests" , change = function() Stoa.modules.Companion:Refresh() end })
+	toggle(companion, "enabled", "Dungeon companion", "Inside a five-player dungeon, out of a fight: the bosses (ticked off as they fall) and your quests for it. /stoa companion and part of a dungeon's name previews it anywhere. The quest list folds to its header while it shows; hover the header to open it.", true, { words = "dungeon instance boss quests preview" , change = function() Stoa.modules.Companion:Refresh() end })
 	choice(companion, "view", "How it shows", "A card where the quest list sits, or one slim line over the console with the bosses as dots and the upgrades on hover. The card's minus and a click on the line switch too.", "card", {
 		{ "card", "Card" }, { "line", "One line" },
 	}, { words = "dungeon companion compact", change = function() Stoa.modules.Companion:Refresh() end })

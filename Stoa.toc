@@ -40,6 +40,7 @@ Core\CooldownManager.lua
 Data\FlightTimes.lua
 Data\TrainerSpells.lua
 Data\EditModeLayout.lua
+Data\Dungeons.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua

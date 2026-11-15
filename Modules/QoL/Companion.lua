@@ -1,13 +1,13 @@
 -- Stoa QoL: the dungeon companion. Inside a five-player dungeon, out of a
 -- fight, a quiet card says where you are in it: the bosses (ticked off as
--- they fall), your quests for it, and the loot in it that would be an
--- upgrade for you. It takes the quest list's place while it shows (the list
+-- they fall) and your quests for it. It takes the quest list's place while it shows (the list
 -- folds to its header, as in a fight) and folds away itself in a fight.
 -- A switch turns it into one slim line over the console instead.
 --
--- Bosses and loot come from the game's own Adventure Guide data, so nothing
--- here needs updating when the game adds or changes a dungeon. Quests are
--- the ones under the dungeon's name in your quest log.
+-- Forever keeps the Adventure Guide closed to addons, so the bosses come
+-- from STOA's own list (Data/Dungeons.lua) and a boss is ticked off by the
+-- name the game gives its kill. Quests are the ones under the dungeon's
+-- name in your quest log.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -22,7 +22,6 @@ local call = Stoa.safe.call
 local WIDTH = 300
 local PAD = 16
 local ROW = 18
-local MAX_LOOT = 3
 -- A run is forgotten when you come back to the dungeon after this long.
 local RUN_GAP = 2 * 3600
 
@@ -37,82 +36,7 @@ function Companion:Where()
 	if not inside or kind ~= "party" then return nil end
 	local name, _, _, _, _, _, _, instanceID = GetInstanceInfo()
 	if not name or Stoa:IsSecret(name) then return nil end
-	local mapID = C_Map and C_Map.GetBestMapForUnit and call(C_Map.GetBestMapForUnit, "player")
-	local lookup = EJ_GetInstanceForMap or (C_EncounterJournal and C_EncounterJournal.GetInstanceForGameMap)
-	local journal = mapID and lookup and plain(call(lookup, mapID))
-	if journal == 0 then journal = nil end
-	if not journal then journal = self:FindInGuide(instanceID, name) end
-	return { name = name, instanceID = instanceID, mapID = mapID, journal = journal }
-end
-
--- Forever's dungeons have no maps of their own, so the guide's dungeon is
--- found by walking its list instead: the same instance id, or the same name.
--- Each tier is looked at in turn and the guide's own tier is put back.
-local found = {}
-function Companion:FindInGuide(instanceID, name)
-	if found[instanceID] ~= nil then return found[instanceID] or nil end
-	if not (EJ_GetInstanceByIndex and EJ_GetNumTiers and EJ_SelectTier and EJ_GetCurrentTier) then return nil end
-	local guide = _G.EncounterJournal
-	if guide and guide.IsShown and guide:IsShown() then return nil end
-	local before = plain(call(EJ_GetCurrentTier))
-	if (not before or before == 0) and C_EncounterJournal and C_EncounterJournal.InitalizeSelectedTier then
-		call(C_EncounterJournal.InitalizeSelectedTier)
-		before = plain(call(EJ_GetCurrentTier))
-	end
-	local hit
-	for tier = 1, plain(call(EJ_GetNumTiers)) or 0 do
-		call(EJ_SelectTier, tier)
-		for i = 1, 200 do
-			local id, title, _, _, _, _, _, _, _, _, mapID = call(EJ_GetInstanceByIndex, i, false)
-			if not id then break end
-			if (mapID and mapID == instanceID) or (type(title) == "string" and title:lower() == name:lower()) then hit = id break end
-		end
-		if hit then break end
-	end
-	if before then call(EJ_SelectTier, before) end
-	found[instanceID] = hit or false
-	return hit
-end
-
-local function guideFreeNow()
-	local guide = _G.EncounterJournal
-	return not (guide and guide.IsShown and guide:IsShown())
-end
-
--- Every dungeon in the guide, as { id, name }, for the preview command:
--- the first whose name holds `part` (any case), and the full list.
-function Companion:SearchGuide(part)
-	if not guideFreeNow() then return nil, {}, "its window is open; close it and try again" end
-	local missing = {}
-	for _, fn in ipairs({ "EJ_GetInstanceByIndex", "EJ_GetNumTiers", "EJ_SelectTier", "EJ_GetCurrentTier" }) do
-		if type(_G[fn]) ~= "function" then missing[#missing + 1] = fn end
-	end
-	if #missing > 0 then return nil, {}, "the game doesn't offer " .. table.concat(missing, ", ") end
-	local rules = _G.GameRulesUtil
-	if rules and rules.EJIsDisabled and call(rules.EJIsDisabled) then return nil, {}, "the game has it switched off" end
-	part = (part or ""):lower()
-	local before = plain(call(EJ_GetCurrentTier))
-	-- The guide picks its tier when it first opens; before that there may be none.
-	if (not before or before == 0) and C_EncounterJournal and C_EncounterJournal.InitalizeSelectedTier then
-		call(C_EncounterJournal.InitalizeSelectedTier)
-		before = plain(call(EJ_GetCurrentTier))
-	end
-	local tiers = plain(call(EJ_GetNumTiers)) or 0
-	local hit, names = nil, {}
-	for tier = 1, tiers do
-		call(EJ_SelectTier, tier)
-		for i = 1, 200 do
-			local id, title = call(EJ_GetInstanceByIndex, i, false)
-			if not id then break end
-			if type(title) == "string" then
-				names[#names + 1] = title
-				if not hit and part ~= "" and title:lower():find(part, 1, true) then hit = { id = id, name = title } end
-			end
-		end
-	end
-	if before and before > 0 then call(EJ_SelectTier, before) end
-	if #names == 0 then return nil, names, ("it listed no dungeons (%d tiers, tier %s)"):format(tiers, tostring(before)) end
-	return hit, names
+	return { name = name, instanceID = instanceID, dungeon = Stoa.Dungeons and Stoa.Dungeons.find(name) }
 end
 
 -- The run: which bosses fell, kept over a /reload.
@@ -127,29 +51,37 @@ function Companion:Run(where)
 	return run
 end
 
--- The Adventure Guide is read only while its window is closed: choosing a
--- dungeon there would change the page someone is reading.
-local function guideFree()
-	local guide = _G.EncounterJournal
-	return not (guide and guide.IsShown and guide:IsShown())
-end
-
--- The game's own bosses for the dungeon, in the guide's order.
-function Companion:Bosses(where)
+-- The bosses for the dungeon, as { name, wing }: one wing's once a kill
+-- shows which wing you are in, otherwise every wing's.
+function Companion:Bosses(where, run)
+	local dungeon = where.dungeon
 	local list = {}
-	if not where.journal or not guideFree() then return list end
-	if EJ_GetEncounterInfoByIndex then
-		if EJ_SelectInstance then call(EJ_SelectInstance, where.journal) end
-		for i = 1, 20 do
-			local name, _, _, _, _, _, dungeonEncounterID = call(EJ_GetEncounterInfoByIndex, i, where.journal)
-			if not name then break end
-			list[#list + 1] = { name = name, id = dungeonEncounterID }
+	if not dungeon then return list end
+	if not dungeon.wings then
+		for _, name in ipairs(dungeon.bosses) do list[#list + 1] = { name = name } end
+		return list
+	end
+	for _, wing in ipairs(dungeon.wings) do
+		if not run.wing or run.wing == wing.name then
+			for _, name in ipairs(wing.bosses) do list[#list + 1] = { name = name, wing = wing.name } end
 		end
 	end
 	return list
 end
 
--- The quests under the dungeon's name in your log.
+-- A boss fell: ticked off by name, and its wing becomes the one you're in.
+function Companion:Killed(name)
+	local where = self:Where()
+	if not where or type(name) ~= "string" then return end
+	local run = self:Run(where)
+	run.killed[name:lower()] = true
+	for _, wing in ipairs(where.dungeon and where.dungeon.wings or {}) do
+		for _, boss in ipairs(wing.bosses) do
+			if boss:lower() == name:lower() then run.wing = wing.name end
+		end
+	end
+end
+
 function Companion:Quests(where)
 	local list = {}
 	local log = C_QuestLog
@@ -180,52 +112,15 @@ function Companion:Quests(where)
 	return list
 end
 
--- Loot in the dungeon that would be an upgrade for you, best first.
-function Companion:Loot(where)
-	local list = {}
-	local get = C_EncounterJournal and C_EncounterJournal.GetLootInfoByIndex
-	if not (where.journal and get and EJ_GetNumLoot and EJ_SelectInstance) or not guideFree() then return list end
-	if EJ_SelectInstance then call(EJ_SelectInstance, where.journal) end
-	if EJ_SetLootFilter then
-		local _, _, classID = UnitClass("player")
-		call(EJ_SetLootFilter, classID or 0, 0)
-	end
-	for i = 1, plain(call(EJ_GetNumLoot)) or 0 do
-		local item = call(get, i)
-		local link = type(item) == "table" and item.link
-		if link and not Stoa:IsSecret(link) then
-			local gain = Stoa.Items.upgrade(link)
-			if gain and gain > 0 then
-				list[#list + 1] = { link = link, gain = gain }
-			end
-		end
-	end
-	-- The guide's own filter goes back to how it was for when you open it.
-	if EJ_ResetLootFilter then call(EJ_ResetLootFilter) end
-	table.sort(list, function(a, b) return a.gain > b.gain end)
-	while #list > MAX_LOOT do table.remove(list) end
-	return list
-end
-
 function Companion:Gather()
 	local where = self:Where()
 	if not where then return nil end
 	local run = self:Run(where)
-	-- The guide's lists are read once per dungeon; the loot again when your
-	-- gear changes or the game sends more item data.
-	local cache = self.cache
-	if not cache or cache.journal ~= where.journal or cache.name ~= where.name then
-		cache = { journal = where.journal, name = where.name }
-		self.cache = cache
-	end
-	if not cache.bosses or #cache.bosses == 0 then cache.bosses = self:Bosses(where) end
-	if not cache.loot then cache.loot = self:Loot(where) end
-	local bosses = {}
-	for i, boss in ipairs(cache.bosses) do bosses[i] = { name = boss.name, id = boss.id } end
+	local bosses = self:Bosses(where, run)
 	local down = 0
 	local nextBoss
 	for _, boss in ipairs(bosses) do
-		boss.dead = boss.id and run.killed[boss.id] or false
+		boss.dead = run.killed[boss.name:lower()] or false
 		if boss.dead then down = down + 1 elseif not nextBoss then nextBoss = boss end
 	end
 	if nextBoss then nextBoss.next = true end
@@ -235,10 +130,9 @@ function Companion:Gather()
 	local map = Stoa.modules.Map
 	return {
 		where = where,
-		levels = map and map.Levels and map:Levels(where.name, where.mapID),
+		levels = map and map.Levels and map:Levels(where.name),
 		bosses = bosses, down = down, nextBoss = nextBoss,
 		quests = quests, questsDone = questsDone,
-		loot = cache.loot,
 	}
 end
 
@@ -367,22 +261,18 @@ function Companion:FillCard(data)
 		y = y - ROW
 	end
 
-	if #data.bosses > 0 then
-		head("Bosses")
-		for _, boss in ipairs(data.bosses) do
-			row(boss.name, boss.dead and "done" or (boss.next and "next") or "", boss.dead and "done" or (boss.next and "next"))
+	local wing
+	for i, boss in ipairs(data.bosses) do
+		if i == 1 or boss.wing ~= wing then
+			wing = boss.wing
+			head(wing and (wing .. " bosses") or "Bosses")
 		end
+		row(boss.name, boss.dead and "done" or (boss.next and "next") or "", boss.dead and "done" or (boss.next and "next"))
 	end
 	if #data.quests > 0 then
 		head("Your quests here")
 		for _, quest in ipairs(data.quests) do
 			row(quest.name, quest.done and "done" or quest.progress, quest.done and "done")
-		end
-	end
-	if #data.loot > 0 then
-		head("Worth a roll for you")
-		for _, item in ipairs(data.loot) do
-			row(item.link, ("+%d%%"):format(math.floor(item.gain + 0.5)))
 		end
 	end
 	card:SetHeight(-y + PAD - 4)
@@ -407,8 +297,9 @@ function Companion:BuildLine()
 		local data = self.data
 		GameTooltip:SetOwner(button, "ANCHOR_TOP")
 		GameTooltip:SetText(data and data.where.name or "Dungeon companion")
-		for _, item in ipairs(data and data.loot or {}) do
-			GameTooltip:AddDoubleLine(item.link, ("+%d%%"):format(math.floor(item.gain + 0.5)), 1, 1, 1, 0.6, 0.6, 0.6)
+		for _, boss in ipairs(data and data.bosses or {}) do
+			local r, g, b = Stoa:Color(boss.next and "accent" or (boss.dead and "muted" or "text"))
+			GameTooltip:AddLine(boss.name, r, g, b)
 		end
 		GameTooltip:AddLine("Click for the full card.", 0.6, 0.6, 0.6)
 		GameTooltip:Show()
@@ -455,7 +346,6 @@ function Companion:FillLine(data)
 	local bits = {}
 	if data.nextBoss then bits[#bits + 1] = "Next " .. Stoa:Hex("accent") .. data.nextBoss.name .. "|r" end
 	if #data.quests > 0 then bits[#bits + 1] = ("Quests %d / %d"):format(data.questsDone, #data.quests) end
-	if #data.loot > 0 then bits[#bits + 1] = #data.loot == 1 and "1 upgrade here" or (#data.loot .. " upgrades here") end
 	bar.rest:ClearAllPoints()
 	bar.rest:SetPoint("LEFT", bar, "LEFT", x + (#data.bosses > 0 and 10 or 0), 0)
 	bar.rest:SetText(UI.join(bits, true))
@@ -526,26 +416,18 @@ function Companion:OnEnable()
 	end)
 	Stoa:On("ZONE_CHANGED_NEW_AREA", soon)
 	Stoa:On("QUEST_LOG_UPDATE", function() if self.data then soon() end end)
-	local function freshLoot()
-		if self.cache then self.cache.loot = nil end
-		if self.data then soon() end
-	end
-	Stoa:On("PLAYER_EQUIPMENT_CHANGED", freshLoot)
-	Stoa:On("EJ_LOOT_DATA_RECIEVED", freshLoot)
 	Stoa:On("PLAYER_REGEN_DISABLED", soon)
 	Stoa:On("PLAYER_REGEN_ENABLED", soon)
-	Stoa:On("ENCOUNTER_END", function(encounterID, _, _, _, success)
-		local id = plain(encounterID)
-		if not id or plain(success) ~= 1 then return end
-		local where = self:Where()
-		if where then self:Run(where).killed[id] = true end
+	Stoa:On("ENCOUNTER_END", function(_, encounterName, _, _, success)
+		if plain(success) ~= 1 or Stoa:IsSecret(encounterName) then return end
+		self:Killed(encounterName)
 		soon()
 	end)
 end
 
 -- /stoa companion shows it now in any dungeon you're in, or says why not.
--- /stoa companion <dungeon> previews that dungeon's card anywhere (its
--- bosses, your quests for it and its loot); /stoa companion off ends it.
+-- /stoa companion <part of a name> previews that dungeon's card anywhere;
+-- /stoa companion off ends it.
 Stoa.commands.companion = function(rest)
 	rest = rest and strtrim(rest) or ""
 	if rest:lower() == "off" then
@@ -554,18 +436,16 @@ Stoa.commands.companion = function(rest)
 		return
 	end
 	if rest ~= "" then
-		local hit, names, why = Companion:SearchGuide(rest)
-		if not hit then
-			if #names == 0 then
-				Stoa:Print("Couldn't read the Adventure Guide: " .. (why or "no reason given") .. ".")
-			else
-				Stoa:Print(("No dungeon matches %q. The guide has: %s."):format(rest, table.concat(names, ", ")))
-			end
+		local dungeon = Stoa.Dungeons and Stoa.Dungeons.search(rest)
+		if not dungeon then
+			local names = {}
+			for _, known in ipairs(Stoa.Dungeons or {}) do names[#names + 1] = known.name end
+			Stoa:Print(("No dungeon matches %q. STOA knows: %s."):format(rest, table.concat(names, ", ")))
 			return
 		end
-		Companion.preview = { name = hit.name, instanceID = "preview:" .. hit.id, journal = hit.id }
+		Companion.preview = { name = dungeon.name, instanceID = "preview:" .. dungeon.name, dungeon = dungeon }
 		Companion:Refresh()
-		Stoa:Print("Previewing the companion for " .. hit.name .. ". /stoa companion off ends it.")
+		Stoa:Print("Previewing the companion for " .. dungeon.name .. ". /stoa companion off ends it.")
 		return
 	end
 	if not Companion:Where() then
