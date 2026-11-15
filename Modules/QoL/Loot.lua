@@ -2,7 +2,8 @@
 -- you looted sits above the chat out of combat and fades after a few
 -- seconds. Behind it Stoa keeps this session's takings: gold gained from
 -- looting and selling, per hour, and the vendor value of what you looted.
--- Both can be picked as lines in the tally.
+-- Both can be picked as lines in the tally. Like the session recap, the
+-- totals run from login to logout and survive a /reload.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -20,11 +21,13 @@ local MIN_SECONDS_FOR_RATE = 60
 
 local call = Stoa.safe.call
 
--- Session totals.
+-- Session totals, kept in the character's saved settings so a /reload
+-- carries on counting. `start` is in real time (time()), which a reload
+-- doesn't reset.
 local session = { gold = 0, value = 0, start = nil }
 
 function Loot:ResetSession()
-	session.gold, session.value, session.start = 0, 0, GetTime()
+	session.gold, session.value, session.start = 0, 0, time()
 	self.entries = {}
 	if self.ClearRate then self:ClearRate() end
 	self:Render()
@@ -163,7 +166,7 @@ end
 
 local function perHour()
 	if not session.start then return nil end
-	local seconds = GetTime() - session.start
+	local seconds = time() - session.start
 	if seconds < MIN_SECONDS_FOR_RATE then return nil end
 	return session.gold / (seconds / 3600)
 end
@@ -190,7 +193,20 @@ function Loot:Totals() return session.gold, session.value end
 
 function Loot:OnEnable()
 	self.entries = {}
-	session.start = GetTime()
+	-- Carry on with the saved session; a fresh login starts a new one below.
+	if type(self.db.session) == "table" and tonumber(self.db.session.start) then
+		session = self.db.session
+		session.gold, session.value = tonumber(session.gold) or 0, tonumber(session.value) or 0
+	else
+		session.start = time()
+		self.db.session = session
+	end
+	Stoa:On("PLAYER_ENTERING_WORLD", function(isLogin)
+		if isLogin then
+			self:ResetSession()
+			self.db.session = session
+		end
+	end)
 	self.money = Stoa:PlainNumber(call(GetMoney))
 	self:Build()
 	Stoa:On("CHAT_MSG_LOOT", function(text) self:OnLoot(text) end)
