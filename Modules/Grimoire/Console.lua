@@ -735,7 +735,7 @@ function Console:BuildFellowship(frame, space)
 	local note = CreateFrame("Button", nil, readyCol)
 	note:SetSize(COLUMN_WIDTH, 13)
 	note:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -3)
-	note:RegisterForClicks("RightButtonUp")
+	note:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	local mark = note:CreateTexture(nil, "ARTWORK")
 	mark:SetSize(5, 5)
 	mark:SetPoint("LEFT", 1, 0)
@@ -744,10 +744,25 @@ function Console:BuildFellowship(frame, space)
 	words:SetPoint("LEFT", mark, "RIGHT", 6, 0)
 	words:SetWordWrap(false)
 	note.mark, note.words = mark, words
-	note:SetScript("OnEnter", function(own) self:ShowJobs(own) end)
+	note:SetScript("OnEnter", function(own)
+		if own.tip then Stoa.modules.Tips:ShowTooltip(own, own.tip) else self:ShowJobs(own) end
+	end)
 	note:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	-- Right-click: the new spells are seen, stop listing them.
-	note:SetScript("OnClick", function(own)
+	-- Right-click: the new spells are seen, stop listing them. On a tip,
+	-- click opens where it lives and right-click marks it as got.
+	note:SetScript("OnClick", function(own, mouse)
+		local tip = own.tip
+		if tip then
+			GameTooltip:Hide()
+			if mouse == "RightButton" then
+				Stoa.modules.Tips:GotIt(tip)
+				self:UpdateJobs()
+			else
+				Stoa.modules.Tips:Open(tip)
+			end
+			return
+		end
+		if mouse ~= "RightButton" then return end
 		Stoa.char.newSpells = nil
 		self:UpdateJobs()
 		if own:IsMouseOver() and own:IsShown() then self:ShowJobs(own) end
@@ -1338,23 +1353,42 @@ function Console:Jobs()
 	return list
 end
 
+-- Shows the Ready line with a quick fade (one animation, made once).
+function Console:ShowNote(note)
+	if note:IsShown() then return end
+	note:Show()
+	if UI.fadeIn then
+		note.fade = note.fade or UI.fadeIn(note)
+		note.fade:Play()
+	end
+end
+
 function Console:UpdateJobs()
 	local note = self.roleNote
 	if not (note and note.words) then return end
 	if InCombatLockdown() then note:Hide() return end
 	local list = self:Jobs()
 	self.jobList = list
-	if #list == 0 then note:Hide() return end
+	note.tip = nil
+	if #list == 0 then
+		-- Nothing to do: a tip's few words instead, muted, the rest on hover.
+		local tips = Stoa.modules.Tips
+		local tip = tips and tips.Current and tips:Current()
+		if not tip then note:Hide() return end
+		note.tip = tip
+		note.words:SetText(tip[2])
+		note.words:SetTextColor(Stoa:Color("muted"))
+		note.mark:SetColorTexture(Stoa:Color("muted"))
+		self:ShowNote(note)
+		return
+	end
 	local warn = false
 	for _, job in ipairs(list) do warn = warn or job[3] end
 	local tone = warn and "danger" or "accent"
 	note.words:SetText(#list == 1 and list[1][1] or ("%d small jobs"):format(#list))
 	note.words:SetTextColor(Stoa:Color(tone))
 	note.mark:SetColorTexture(Stoa:Color(tone))
-	if not note:IsShown() then
-		note:Show()
-		if UI.fadeIn then UI.fadeIn(note) end
-	end
+	self:ShowNote(note)
 end
 
 function Console:ShowJobs(owner)

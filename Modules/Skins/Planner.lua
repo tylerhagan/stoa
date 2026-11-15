@@ -612,7 +612,10 @@ end
 function Planner:Say(words)
 	if not self.panel then return end
 	self.panel.note:SetText(words or "")
-	if words then UI.fadeIn(self.panel.note, UI.MOTION.quick):Play() end
+	if words then
+		self.panel.noteFade = self.panel.noteFade or UI.fadeIn(self.panel.note, UI.MOTION.quick)
+		self.panel.noteFade:Play()
+	end
 end
 
 function Planner:SetPlanning(on)
