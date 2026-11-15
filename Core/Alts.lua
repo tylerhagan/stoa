@@ -1072,9 +1072,20 @@ local function dress(model, entry)
 end
 
 -- An item link's name without brackets, in its quality colour.
+-- The quality comes from the item itself: newer links carry a named
+-- colour (|cnIQ3:) instead of hex, so the link's own prefix can't be trusted.
 local function linkName(link)
-	local colour = link:match("^(|c%x%x%x%x%x%x%x%x)")
 	local name = link:match("%[(.-)%]") or link
+	name = name:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|cn[^:]*:", ""):gsub("|r", "")
+	local id = tonumber(link:match("item:(%d+)"))
+	local quality = id and C_Item and C_Item.GetItemQualityByID and C_Item.GetItemQualityByID(id)
+	if not quality and GetItemInfo then quality = select(3, GetItemInfo(link)) end
+	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+	if color and color.hex then return color.hex .. name .. "|r" end
+	if color and color.r then
+		return ("|cff%02x%02x%02x"):format(color.r * 255, color.g * 255, color.b * 255) .. name .. "|r"
+	end
+	local colour = link:match("^(|c%x%x%x%x%x%x%x%x)")
 	return (colour or "") .. name .. (colour and "|r" or "")
 end
 
