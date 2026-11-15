@@ -779,17 +779,22 @@ end
 function Window:Nav()
 	for _, button in ipairs(self.navButtons) do
 		local chosen = not query and button.id == current
+		-- The lift first: it's a white plate until tinted, so nothing that
+		-- follows (the mark's motion) may leave it untinted.
+		colour(button.lift, "text", 0.06)
+		button.lift:SetShown(chosen)
 		colour(button.text, chosen and "accent" or (button:IsMouseOver() and "text" or "muted"))
+		colour(button.mark, "accent")
+		colour(button.count, "muted", 0.7)
 		button.mark:SetShown(chosen)
 		if chosen and not button.wasChosen then
-			button.markIn = button.markIn or UI.growIn(button.mark, "y")
-			button.markIn:Play()
+			button.wasChosen = true
+			pcall(function()
+				button.markIn = button.markIn or UI.growIn(button.mark, "y")
+				button.markIn:Play()
+			end)
 		end
 		button.wasChosen = chosen
-		colour(button.mark, "accent")
-		button.lift:SetShown(chosen)
-		colour(button.lift, "text", 0.06)
-		colour(button.count, "muted", 0.7)
 	end
 end
 
@@ -941,6 +946,8 @@ function Window:Build()
 		button:SetPoint("TOPLEFT", 12, y)
 		button.id = info[1]
 		button.lift = UI.pillFill(button, 0)
+		colour(button.lift, "text", 0.06)
+		button.lift:Hide()
 		button.mark = button:CreateTexture(nil, "ARTWORK")
 		button.mark:SetTexture(UI.WHITE)
 		button.mark:SetSize(2, 16)
