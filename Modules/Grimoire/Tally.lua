@@ -414,7 +414,9 @@ local ENTRIES = {
 	gold = { label = "Gold", group = "Kit", value = money, detail = function(add)
 		local copper = plain(call(GetMoney))
 		if copper and session.money then add("This session", moneyText(copper - session.money)) end
-	end, open = "money" },
+		local alts = Stoa.Alts
+		if alts and alts.totalMoney then add("On all characters", moneyText(alts.totalMoney())) end
+	end, action = "Characters", open = function() if Stoa.Alts then Stoa.Alts:Toggle() end end },
 
 	prof1 = profession("prof1", "Profession"),
 	prof2 = profession("prof2", "Second profession"),

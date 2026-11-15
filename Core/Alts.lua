@@ -235,15 +235,20 @@ function Alts:OnEnable()
 end
 
 -- The Characters window ----------------------------------------------------------
--- One row per character, a Search tab that finds an item on every
--- character, and a side panel for the one you click: its model and gear.
--- Built the first time it opens; nothing runs while it is closed.
+-- A band of account totals, one row per character, a Search tab that finds an
+-- item on every character, and a side panel for the one you click: its model
+-- and gear by group. Built the first time it opens; nothing runs while it is
+-- closed.
 
-local WIDTH, HEIGHT, PAD, HEADER, FOOTER = 820, 560, 20, 48, 40
-local ROWS, ROW_HEIGHT = 10, 42
+local WIDTH, HEIGHT, PAD, HEADER, FOOTER = 840, 600, 20, 48, 40
+local BAND_HEIGHT, BAND_GAP = 58, 10
+local ROWS, ROW_HEIGHT = 7, 54
 local HITS, HIT_HEIGHT = 9, 44
-local SIDE_WIDTH = 300
-local COLUMNS = { { "Character", 0 }, { "Where", 190 }, { "Gold", 370 }, { "Rest", 470 }, { "Lockouts", 580 } }
+local SIDE_WIDTH = 320
+local CREST = 34
+-- Columns: x from the row's left edge.
+local COLUMNS = { { "Character", 0 }, { "Where", 270 }, { "Gold", 470 }, { "Status", 590 } }
+local LIST_TOP = HEADER + 14 + BAND_HEIGHT + 20
 
 local function money(copper)
 	copper = copper or 0
@@ -255,23 +260,27 @@ end
 local function ago(seen)
 	if not seen then return "" end
 	local s = time() - seen
-	if s < 3600 then return "Now" end
-	if s < 86400 then return math.floor(s / 3600) .. "h ago" end
-	return math.floor(s / 86400) .. "d ago"
+	if s < 3600 then return "Seen just now" end
+	if s < 86400 then return "Seen " .. math.floor(s / 3600) .. "h ago" end
+	return "Seen " .. math.floor(s / 86400) .. "d ago"
 end
 
 -- Rest as a share of a level; it fills while logged out in an inn, so the
 -- page adds what the hours away have earned (5% each 8 hours, up to 150%).
-local function restText(entry)
-	if not entry.xpMax or entry.xpMax <= 0 then return "" end
+local function restShare(entry)
+	if not entry.xpMax or entry.xpMax <= 0 then return 0 end
 	local rested = entry.rested or 0
 	if entry.seen then
 		rested = rested + entry.xpMax * 0.05 * ((time() - entry.seen) / 28800)
 	end
-	rested = math.min(rested, entry.xpMax * 1.5)
-	if rested <= 0 then return "" end
-	if rested >= entry.xpMax * 1.5 then return "Fully rested" end
-	return math.floor(rested / entry.xpMax * 100 + 0.5) .. "% rested"
+	return math.min(rested, entry.xpMax * 1.5) / entry.xpMax
+end
+
+local function restText(entry)
+	local share = restShare(entry)
+	if share <= 0 then return "" end
+	if share >= 1.5 then return "Fully rested" end
+	return math.floor(share * 100 + 0.5) .. "% rested"
 end
 
 local function keyOf(entry)
@@ -288,13 +297,14 @@ local function className(entry)
 	return names[entry.class or ""] or ""
 end
 
-local function paintName(fs, entry)
+local function classColour(entry)
 	local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class or ""]
-	if color and Stoa.db.vision == "Standard" then
-		fs:SetTextColor(color.r, color.g, color.b)
-	else
-		fs:SetTextColor(Stoa:Color("text"))
-	end
+	if color and Stoa.db.vision == "Standard" then return color.r, color.g, color.b end
+	return Stoa:Color("text")
+end
+
+local function paintName(fs, entry)
+	fs:SetTextColor(classColour(entry))
 end
 
 local function liveLocks(entry)
@@ -305,11 +315,39 @@ local function liveLocks(entry)
 	return out
 end
 
+-- The class's round crest, from the game's class icon sheet.
+local function crest(parent, size)
+	local holder = CreateFrame("Frame", nil, parent)
+	holder:SetSize(size, size)
+	local icon = holder:CreateTexture(nil, "ARTWORK")
+	icon:SetAllPoints()
+	if icon.SetMask then pcall(icon.SetMask, icon, "Interface\\CharacterFrame\\TempPortraitAlphaMask") end
+	local ring = holder:CreateTexture(nil, "BACKGROUND")
+	ring:SetPoint("TOPLEFT", -2, 2)
+	ring:SetPoint("BOTTOMRIGHT", 2, -2)
+	ring:SetTexture(UI.WHITE)
+	if ring.SetMask then pcall(ring.SetMask, ring, "Interface\\CharacterFrame\\TempPortraitAlphaMask") end
+	holder.icon, holder.ring = icon, ring
+	function holder:Set(entry)
+		local coords = CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[entry.class or ""]
+		if coords then
+			icon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
+			icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+		else
+			icon:SetTexture(134400)
+			icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		end
+		local r, g, b = classColour(entry)
+		ring:SetVertexColor(r, g, b, 0.85)
+	end
+	return holder
+end
+
 -- Motion -------------------------------------------------------------------------
 -- Small eased moves from the shared helpers in Core/Widgets.lua (animation
--- groups, no per-frame addon code): a window rises in, the side panel slides out from the
--- window's edge, hover lifts fade, the tab mark grows from its middle and
--- search results arrive one after another.
+-- groups, no per-frame addon code): a window rises in, the side panel slides
+-- out from the window's edge, hover lifts fade, the tab mark grows from its
+-- middle, rows and search results arrive one after another.
 
 local intro, fadeIn = UI.intro, UI.fadeIn
 
@@ -324,30 +362,63 @@ local function lift(row, on)
 	end
 end
 
+local function hoverRow(row)
+	local liftTex = row:CreateTexture(nil, "BACKGROUND", nil, 2)
+	liftTex:SetTexture(UI.WHITE)
+	liftTex:SetAllPoints()
+	liftTex:SetVertexColor(1, 1, 1, 0.045)
+	liftTex:Hide()
+	row.lift = liftTex
+	row.liftIn = fadeIn(liftTex, UI.MOTION.quick)
+	local rule = UI.line(row, "hairline")
+	rule:SetPoint("BOTTOMLEFT")
+	rule:SetPoint("BOTTOMRIGHT")
+end
+
 -- Two lines in one cell: a value and a muted caption under it.
 local function cell(row, x, width, token)
 	local top = UI.text(row, "sans", Stoa.typeSize.body, token or "text", "LEFT")
-	top:SetPoint("TOPLEFT", x, -6)
+	top:SetPoint("TOPLEFT", x, -11)
 	top:SetWidth(width)
 	top:SetWordWrap(false)
 	local under = UI.text(row, "sans", Stoa.typeSize.caption, "muted", "LEFT")
-	under:SetPoint("TOPLEFT", top, "BOTTOMLEFT", 0, -3)
+	under:SetPoint("TOPLEFT", top, "BOTTOMLEFT", 0, -5)
 	under:SetWidth(width)
 	under:SetWordWrap(false)
 	return top, under
 end
 
-local function hoverRow(row)
-	local lift = row:CreateTexture(nil, "BACKGROUND", nil, 2)
-	lift:SetTexture(UI.WHITE)
-	lift:SetAllPoints()
-	lift:SetVertexColor(1, 1, 1, 0.04)
-	lift:Hide()
-	row.lift = lift
-	row.liftIn = fadeIn(lift, 0.1)
-	local rule = UI.line(row, "hairline")
-	rule:SetPoint("BOTTOMLEFT")
-	rule:SetPoint("BOTTOMRIGHT")
+-- A thin bar: the level so far, and the rest waiting beyond it.
+local function levelBar(row)
+	local track = row:CreateTexture(nil, "ARTWORK")
+	track:SetTexture(UI.WHITE)
+	track:SetHeight(2)
+	track:SetVertexColor(1, 1, 1, 0.08)
+	local rest = row:CreateTexture(nil, "ARTWORK", nil, 1)
+	rest:SetTexture(UI.WHITE)
+	rest:SetHeight(2)
+	rest:SetPoint("LEFT", track, "LEFT")
+	local fill = row:CreateTexture(nil, "ARTWORK", nil, 2)
+	fill:SetTexture(UI.WHITE)
+	fill:SetHeight(2)
+	fill:SetPoint("LEFT", track, "LEFT")
+	return track, fill, rest
+end
+
+local function setBar(row, entry, width)
+	local share = (entry.xp and entry.xpMax and entry.xpMax > 0) and math.min(entry.xp / entry.xpMax, 1) or nil
+	local shown = share ~= nil and (entry.level or 0) < (MAX_PLAYER_LEVEL or 60)
+	row.track:SetShown(shown)
+	row.fill:SetShown(shown and share > 0)
+	row.restBar:SetShown(shown)
+	if not shown then return end
+	local r, g, b = classColour(entry)
+	row.fill:SetVertexColor(r, g, b, 0.9)
+	row.fill:SetWidth(math.max(1, width * share))
+	local rest = math.min(share + restShare(entry), 1)
+	local ar, ag, ab = Stoa:Color("accent")
+	row.restBar:SetVertexColor(ar, ag, ab, 0.35)
+	row.restBar:SetWidth(math.max(1, width * rest))
 end
 
 function Alts:BuildRow(holder, i)
@@ -356,30 +427,55 @@ function Alts:BuildRow(holder, i)
 	row:SetPoint("TOPLEFT", 0, -(i - 1) * ROW_HEIGHT)
 	row:SetPoint("RIGHT", holder, "RIGHT")
 	hoverRow(row)
-	row.name, row.class = cell(row, COLUMNS[1][2] + 8, 175, "text")
-	Stoa:SetFont(row.name, "serif", Stoa.typeSize.label)
-	row.zone, row.prof = cell(row, COLUMNS[2][2] + 8, 170)
-	row.gold = cell(row, COLUMNS[3][2] + 8, 95, "accent")
-	row.rest = cell(row, COLUMNS[4][2] + 8, 105, "muted")
-	row.locks = cell(row, COLUMNS[5][2] + 8, 120, "muted")
-	row.ilvl, row.seen = cell(row, 0, 70)
-	row.ilvl:ClearAllPoints()
-	row.ilvl:SetPoint("TOPRIGHT", -8, -6)
-	row.ilvl:SetJustifyH("RIGHT")
-	row.seen:SetJustifyH("RIGHT")
-	row.seen:ClearAllPoints()
-	row.seen:SetPoint("TOPRIGHT", row.ilvl, "BOTTOMRIGHT", 0, -3)
+	-- The class's edge, which turns to the accent while picked.
+	local edge = row:CreateTexture(nil, "ARTWORK")
+	edge:SetTexture(UI.WHITE)
+	edge:SetWidth(2)
+	edge:SetPoint("TOPLEFT", 0, -6)
+	edge:SetPoint("BOTTOMLEFT", 0, 6)
+	row.edge = edge
+	row.crest = crest(row, CREST)
+	row.crest:SetPoint("LEFT", 14, 0)
+	row.level = UI.badge(row, "1", "text")
+	row.level:SetPoint("CENTER", row.crest, "BOTTOMRIGHT", -3, 3)
+	row.level:SetFrameLevel(row:GetFrameLevel() + 3)
+	local x = CREST + 26
+	row.name = UI.text(row, "serif", Stoa.typeSize.label, "text", "LEFT")
+	row.name:SetPoint("TOPLEFT", x, -9)
+	row.name:SetWidth(COLUMNS[2][2] - x - 16)
+	row.name:SetWordWrap(false)
+	row.class = UI.text(row, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	row.class:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -4)
+	row.track, row.fill, row.restBar = levelBar(row)
+	row.track:SetPoint("TOPLEFT", row.class, "BOTTOMLEFT", 0, -6)
+	row.track:SetWidth(150)
+	row.zone, row.prof = cell(row, COLUMNS[2][2], 185)
+	row.gold, row.goldUnder = cell(row, COLUMNS[3][2], 110)
+	row.status, row.locks = cell(row, COLUMNS[4][2], 110, "muted")
+	row.ilvl = UI.text(row, "sans", Stoa.typeSize.label, "text", "RIGHT")
+	row.ilvl:SetPoint("TOPRIGHT", -12, -10)
+	row.seen = UI.text(row, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	row.seen:SetPoint("TOPRIGHT", row.ilvl, "BOTTOMRIGHT", 0, -5)
+	row.intro = intro(row, 0, 4, UI.MOTION.quick, (i - 1) * UI.MOTION.stagger)
 	row:SetScript("OnEnter", function()
 		lift(row, true)
-		local locks = row.entry and liveLocks(row.entry) or {}
-		if #locks == 0 then return end
+		local entry = row.entry
+		if not entry then return end
 		GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
-		GameTooltip:AddLine("Saved to", Stoa:Color("text"))
+		GameTooltip:AddLine(entry.name, classColour(entry))
+		local mr, mg, mb = Stoa:Color("muted")
+		local tr, tg, tb = Stoa:Color("text")
+		if entry.professions and #entry.professions > 0 then
+			GameTooltip:AddDoubleLine("Professions", table.concat(entry.professions, ", "), mr, mg, mb, tr, tg, tb)
+		end
+		local locks = liveLocks(entry)
 		for _, lock in ipairs(locks) do
 			local hours = math.floor((lock.ends - time()) / 3600)
 			GameTooltip:AddDoubleLine(lock.name .. (lock.killed and (" " .. lock.killed .. "/" .. (lock.bosses or "?")) or ""),
-				hours >= 24 and (math.floor(hours / 24) .. "d") or (hours .. "h"), 1, 1, 1, 0.7, 0.7, 0.7)
+				"resets in " .. (hours >= 24 and (math.floor(hours / 24) .. "d") or (hours .. "h")), mr, mg, mb, tr, tg, tb)
 		end
+		local ar, ag, ab = Stoa:Color("accent")
+		GameTooltip:AddDoubleLine("Click", Alts.picked == entry and "Close gear" or "Model and gear", mr, mg, mb, ar, ag, ab)
 		GameTooltip:Show()
 	end)
 	row:SetScript("OnLeave", function()
@@ -389,6 +485,7 @@ function Alts:BuildRow(holder, i)
 	row:SetScript("OnClick", function()
 		if not row.entry then return end
 		Alts:Pick(Alts.picked ~= row.entry and row.entry or nil)
+		GameTooltip_Hide()
 	end)
 	return row
 end
@@ -418,10 +515,73 @@ local function tabWord(page, label, onClick)
 	return tab
 end
 
+local function closeButton(parent, onClick)
+	local close = CreateFrame("Button", nil, parent)
+	close:SetSize(24, 24)
+	close:SetPoint("RIGHT", parent, "TOPRIGHT", -12, -HEADER / 2)
+	local cross = UI.glyph(close, "Cross", 14, "muted")
+	cross:SetPoint("CENTER")
+	close:SetScript("OnClick", onClick)
+	close:SetScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("accent")) end)
+	close:SetScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
+	return close
+end
+
+-- The band of account totals over the list.
+function Alts:BuildBand(pane)
+	local band = CreateFrame("Frame", nil, pane)
+	band:SetPoint("TOPLEFT", 0, 0)
+	band:SetPoint("TOPRIGHT", 0, 0)
+	band:SetHeight(BAND_HEIGHT)
+	self.tiles = {}
+	local count = 4
+	local width = (WIDTH - PAD * 2 - BAND_GAP * (count - 1)) / count
+	for i = 1, count do
+		local tile = CreateFrame("Frame", nil, band)
+		tile:SetSize(width, BAND_HEIGHT)
+		tile:SetPoint("TOPLEFT", (i - 1) * (width + BAND_GAP), 0)
+		UI.well(tile, 0)
+		local cap = UI.text(tile, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+		cap:SetPoint("TOPLEFT", 14, -11)
+		local value = UI.text(tile, "sans", Stoa.typeSize.title, "text", "LEFT")
+		value:SetPoint("BOTTOMLEFT", 14, 9)
+		value:SetPoint("RIGHT", -12, 0)
+		value:SetWordWrap(false)
+		tile.cap, tile.value = cap, value
+		tile.intro = intro(tile, 0, 4, UI.MOTION.quick, (i - 1) * UI.MOTION.stagger * 2)
+		self.tiles[i] = tile
+	end
+end
+
+function Alts:FillBand(list)
+	local best, rested = nil, 0
+	for _, entry in ipairs(list) do
+		if not best or (entry.level or 0) > (best.level or 0) then best = entry end
+		if not isMe(entry) and restShare(entry) >= 0.5 then rested = rested + 1 end
+	end
+	local tiles = self.tiles
+	tiles[1].cap:SetText("GOLD ON ALL")
+	tiles[1].value:SetText(Stoa:TintMoney(money(Alts.totalMoney())))
+	tiles[1].value:SetTextColor(Stoa:Color("text"))
+	tiles[2].cap:SetText("CHARACTERS")
+	tiles[2].value:SetText(tostring(#list))
+	tiles[2].value:SetTextColor(Stoa:Color("text"))
+	tiles[3].cap:SetText("HIGHEST")
+	if best then
+		tiles[3].value:SetText(best.name .. Stoa:Hex("muted") .. "  " .. (best.level or "?") .. "|r")
+		tiles[3].value:SetTextColor(classColour(best))
+	else
+		tiles[3].value:SetText("")
+	end
+	tiles[4].cap:SetText("WELL RESTED")
+	tiles[4].value:SetText(rested == 0 and "None yet" or (rested == 1 and "1 character" or (rested .. " characters")))
+	tiles[4].value:SetTextColor(Stoa:Color(rested > 0 and "accent" or "muted"))
+end
+
 function Alts:Build()
 	local page = CreateFrame("Frame", "StoaAltsPage", UIParent)
 	page:SetSize(WIDTH, HEIGHT)
-	page:SetPoint("CENTER", -SIDE_WIDTH / 2, 40)
+	page:SetPoint("CENTER", -SIDE_WIDTH / 2, 30)
 	page:SetFrameStrata("DIALOG")
 	page:EnableMouse(true)
 	page:SetMovable(true)
@@ -433,7 +593,7 @@ function Alts:Build()
 	table.insert(UISpecialFrames, "StoaAltsPage")
 	UI.windowPanel(page, 0.97, { header = HEADER, footer = FOOTER })
 	self.page = page
-	page.intro = intro(page, 0, 8, 0.16)
+	page.intro = intro(page, 0, 8, UI.MOTION.open)
 
 	local title = UI.text(page, "serif", Stoa.typeSize.title, "text", "LEFT")
 	title:SetPoint("LEFT", page, "TOPLEFT", PAD, -HEADER / 2)
@@ -442,32 +602,30 @@ function Alts:Build()
 		list = tabWord(page, "Characters", function() Alts:ShowTab("list") end),
 		search = tabWord(page, "Search", function() Alts:ShowTab("search") end),
 	}
-	self.tabs.list:SetPoint("LEFT", title, "RIGHT", 24, 0)
-	self.tabs.search:SetPoint("LEFT", self.tabs.list, "RIGHT", 16, 0)
-	local close = CreateFrame("Button", nil, page)
-	close:SetSize(24, 24)
-	close:SetPoint("RIGHT", page, "TOPRIGHT", -12, -HEADER / 2)
-	local cross = UI.glyph(close, "Cross", 14, "muted")
-	cross:SetPoint("CENTER")
-	close:SetScript("OnClick", function() page:Hide() end)
-	close:SetScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("accent")) end)
-	close:SetScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
+	self.tabs.list:SetPoint("LEFT", title, "RIGHT", 28, 0)
+	self.tabs.search:SetPoint("LEFT", self.tabs.list, "RIGHT", 18, 0)
+	closeButton(page, function() page:Hide() end)
 
-	-- The list.
+	-- The list: totals, column heads, rows.
 	local list = CreateFrame("Frame", nil, page)
-	list:SetPoint("TOPLEFT", PAD, -HEADER - 10)
+	list:SetPoint("TOPLEFT", PAD, -HEADER - 14)
 	list:SetPoint("BOTTOMRIGHT", -PAD, FOOTER + 6)
 	self.listPane = list
+	self:BuildBand(list)
+	local headY = -(LIST_TOP - HEADER - 14)
 	for _, column in ipairs(COLUMNS) do
 		local head = UI.text(list, "sans", Stoa.typeSize.caption, "accent", "LEFT")
-		head:SetPoint("TOPLEFT", column[2] + 8, 0)
+		head:SetPoint("TOPLEFT", column[2] + (column[2] == 0 and (CREST + 26) or 0), headY)
 		head:SetText(column[1]:upper())
 	end
 	local ilvlHead = UI.text(list, "sans", Stoa.typeSize.caption, "accent", "RIGHT")
-	ilvlHead:SetPoint("TOPRIGHT", -8, 0)
-	ilvlHead:SetText("ILVL")
+	ilvlHead:SetPoint("TOPRIGHT", -12, headY)
+	ilvlHead:SetText("ITEM LEVEL")
+	local headRule = UI.line(list, "hairline")
+	headRule:SetPoint("TOPLEFT", 0, headY - 18)
+	headRule:SetPoint("TOPRIGHT", 0, headY - 18)
 	local rows = CreateFrame("Frame", nil, list)
-	rows:SetPoint("TOPLEFT", 0, -20)
+	rows:SetPoint("TOPLEFT", 0, headY - 20)
 	rows:SetPoint("BOTTOMRIGHT")
 	self.rows = {}
 	for i = 1, ROWS do self.rows[i] = self:BuildRow(rows, i) end
@@ -475,28 +633,30 @@ function Alts:Build()
 	list:EnableMouseWheel(true)
 	list:SetScript("OnMouseWheel", function(_, delta)
 		local maxOffset = math.max(#(self.list or {}) - ROWS, 0)
-		self.offset = math.min(math.max(self.offset - delta * 2, 0), maxOffset)
+		self.offset = math.min(math.max(self.offset - delta, 0), maxOffset)
 		self:Refresh()
 	end)
 	local empty = UI.text(list, "italic", Stoa.typeSize.label, "muted")
-	empty:SetPoint("CENTER")
+	empty:SetPoint("CENTER", 0, -40)
 	empty:SetText("Each character fills in when you play it.")
 	self.empty = empty
 
 	-- The search.
 	self:BuildSearch(page)
 
-	local count = UI.text(page, "sans", Stoa.typeSize.body, "muted", "LEFT")
-	count:SetPoint("LEFT", page, "BOTTOMLEFT", PAD, FOOTER / 2)
-	local total = UI.text(page, "sans", Stoa.typeSize.body, "muted", "RIGHT")
-	total:SetPoint("RIGHT", page, "BOTTOMRIGHT", -PAD, FOOTER / 2)
-	self.count, self.total = count, total
+	local hint = UI.text(page, "sans", Stoa.typeSize.body, "muted", "LEFT")
+	hint:SetPoint("LEFT", page, "BOTTOMLEFT", PAD, FOOTER / 2)
+	local more = UI.text(page, "sans", Stoa.typeSize.body, "muted", "RIGHT")
+	more:SetPoint("RIGHT", page, "BOTTOMRIGHT", -PAD, FOOTER / 2)
+	self.count, self.total = hint, more
 
 	page:SetScript("OnShow", function()
 		self:Note()
 		self:NoteGear()
+		self.arrive = true
 		self:ShowTab(self.tab or "list")
 		page.intro:Play()
+		for _, tile in ipairs(self.tiles) do tile.intro:Play() end
 	end)
 	page:SetScript("OnHide", function()
 		if self.side then self.side:Hide() end
@@ -516,6 +676,7 @@ function Alts:ShowTab(which)
 		self:Search()
 	else
 		self.box:ClearFocus()
+		self.arrive = true
 		self:Refresh()
 	end
 end
@@ -533,27 +694,49 @@ function Alts:Refresh()
 	end)
 	self.list = list
 	self.empty:SetShown(#list == 0)
+	self:FillBand(list)
+	local arrive = self.arrive
+	self.arrive = false
 	for i, row in ipairs(self.rows) do
 		local entry = list[i + self.offset]
+		local was = row.entry
 		row.entry = entry
 		row:SetShown(entry ~= nil)
 		if entry then
+			if arrive or was ~= entry then row.intro:Play() end
+			row.crest:Set(entry)
+			row.level:Set(tostring(entry.level or "?"), "text")
 			row.name:SetText(entry.name)
 			paintName(row.name, entry)
-			row.class:SetText(UI.join({ entry.level and tostring(entry.level), className(entry) }))
-			row.zone:SetText(entry.zone or "")
-			row.prof:SetText(entry.professions and entry.professions[1] or "")
-			row.gold:SetText(money(entry.money))
-			row.rest:SetText(isMe(entry) and "Playing" or restText(entry))
+			local about = {}
+			if className(entry) ~= "" then about[#about + 1] = className(entry) end
+			if entry.realm and entry.realm ~= "" and entry.realm ~= select(3, Alts.me()) then about[#about + 1] = entry.realm end
+			row.class:SetText(UI.join(about))
+			setBar(row, entry, 150)
+			row.zone:SetText(entry.zone or "Not seen yet")
+			row.prof:SetText(UI.join(entry.professions or {}))
+			row.gold:SetText(Stoa:TintMoney(money(entry.money)))
+			row.goldUnder:SetText("")
+			local playing = isMe(entry)
+			row.status:SetText(playing and "Playing now" or restText(entry))
+			row.status:SetTextColor(Stoa:Color(playing and "accent" or "muted"))
 			local locks = liveLocks(entry)
 			row.locks:SetText(#locks == 1 and locks[1].name or (#locks > 1 and (#locks .. " lockouts")) or "")
 			row.ilvl:SetText(entry.ilvl and tostring(entry.ilvl) or "")
-			row.seen:SetText(isMe(entry) and "Now" or ago(entry.seen))
-			lift(row, self.picked == entry)
+			row.seen:SetText(playing and "" or ago(entry.seen))
+			local picked = self.picked == entry
+			if picked then
+				row.edge:SetVertexColor(Stoa:Color("accent"))
+			else
+				local r, g, b = classColour(entry)
+				row.edge:SetVertexColor(r, g, b, 0.7)
+			end
+			lift(row, picked)
 		end
 	end
-	self.count:SetText(#list == 1 and "1 character" or (#list .. " characters"))
-	self.total:SetText("Total " .. Stoa:TintMoney(money(Alts.totalMoney())))
+	self.count:SetText(#list > 0 and "Click a character for their model and gear" or "")
+	local hidden = math.max(#list - ROWS, 0)
+	self.total:SetText(hidden > 0 and ("Scroll for " .. hidden .. " more") or "")
 	if self.picked and self.side and self.side:IsShown() then self:FillSide(self.picked) end
 end
 
@@ -740,12 +923,56 @@ end
 
 -- The side panel -----------------------------------------------------------------
 
-local SLOTS = {
-	{ 1, "Head" }, { 2, "Neck" }, { 3, "Shoulder" }, { 15, "Back" }, { 5, "Chest" },
-	{ 9, "Wrist" }, { 10, "Hands" }, { 6, "Waist" }, { 7, "Legs" }, { 8, "Feet" },
-	{ 11, "Ring" }, { 12, "Ring" }, { 13, "Trinket" }, { 14, "Trinket" },
-	{ 16, "Main hand" }, { 17, "Off hand" }, { 18, "Ranged" },
+local GROUPS = {
+	{ "Armour", { { 1, "Head" }, { 3, "Shoulder" }, { 15, "Back" }, { 5, "Chest" }, { 9, "Wrist" },
+		{ 10, "Hands" }, { 6, "Waist" }, { 7, "Legs" }, { 8, "Feet" } } },
+	{ "Jewellery", { { 2, "Neck" }, { 11, "Ring" }, { 12, "Ring" }, { 13, "Trinket" }, { 14, "Trinket" } } },
+	{ "Weapons", { { 16, "Main hand" }, { 17, "Off hand" }, { 18, "Ranged" } } },
 }
+local STAGE_HEIGHT, LINE_HEIGHT, GROUP_HEAD = 172, 16, 24
+
+-- One gear line: icon, the item's name in its quality colour, its level.
+-- Hovering shows the item.
+local function gearLine(side, label)
+	local line = CreateFrame("Button", nil, side)
+	line:SetHeight(LINE_HEIGHT)
+	local liftTex = line:CreateTexture(nil, "BACKGROUND")
+	liftTex:SetTexture(UI.WHITE)
+	liftTex:SetPoint("TOPLEFT", -6, 1)
+	liftTex:SetPoint("BOTTOMRIGHT", 6, -1)
+	liftTex:SetVertexColor(1, 1, 1, 0.05)
+	liftTex:Hide()
+	line.lift, line.liftIn = liftTex, fadeIn(liftTex, UI.MOTION.quick)
+	local icon = line:CreateTexture(nil, "ARTWORK")
+	icon:SetSize(14, 14)
+	icon:SetPoint("LEFT", 0, 0)
+	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	local slot = UI.text(line, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	slot:SetPoint("LEFT", icon, "RIGHT", 8, 0)
+	slot:SetWidth(62)
+	slot:SetText(label)
+	local item = UI.text(line, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	item:SetPoint("LEFT", slot, "RIGHT", 4, 0)
+	item:SetPoint("RIGHT", line, "RIGHT", -30, 0)
+	item:SetWordWrap(false)
+	local level = UI.text(line, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	level:SetPoint("RIGHT", 0, 0)
+	line.icon, line.slotText, line.item, line.level = icon, slot, item, level
+	line:SetScript("OnEnter", function(own)
+		own.lift:Show()
+		own.liftIn:Play()
+		if own.link then
+			GameTooltip:SetOwner(own, "ANCHOR_LEFT")
+			pcall(GameTooltip.SetHyperlink, GameTooltip, own.link)
+			GameTooltip:Show()
+		end
+	end)
+	line:SetScript("OnLeave", function(own)
+		own.lift:Hide()
+		GameTooltip_Hide()
+	end)
+	return line
+end
 
 function Alts:BuildSide()
 	local side = CreateFrame("Frame", "StoaAltsSide", self.page)
@@ -754,26 +981,35 @@ function Alts:BuildSide()
 	side:EnableMouse(true)
 	side:Hide()
 	UI.windowPanel(side, 0.97, { header = HEADER })
-	side.intro = intro(side, 10, 0, 0.18)
+	side.intro = intro(side, 10, 0, UI.MOTION.open)
 	local name = UI.text(side, "serif", Stoa.typeSize.title, "text", "LEFT")
 	name:SetPoint("LEFT", side, "TOPLEFT", PAD, -HEADER / 2)
-	local close = CreateFrame("Button", nil, side)
-	close:SetSize(24, 24)
-	close:SetPoint("RIGHT", side, "TOPRIGHT", -12, -HEADER / 2)
-	local cross = UI.glyph(close, "Cross", 14, "muted")
-	cross:SetPoint("CENTER")
-	close:SetScript("OnClick", function() Alts:Pick(nil) end)
-	close:SetScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("accent")) end)
-	close:SetScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
+	closeButton(side, function() Alts:Pick(nil) end)
+	local about = UI.text(side, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	about:SetPoint("TOPLEFT", PAD, -HEADER - 12)
+	about:SetPoint("RIGHT", side, "RIGHT", -PAD, 0)
+	about:SetWordWrap(false)
 
+	-- The stage: the model in a well, item level on its corner, a soft
+	-- shade at its foot.
 	local stage = CreateFrame("Frame", nil, side)
-	stage:SetPoint("TOPLEFT", PAD, -HEADER - 10)
-	stage:SetPoint("TOPRIGHT", -PAD, -HEADER - 10)
-	stage:SetHeight(210)
+	stage:SetPoint("TOPLEFT", PAD, -HEADER - 32)
+	stage:SetPoint("TOPRIGHT", -PAD, -HEADER - 32)
+	stage:SetHeight(STAGE_HEIGHT)
 	UI.well(stage, 0)
+	local shade = stage:CreateTexture(nil, "BACKGROUND", nil, 1)
+	shade:SetTexture(UI.WHITE)
+	shade:SetPoint("BOTTOMLEFT")
+	shade:SetPoint("BOTTOMRIGHT")
+	shade:SetHeight(STAGE_HEIGHT * 0.45)
+	if shade.SetGradient and CreateColor then
+		pcall(shade.SetGradient, shade, "VERTICAL", CreateColor(0, 0, 0, 0.45), CreateColor(0, 0, 0, 0))
+	else
+		shade:SetVertexColor(0, 0, 0, 0.2)
+	end
 	local model = CreateFrame("DressUpModel", nil, stage)
 	model:SetAllPoints()
-	model.reveal = fadeIn(model, 0.22)
+	model.reveal = fadeIn(model, 0.2)
 	-- Drag to turn the model; it settles where you let go.
 	model:EnableMouse(true)
 	model:SetScript("OnMouseDown", function(m, button)
@@ -788,24 +1024,40 @@ function Alts:BuildSide()
 	model:SetScript("OnHide", function(m) m:SetScript("OnUpdate", nil) end)
 	local noModel = UI.text(stage, "italic", Stoa.typeSize.body, "muted")
 	noModel:SetPoint("CENTER")
-	noModel:SetWidth(SIDE_WIDTH - PAD * 2 - 20)
+	noModel:SetWidth(SIDE_WIDTH - PAD * 2 - 30)
+	local ilvlCap = UI.text(stage, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	ilvlCap:SetPoint("TOPLEFT", 12, -10)
+	ilvlCap:SetText("ITEM LEVEL")
+	local ilvl = UI.text(stage, "sans", Stoa.typeSize.title, "text", "LEFT")
+	ilvl:SetPoint("TOPLEFT", ilvlCap, "BOTTOMLEFT", 0, -4)
+	local turn = UI.text(stage, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	turn:SetPoint("BOTTOMRIGHT", -10, 8)
+	turn:SetText("Drag to turn")
+	turn:SetAlpha(0.7)
 
+	-- Gear, by group.
 	local lines = {}
-	for i, slot in ipairs(SLOTS) do
-		local label = UI.text(side, "sans", Stoa.typeSize.caption, "muted", "LEFT")
-		label:SetPoint("TOPLEFT", stage, "BOTTOMLEFT", 0, -12 - (i - 1) * 15)
-		label:SetWidth(64)
-		label:SetText(slot[2])
-		local item = UI.text(side, "sans", Stoa.typeSize.caption, "text", "LEFT")
-		item:SetPoint("LEFT", label, "RIGHT", 4, 0)
-		item:SetPoint("RIGHT", side, "RIGHT", -PAD - 28, 0)
-		item:SetWordWrap(false)
-		local level = UI.text(side, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
-		level:SetPoint("RIGHT", side, "RIGHT", -PAD, 0)
-		level:SetPoint("TOP", label, "TOP")
-		lines[i] = { slot = slot[1], item = item, level = level }
+	local y = -HEADER - 32 - STAGE_HEIGHT - 16
+	for _, group in ipairs(GROUPS) do
+		local head = UI.text(side, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+		head:SetPoint("TOPLEFT", PAD, y)
+		head:SetText(group[1]:upper())
+		local rule = UI.line(side, "hairline")
+		rule:SetPoint("LEFT", head, "RIGHT", 8, 0)
+		rule:SetPoint("RIGHT", side, "RIGHT", -PAD, 0)
+		y = y - 18
+		for _, slot in ipairs(group[2]) do
+			local line = gearLine(side, slot[2])
+			line:SetPoint("TOPLEFT", PAD, y)
+			line:SetPoint("RIGHT", side, "RIGHT", -PAD, 0)
+			line.slot = slot[1]
+			lines[#lines + 1] = line
+			y = y - LINE_HEIGHT
+		end
+		y = y - (GROUP_HEAD - 18)
 	end
-	side.name, side.model, side.noModel, side.lines = name, model, noModel, lines
+	side:SetHeight(math.max(HEIGHT, -y + 10))
+	side.name, side.about, side.model, side.noModel, side.lines, side.ilvl, side.turn = name, about, model, noModel, lines, ilvl, turn
 	self.side = side
 end
 
@@ -820,36 +1072,80 @@ local function dress(model, entry)
 	local ok = pcall(model.SetCustomRace, model, entry.raceID, entry.sex == 3 and 1 or 0)
 	if not ok then return false end
 	if model.Undress then pcall(model.Undress, model) end
-	for slot, link in pairs(entry.gear) do
+	for _, link in pairs(entry.gear) do
 		pcall(model.TryOn, model, link)
 	end
 	return true
+end
+
+-- An item link's name without brackets, in its quality colour.
+local function linkName(link)
+	local colour = link:match("^(|c%x%x%x%x%x%x%x%x)")
+	local name = link:match("%[(.-)%]") or link
+	return (colour or "") .. name .. (colour and "|r" or "")
+end
+
+local function linkIcon(link)
+	local id = tonumber(link:match("item:(%d+)"))
+	return id and C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(id) or nil
 end
 
 function Alts:FillSide(entry)
 	local side = self.side
 	side.name:SetText(entry.name)
 	paintName(side.name, entry)
+	local about = {}
+	if entry.level then about[#about + 1] = "Level " .. entry.level end
+	if className(entry) ~= "" then about[#about + 1] = className(entry) end
+	if entry.zone then about[#about + 1] = entry.zone end
+	side.about:SetText(UI.join(about))
 	local shown = dress(side.model, entry)
 	side.model:SetShown(shown and true or false)
+	side.turn:SetShown(shown and true or false)
 	if shown then
 		if side.model.SetFacing then side.model:SetFacing(0.35) end
 		side.model.reveal:Play()
 	end
 	side.noModel:SetShown(not shown)
 	side.noModel:SetText(entry.name .. "'s model shows while you play them.")
+	side.ilvl:SetText(entry.ilvl and tostring(entry.ilvl) or "-")
 	local gear = entry.gear or {}
 	for _, line in ipairs(side.lines) do
 		local link = gear[line.slot]
-		line.item:SetText(link or "")
-		local level = link and Stoa.Items.level(link)
-		line.level:SetText(level and tostring(Stoa:PlainNumber(level) or "") or "")
+		line.link = link
+		if link then
+			line.item:SetText(linkName(link))
+			line.icon:SetTexture(linkIcon(link) or 134400)
+			line.icon:SetDesaturated(false)
+			line.icon:SetAlpha(1)
+			line.slotText:SetTextColor(Stoa:Color("muted"))
+			local level = Stoa.Items.level(link)
+			line.level:SetText(level and tostring(Stoa:PlainNumber(level) or "") or "")
+		else
+			line.item:SetText(Stoa:Hex("muted") .. "Empty|r")
+			line.icon:SetTexture(134400)
+			line.icon:SetDesaturated(true)
+			line.icon:SetAlpha(0.25)
+			line.slotText:SetTextColor(Stoa:Color("muted"))
+			line.level:SetText("")
+		end
 	end
 end
 
 function Alts:Pick(entry)
 	self.picked = entry
-	for _, row in ipairs(self.rows or {}) do lift(row, entry ~= nil and row.entry == entry) end
+	for _, row in ipairs(self.rows or {}) do
+		local on = entry ~= nil and row.entry == entry
+		lift(row, on)
+		if row.entry then
+			if on then
+				row.edge:SetVertexColor(Stoa:Color("accent"))
+			else
+				local r, g, b = classColour(row.entry)
+				row.edge:SetVertexColor(r, g, b, 0.7)
+			end
+		end
+	end
 	if not entry then
 		if self.side then self.side:Hide() end
 		return
@@ -866,7 +1162,11 @@ function Alts:Toggle()
 	self.page:SetShown(not self.page:IsShown())
 end
 
--- /stoa alts opens the page; /stoa alts forget <name> drops a character.
+-- A key for it in the game's Key Bindings, under AddOns > STOA (Bindings.xml).
+BINDING_HEADER_STOA = "STOA"
+BINDING_NAME_STOA_CHARACTERS = "Characters window"
+
+-- /stoa alts (or /stoa characters) opens the page; /stoa alts forget <name> drops a character.
 Stoa.commands.alts = function(rest)
 	local action, who = (rest or ""):match("^(%S*)%s*(.-)$")
 	if action:lower() == "forget" and who ~= "" then
@@ -883,3 +1183,4 @@ Stoa.commands.alts = function(rest)
 	end
 	Alts:Toggle()
 end
+Stoa.commands.characters = Stoa.commands.alts
