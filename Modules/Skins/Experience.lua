@@ -3,7 +3,8 @@
 -- other bars that share its place) loses its frame, its segmented art and
 -- its glossy fill for a thin flat bar in the same rounded dark track as the
 -- nameplates and the swing timer. Experience fills in the accent like the
--- medallion's bezel, the rested stretch runs on in mana blue, and the
+-- medallion's bezel, the rested stretch runs on in mana blue (striped, so
+-- it still reads over the quest stretch), and the
 -- segment dividers become fine dark notches over the filled part. In a
 -- fight it fades away with the console and comes back after. Edit Mode
 -- still places it.
@@ -11,6 +12,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
+local RESTED_HATCH = UI.MEDIA .. "Textures\\HatchLight"
 
 local XPBar = Stoa:NewModule("XPBar", {
 	-- In a fight the bar fades away with the console.
@@ -65,6 +67,10 @@ local function colourBar(bar)
 		local mr, mg, mb = Stoa:Color("mana")
 		rested:SetVertexColor(mr, mg, mb, 0.7)
 	end
+	if bar.stoaRestStripes then
+		local mr, mg, mb = Stoa:Color("mana")
+		bar.stoaRestStripes:SetVertexColor(mr, mg, mb, 0.9)
+	end
 	if bar.stoaTick then
 		local mr, mg, mb = Stoa:Color("mana")
 		bar.stoaTick:SetVertexColor(mr, mg, mb, 0.95)
@@ -118,6 +124,19 @@ local function dressBar(bar)
 		rested:ClearAllPoints()
 		rested:SetPoint("TOPLEFT", status, "TOPLEFT")
 		rested:SetPoint("BOTTOMLEFT", status, "BOTTOMLEFT")
+		-- Fine blue stripes over the rested part beyond the fill, drawn on
+		-- top so they still read over the quest stretch (which hides the
+		-- flat blue under it). They follow the rested bar's own edge.
+		local stripes = status:CreateTexture(nil, "OVERLAY", nil, 1)
+		stripes:SetTexture(RESTED_HATCH, "REPEAT", "REPEAT")
+		if stripes.SetHorizTile then stripes:SetHorizTile(true) end
+		if stripes.SetVertTile then stripes:SetVertTile(true) end
+		stripes:SetPoint("TOPLEFT", status:GetStatusBarTexture(), "TOPRIGHT")
+		stripes:SetPoint("BOTTOMRIGHT", rested, "BOTTOMRIGHT")
+		stripes:SetShown(rested:IsShown())
+		rested:HookScript("OnShow", function() stripes:Show() end)
+		rested:HookScript("OnHide", function() stripes:Hide() end)
+		bar.stoaRestStripes = stripes
 	end
 	local pip = bar.ExhaustionTick
 	if pip then
