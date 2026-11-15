@@ -210,7 +210,39 @@ end
 -- Sets words that won't change again. If the face wasn't loaded when they
 -- were first drawn they come out empty, and the game skips a later SetText
 -- with the same words, so they're cleared and set again until they measure.
+-- Captions that came out blank at login: the first string drawn in a face
+-- can render empty if the font file wasn't ready, while measuring fine, so
+-- setting the text again isn't always enough. Re-applying the same font
+-- makes the game load it afresh. Every settled caption is redone a moment
+-- after each loading screen.
+local settled = setmetatable({}, { __mode = "k" })
+
+local function refont(fs)
+	local face, size, flags = fs:GetFont()
+	if face then fs:SetFont(face, size, flags or "") end
+end
+
+local function resettle()
+	for fs, words in pairs(settled) do
+		if fs:GetText() == words then
+			refont(fs)
+			fs:SetText("")
+			fs:SetText(words)
+		end
+	end
+end
+
+if CreateFrame then
+	local watcher = CreateFrame("Frame")
+	watcher:RegisterEvent("PLAYER_ENTERING_WORLD")
+	watcher:SetScript("OnEvent", function()
+		C_Timer.After(1, resettle)
+		C_Timer.After(4, resettle)
+	end)
+end
+
 function UI.settleText(fs, words, tries)
+	settled[fs] = words
 	fs:SetText("")
 	fs:SetText(words)
 	-- A face can also come out blank while measuring fine (the page was
@@ -223,6 +255,7 @@ function UI.settleText(fs, words, tries)
 		parent:HookScript("OnShow", function()
 			local again = fs.stoaSettled
 			if again and fs:GetText() == again then
+				refont(fs)
 				fs:SetText("")
 				fs:SetText(again)
 			end
