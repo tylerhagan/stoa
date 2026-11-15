@@ -237,6 +237,7 @@ end
 function Console:PaintGlass()
 	local glass = self.glass
 	if not glass then return end
+	glass:SetShown(self.db.daylight ~= false)
 	local light = Stoa.daylight
 	local m = light and light.mix or 0
 	local r, g, b = 1, 0.98, 0.94
