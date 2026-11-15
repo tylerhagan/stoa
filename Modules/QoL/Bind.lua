@@ -133,6 +133,7 @@ end
 function Bind:BuildBar()
 	local bar = CreateFrame("Frame", "StoaBindBar", UIParent)
 	bar:SetSize(420, 96)
+	UI.riseOnShow(bar)
 	bar:SetPoint("TOP", 0, -120)
 	bar:SetFrameStrata("DIALOG")
 	bar:EnableMouse(true)

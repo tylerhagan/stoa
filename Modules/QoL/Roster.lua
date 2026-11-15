@@ -174,6 +174,7 @@ end
 function Roster:Build()
 	local page = CreateFrame("Frame", "StoaRosterPage", UIParent)
 	page:SetSize(WIDTH, HEIGHT)
+	UI.riseOnShow(page)
 	page:SetPoint("CENTER", 0, 60)
 	page:SetFrameStrata("DIALOG")
 	page:EnableMouse(true)

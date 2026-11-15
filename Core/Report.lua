@@ -246,6 +246,7 @@ function Report:Build()
 	UI = Stoa.UI
 	local page = CreateFrame("Frame", "StoaReportPage", UIParent)
 	page:SetSize(WIDTH, HEIGHT)
+	UI.riseOnShow(page)
 	page:SetPoint("CENTER", 0, 60)
 	page:SetFrameStrata("DIALOG")
 	page:EnableMouse(true)

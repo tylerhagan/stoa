@@ -163,6 +163,7 @@ function Session:BuildCard()
 	card:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
 	card:Hide()
 	UI.windowPanel(card, nil, { header = HEADER, plainHeader = true })
+	UI.riseOnShow(card)
 	local title = UI.text(card, "serif", Stoa.typeSize.title, "text", "LEFT")
 	title:SetPoint("LEFT", card, "TOPLEFT", PAD, -HEADER / 2)
 	title:SetText("This session")
@@ -320,9 +321,7 @@ function Session:ShowCard()
 		find:Hide()
 	end
 	card:SetHeight(y + PAD - GAP)
-	card:SetAlpha(0)
 	card:Show()
-	UI.fade(card, 1, 0.14)
 end
 
 Stoa.commands.recap = function()
