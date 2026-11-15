@@ -1663,6 +1663,7 @@ function Console:UpdateDaylight()
 	local light = nil
 	if self.db.daylight ~= false and GetGameTime then
 		local hour, minute = GetGameTime()
+		if self.previewHour then hour, minute = self.previewHour, 0 end
 		if type(hour) == "number" then light = Console.lightAt(hour + (minute or 0) / 60) end
 	end
 	local was = Stoa.daylight
@@ -1788,4 +1789,20 @@ function Console:OnEnable()
 		end
 	end
 	self:FitPages()
+end
+
+-- /stoa daylight 23 shows the console as it looks at that hour, without
+-- waiting for it; /stoa daylight goes back to the game's clock.
+Stoa.commands.daylight = function(rest)
+	local console = Stoa.modules.Grimoire
+	if not (console and console.UpdateDaylight) then return end
+	local hour = tonumber(rest and rest:match("^%s*(%d+%.?%d*)"))
+	console.previewHour = hour and hour >= 0 and hour < 24 and hour or nil
+	console:UpdateDaylight()
+	if console.previewHour then
+		Stoa:Print(("Console light shown as at %02d:00. /stoa daylight goes back to the game's clock."):format(math.floor(console.previewHour)))
+	else
+		local h, m = GetGameTime()
+		Stoa:Print(("Console light follows the game's clock (%02d:%02d now)."):format(h or 0, m or 0))
+	end
 end
