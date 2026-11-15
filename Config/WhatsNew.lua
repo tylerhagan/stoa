@@ -19,22 +19,16 @@ Stoa.WhatsNew = WhatsNew
 -- as "PRIEST"): each shows as a small tag in its class colour beside the
 -- line's name.
 local NOTE = {
-	edition = "1.2.0",
-	title = "New in STOA 1.2",
+	edition = "1.3.0",
+	title = "New in STOA 1.3",
 	lines = {
-		{ "A new character sheet", "Your gear in two columns with each item's name and item level beside it, the weapons named under the model, calmer stats, the tabs as words in the header, and your durability, titles and equipment sets at the foot. Settings > Dress turns it off." },
-		{ "The spellbook in STOA's dress", "Every spell you know on one scrolling list, two lines each: its name, then its rank, cost and cast time, with Next at 26 or Train now in a pill. STOA's own school words and search sit along the top, and passives close each school. Click to cast, drag to a bar, Shift-click to link, or switch back to Blizzard's pages. A To train word opens what your trainer has for you beside the book. Settings > Dress turns it off." },
-		{ "The talents in STOA's dress", "Each tree on its own card, a band for every row with the points it needs, a bar toward the next row, each tree's name and points as words, and a line by Apply while changes are waiting. Points you place are only a preview until you press Apply, so try a build and undo it freely. Settings > Dress turns it off." },
-		{ "More windows in STOA's dress", "The bank, trade, professions, the dressing room, macros, collections, the adventure guide, the stable, gem sockets and the other framed windows now match the rest, inside too: Blizzard's parchment and painted cards give way to STOA's dark wells, and each collection's count sits at the foot. The profession tabs are dark tiles with their icons whole, and tabs read as words, not buttons. Window headers are a neutral dark plate, and Shift-drag works anywhere on them." },
-		{ "Sections on the console", "A faint gold line with a small diamond, set into a soft groove, now divides chat, At a glance, the action bars and the Ready, Journey and Company pages. Settings > Console turns them off." },
-		{ "Your bag in sections", "The combined bag sorts what you carry into sections: new, consumables, trade goods, quest, equipment, other, junk and empty slots. The Grid word in its header switches back to one grid in bag order." },
-		{ "A new target plaque", "A round portrait in a gold ring with the level on a badge, a rounded health bar with the numbers inside, the target's power and its cast. Out of combat it docks on the console's gold rim without the portrait, its target of target tucked in behind it." },
-		{ "Your buffs at hand", "Out of combat, small icons left of the Halo for the long buffs you keep on yourself when one is missing or about to run out, such as Inner Fire, a paladin's aura and blessing, a mage's armor or a shaman's shield. Drawn in your theme's colour. Click one to cast it. Every class but warriors and rogues has some." },
-		{ "Sparkle on what's up close", "The herb, ore, chest or quest object the game's interact icon marks gets a soft gold glow with a few twinkling stars. Chairs and furniture no longer get the icon, and quest items lying in the world get the game's own loot sparkle." },
-		{ "Finished quests on the experience bar", "A deeper gold stretch past your experience shows where handing in your finished quests takes you. Hover the bar for the count and the experience." },
-		{ "A dot for new whispers", "A whisper arriving in a chat window you aren't looking at, such as a Whispers tab, puts a gold dot on its tab until you open it." },
-		{ "Grey quests left alone", "Accepting quests for you skips low-level quests, and holding Shift as you talk to an NPC now reliably stops the comforts for that talk." },
-		{ "OneForAll, side by side", "With OneForAll, the jobs both can do (sparkles, hiding errors, gathering minimap icons and more) go to whichever has its switch on, and STOA asks once whether to turn off OneForAll's low-rank check and info bar." },
+		{ "Your characters, in one window", "Every character you've played with STOA with their level, place, gold, rest, lockouts and item level. Search finds an item in any character's bags or bank, and clicking a character shows their model and gear. Your bag search also says who else holds a match. /stoa alts opens it." },
+		{ "A dungeon companion", "Inside a five-player dungeon, out of a fight, a card where the quest list sits shows the bosses, ticked off as they fall, and your quests for it. It can be a slim line over the console instead." },
+		{ "A recap when you log out", "While the game counts down, a card shows what the session brought: time played, levels, experience an hour, gold, quests, deaths and your best find. /stoa recap shows it any time." },
+		{ "A talent planner", "Plan a build point by point for levels you haven't reached, keep named plans, share them as text and turn one into a game loadout. The Talent planner word on the talent window opens it. STOA never spends a point for you." },
+		{ "Small jobs on the console", "One line under Ready gathers what's worth doing before you head out: a missing buff, gear about to break, talent points, new spells not on a bar, restock items short and an emptied slot. Hover it for the list." },
+		{ "Light from the time of day", "The console's gold catches the sky from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk and moonlit blue at night, with a glass glint on your portrait. /stoa daylight 23 previews an hour." },
+		{ "Smoother, tidier", "STOA's windows, settings and cards rise in swiftly, the trainer window is tidied with Settings in its footer, rested shows as blue stripes on the experience bar, and books and letters read clearly." },
 	},
 	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }
