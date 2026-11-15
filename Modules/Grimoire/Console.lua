@@ -25,6 +25,8 @@ local Console = Stoa:NewModule("Grimoire", {
 	formMana = true,
 	-- Faint lines between the console's sections.
 	dividers = true,
+	-- The console's gold follows the game's time of day.
+	daylight = true,
 })
 
 local SPINE_HEIGHT = 22
@@ -172,7 +174,7 @@ function Console:BuildArt(frame)
 	local function gold(base, file, sublevel)
 		local lines = layer(file, sublevel)
 		lines:SetAllPoints(base)
-		UI.tint(lines, "accent")
+		UI.tint(lines, "daylit")
 	end
 
 	local leather = layer("Leather", -6)
@@ -244,7 +246,7 @@ function Console:BuildSeal(frame)
 		local gap = circle(seal, "BORDER", 1, size + 10, "panel")
 		gap:SetPoint("CENTER")
 	end
-	local ring = circle(seal, "BORDER", 2, size + 4, "accent")
+	local ring = circle(seal, "BORDER", 2, size + 4, "daylit")
 	ring:SetPoint("CENTER")
 
 	local portrait = circle(seal, "ARTWORK", 0, size)
@@ -1446,7 +1448,7 @@ end
 
 function Console:PaintDividers()
 	if not self.dividers then return end
-	local r, g, b = Stoa:Color("accent")
+	local r, g, b = Stoa:Color("daylit")
 	for _, div in ipairs(self.dividers) do
 		div.upper:SetColorTexture(1, 1, 1, 1)
 		div.lower:SetColorTexture(1, 1, 1, 1)
@@ -1575,6 +1577,44 @@ end
 
 -- Lifecycle -----------------------------------------------------------------
 
+-- Time of day --------------------------------------------------------------
+-- The console's gold (top edge, medallion, seal ring, section lines) keeps the
+-- theme's hue but takes the light of the game's clock: pale at dawn, full at
+-- midday, deeper at dusk, dim at night. Checked once a minute; a step this
+-- small every few minutes is never seen happening.
+local DAYLIGHT = {
+	{ 0, -0.16, -0.40 }, { 5, -0.16, -0.40 }, { 6.5, 0.07, -0.18 }, { 9, 0.02, 0 },
+	{ 13, 0.05, 0.04 }, { 17, 0.02, 0 }, { 19.5, -0.06, 0.12 }, { 21.5, -0.16, -0.40 }, { 24, -0.16, -0.40 },
+}
+
+function Console.lightAt(hour)
+	for i = 1, #DAYLIGHT - 1 do
+		local a, b = DAYLIGHT[i], DAYLIGHT[i + 1]
+		if hour <= b[1] then
+			local t = (hour - a[1]) / (b[1] - a[1])
+			return a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t
+		end
+	end
+	return DAYLIGHT[1][2], DAYLIGHT[1][3]
+end
+
+function Console:UpdateDaylight()
+	local light = nil
+	if self.db.daylight ~= false and GetGameTime then
+		local hour, minute = GetGameTime()
+		if type(hour) == "number" then
+			local l, s = Console.lightAt(hour + (minute or 0) / 60)
+			light = { l = l, s = s }
+		end
+	end
+	local was = Stoa.daylight
+	if was and light and math.abs(was.l - light.l) < 0.004 and math.abs(was.s - light.s) < 0.01 then return end
+	if not was and not light then return end
+	Stoa.daylight = light
+	UI.applyTheme()
+	self:PaintDividers()
+end
+
 function Console:OnEnable()
 	self:Build()
 	Stoa.notesInConsole = true
@@ -1661,6 +1701,8 @@ function Console:OnEnable()
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:CheckLowHealth() end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:Settle("low") end)
 	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDividers() end)
+	self:UpdateDaylight()
+	C_Timer.NewTicker(60, function() self:UpdateDaylight() end)
 	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
 		Stoa:On(event, function() self:UpdateKit() end)
 	end
