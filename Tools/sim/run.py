@@ -1032,6 +1032,23 @@ do
 		alts:Search()
 		local hit = alts.found and alts.found[1]
 		if not (hit and hit.total == 52 and #(alts.found) == 1) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: search didn't find 52 runecloth" end
+		-- The bag search's line: other characters holding a match.
+		local bags = Stoa.modules.Bags
+		if bags and bags.ShowElsewhere then
+			local bag = CreateFrame("Frame", "SimBag", UIParent)
+			bag:Show()
+			_G.BagItemSearchBox = CreateFrame("EditBox", "SimBagSearch", bag)
+			BagItemSearchBox.anchorBag = bag
+			BagItemSearchBox:SetText("rune")
+			bags:ShowElsewhere()
+			if not (bags.elsewhere and bags.elsewhere:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the other-characters line didn't show" end
+			bags.elsewhere:Click()
+			if not (alts.box:GetText() == "rune" and alts.tab == "search") then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the line didn't open Characters searched" end
+			BagItemSearchBox:SetText("")
+			bags:ShowElsewhere()
+			if bags.elsewhere:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the line stayed after clearing" end
+			_G.BagItemSearchBox = nil
+		end
 		alts:ShowTab("list")
 		alts:Pick(StoaDB.alts["Valen - Test"])
 		if not (alts.side and alts.side:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: the side panel didn't open" end

@@ -839,18 +839,19 @@ local function itemName(id)
 	return name
 end
 
--- Every item whose name holds the words, with who keeps it where.
-function Alts:Search()
-	local query = strtrim(self.box:GetText() or ""):lower()
-	local found, byID = {}, {}
-	self.waiting = false
-	if #query >= 2 then
-		for _, entry in pairs(store()) do
+-- Every item whose name holds the words, with who keeps it where. skip is a
+-- character key left out (the bag search leaves out who is playing). The
+-- second answer is true while some names are still loading.
+function Alts.find(query, skip)
+	local found, byID, waiting = {}, {}, false
+	if #query < 2 then return found, waiting end
+	for key, entry in pairs(store()) do
+		if key ~= skip then
 			for place, items in pairs({ Bags = entry.bags, Bank = entry.bank }) do
 				for id, n in pairs(items or {}) do
 					local name = itemName(id)
 					if not name then
-						self.waiting = true
+						waiting = true
 						if C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(id) end
 					elseif name:lower():find(query, 1, true) then
 						local hit = byID[id]
@@ -872,6 +873,13 @@ function Alts:Search()
 			end
 		end
 	end
+	return found, waiting
+end
+
+function Alts:Search()
+	local query = strtrim(self.box:GetText() or ""):lower()
+	local found, waiting = Alts.find(query)
+	self.waiting = waiting
 	table.sort(found, function(a, b)
 		if a.total ~= b.total then return a.total > b.total end
 		return a.name < b.name
@@ -1079,7 +1087,7 @@ local function linkName(link)
 	name = name:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|cn[^:]*:", ""):gsub("|r", "")
 	local id = tonumber(link:match("item:(%d+)"))
 	local quality = id and C_Item and C_Item.GetItemQualityByID and C_Item.GetItemQualityByID(id)
-	if not quality and GetItemInfo then quality = select(3, GetItemInfo(link)) end
+	if not quality then quality = tonumber(link:match("|cnIQ(%d+):")) end
 	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
 	if color and color.hex then return color.hex .. name .. "|r" end
 	if color and color.r then
@@ -1164,6 +1172,15 @@ end
 function Alts:Toggle()
 	if not self.page then self:Build() end
 	self.page:SetShown(not self.page:IsShown())
+end
+
+-- Opens the window on its Search tab, already searched for the words.
+function Alts:OpenSearch(query)
+	if not self.page then self:Build() end
+	self.page:Show()
+	self.box:SetText(query or "")
+	self:ShowTab("search")
+	self.box:SetCursorPosition(#(query or ""))
 end
 
 -- A key for it in the game's Key Bindings, under AddOns > STOA (Bindings.xml).
