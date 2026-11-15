@@ -55,6 +55,10 @@ function Companion:FindInGuide(instanceID, name)
 	local guide = _G.EncounterJournal
 	if guide and guide.IsShown and guide:IsShown() then return nil end
 	local before = plain(call(EJ_GetCurrentTier))
+	if (not before or before == 0) and C_EncounterJournal and C_EncounterJournal.InitalizeSelectedTier then
+		call(C_EncounterJournal.InitalizeSelectedTier)
+		before = plain(call(EJ_GetCurrentTier))
+	end
 	local hit
 	for tier = 1, plain(call(EJ_GetNumTiers)) or 0 do
 		call(EJ_SelectTier, tier)
@@ -78,11 +82,24 @@ end
 -- Every dungeon in the guide, as { id, name }, for the preview command:
 -- the first whose name holds `part` (any case), and the full list.
 function Companion:SearchGuide(part)
-	if not (EJ_GetInstanceByIndex and EJ_GetNumTiers and EJ_SelectTier and EJ_GetCurrentTier) or not guideFreeNow() then return nil, {} end
+	if not guideFreeNow() then return nil, {}, "its window is open; close it and try again" end
+	local missing = {}
+	for _, fn in ipairs({ "EJ_GetInstanceByIndex", "EJ_GetNumTiers", "EJ_SelectTier", "EJ_GetCurrentTier" }) do
+		if type(_G[fn]) ~= "function" then missing[#missing + 1] = fn end
+	end
+	if #missing > 0 then return nil, {}, "the game doesn't offer " .. table.concat(missing, ", ") end
+	local rules = _G.GameRulesUtil
+	if rules and rules.EJIsDisabled and call(rules.EJIsDisabled) then return nil, {}, "the game has it switched off" end
 	part = (part or ""):lower()
 	local before = plain(call(EJ_GetCurrentTier))
+	-- The guide picks its tier when it first opens; before that there may be none.
+	if (not before or before == 0) and C_EncounterJournal and C_EncounterJournal.InitalizeSelectedTier then
+		call(C_EncounterJournal.InitalizeSelectedTier)
+		before = plain(call(EJ_GetCurrentTier))
+	end
+	local tiers = plain(call(EJ_GetNumTiers)) or 0
 	local hit, names = nil, {}
-	for tier = 1, plain(call(EJ_GetNumTiers)) or 0 do
+	for tier = 1, tiers do
 		call(EJ_SelectTier, tier)
 		for i = 1, 200 do
 			local id, title = call(EJ_GetInstanceByIndex, i, false)
@@ -93,7 +110,8 @@ function Companion:SearchGuide(part)
 			end
 		end
 	end
-	if before then call(EJ_SelectTier, before) end
+	if before and before > 0 then call(EJ_SelectTier, before) end
+	if #names == 0 then return nil, names, ("it listed no dungeons (%d tiers, tier %s)"):format(tiers, tostring(before)) end
 	return hit, names
 end
 
@@ -536,10 +554,10 @@ Stoa.commands.companion = function(rest)
 		return
 	end
 	if rest ~= "" then
-		local hit, names = Companion:SearchGuide(rest)
+		local hit, names, why = Companion:SearchGuide(rest)
 		if not hit then
 			if #names == 0 then
-				Stoa:Print("Couldn't read the Adventure Guide. If its window is open, close it and try again.")
+				Stoa:Print("Couldn't read the Adventure Guide: " .. (why or "no reason given") .. ".")
 			else
 				Stoa:Print(("No dungeon matches %q. The guide has: %s."):format(rest, table.concat(names, ", ")))
 			end
