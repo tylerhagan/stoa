@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="STOA_CHARACTERS" header="STOA" category="ADDONS">
+		if Stoa and Stoa.Alts then Stoa.Alts:Toggle() end
+	</Binding>
+</Bindings>

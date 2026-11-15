@@ -343,7 +343,7 @@ end
 
 function Planner:PaintMarks()
 	local talents = talentsFrame()
-	if not (talents and talents:IsVisible()) then return end
+	if not (talents and talents:IsVisible()) or not self:Opened() then return end
 	local layout = self:Layout(talents)
 	self.marks = self.marks or {}
 	local plan = self:Active()
@@ -658,9 +658,67 @@ function Planner:FillList()
 	panel.empty:SetShown(shown == 0)
 end
 
+-- The "Planner" word on the talent window's foot, across from Apply, opens
+-- and closes the panel; the choice is remembered. With the panel closed the
+-- trees carry no marks at all.
+function Planner:Opened() return self.db.panel ~= false end
+
+function Planner:PaintToggle(talents)
+	local toggle = talents.stoaPlannerToggle
+	if not toggle then
+		toggle = CreateFrame("Button", nil, talents)
+		toggle:SetHeight(24)
+		local mark = toggle:CreateTexture(nil, "ARTWORK")
+		mark:SetTexture(UI.WHITE)
+		mark:SetSize(6, 6)
+		mark:SetPoint("LEFT", 0, 0)
+		mark:SetRotation(math.pi / 4)
+		local word = UI.text(toggle, "sans", Stoa.typeSize.body, "muted", "LEFT")
+		word:SetPoint("LEFT", mark, "RIGHT", 8, 0)
+		word:SetText("Talent planner")
+		toggle:SetWidth((word:GetStringWidth() or 90) + 16)
+		toggle.mark, toggle.word = mark, word
+		toggle:SetScript("OnClick", function()
+			self.db.panel = not self:Opened()
+			if not self:Opened() then self.planning = false end
+			self:Refresh()
+		end)
+		toggle:SetScript("OnEnter", function(own)
+			own.word:SetTextColor(Stoa:Color("accent"))
+			GameTooltip:SetOwner(own, "ANCHOR_TOP")
+			GameTooltip:AddLine(self:Opened() and "Hide STOA's talent planner" or "Show STOA's talent planner", 1, 1, 1)
+			GameTooltip:Show()
+		end)
+		toggle:SetScript("OnLeave", function()
+			GameTooltip_Hide()
+			self:PaintToggle(talents)
+		end)
+		talents.stoaPlannerToggle = toggle
+	end
+	-- Level with the Apply button, in from the window's left edge.
+	local apply = talents.ApplyButton
+	local y = 30
+	if apply and apply.GetCenter and talents.GetBottom then
+		local _, cy = apply:GetCenter()
+		local bottom = talents:GetBottom()
+		if cy and bottom and not Stoa:IsSecret(cy) then y = cy - bottom end
+	end
+	toggle:ClearAllPoints()
+	toggle:SetPoint("LEFT", talents, "BOTTOMLEFT", 24, y)
+	local open = self:Opened()
+	toggle.word:SetTextColor(Stoa:Color(open and "text" or "muted"))
+	toggle.mark:SetVertexColor(Stoa:Color(open and "accent" or "muted"))
+	toggle:Show()
+end
+
 function Planner:Refresh()
 	local talents = talentsFrame()
 	local show = self.enabled and talents and talents:IsVisible()
+	if show then self:PaintToggle(talents) end
+	if show and not self:Opened() then
+		show = false
+		for _, mark in pairs(self.marks or {}) do mark:Hide() end
+	end
 	if not show then
 		if self.panel then self.panel:Hide() end
 		return

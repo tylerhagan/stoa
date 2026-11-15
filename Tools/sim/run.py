@@ -456,6 +456,30 @@ do
 		console:UpdateDaylight()
 	end
 end
+-- Trainer window: the skill bar, the Settings dropdown and the rows dressed.
+do
+	if Stoa.modules.Windows then
+		local frame = CreateFrame("Frame", "ClassTrainerFrame", UIParent)
+		local bar = CreateFrame("StatusBar", "ClassTrainerStatusBar", frame)
+		for _, suffix in ipairs({ "Left", "Right", "Middle", "Background" }) do bar:CreateTexture("ClassTrainerStatusBar" .. suffix) end
+		bar.rankText = bar:CreateFontString("ClassTrainerStatusBarSkillRank")
+		frame.FilterDropdown = CreateFrame("Button", nil, frame)
+		frame.FilterDropdown.Background = frame.FilterDropdown:CreateTexture()
+		frame.FilterDropdown.Text = frame.FilterDropdown:CreateFontString()
+		local step = CreateFrame("Button", nil, frame)
+		step.icon = step:CreateTexture()
+		step.selectedTex = step:CreateTexture()
+		step.disabledBG = step:CreateTexture()
+		frame.skillStepButton = step
+		local ok, err = pcall(Stoa.modules.Windows.DressTrainer)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: " .. tostring(err) end
+		if not bar.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: skill bar not dressed" end
+		if not frame.FilterDropdown.stoaDressed then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: Settings dropdown not dressed" end
+		if not step.stoaRow then SIM_ERRORS[#SIM_ERRORS + 1] = "Trainer: skill row not dressed" end
+		frame:Hide()
+		_G.ClassTrainerFrame, _G.ClassTrainerStatusBar = nil, nil
+	end
+end
 
 -- Settings window: every page and a search drawn, every setting changed
 -- and put back, the lists added to and taken from, a dropdown by keys.
@@ -1029,6 +1053,53 @@ do
 		C_Traits = savedTraits
 		StoaDB.talentPlans = nil
 		_G.PlayerSpellsFrame = nil
+	end
+end
+
+-- The Characters window: rows, the search across characters, the side panel.
+do
+	local alts = Stoa.Alts
+	if alts and StoaDB then
+		StoaDB.alts = StoaDB.alts or {}
+		StoaDB.alts["Valen - Test"] = { name = "Valen", realm = "Test", class = "PALADIN", level = 42, money = 381200, seen = time() - 7200,
+			bags = { [14047] = 12 }, bank = { [14047] = 40, [2589] = 3 }, gear = { [1] = "|cff1eff00|Hitem:10:0|h[Helm]|h|r" }, raceID = 1, sex = 2, ilvl = 36 }
+		local saved = C_Item.GetItemNameByID
+		C_Item.GetItemNameByID = function(id) return ({ [14047] = "Runecloth", [2589] = "Linen Cloth" })[id] end
+		if not alts.page then alts:Build() end
+		alts.page:Show()
+		if not (alts.page and alts.page:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: the window didn't open" end
+		local shown = 0
+		for _, row in ipairs(alts.rows or {}) do if row:IsShown() then shown = shown + 1 end end
+		if shown < 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: no rows" end
+		alts:ShowTab("search")
+		alts.box:SetText("rune")
+		alts:Search()
+		local hit = alts.found and alts.found[1]
+		if not (hit and hit.total == 52 and #(alts.found) == 1) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: search didn't find 52 runecloth" end
+		-- The bag search's line: other characters holding a match.
+		local bags = Stoa.modules.Bags
+		if bags and bags.ShowElsewhere then
+			local bag = CreateFrame("Frame", "SimBag", UIParent)
+			bag:Show()
+			_G.BagItemSearchBox = CreateFrame("EditBox", "SimBagSearch", bag)
+			BagItemSearchBox.anchorBag = bag
+			BagItemSearchBox:SetText("rune")
+			bags:ShowElsewhere()
+			if not (bags.elsewhere and bags.elsewhere:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the other-characters line didn't show" end
+			bags.elsewhere:Click()
+			if not (alts.box:GetText() == "rune" and alts.tab == "search") then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the line didn't open Characters searched" end
+			BagItemSearchBox:SetText("")
+			bags:ShowElsewhere()
+			if bags.elsewhere:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Bags: the line stayed after clearing" end
+			_G.BagItemSearchBox = nil
+		end
+		alts:ShowTab("list")
+		alts:Pick(StoaDB.alts["Valen - Test"])
+		if not (alts.side and alts.side:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Characters: the side panel didn't open" end
+		alts:Pick(nil)
+		alts.page:Hide()
+		C_Item.GetItemNameByID = saved
+		StoaDB.alts["Valen - Test"] = nil
 	end
 end
 

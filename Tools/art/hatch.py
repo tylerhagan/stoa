@@ -27,3 +27,9 @@ img = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
 WASH, LINE = 0.15, 0.72
 img[..., 3] = np.round((WASH + (LINE - WASH) * alpha) * 255).astype(np.uint8)
 Image.fromarray(img, "RGBA").save(sys.argv[1].rstrip("/\\") + "/Hatch.tga")
+# The same stripes in white with clear gaps, tinted in game: the rested
+# stretch on the experience bar, laid over whatever is under it.
+light = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
+light[..., :3] = 255
+light[..., 3] = np.round(alpha * 255).astype(np.uint8)
+Image.fromarray(light, "RGBA").save(sys.argv[1].rstrip("/\\") + "/HatchLight.tga")
