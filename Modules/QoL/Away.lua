@@ -17,6 +17,7 @@ local Away = Stoa:NewModule("Away", {
 local BAND = 150
 local SPIN = 0.03
 local WHISPERS = 4
+local TIP_EVERY = 20
 
 local function clock(seconds)
 	seconds = math.max(0, math.floor(seconds))
@@ -82,6 +83,12 @@ function Away:Build()
 	local timer = UI.text(band, "serif", Stoa.typeSize.hero, "text", "CENTER")
 	timer:SetPoint("TOP", caption, "BOTTOM", 0, -6)
 
+	-- A tip under the timer, a new one every TIP_EVERY seconds.
+	local tip = UI.text(band, "sans", Stoa.typeSize.label, "muted", "CENTER")
+	tip:SetPoint("TOP", timer, "BOTTOM", 0, -10)
+	tip:SetWidth(520)
+	tip:SetMaxLines(2)
+
 	local heard = UI.caption(band, "")
 	heard:SetPoint("TOPLEFT", band, "TOPRIGHT", -620, -30)
 	local lines = {}
@@ -101,10 +108,27 @@ function Away:Build()
 		if self.tick < 0.5 then return end
 		self.tick = 0
 		timer:SetText(clock(GetTime() - (self.since or GetTime())))
+		self.tipTime = (self.tipTime or 0) + 0.5
+		if self.tipTime >= TIP_EVERY then self:NextTip() end
 	end)
 
 	self.frame, self.name, self.about, self.rest, self.timer = frame, name, about, rest, timer
-	self.heard, self.lines = heard, lines
+	self.heard, self.lines, self.tip = heard, lines, tip
+end
+
+function Away:NextTip()
+	self.tipTime = 0
+	local tips = Stoa.modules.Tips
+	local list = tips and tips.AwayList and tips:AwayList() or {}
+	if #list == 0 then self.tip:SetText("") return end
+	self.tipIndex = (self.tipIndex or 0) % #list + 1
+	local tip = list[self.tipIndex]
+	local where = tips:Where(tip)
+	self.tip:SetText(("%sDid you know?|r  %s%s"):format(Stoa:Hex("accent"), tip[3], where and ("  " .. where) or ""))
+	if UI.fadeIn then
+		self.tipFade = self.tipFade or UI.fadeIn(self.tip, 0.3)
+		self.tipFade:Play()
+	end
 end
 
 function Away:Fill()
@@ -156,6 +180,7 @@ function Away:Show()
 	if not self.frame then self:Build() end
 	self.shown, self.since, self.whispers = true, GetTime(), {}
 	self:Fill()
+	self:NextTip()
 	if UIParent:IsShown() then
 		UIParent:Hide()
 		self.hidUI = true
