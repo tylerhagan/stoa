@@ -319,9 +319,10 @@ end
 local function crest(parent, size)
 	local holder = CreateFrame("Frame", nil, parent)
 	holder:SetSize(size, size)
+	-- The game's round class icons, cut from one sheet (a masked texture
+	-- can't take tex coords, so the round sheet does the rounding).
 	local icon = holder:CreateTexture(nil, "ARTWORK")
 	icon:SetAllPoints()
-	if icon.SetMask then pcall(icon.SetMask, icon, "Interface\\CharacterFrame\\TempPortraitAlphaMask") end
 	local ring = holder:CreateTexture(nil, "BACKGROUND")
 	ring:SetPoint("TOPLEFT", -2, 2)
 	ring:SetPoint("BOTTOMRIGHT", 2, -2)
@@ -331,11 +332,10 @@ local function crest(parent, size)
 	function holder:Set(entry)
 		local coords = CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[entry.class or ""]
 		if coords then
-			icon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
+			icon:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles")
 			icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
 		else
-			icon:SetTexture(134400)
-			icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+			icon:SetTexture(nil)
 		end
 		local r, g, b = classColour(entry)
 		ring:SetVertexColor(r, g, b, 0.85)
