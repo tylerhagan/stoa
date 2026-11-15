@@ -29,6 +29,35 @@ local function hideBook(book)
 	for _, key in ipairs(ART) do hide(book[key]) end
 end
 
+-- A school's heading on Blizzard's pages ("Shadow", "Name Matches" in a
+-- search): the parchment smudge and the red divider go, the name is in
+-- STOA's serif in the accent over a plain hairline. Blizzard makes these
+-- as the pages fill, beside the spells, so each spell dressed looks for
+-- new headings next to it.
+local function dressHeader(header)
+	if header.stoaHeader or not (header.Text and header.Border) then return end
+	header.stoaHeader = true
+	hide(header.Backplate)
+	header.Border:SetAlpha(0)
+	Stoa:SetFont(header.Text, "serif", Stoa.typeSize.name)
+	header.Text:SetShadowOffset(0, 0)
+	header.Text:SetTextColor(Stoa:Color("accent"))
+	local rule = header:CreateTexture(nil, "ARTWORK")
+	rule:SetTexture(UI.WHITE)
+	rule:SetHeight(1)
+	rule:SetPoint("BOTTOMLEFT", header.Border, "BOTTOMLEFT", 24, 4)
+	rule:SetPoint("BOTTOMRIGHT", header.Border, "BOTTOMRIGHT", 0, 4)
+	UI.tint(rule, "hairline")
+end
+
+local function dressHeadersBeside(item)
+	local parent = item.GetParent and item:GetParent()
+	if not (parent and parent.GetChildren) then return end
+	for _, child in ipairs({ parent:GetChildren() }) do
+		if not child.stoaHeader and child.Backplate and child.Border and child.Text and not child.Name then dressHeader(child) end
+	end
+end
+
 -- One spell: its name in STOA's type and light, the rank or "Passive"
 -- under it quiet, "Available at level 30" or "Trainable" in the accent.
 -- Blizzard fades unlearned ones by alpha, which this keeps.
@@ -41,6 +70,7 @@ function Spellbook.DressItem(item)
 		if item.SubName then Stoa:SetFont(item.SubName, "sans", Stoa.typeSize.caption) end
 		if item.RequiredLevel then Stoa:SetFont(item.RequiredLevel, "sans", Stoa.typeSize.caption) end
 	end
+	dressHeadersBeside(item)
 	item.Name:SetTextColor(Stoa:Color("text"))
 	if item.SubName then item.SubName:SetTextColor(Stoa:Color("muted")) end
 	if item.RequiredLevel then item.RequiredLevel:SetTextColor(Stoa:Color("accent")) end
