@@ -508,15 +508,37 @@ function Bar:OnEnable()
 	-- The row fades with the Halo and the console (Stoa.TRANSITION): in as
 	-- the fight starts, out as the calm ends, then it is laid out again.
 	local pager = self.pager
+	-- The row leaves first: it starts fading TRANSITION.lead seconds before
+	-- the calm ends and the rest of the combat look goes. A new fight in
+	-- that moment brings it straight back.
+	local leaving = false
+	Stoa:On("STOA_CALM_ENDING", function()
+		if Stoa:IsPractising() or Stoa:GetState() ~= Stoa.STATE_COMBAT then return end
+		leaving = true
+		UI.fade(pager, 0, Stoa.TRANSITION.out)
+	end)
+	Stoa:On("PLAYER_REGEN_DISABLED", function()
+		if not leaving then return end
+		leaving = false
+		UI.fade(pager, 1, Stoa.TRANSITION.into)
+	end)
 	Stoa:On("STOA_STATE_CHANGED", function(state)
 		if state == Stoa.STATE_COMBAT then
+			leaving = false
 			pager:SetAlpha(0)
 			UI.fade(pager, 1, Stoa.TRANSITION.into)
 		end
 		if InCombatLockdown() then return end
 		if state == Stoa.STATE_WORLD and not Stoa:IsPractising() then
-			UI.fade(pager, 0, Stoa.TRANSITION.out)
-			C_Timer.After(Stoa.TRANSITION.out, function()
+			-- Already on its way out when the calm ran its course.
+			local wait = Stoa.TRANSITION.out
+			if leaving then
+				wait = math.max(0, Stoa.TRANSITION.out - Stoa.TRANSITION.lead)
+			else
+				UI.fade(pager, 0, Stoa.TRANSITION.out)
+			end
+			leaving = false
+			C_Timer.After(wait, function()
 				if Stoa:GetState() ~= Stoa.STATE_WORLD or InCombatLockdown() then return end
 				layout()
 				pager:SetAlpha(1)
