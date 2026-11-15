@@ -113,28 +113,6 @@ local function duration(seconds)
 	return ("%dm"):format(m)
 end
 
--- The numbers, ready to show: each entry is { label, words }. Time and
--- level always show; the rest only once there is something to count.
-function Session:Lines()
-	local now = self.db.now
-	if not now then return {} end
-	local seconds = time() - now.started
-	local level = plain(call(UnitLevel, "player")) or now.level
-	local money = (plain(call(GetMoney)) or now.money) - now.money
-	local lines = {}
-	local function add(label, words) lines[#lines + 1] = { label, words } end
-	add("Played", duration(seconds))
-	add("Level", level ~= now.level and (now.level .. " to " .. level) or tostring(level))
-	if seconds >= 600 and now.xp > 0 then
-		add("Experience an hour", BreakUpLargeNumbers and BreakUpLargeNumbers(math.floor(now.xp / (seconds / 3600))) or tostring(math.floor(now.xp / (seconds / 3600))))
-	end
-	if money ~= 0 then add("Gold", (money < 0 and "-" or "+") .. Stoa.Items.money(math.abs(money))) end
-	if now.quests > 0 then add("Quests handed in", tostring(now.quests)) end
-	if now.deaths > 0 then add("Deaths", tostring(now.deaths)) end
-	if now.best then add("Best find", now.best.link) end
-	return lines
-end
-
 -- Four short lines for the away screen.
 function Session:Short()
 	local now = self.db.now
@@ -156,9 +134,27 @@ function Session:Short()
 end
 
 -- The card ---------------------------------------------------------------------
+-- A header band with your name in your class colour; a hero line with the
+-- time played and your level (a level-up lit in the accent); a grid of
+-- tiles for the rest, each a big number over a small label on a dark well;
+-- and the best find as an item row with its icon, in its quality colour.
 
-local CARD_WIDTH = 360
+local CARD_WIDTH = 380
 local PAD = 20
+local HEADER = 44
+local GAP = 8
+local TILE_H = 54
+
+local function classColour()
+	local _, class = UnitClass("player")
+	local colour = class and (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class) or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]))
+	if colour then return colour.r, colour.g, colour.b end
+	return Stoa:Color("text")
+end
+
+local function caption(parent, token)
+	return UI.text(parent, "sans", Stoa.typeSize.micro, token or "muted", "LEFT")
+end
 
 function Session:BuildCard()
 	local card = CreateFrame("Frame", "StoaRecap", UIParent)
@@ -166,54 +162,167 @@ function Session:BuildCard()
 	card:SetFrameStrata("DIALOG")
 	card:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
 	card:Hide()
-	UI.windowPanel(card, nil, { header = 44, plainHeader = true })
+	UI.windowPanel(card, nil, { header = HEADER, plainHeader = true })
 	local title = UI.text(card, "serif", Stoa.typeSize.title, "text", "LEFT")
-	title:SetPoint("LEFT", card, "TOPLEFT", PAD, -22)
+	title:SetPoint("LEFT", card, "TOPLEFT", PAD, -HEADER / 2)
 	title:SetText("This session")
-	local who = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
-	who:SetPoint("RIGHT", card, "TOPRIGHT", -44, -22)
+	local who = UI.text(card, "sans", Stoa.typeSize.body, "text", "RIGHT")
+	who:SetPoint("RIGHT", card, "TOPRIGHT", -44, -HEADER / 2)
 	local close = CreateFrame("Button", nil, card)
 	close:SetSize(20, 20)
-	close:SetPoint("RIGHT", card, "TOPRIGHT", -12, -22)
+	close:SetPoint("RIGHT", card, "TOPRIGHT", -12, -HEADER / 2)
 	local cross = UI.glyph(close, "Cross", 14, "muted")
 	cross:SetPoint("CENTER")
 	close:SetScript("OnClick", function() card:Hide() end)
 	close:SetScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("accent")) end)
 	close:SetScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
-	card.who, card.rows = who, {}
+
+	-- Hero: time played on the left, level on the right.
+	local playedCap = caption(card)
+	playedCap:SetPoint("TOPLEFT", PAD, -HEADER - 16)
+	playedCap:SetText("PLAYED")
+	local played = UI.text(card, "serif", Stoa.typeSize.display, "text", "LEFT")
+	played:SetPoint("TOPLEFT", playedCap, "BOTTOMLEFT", 0, -4)
+	local levelCap = caption(card)
+	levelCap:SetJustifyH("RIGHT")
+	levelCap:SetPoint("TOPRIGHT", -PAD, -HEADER - 16)
+	local level = UI.text(card, "serif", Stoa.typeSize.display, "text", "RIGHT")
+	level:SetPoint("TOPRIGHT", levelCap, "BOTTOMRIGHT", 0, -4)
+	local rule = card:CreateTexture(nil, "BORDER")
+	UI.pixel(rule, "height")
+	rule:SetTexture(UI.WHITE)
+	rule:SetPoint("TOPLEFT", PAD, -HEADER - 72)
+	rule:SetPoint("TOPRIGHT", -PAD, -HEADER - 72)
+
+	-- The best find: icon, name in its quality colour, item level.
+	local find = CreateFrame("Button", nil, card)
+	find:SetHeight(44)
+	UI.well(find, 0)
+	local findCap = caption(find)
+	findCap:SetText("BEST FIND")
+	local icon = find:CreateTexture(nil, "ARTWORK")
+	icon:SetSize(30, 30)
+	icon:SetPoint("LEFT", 8, 0)
+	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	local ring = find:CreateTexture(nil, "OVERLAY")
+	ring:SetPoint("TOPLEFT", icon, -1, 1)
+	ring:SetPoint("BOTTOMRIGHT", icon, 1, -1)
+	ring:SetTexture(UI.WHITE)
+	ring:SetDrawLayer("ARTWORK", -1)
+	findCap:SetPoint("TOPLEFT", icon, "TOPRIGHT", 10, 0)
+	local findName = UI.text(find, "sans", Stoa.typeSize.body, "text", "LEFT")
+	findName:SetPoint("BOTTOMLEFT", icon, "BOTTOMRIGHT", 10, 1)
+	findName:SetPoint("RIGHT", find, "RIGHT", -52, 0)
+	findName:SetWordWrap(false)
+	local findLevel = UI.text(find, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	findLevel:SetPoint("RIGHT", -10, 0)
+	find:SetScript("OnEnter", function(own)
+		if not own.link then return end
+		GameTooltip:SetOwner(own, "ANCHOR_RIGHT")
+		GameTooltip:SetHyperlink(own.link)
+		GameTooltip:Show()
+	end)
+	find:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+	card.who, card.played, card.level, card.levelCap, card.rule = who, played, level, levelCap, rule
+	card.find, card.findIcon, card.findRing, card.findName, card.findLevel = find, icon, ring, findName, findLevel
+	card.tiles = {}
 	if UISpecialFrames then table.insert(UISpecialFrames, "StoaRecap") end
 	self.card = card
+end
+
+-- The tiles: { label, value, token } for what the session counted.
+function Session:Tiles()
+	local now = self.db.now
+	local seconds = time() - now.started
+	local money = (plain(call(GetMoney)) or now.money) - now.money
+	local tiles = {}
+	if seconds >= 600 and now.xp > 0 then
+		local rate = math.floor(now.xp / (seconds / 3600))
+		tiles[#tiles + 1] = { "Experience an hour", BreakUpLargeNumbers and BreakUpLargeNumbers(rate) or tostring(rate) }
+	end
+	if money ~= 0 then tiles[#tiles + 1] = { money > 0 and "Gold earned" or "Gold spent", Stoa.Items.money(math.abs(money)), money > 0 and "accent" or "text" } end
+	if now.quests > 0 then tiles[#tiles + 1] = { now.quests == 1 and "Quest handed in" or "Quests handed in", tostring(now.quests) } end
+	if now.deaths > 0 then tiles[#tiles + 1] = { now.deaths == 1 and "Death" or "Deaths", tostring(now.deaths), "danger" } end
+	return tiles
 end
 
 function Session:ShowCard()
 	if not self.card then self:BuildCard() end
 	local card = self.card
-	local lines = self:Lines()
+	local now = self.db.now
 	card.who:SetText(Stoa.safe.plain(UnitName("player")) or "")
-	for _, row in ipairs(card.rows) do row.label:Hide() row.value:Hide() end
-	local y = -44 - 14
-	for i, line in ipairs(lines) do
-		local row = card.rows[i]
-		if not row then
-			row = {
-				label = UI.text(card, "sans", Stoa.typeSize.body, "muted", "LEFT"),
-				value = UI.text(card, "sans", Stoa.typeSize.label, "text", "RIGHT"),
-			}
-			card.rows[i] = row
-		end
-		row.label:ClearAllPoints()
-		row.label:SetPoint("TOPLEFT", PAD, y)
-		row.value:ClearAllPoints()
-		row.value:SetPoint("TOPRIGHT", -PAD, y)
-		row.label:SetText(line[1])
-		row.value:SetText(line[2])
-		if line[1] == "Gold" then row.value:SetTextColor(Stoa:Color("accent")) else row.value:SetTextColor(Stoa:Color("text")) end
-		row.label:Show()
-		row.value:Show()
-		y = y - 22
+	card.who:SetTextColor(classColour())
+	local tr, tg, tb = Stoa:Color("text")
+	card.rule:SetVertexColor(tr, tg, tb, 0.1)
+
+	card.played:SetText(duration(time() - now.started))
+	local level = plain(call(UnitLevel, "player")) or now.level
+	if level ~= now.level then
+		card.levelCap:SetText("LEVEL UP")
+		card.levelCap:SetTextColor(Stoa:Color("accent"))
+		card.level:SetText(now.level .. Stoa:Hex("muted") .. " to |r" .. Stoa:Hex("accent") .. level .. "|r")
+	else
+		card.levelCap:SetText("LEVEL")
+		card.levelCap:SetTextColor(Stoa:Color("muted"))
+		card.level:SetText(tostring(level))
 	end
-	card:SetHeight(-y + PAD - 4)
+
+	-- The tiles, two to a row.
+	for _, tile in ipairs(card.tiles) do tile:Hide() end
+	local tiles = self:Tiles()
+	local width = (CARD_WIDTH - PAD * 2 - GAP) / 2
+	local top = HEADER + 84
+	for i, info in ipairs(tiles) do
+		local tile = card.tiles[i]
+		if not tile then
+			tile = CreateFrame("Frame", nil, card)
+			UI.well(tile, 0)
+			tile.value = UI.text(tile, "sans", Stoa.typeSize.name, "text", "LEFT")
+			tile.value:SetPoint("TOPLEFT", 12, -10)
+			tile.label = caption(tile)
+			tile.label:SetPoint("BOTTOMLEFT", 12, 10)
+			card.tiles[i] = tile
+		end
+		local col, rowIndex = (i - 1) % 2, math.floor((i - 1) / 2)
+		tile:ClearAllPoints()
+		tile:SetSize(width, TILE_H)
+		tile:SetPoint("TOPLEFT", card, "TOPLEFT", PAD + col * (width + GAP), -(top + rowIndex * (TILE_H + GAP)))
+		tile.value:SetText(info[2])
+		tile.value:SetTextColor(Stoa:Color(info[3] or "text"))
+		tile.label:SetText(info[1]:upper())
+		tile:Show()
+	end
+	local y = top + math.ceil(#tiles / 2) * (TILE_H + GAP)
+	if #tiles == 0 then y = top end
+
+	-- The best find.
+	local find = card.find
+	local best = now.best
+	if best then
+		find.link = best.link
+		find:ClearAllPoints()
+		find:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -y)
+		find:SetPoint("TOPRIGHT", card, "TOPRIGHT", -PAD, -y)
+		local iconFile = C_Item and C_Item.GetItemIconByID and call(C_Item.GetItemIconByID, best.link) or (GetItemIcon and call(GetItemIcon, best.link))
+		card.findIcon:SetTexture(iconFile or 134400)
+		local r, g, b = 1, 1, 1
+		local colour = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[best.quality]
+		if colour then r, g, b = colour.r, colour.g, colour.b end
+		card.findRing:SetVertexColor(r, g, b, 0.9)
+		local name = best.link:match("%[(.-)%]") or best.link
+		card.findName:SetText(name)
+		card.findName:SetTextColor(r, g, b)
+		card.findLevel:SetText(best.level and best.level > 0 and ("ilvl " .. best.level) or "")
+		find:Show()
+		y = y + 44 + GAP
+	else
+		find:Hide()
+	end
+	card:SetHeight(y + PAD - GAP)
+	card:SetAlpha(0)
 	card:Show()
+	UI.fade(card, 1, 0.14)
 end
 
 Stoa.commands.recap = function()
