@@ -21,7 +21,6 @@ local Companion = Stoa:NewModule("Companion", {
 local call = Stoa.safe.call
 local WIDTH = 300
 local PAD = 16
-local ROW = 18
 -- A run is forgotten when you come back to the dungeon after this long.
 local RUN_GAP = 2 * 3600
 
@@ -138,34 +137,32 @@ end
 
 -- The card ---------------------------------------------------------------------
 
-local function line(parent)
-	local left = UI.text(parent, "sans", Stoa.typeSize.body, "text", "LEFT")
-	local right = UI.text(parent, "sans", Stoa.typeSize.body, "muted", "RIGHT")
-	left:SetWordWrap(false)
-	right:SetWordWrap(false)
-	return { left = left, right = right }
-end
+-- Made to read at a glance: a header band with the dungeon and its levels,
+-- a strip with one segment per boss, then the bosses and your quests as
+-- rows with a marker each (a tick once done, a dot while waiting, the next
+-- boss lit in the accent on a soft band of its own).
+local HEADER = 52
+local ROW_H = 22
+local MARK = 22
 
 function Companion:BuildCard()
 	local card = CreateFrame("Frame", "StoaCompanion", UIParent)
-	card:SetSize(WIDTH, 120)
+	card:SetSize(WIDTH, 160)
 	card:SetFrameStrata("MEDIUM")
 	card:Hide()
-	UI.roundPanel(card, 0.94)
+	UI.windowPanel(card, 0.95, { header = HEADER, plainHeader = true })
 
 	local title = UI.text(card, "serif", Stoa.typeSize.name, "text", "LEFT")
-	title:SetPoint("TOPLEFT", PAD, -PAD + 2)
-	title:SetPoint("RIGHT", card, "RIGHT", -PAD - 70, 0)
+	title:SetPoint("TOPLEFT", PAD, -12)
+	title:SetPoint("RIGHT", card, "RIGHT", -PAD - 24, 0)
 	title:SetWordWrap(false)
-	local levels = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
-	levels:SetPoint("RIGHT", card, "TOPRIGHT", -PAD - 22, -PAD - 6)
-	local sub = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "LEFT")
-	sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+	local levels = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	levels:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
 
 	-- Folds the card to the slim line.
 	local fold = CreateFrame("Button", nil, card)
-	fold:SetSize(18, 18)
-	fold:SetPoint("TOPRIGHT", -8, -10)
+	fold:SetSize(20, 20)
+	fold:SetPoint("TOPRIGHT", -10, -12)
 	local glyph = UI.glyph(fold, "Minus", 12, "muted")
 	glyph:SetPoint("CENTER")
 	fold:SetScript("OnClick", function() self:SetView("line") end)
@@ -180,14 +177,29 @@ function Companion:BuildCard()
 		GameTooltip:Hide()
 	end)
 
-	local rule = card:CreateTexture(nil, "BORDER")
-	UI.pixel(rule, "height")
-	UI.paint(rule, "hairline")
-	rule:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", -PAD, -10)
-	rule:SetPoint("RIGHT", card, "RIGHT")
+	-- Progress: words over a strip of one segment per boss.
+	local bossCount = UI.text(card, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	bossCount:SetPoint("TOPLEFT", PAD, -HEADER - 12)
+	local questCount = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	questCount:SetPoint("TOPRIGHT", -PAD, -HEADER - 12)
+	local strip = CreateFrame("Frame", nil, card)
+	strip:SetHeight(4)
+	strip:SetPoint("TOPLEFT", PAD, -HEADER - 30)
+	strip:SetPoint("TOPRIGHT", -PAD, -HEADER - 30)
 
-	card.title, card.levels, card.sub, card.rule = title, levels, sub, rule
-	card.heads, card.lines = {}, {}
+	-- The next boss's band: a soft accent wash with a bar at its left.
+	local band = card:CreateTexture(nil, "BACKGROUND", nil, 6)
+	band:SetTexture(UI.WHITE)
+	local bar = card:CreateTexture(nil, "BORDER")
+	bar:SetTexture(UI.WHITE)
+	bar:SetWidth(2)
+	bar:SetPoint("TOPLEFT", band, "TOPLEFT")
+	bar:SetPoint("BOTTOMLEFT", band, "BOTTOMLEFT")
+
+	card.title, card.levels, card.fold = title, levels, fold
+	card.bossCount, card.questCount, card.strip, card.segments = bossCount, questCount, strip, {}
+	card.band, card.bandBar = band, bar
+	card.heads, card.rules, card.lines = {}, {}, {}
 	self.card = card
 	Stoa:RegisterMover("companion", card, "Dungeon companion", { default = function() self:PlaceCard() end })
 	self:PlaceCard()
@@ -207,58 +219,142 @@ function Companion:PlaceCard()
 	end
 end
 
+-- The strip: done segments in the accent, the next one half lit.
+function Companion:FillStrip(bosses)
+	local card = self.card
+	local strip, segments = card.strip, card.segments
+	for _, seg in ipairs(segments) do seg:Hide() end
+	local count = #bosses
+	strip:SetShown(count > 0)
+	if count == 0 then return end
+	local gap = 3
+	local width = (WIDTH - PAD * 2 - gap * (count - 1)) / count
+	local ar, ag, ab = Stoa:Color("accent")
+	local tr, tg, tb = Stoa:Color("text")
+	for i, boss in ipairs(bosses) do
+		local seg = segments[i]
+		if not seg then
+			seg = strip:CreateTexture(nil, "ARTWORK")
+			seg:SetTexture(UI.WHITE)
+			segments[i] = seg
+		end
+		seg:ClearAllPoints()
+		seg:SetPoint("TOPLEFT", strip, "TOPLEFT", (i - 1) * (width + gap), 0)
+		seg:SetSize(width, 4)
+		if boss.dead then
+			seg:SetVertexColor(ar, ag, ab, 0.95)
+		elseif boss.next then
+			seg:SetVertexColor(ar, ag, ab, 0.4)
+		else
+			seg:SetVertexColor(tr, tg, tb, 0.12)
+		end
+		seg:Show()
+	end
+end
+
 local function sectionHead(card, index, words)
 	local head = card.heads[index]
 	if not head then
-		head = UI.text(card, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+		head = UI.text(card, "sans", Stoa.typeSize.micro, "accent", "LEFT")
 		card.heads[index] = head
+		local rule = card:CreateTexture(nil, "BORDER")
+		UI.pixel(rule, "height")
+		rule:SetTexture(UI.WHITE)
+		rule:SetPoint("LEFT", head, "RIGHT", 8, 0)
+		rule:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
+		card.rules[index] = rule
 	end
+	local r, g, b = Stoa:Color("text")
+	card.rules[index]:SetVertexColor(r, g, b, 0.1)
 	head:SetText(words:upper())
-	return head
+	return head, card.rules[index]
+end
+
+local function makeRow(card)
+	local row = {}
+	row.mark = card:CreateTexture(nil, "OVERLAY")
+	row.left = UI.text(card, "sans", Stoa.typeSize.body, "text", "LEFT")
+	row.right = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	row.left:SetWordWrap(false)
+	row.right:SetWordWrap(false)
+	return row
 end
 
 function Companion:FillCard(data)
 	local card = self.card
 	card.title:SetText(data.where.name)
-	card.levels:SetText(data.levels and data.levels:gsub("^Level ", "") or "")
-	local bits = {}
-	if #data.bosses > 0 then bits[#bits + 1] = ("%d of %d bosses"):format(data.down, #data.bosses) end
-	if #data.quests > 0 then bits[#bits + 1] = ("%d of %d quests done"):format(data.questsDone, #data.quests) end
-	card.sub:SetText(UI.join(bits))
+	card.levels:SetText(data.levels or (self.preview and "Preview" or ""))
 
-	for _, head in ipairs(card.heads) do head:Hide() end
-	for _, row in ipairs(card.lines) do row.left:Hide() row.right:Hide() end
-	local y = -(PAD + 46)
+	local bosses = #data.bosses
+	card.bossCount:SetText(bosses > 0 and ("%d of %d bosses"):format(data.down, bosses) or "No bosses listed")
+	card.questCount:SetText(#data.quests > 0 and ("%d of %d quests done"):format(data.questsDone, #data.quests) or "")
+	self:FillStrip(data.bosses)
+
+	for i, head in ipairs(card.heads) do head:Hide() card.rules[i]:Hide() end
+	for _, row in ipairs(card.lines) do row.mark:Hide() row.left:Hide() row.right:Hide() end
+	card.band:Hide()
+	card.bandBar:Hide()
+	local y = -(HEADER + (bosses > 0 and 46 or 34))
 	local heads, rows = 0, 0
+	local ar, ag, ab = Stoa:Color("accent")
 	local function head(words)
 		heads = heads + 1
-		local fs = sectionHead(card, heads, words)
+		local fs, rule = sectionHead(card, heads, words)
 		fs:ClearAllPoints()
-		fs:SetPoint("TOPLEFT", PAD, y - 6)
+		fs:SetPoint("TOPLEFT", PAD, y - 8)
 		fs:Show()
-		y = y - 6 - ROW
+		rule:Show()
+		y = y - 8 - 18
 	end
+	-- state: "done", "next" or nil (still to come).
 	local function row(left, right, state)
 		rows = rows + 1
 		local r = card.lines[rows]
 		if not r then
-			r = line(card)
+			r = makeRow(card)
 			card.lines[rows] = r
 		end
+		local mid = y - ROW_H / 2
+		r.mark:ClearAllPoints()
+		r.mark:SetPoint("CENTER", card, "TOPLEFT", PAD + 5, mid)
+		if state == "done" then
+			r.mark:SetTexture(UI.MEDIA .. "Textures\\GlyphTick")
+			r.mark:SetSize(14, 14)
+			r.mark:SetVertexColor(ar, ag, ab, 0.75)
+		else
+			r.mark:SetTexture(UI.MEDIA .. "Textures\\GlyphDot")
+			local size = state == "next" and 10 or 7
+			r.mark:SetSize(size, size * 2)
+			if state == "next" then
+				r.mark:SetVertexColor(ar, ag, ab, 1)
+			else
+				local mr, mg, mb = Stoa:Color("muted")
+				r.mark:SetVertexColor(mr, mg, mb, 0.6)
+			end
+		end
 		r.left:ClearAllPoints()
-		r.left:SetPoint("TOPLEFT", PAD, y)
-		r.left:SetPoint("RIGHT", card, "RIGHT", -PAD - 110, 0)
+		r.left:SetPoint("LEFT", card, "TOPLEFT", PAD + MARK - 4, mid)
+		r.left:SetPoint("RIGHT", card, "RIGHT", -PAD - 90, 0)
 		r.right:ClearAllPoints()
-		r.right:SetPoint("TOPRIGHT", -PAD, y)
+		r.right:SetPoint("RIGHT", card, "TOPRIGHT", -PAD, mid)
 		r.left:SetText(left)
 		r.right:SetText(right or "")
-		local token = state == "done" and "muted" or "text"
-		r.left:SetTextColor(Stoa:Color(token))
-		r.right:SetTextColor(Stoa:Color(state == "next" and "accent" or "muted"))
+		r.left:SetTextColor(Stoa:Color(state == "done" and "muted" or "text"))
 		r.left:SetAlpha(state == "done" and 0.6 or 1)
+		r.right:SetTextColor(Stoa:Color(state == "next" and "accent" or "muted"))
+		if state == "next" then
+			card.band:ClearAllPoints()
+			card.band:SetPoint("TOPLEFT", card, "TOPLEFT", PAD - 8, y + 1)
+			card.band:SetPoint("BOTTOMRIGHT", card, "TOPRIGHT", -PAD + 8, y - ROW_H - 1)
+			card.band:SetVertexColor(ar, ag, ab, 0.09)
+			card.bandBar:SetVertexColor(ar, ag, ab, 0.9)
+			card.band:Show()
+			card.bandBar:Show()
+		end
+		r.mark:Show()
 		r.left:Show()
 		r.right:Show()
-		y = y - ROW
+		y = y - ROW_H
 	end
 
 	local wing
@@ -267,15 +363,15 @@ function Companion:FillCard(data)
 			wing = boss.wing
 			head(wing and (wing .. " bosses") or "Bosses")
 		end
-		row(boss.name, boss.dead and "done" or (boss.next and "next") or "", boss.dead and "done" or (boss.next and "next"))
+		row(boss.name, boss.dead and "Done" or (boss.next and "Next") or "", boss.dead and "done" or (boss.next and "next"))
 	end
 	if #data.quests > 0 then
 		head("Your quests here")
 		for _, quest in ipairs(data.quests) do
-			row(quest.name, quest.done and "done" or quest.progress, quest.done and "done")
+			row(quest.name, quest.done and "Ready" or quest.progress, quest.done and "done")
 		end
 	end
-	card:SetHeight(-y + PAD - 4)
+	card:SetHeight(-y + PAD)
 end
 
 -- The line ---------------------------------------------------------------------
