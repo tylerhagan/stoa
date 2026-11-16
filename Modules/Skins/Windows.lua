@@ -677,7 +677,7 @@ end
 
 -- The skill bar under the title: a thin rounded STOA bar, the numbers in
 -- STOA's type, Blizzard's framed blue bar gone.
-local TRAINER_BAR_ROOM = 24
+local TRAINER_BAR_ROOM = 14
 
 local function dressTrainerBar()
 	local bar = ClassTrainerStatusBar
