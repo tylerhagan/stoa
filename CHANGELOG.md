@@ -4,6 +4,19 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.4.0
+
+- Riding: on a mount or a flight, out of a fight, the console folds to a slim travel line with your speed, the zone and how far your followed quest is. Chat steps back to a short fading feed and the action bars fade. Comforts: get off your mount to cast, and get off at the flight master. Settings > Console turns it off; /stoa ride previews it.
+- Tips: when there are no small jobs, the console's Ready line shows a short tip about something STOA does that's easy to miss. Hover for the whole tip, click to open its setting, right-click once you've got it. The away screen shows them in turn; /stoa tips brings back the ones you've marked.
+- Tank watch: the watch frame now wears the same plaque as the target, with its portrait medallion, rounded health bar with percent and amount, shield, power line and level.
+- Target plaque: a player's caption names their race and class.
+- Trainer window: the skill bar has its own full-width row under the header, and the list and skill step move down with it. The window is dressed whenever a trainer opens.
+- Spellbook list: an All ranks word shows every rank of each spell, and the detail line (rank, cost, cast) always keeps its muted colour.
+- Dungeon companion: finds dungeons by Forever's own names (such as the Stormwind Stockade) and lists the quests the log files under the dungeon's name.
+- Experience bar: rested shows in plain blue, and only quests ready to hand in count as finished.
+- Character window: keeps its size and header tabs when first opened in a fight.
+- Fixes: the console's gold no longer turns silver after a fight or a flight; theme colours paint as soon as a part is made.
+
 ## 1.3.0
 
 - Characters window (/stoa alts, or Settings > Your characters): every character you've played with STOA in one list with level, place, gold, rest, lockouts and item level. Search finds an item in any character's bags or bank, and clicking a character shows their model and gear, each item in its quality colour.
