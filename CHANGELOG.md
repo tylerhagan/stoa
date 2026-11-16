@@ -4,6 +4,11 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.4.1
+
+- Shield gauge: a new shield in a fight now shows full straight away. Before, the gauge could keep a reading taken as the last shield broke and show the new one empty.
+- Console light from the time of day is much subtler: the sky now tints the gold by a third at most, so it stays gold at night.
+
 ## 1.4.0
 
 - Riding: on a mount or a flight, out of a fight, the console folds to a slim travel line with your speed, the zone and how far your followed quest is. Chat steps back to a short fading feed and the action bars fade. Comforts: get off your mount to cast, and get off at the flight master. Settings > Console turns it off; /stoa ride previews it.
