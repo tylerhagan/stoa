@@ -486,6 +486,9 @@ function Spellbook:FillList()
 				row.name:SetTextColor(Stoa:Color((entry.passive or entry.older) and "muted" or "text"))
 				row.icon:SetAlpha((entry.passive or entry.older) and 0.75 or 1)
 				row.detail:SetText(detailText(entry))
+				-- Set on every fill: a theme repaint before the list opened
+				-- could leave the line as white as the name.
+				row.detail:SetTextColor(Stoa:Color("muted"))
 				setPill(row.pill, entry)
 				row:SetAttribute("spell", not entry.passive and entry.spellID or nil)
 			end
