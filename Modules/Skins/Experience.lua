@@ -3,8 +3,8 @@
 -- other bars that share its place) loses its frame, its segmented art and
 -- its glossy fill for a thin flat bar in the same rounded dark track as the
 -- nameplates and the swing timer. Experience fills in the accent like the
--- medallion's bezel, the rested stretch runs on in mana blue (striped, so
--- it still reads over the quest stretch), and the
+-- medallion's bezel, the rested stretch runs on in mana blue (drawn over
+-- the quest stretch, so it still reads), and the
 -- segment dividers become fine dark notches over the filled part. In a
 -- fight it fades away with the console and comes back after. Edit Mode
 -- still places it.
@@ -12,7 +12,6 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
-local RESTED_HATCH = UI.MEDIA .. "Textures\\HatchLight"
 
 local XPBar = Stoa:NewModule("XPBar", {
 	-- In a fight the bar fades away with the console.
@@ -69,7 +68,7 @@ local function colourBar(bar)
 	end
 	if bar.stoaRestStripes then
 		local mr, mg, mb = Stoa:Color("mana")
-		bar.stoaRestStripes:SetVertexColor(mr, mg, mb, 0.9)
+		bar.stoaRestStripes:SetVertexColor(mr, mg, mb, 0.7)
 	end
 	if bar.stoaTick then
 		local mr, mg, mb = Stoa:Color("mana")
@@ -124,13 +123,11 @@ local function dressBar(bar)
 		rested:ClearAllPoints()
 		rested:SetPoint("TOPLEFT", status, "TOPLEFT")
 		rested:SetPoint("BOTTOMLEFT", status, "BOTTOMLEFT")
-		-- Fine blue stripes over the rested part beyond the fill, drawn on
-		-- top so they still read over the quest stretch (which hides the
-		-- flat blue under it). They follow the rested bar's own edge.
+		-- Plain blue over the rested part beyond the fill, drawn on top so
+		-- it still reads over the quest stretch (which hides the flat blue
+		-- under it). It follows the rested bar's own edge.
 		local stripes = status:CreateTexture(nil, "OVERLAY", nil, 1)
-		stripes:SetTexture(RESTED_HATCH, "REPEAT", "REPEAT")
-		if stripes.SetHorizTile then stripes:SetHorizTile(true) end
-		if stripes.SetVertTile then stripes:SetVertTile(true) end
+		stripes:SetTexture(UI.WHITE)
 		stripes:SetPoint("TOPLEFT", status:GetStatusBarTexture(), "TOPRIGHT")
 		stripes:SetPoint("BOTTOMRIGHT", rested, "BOTTOMRIGHT")
 		stripes:SetShown(rested:IsShown())
@@ -270,14 +267,32 @@ end
 -- while a companion (OneForAll's quest XP) draws its own.
 local call = Stoa.safe.call
 
+-- Finished means ready to hand in: every objective done. The game also
+-- calls a quest complete when it has no objectives at all (talk to
+-- someone, take a letter somewhere) and for hidden tracking quests, which
+-- filled the stretch with quests that weren't done; those count only when
+-- the game says they're ready to turn in.
+local function finished(log, id)
+	if log.IsFailed and call(log.IsFailed, id) then return false end
+	if not call(log.IsComplete, id) then return false end
+	local objectives = log.GetQuestObjectives and call(log.GetQuestObjectives, id)
+	if type(objectives) == "table" and #objectives > 0 then
+		for _, objective in ipairs(objectives) do
+			if type(objective) == "table" and not objective.finished then return false end
+		end
+		return true
+	end
+	return log.ReadyForTurnIn and call(log.ReadyForTurnIn, id) and true or false
+end
+
 function XPBar:QuestXP()
 	local total, count = 0, 0
 	local log = C_QuestLog
 	if not (log and log.GetNumQuestLogEntries and log.GetInfo and log.IsComplete and GetQuestLogRewardXP) then return 0, 0 end
 	for index = 1, Stoa:PlainNumber(call(log.GetNumQuestLogEntries)) or 0 do
 		local info = call(log.GetInfo, index)
-		local id = type(info) == "table" and not info.isHeader and info.questID
-		if id and call(log.IsComplete, id) then
+		local id = type(info) == "table" and not info.isHeader and not info.isHidden and info.questID
+		if id and finished(log, id) then
 			local xp = Stoa:PlainNumber(call(GetQuestLogRewardXP, id))
 			if xp and xp > 0 then
 				total, count = total + xp, count + 1

@@ -456,6 +456,36 @@ do
 		console:UpdateDaylight()
 	end
 end
+-- Finished quests on the XP bar: only quests ready to hand in count, not
+-- talk-to quests with no objectives or hidden tracking quests.
+do
+	local xpbar = Stoa.modules.XPBar
+	if xpbar and xpbar.QuestXP then
+		local saved, savedXP = C_QuestLog, GetQuestLogRewardXP
+		local quests = {
+			{ questID = 1, objectives = { { finished = true }, { finished = true } } },
+			{ questID = 2, objectives = { { finished = true }, { finished = false } } },
+			{ questID = 3, objectives = {} },
+			{ questID = 4, objectives = {}, ready = true },
+			{ questID = 5, objectives = { { finished = true } }, isHidden = true },
+		}
+		local byID = {}
+		for _, q in ipairs(quests) do byID[q.questID] = q end
+		C_QuestLog = {
+			GetNumQuestLogEntries = function() return #quests end,
+			GetInfo = function(i) return quests[i] end,
+			IsComplete = function() return true end,
+			IsFailed = function() return false end,
+			GetQuestObjectives = function(id) return byID[id].objectives end,
+			ReadyForTurnIn = function(id) return byID[id].ready or false end,
+		}
+		GetQuestLogRewardXP = function() return 100 end
+		local ok, xp, count = pcall(xpbar.QuestXP, xpbar)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: " .. tostring(xp)
+		elseif count ~= 2 or xp ~= 200 then SIM_ERRORS[#SIM_ERRORS + 1] = ("Quest XP: counted %s quests, %s XP (want 2, 200)"):format(tostring(count), tostring(xp)) end
+		C_QuestLog, GetQuestLogRewardXP = saved, savedXP
+	end
+end
 -- Dungeon names as Forever gives them find STOA's boss lists.
 do
 	local find = Stoa.Dungeons and Stoa.Dungeons.find
@@ -762,6 +792,8 @@ do
 		C_QuestLog.GetNumQuestLogEntries = function() return 2 end
 		C_QuestLog.GetInfo = function(i) return { questID = 100 + i, title = "Q" .. i } end
 		C_QuestLog.IsComplete = function(id) return id == 101 end
+		local realObjectives = C_QuestLog.GetQuestObjectives
+		C_QuestLog.GetQuestObjectives = function(id) return { { finished = id == 101 } } end
 		GetQuestLogRewardXP = function(id) return 1500 end
 		xpbar:UpdateQuests()
 		local stretch = bar.StatusBar.stoaQuests
@@ -776,6 +808,7 @@ do
 		xpbar:UpdateQuests()
 		if stretch and stretch:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: stretch shown with nothing finished" end
 		C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete, GetQuestLogRewardXP = realNum, realInfo, realComplete, realXP
+		C_QuestLog.GetQuestObjectives = realObjectives
 		container.bars = {}
 	end
 end
