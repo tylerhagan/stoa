@@ -776,8 +776,8 @@ local function dressTrainer()
 				inset:SetPoint(point, rel, relPoint, x, y - TRAINER_BAR_ROOM)
 				frame:SetHeight(frame:GetHeight() + TRAINER_BAR_ROOM)
 				bar:ClearAllPoints()
-				bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y - 6)
-				bar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, y - 6)
+				bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y + 6)
+				bar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, y + 6)
 			end
 		end
 		-- Your money sits at the left of the footer, level with Train.
