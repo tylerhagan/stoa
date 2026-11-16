@@ -1377,6 +1377,43 @@ function Halo:OnEnable()
 		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
 			Stoa:On(event, function() self.shield:Update("player") end)
 		end
+		-- A fresh shield on you (any absorb: Power Word: Shield, an Aegis,
+		-- a Ward, a Barrier) is the gauge's new top, even in a fight.
+		local ABSORB = { "Shield", "Barrier", "Ward", "Aegis" }
+		local function absorbing(aura)
+			local id = aura and aura.spellId
+			if not id or Stoa:IsSecret(id) then return false end
+			local name = Stoa.Spells and Stoa.Spells.name(id)
+			if type(name) ~= "string" then return false end
+			for _, word in ipairs(ABSORB) do
+				if name:find(word, 1, true) then return true end
+			end
+			return false
+		end
+		-- In a fight the game can hide the whole list (a secret), so any
+		-- read of it is guarded and a hidden list is simply skipped.
+		local function freshShield(info)
+			if Stoa:IsSecret(info) or type(info) ~= "table" then return false end
+			local added = info.addedAuras
+			if Stoa:IsSecret(added) or type(added) ~= "table" then return false end
+			for _, aura in ipairs(added) do
+				if not Stoa:IsSecret(aura) and absorbing(aura) then return true end
+			end
+			return false
+		end
+		Stoa:OnUnit("UNIT_AURA", { "player" }, function(unit, info)
+			local ok, yes = pcall(freshShield, info)
+			if ok and yes then self.shield:Remeasure("player") end
+		end)
+		-- Your own shield cast lands on you when you target yourself, an
+		-- enemy or nobody: the hidden list can't tell, the cast can.
+		local plain = function(v) return Stoa.safe.plain(v) end
+		Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(_, _, spellID)
+			if not spellID or Stoa:IsSecret(spellID) or not absorbing({ spellId = spellID }) then return end
+			local onYou = not UnitExists("target") or plain(UnitIsUnit("target", "player"))
+				or (UnitCanAssist and plain(UnitCanAssist("player", "target")) == false)
+			if onYou then self.shield:Remeasure("player") end
+		end)
 	end
 	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
