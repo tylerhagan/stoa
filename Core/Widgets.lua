@@ -789,6 +789,23 @@ function UI.shieldGauge(parent, size)
 		self:Show()
 	end
 
+	-- A shield just went up on the unit (Modules/Halo/Halo.lua watches your
+	-- auras): what it holds now is the top. Without this a fight kept a top
+	-- measured earlier, at worst the moment the last shield broke, and the
+	-- new shield showed empty however full it was.
+	function gauge:Remeasure(unit)
+		unit = unit or self.unit or "player"
+		local known, left = absorbOf(unit)
+		if not known or Stoa:PlainNumber(left) then return self:Update(unit) end
+		gaugeFull[unit] = false
+		C_Timer.After(0.25, function()
+			if gaugeFull[unit] ~= false then return end
+			local ok, amount = absorbOf(unit)
+			gaugeFull[unit] = ok and { amount, at = GetTime() } or nil
+			self:Update(unit)
+		end)
+	end
+
 	gauge:Hide()
 	return gauge
 end

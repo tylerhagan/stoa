@@ -1377,6 +1377,27 @@ function Halo:OnEnable()
 		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
 			Stoa:On(event, function() self.shield:Update("player") end)
 		end
+		-- A fresh shield on you (any absorb: Power Word: Shield, an Aegis,
+		-- a Ward, a Barrier) is the gauge's new top, even in a fight.
+		local ABSORB = { "Shield", "Barrier", "Ward", "Aegis" }
+		local function absorbing(aura)
+			local id = aura and aura.spellId
+			if not id or Stoa:IsSecret(id) then return false end
+			local name = Stoa.Spells and Stoa.Spells.name(id)
+			if type(name) ~= "string" then return false end
+			for _, word in ipairs(ABSORB) do
+				if name:find(word, 1, true) then return true end
+			end
+			return false
+		end
+		Stoa:OnUnit("UNIT_AURA", { "player" }, function(unit, info)
+			local added = type(info) == "table" and info.addedAuras
+			if type(added) ~= "table" then return end
+			for _, aura in ipairs(added) do
+				local ok, yes = pcall(absorbing, aura)
+				if ok and yes then self.shield:Remeasure("player") return end
+			end
+		end)
 	end
 	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdatePower() end

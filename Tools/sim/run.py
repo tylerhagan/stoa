@@ -1458,6 +1458,24 @@ drain()
 UnitGetTotalAbsorbs = function() return SECRET end
 fire("UNIT_ABSORB_AMOUNT_CHANGED", "player")
 drain()
+-- A fresh shield in a fight is measured again as the gauge's top.
+do
+	local halo = Stoa.modules.Halo
+	local shield = halo and halo.shield
+	if shield then
+		local asked = false
+		local remeasure = shield.Remeasure
+		shield.Remeasure = function(self, unit) asked = true return remeasure(self, unit) end
+		local spellName = C_Spell.GetSpellName
+		C_Spell.GetSpellName = function(id) if id == 17 then return "Power Word: Shield" end return spellName(id) end
+		fire("UNIT_AURA", "player", { addedAuras = { { spellId = 17 } } })
+		SIM_ADVANCE(0.5)
+		drain()
+		shield.Remeasure = remeasure
+		C_Spell.GetSpellName = spellName
+		if not asked then error("shield gauge: a fresh Power Word: Shield in a fight wasn't measured again") end
+	end
+end
 for _, e in ipairs({ "UNIT_HEALTH", "UNIT_POWER_UPDATE", "UNIT_AURA", "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_START" }) do
 	fire(e, "player", "Cast-1", 589)
 	fire(e, "target", "Cast-1", 589)
