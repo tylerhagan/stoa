@@ -1468,7 +1468,14 @@ do
 		shield.Remeasure = function(self, unit) asked = true return remeasure(self, unit) end
 		local spellName = C_Spell.GetSpellName
 		C_Spell.GetSpellName = function(id) if id == 17 then return "Power Word: Shield" end return spellName(id) end
+		fire("UNIT_AURA", "player", SECRET)
+		fire("UNIT_AURA", "player", { addedAuras = SECRET })
+		drain()
 		fire("UNIT_AURA", "player", { addedAuras = { { spellId = 17 } } })
+		SIM_ADVANCE(0.5)
+		drain()
+		asked = false
+		fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-2", 17)
 		SIM_ADVANCE(0.5)
 		drain()
 		shield.Remeasure = remeasure

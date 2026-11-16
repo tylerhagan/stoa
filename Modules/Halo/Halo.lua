@@ -1390,13 +1390,29 @@ function Halo:OnEnable()
 			end
 			return false
 		end
-		Stoa:OnUnit("UNIT_AURA", { "player" }, function(unit, info)
-			local added = type(info) == "table" and info.addedAuras
-			if type(added) ~= "table" then return end
+		-- In a fight the game can hide the whole list (a secret), so any
+		-- read of it is guarded and a hidden list is simply skipped.
+		local function freshShield(info)
+			if Stoa:IsSecret(info) or type(info) ~= "table" then return false end
+			local added = info.addedAuras
+			if Stoa:IsSecret(added) or type(added) ~= "table" then return false end
 			for _, aura in ipairs(added) do
-				local ok, yes = pcall(absorbing, aura)
-				if ok and yes then self.shield:Remeasure("player") return end
+				if not Stoa:IsSecret(aura) and absorbing(aura) then return true end
 			end
+			return false
+		end
+		Stoa:OnUnit("UNIT_AURA", { "player" }, function(unit, info)
+			local ok, yes = pcall(freshShield, info)
+			if ok and yes then self.shield:Remeasure("player") end
+		end)
+		-- Your own shield cast lands on you when you target yourself, an
+		-- enemy or nobody: the hidden list can't tell, the cast can.
+		local plain = function(v) return Stoa.safe.plain(v) end
+		Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(_, _, spellID)
+			if not spellID or Stoa:IsSecret(spellID) or not absorbing({ spellId = spellID }) then return end
+			local onYou = not UnitExists("target") or plain(UnitIsUnit("target", "player"))
+				or (UnitCanAssist and plain(UnitCanAssist("player", "target")) == false)
+			if onYou then self.shield:Remeasure("player") end
 		end)
 	end
 	Stoa:OnUnit("UNIT_POWER_UPDATE", { "player", "target" }, function(unit)
