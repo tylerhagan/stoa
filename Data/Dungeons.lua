@@ -13,7 +13,7 @@ Stoa.Dungeons = {
 	{ name = "The Deadmines", bosses = { "Rhahk'Zor", "Sneed", "Gilnid", "Mr. Smite", "Captain Greenskin", "Edwin VanCleef", "Cookie" } },
 	{ name = "Shadowfang Keep", bosses = { "Rethilgore", "Razorclaw the Butcher", "Baron Silverlaine", "Commander Springvale", "Odo the Blindwatcher", "Fenrus the Devourer", "Wolf Master Nandos", "Archmage Arugal" } },
 	{ name = "Blackfathom Deeps", bosses = { "Ghamoo-ra", "Lady Sarevess", "Gelihast", "Lorgus Jett", "Baron Aquanis", "Twilight Lord Kelris", "Old Serra'kis", "Aku'mai" } },
-	{ name = "The Stockade", bosses = { "Targorr the Dread", "Kam Deepfury", "Hamhock", "Bazil Thredd", "Dextren Ward" } },
+	{ name = "The Stockade", aka = { "Stormwind Stockade" }, bosses = { "Targorr the Dread", "Kam Deepfury", "Hamhock", "Bazil Thredd", "Dextren Ward" } },
 	{ name = "Gnomeregan", bosses = { "Grubbis", "Viscous Fallout", "Electrocutioner 6000", "Crowd Pummeler 9-60", "Mekgineer Thermaplugg" } },
 	{ name = "Razorfen Kraul", bosses = { "Roogug", "Aggem Thorncurse", "Death Speaker Jargba", "Overlord Ramtusk", "Agathelos the Raging", "Charlga Razorflank" } },
 	{ name = "Scarlet Monastery", wings = {
@@ -44,15 +44,28 @@ Stoa.Dungeons = {
 	} },
 }
 
--- The dungeon by the game's name for it (any case), or nil.
+-- A name to compare: lower case, without a leading "The" or punctuation
+-- ("The Deadmines" and "Deadmines" match).
+local function key(name)
+	return (name:lower():gsub("^the%s+", ""):gsub("[^%w%s]", ""):gsub("%s+", " "))
+end
+
+-- The dungeon by the game's name for it, or nil. Forever names some
+-- dungeons differently from the old lists (Stormwind Stockade), so a name
+-- holding a dungeon's name, or held in it, counts as well.
 function Stoa.Dungeons.find(name)
-	if type(name) ~= "string" then return nil end
-	local want = name:lower()
+	if type(name) ~= "string" or name == "" then return nil end
+	local want = key(name)
 	for _, dungeon in ipairs(Stoa.Dungeons) do
-		if dungeon.name:lower() == want then return dungeon end
+		if key(dungeon.name) == want then return dungeon end
 		for _, other in ipairs(dungeon.aka or {}) do
-			if other:lower() == want then return dungeon end
+			if key(other) == want then return dungeon end
 		end
+	end
+	if #want < 6 then return nil end
+	for _, dungeon in ipairs(Stoa.Dungeons) do
+		local mine = key(dungeon.name)
+		if want:find(mine, 1, true) or mine:find(want, 1, true) then return dungeon end
 	end
 end
 
