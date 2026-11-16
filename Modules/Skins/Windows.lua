@@ -778,6 +778,23 @@ local function dressTrainer()
 				bar:ClearAllPoints()
 				bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y + 6)
 				bar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, y + 6)
+				-- With a skill step (the next rank) shown, Blizzard ends the
+				-- top list a set distance from the window's top; that end
+				-- moves down with it, or the step row covers the list.
+				local function lowerStepRow()
+					if not (frame.bottomInset and frame.bottomInset:IsShown()) or InCombatLockdown() then return end
+					for i = 1, (inset.GetNumPoints and inset:GetNumPoints() or 1) do
+						local p, r, rp, px, py = inset:GetPoint(i)
+						if p == "BOTTOMRIGHT" and rp == "TOPRIGHT" and type(py) == "number" then
+							inset:SetPoint(p, r, rp, px, py - TRAINER_BAR_ROOM)
+							break
+						end
+					end
+				end
+				if _G.ClassTrainerFrame_Update then
+					hooksecurefunc("ClassTrainerFrame_Update", function() Stoa.safe.guarded(lowerStepRow) end)
+				end
+				lowerStepRow()
 			end
 		end
 		-- Your money sits at the left of the footer, level with Train.
