@@ -178,7 +178,9 @@ function Console:BuildArt(frame)
 		lines:SetAllPoints(base)
 		-- Painted by PaintDaylit: the theme's gold, lit from above.
 		self.daylitParts = self.daylitParts or {}
-		table.insert(self.daylitParts, { region = lines, vertex = true })
+		local part = { region = lines, vertex = true }
+		lines.stoaDaylit = part
+		table.insert(self.daylitParts, part)
 	end
 
 	local leather = layer("Leather", -6)
@@ -1573,7 +1575,16 @@ function Console:SetOpen(open, instant)
 			UI.fadeTo(part, open and progress or 1 - progress)
 		end
 		for _, part in ipairs(self.archParts) do
-			UI.fadeTo(part, open and progress or 1 - progress)
+			local fade = open and progress or 1 - progress
+			-- The gold lines fade inside their own colour: a texture's
+			-- alpha set over a gradient left the lines plain white after a
+			-- fight or a flight, which read as silver.
+			if part.stoaDaylit then
+				part.stoaGoldFade = fade
+				self:PaintDaylitPart(part.stoaDaylit)
+			else
+				UI.fadeTo(part, fade)
+			end
 			-- Hidden once folded: the gold lines' gradient keeps its own
 			-- alpha through a repaint, so a fade alone left the ring showing.
 			part:SetShown(open or progress < 1)
@@ -1892,31 +1903,32 @@ end
 
 -- Repaints only the console's own gold. (The theme's full repaint would
 -- also reset colours other modules set since, such as the target's bar.)
-function Console:PaintDaylit()
+function Console:PaintDaylitPart(part)
 	-- Light from above: the sky's colour on the top, the theme's own gold
 	-- underneath, so only the upper half of each piece catches it.
+	local region = part.region
 	local r, g, b, a = Stoa:Color("daylit")
 	local ar, ag, ab, aa = Stoa:Color("accent")
 	local lit = Stoa.daylight and CreateColor and true
-	for _, part in ipairs(self.daylitParts or {}) do
-		local region = part.region
-		-- A texture's colour carries its alpha, so a part faded by the fold
-		-- (folded in a fight, or riding) keeps its fade through a repaint.
-		local fade = region.stoaFade or 1
-		if not part.vertex then region:SetColorTexture(1, 1, 1, 1) end
-		if lit and region.SetGradient then
-			local top = CreateColor(r, g, b, a * fade)
-			if part.weight then
-				local w = part.weight
-				top = CreateColor(ar + (r - ar) * w, ag + (g - ag) * w, ab + (b - ab) * w, a * fade)
-			end
-			pcall(region.SetGradient, region, "VERTICAL", CreateColor(ar, ag, ab, aa * fade), top)
-		elseif part.vertex then
-			region:SetVertexColor(ar, ag, ab, aa * fade)
-		else
-			region:SetColorTexture(ar, ag, ab, aa * fade)
+	-- The fold's fade lives in the colour, never in the region's alpha.
+	local fade = region.stoaGoldFade or 1
+	if not part.vertex then region:SetColorTexture(1, 1, 1, 1) end
+	if lit and region.SetGradient then
+		local top = CreateColor(r, g, b, a * fade)
+		if part.weight then
+			local w = part.weight
+			top = CreateColor(ar + (r - ar) * w, ag + (g - ag) * w, ab + (b - ab) * w, a * fade)
 		end
+		pcall(region.SetGradient, region, "VERTICAL", CreateColor(ar, ag, ab, aa * fade), top)
+	elseif part.vertex then
+		region:SetVertexColor(ar, ag, ab, aa * fade)
+	else
+		region:SetColorTexture(ar, ag, ab, aa * fade)
 	end
+end
+
+function Console:PaintDaylit()
+	for _, part in ipairs(self.daylitParts or {}) do self:PaintDaylitPart(part) end
 	self:PaintDividers()
 	self:PaintGlass()
 end
