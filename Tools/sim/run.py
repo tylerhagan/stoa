@@ -1316,6 +1316,16 @@ do
 		if not head then SIM_ERRORS[#SIM_ERRORS + 1] = "Character layout: no head slot to check" end
 		if head and not head.stoaSide then SIM_ERRORS[#SIM_ERRORS + 1] = "Character layout: no words beside the head slot" end
 		character:UpdateFooter()
+		-- Opened mid-fight: the window's size is put back (it isn't protected).
+		do
+			local lockdown, setSize, h = InCombatLockdown, CharacterFrame.SetSize, nil
+			InCombatLockdown = function() return true end
+			CharacterFrame.SetSize = function(f, w, hh) h = hh return setSize(f, w, hh) end
+			character:LayOut()
+			InCombatLockdown, CharacterFrame.SetSize = lockdown, setSize
+			if h ~= 560 then SIM_ERRORS[#SIM_ERRORS + 1] = "Character layout: size not kept in combat (" .. tostring(h) .. ")" end
+			character.layOutAfterCombat = nil
+		end
 		-- A detail pane on another page starts under the header, not in it.
 		local page = rawget(_G, "ReputationFrame") or CreateFrame("Frame")
 		_G.ReputationFrame = page

@@ -28,6 +28,13 @@ local Character = Stoa:NewModule("Character", { layout = true })
 local guarded = Stoa.safe.guarded
 local hide = Stoa.frames.hide
 
+-- In a fight a protected frame can't be moved or sized. The character
+-- window and its tabs aren't protected, so STOA keeps them in shape when
+-- the sheet opens mid-fight; anything that is protected waits.
+local function blocked(region)
+	return InCombatLockdown() and region and region.IsProtected and region:IsProtected() and true or false
+end
+
 local SLOTS = {
 	"Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist",
 	"Hands", "Waist", "Legs", "Feet", "Finger0", "Finger1", "Trinket0", "Trinket1",
@@ -103,7 +110,7 @@ end
 -- again after each one.
 local function seatLevel()
 	local frame, level = CharacterFrame, CharacterLevelText
-	if not (frame and level and frame.stoaHeader) or InCombatLockdown() then return end
+	if not (frame and level and frame.stoaHeader) or blocked(frame) then return end
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	-- On the sheet the title sits high with the level line under it; the
 	-- other pages have no level line, so their title sits level with the
@@ -486,7 +493,7 @@ end
 function Character:PlaceTabs()
 	local frame = CharacterFrame
 	local tabs = frame and frame.ModeTabs and frame.ModeTabs.Tabs
-	if not tabs or InCombatLockdown() then return end
+	if not tabs or blocked(frame) then return end
 	local close = frame.CloseButton or _G.CharacterFrameCloseButton
 	local previous
 	for i = #tabs, 1, -1 do
@@ -728,11 +735,21 @@ end
 local laidOut
 -- Moves the slots and sizes the window. Out of combat only; run again
 -- whenever Blizzard sizes the window (each tab change).
-function Character:LayOut()
+function Character:LayOut(early)
 	local frame = CharacterFrame
 	if not (frame and layoutOn()) then return end
 	if InCombatLockdown() then
+		-- Blizzard sizes the window and its tabs on every show; put the size
+		-- and tabs back (neither is protected) and do the rest after.
 		self.layOutAfterCombat = true
+		if not blocked(frame) then
+			local right = frame.RightPaneHost
+			local collapsed = frame.IsRightPaneCollapsed and frame:IsRightPaneCollapsed()
+			frame:SetSize(LEFT_W + ((not collapsed and right and right:GetWidth()) or 0), SHEET_H)
+			if frame.LeftPaneHost then frame.LeftPaneHost:SetWidth(LEFT_W) end
+			self:PlaceTabs()
+			guarded(seatLevel)
+		end
 		return
 	end
 	-- One size for every tab, so the window never jumps as you switch and
@@ -746,7 +763,9 @@ function Character:LayOut()
 	if left then left:SetWidth(LEFT_W) end
 	-- The item level line belongs to the sheet; Blizzard gives other pages
 	-- their own title, in its gold, which STOA sets light again.
-	local sheet = onSheet()
+	-- Early (before the sheet first opens) lays the sheet out as well, so
+	-- opening it first in a fight finds it ready.
+	local sheet = early or onSheet()
 	if frame.stoaAverage then frame.stoaAverage:SetShown(sheet and true or false) end
 	local title = (frame.TitleContainer and frame.TitleContainer.TitleText) or frame.TitleText
 	if title then title:SetTextColor(Stoa:Color("text")) end
@@ -926,6 +945,15 @@ function Character:OnEnable()
 			if name == "Blizzard_InspectUI" then guarded(dressInspect) end
 		end)
 	end
+	-- Laid out ahead, out of combat, so the sheet is in shape even if it
+	-- first opens in a fight.
+	Stoa:On("PLAYER_ENTERING_WORLD", function()
+		C_Timer.After(2, function()
+			if not laidOut and CharacterFrame and not CharacterFrame:IsShown() then
+				Stoa:AfterCombat(function() guarded(Character.LayOut, Character, true) end)
+			end
+		end)
+	end)
 	Stoa:On("UPDATE_INVENTORY_DURABILITY", function() Character:Refresh() end)
 	Stoa:On("PLAYER_EQUIPMENT_CHANGED", function() Character:Refresh() end)
 	Stoa:On("INSPECT_READY", function() guarded(refreshInspect) end)
