@@ -28,7 +28,7 @@ local NOTE = {
 		{ "A talent planner", "Plan a build point by point for levels you haven't reached, keep named plans, share them as text and turn one into a game loadout. The Talent planner word on the talent window opens it. STOA never spends a point for you." },
 		{ "Small jobs on the console", "One line under Ready gathers what's worth doing before you head out: a missing buff, gear about to break, talent points, new spells not on a bar, restock items short and an emptied slot. Hover it for the list." },
 		{ "Light from the time of day", "The console's gold catches the sky from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk and moonlit blue at night, with a glass glint on your portrait. /stoa daylight 23 previews an hour." },
-		{ "Smoother, tidier", "STOA's windows, settings and cards rise in swiftly, the trainer window is tidied with Settings in its footer, rested shows as blue stripes on the experience bar, and books and letters read clearly." },
+		{ "Smoother, tidier", "STOA's windows, settings and cards rise in swiftly, the trainer window is tidied with Settings in its footer, rested stays blue on the experience bar, and books and letters read clearly." },
 	},
 	foot = "Each can be switched off in the settings. /stoa news shows this again.\n\nMy characters have waited long enough whilst I polished their interface. Updates will be slower until I reach 60, though anything broken still gets fixed quickly.",
 }

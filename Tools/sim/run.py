@@ -456,6 +456,47 @@ do
 		console:UpdateDaylight()
 	end
 end
+-- Finished quests on the XP bar: only quests ready to hand in count, not
+-- talk-to quests with no objectives or hidden tracking quests.
+do
+	local xpbar = Stoa.modules.XPBar
+	if xpbar and xpbar.QuestXP then
+		local saved, savedXP = C_QuestLog, GetQuestLogRewardXP
+		local quests = {
+			{ questID = 1, objectives = { { finished = true }, { finished = true } } },
+			{ questID = 2, objectives = { { finished = true }, { finished = false } } },
+			{ questID = 3, objectives = {} },
+			{ questID = 4, objectives = {}, ready = true },
+			{ questID = 5, objectives = { { finished = true } }, isHidden = true },
+		}
+		local byID = {}
+		for _, q in ipairs(quests) do byID[q.questID] = q end
+		C_QuestLog = {
+			GetNumQuestLogEntries = function() return #quests end,
+			GetInfo = function(i) return quests[i] end,
+			IsComplete = function() return true end,
+			IsFailed = function() return false end,
+			GetQuestObjectives = function(id) return byID[id].objectives end,
+			ReadyForTurnIn = function(id) return byID[id].ready or false end,
+		}
+		GetQuestLogRewardXP = function() return 100 end
+		local ok, xp, count = pcall(xpbar.QuestXP, xpbar)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: " .. tostring(xp)
+		elseif count ~= 2 or xp ~= 200 then SIM_ERRORS[#SIM_ERRORS + 1] = ("Quest XP: counted %s quests, %s XP (want 2, 200)"):format(tostring(count), tostring(xp)) end
+		C_QuestLog, GetQuestLogRewardXP = saved, savedXP
+	end
+end
+-- Dungeon names as Forever gives them find STOA's boss lists.
+do
+	local find = Stoa.Dungeons and Stoa.Dungeons.find
+	if find then
+		for game, ours in pairs({ ["Stormwind Stockade"] = "The Stockade", ["Deadmines"] = "The Deadmines", ["the stockade"] = "The Stockade", ["Sunken Temple"] = "The Temple of Atal'Hakkar", ["Scarlet Monastery - Library"] = "Scarlet Monastery" }) do
+			local found = find(game)
+			if not (found and found.name == ours) then SIM_ERRORS[#SIM_ERRORS + 1] = "Dungeons: " .. game .. " found " .. tostring(found and found.name) end
+		end
+		if find("Elwynn Forest") or find("The") then SIM_ERRORS[#SIM_ERRORS + 1] = "Dungeons: a zone matched a dungeon" end
+	end
+end
 -- Trainer window: the skill bar, the Settings dropdown and the rows dressed.
 do
 	if Stoa.modules.Windows then
@@ -751,6 +792,8 @@ do
 		C_QuestLog.GetNumQuestLogEntries = function() return 2 end
 		C_QuestLog.GetInfo = function(i) return { questID = 100 + i, title = "Q" .. i } end
 		C_QuestLog.IsComplete = function(id) return id == 101 end
+		local realObjectives = C_QuestLog.GetQuestObjectives
+		C_QuestLog.GetQuestObjectives = function(id) return { { finished = id == 101 } } end
 		GetQuestLogRewardXP = function(id) return 1500 end
 		xpbar:UpdateQuests()
 		local stretch = bar.StatusBar.stoaQuests
@@ -765,6 +808,7 @@ do
 		xpbar:UpdateQuests()
 		if stretch and stretch:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: stretch shown with nothing finished" end
 		C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete, GetQuestLogRewardXP = realNum, realInfo, realComplete, realXP
+		C_QuestLog.GetQuestObjectives = realObjectives
 		container.bars = {}
 	end
 end
@@ -873,6 +917,13 @@ do
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: rows not grouped to the best rank"
 		end
 		if #spellbook:ListRows("zzz") ~= 0 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: search didn't narrow" end
+		-- All ranks: the best Smite, then Rank 1 under it, quieter.
+		spellbook.db.allRanks = true
+		local every = spellbook:ListRows("")
+		if not (#every == 3 and every[2].rank == "Rank 2" and every[3].rank == "Rank 1" and every[3].older and every[1].count == 1) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: all ranks not listed best first"
+		end
+		spellbook.db.allRanks = false
 		if spellbook.list then
 			spellbook.list.IsShown = function() return true end
 			spellbook.list.GetHeight = function() return 400 end
@@ -885,8 +936,12 @@ do
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: Shadow Magic not shortened"
 		end
 		if rows[1].count ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: heading has no count" end
-		if not (spellbook.tools and spellbook.tools.box and spellbook.tools.words[1]) then
+		if not (spellbook.tools and spellbook.tools.box and spellbook.tools.words[1] and spellbook.tools.ranks) then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: no STOA toolbar"
+		else
+			spellbook.tools.ranks:GetScript("OnClick")(spellbook.tools.ranks)
+			if not (spellbook.db.allRanks and spellbook.tools.ranks.chosen) then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: All ranks word didn't switch" end
+			spellbook.tools.ranks:GetScript("OnClick")(spellbook.tools.ranks)
 		end
 		spellbook.tools.box:SetText("zzz")
 		spellbook:FillList()

@@ -245,10 +245,21 @@ function Spellbook:Schools()
 	return out
 end
 
+-- Every rank or the best only (the All ranks word in List view). It starts
+-- from the game's own Show all spell ranks setting, then keeps its own.
+function Spellbook:AllRanks()
+	if self.db.allRanks == nil then
+		return GetCVarBool and GetCVarBool("ShowAllSpellRanks") and true or false
+	end
+	return self.db.allRanks and true or false
+end
+
 -- Your spells as rows: a heading per school (with its count), then its
--- spells by name, the best rank of each, passives last. Search text narrows
--- them by name; a school name keeps only that school.
+-- spells by name, the best rank of each, passives last. With All ranks on,
+-- each spell's lower ranks follow it, quieter, best first. Search text
+-- narrows them by name; a school name keeps only that school.
 function Spellbook:ListRows(filter, school)
+	local allRanks = self:AllRanks()
 	local rows, book = {}, C_SpellBook
 	if not (book and book.GetNumSpellBookSkillLines) then return rows end
 	filter = filter and filter ~= "" and filter:lower() or nil
@@ -266,8 +277,15 @@ function Spellbook:ListRows(filter, school)
 				if spell and (not filter or item.name:lower():find(filter, 1, true)) then
 					if not byName[item.name] then names[#names + 1] = item.name end
 					-- The book lists ranks low to high: the last is the best.
-					byName[item.name] = { slot = slot, spellID = item.spellID, name = item.name, icon = item.iconID,
+					local entry = { slot = slot, spellID = item.spellID, name = item.name, icon = item.iconID,
 						rank = item.subName, passive = item.isPassive and true or false }
+					if byName[item.name] then
+						local before = byName[item.name]
+						entry.lower = before.lower or {}
+						before.lower = nil
+						table.insert(entry.lower, 1, before)
+					end
+					byName[item.name] = entry
 				end
 			end
 			if #names > 0 then
@@ -284,6 +302,12 @@ function Spellbook:ListRows(filter, school)
 					entry.nextAt = type(nextAt) == "number" and nextAt or nil
 					entry.next = entry.trainNow and "Train now" or (entry.nextAt and ("Next at " .. entry.nextAt)) or ""
 					rows[#rows + 1] = entry
+					if allRanks then
+						for _, older in ipairs(entry.lower or {}) do
+							older.older, older.next = true, ""
+							rows[#rows + 1] = older
+						end
+					end
 				end
 			end
 		end
@@ -459,8 +483,12 @@ function Spellbook:FillList()
 				row.icon:SetDesaturated(entry.passive)
 				row.icon:SetAlpha(entry.passive and 0.75 or 1)
 				row.name:SetText(entry.name)
-				row.name:SetTextColor(Stoa:Color(entry.passive and "muted" or "text"))
+				row.name:SetTextColor(Stoa:Color((entry.passive or entry.older) and "muted" or "text"))
+				row.icon:SetAlpha((entry.passive or entry.older) and 0.75 or 1)
 				row.detail:SetText(detailText(entry))
+				-- Set on every fill: a theme repaint before the list opened
+				-- could leave the line as white as the name.
+				row.detail:SetTextColor(Stoa:Color("muted"))
 				setPill(row.pill, entry)
 				row:SetAttribute("spell", not entry.passive and entry.spellID or nil)
 			end
@@ -527,6 +555,21 @@ local function buildTools(book)
 	end)
 	paintBox()
 	tools.box = box
+	-- All ranks: every rank of each spell, or only the best.
+	local ranks = wordButton(tools, "All ranks")
+	ranks:SetPoint("RIGHT", box, "LEFT", -16, 0)
+	ranks:SetScript("OnClick", function()
+		Spellbook.db.allRanks = not Spellbook:AllRanks()
+		guarded(Spellbook.FillList, Spellbook)
+	end)
+	ranks:HookScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:SetText(Spellbook:AllRanks() and "Showing every rank" or "Showing the best rank")
+		GameTooltip:AddLine("Click to show " .. (Spellbook:AllRanks() and "only the best rank of each spell." or "every rank of each spell."), 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	ranks:HookScript("OnLeave", function() GameTooltip:Hide() end)
+	tools.ranks = ranks
 	tools.words = {}
 	tools:Hide()
 	return tools
@@ -543,7 +586,19 @@ function Spellbook:PaintSchools()
 	for _, name in ipairs(schools) do labels[#labels + 1] = name end
 	local room = tools:GetWidth()
 	if not room or Stoa:IsSecret(room) or room <= 0 then room = 600 end
-	local x, limit = 0, room - 190
+	-- The All ranks word, lit while every rank shows.
+	local ranks = tools.ranks
+	local rankWidth = 0
+	if ranks then
+		local width = ranks.text:GetStringWidth()
+		if not width or Stoa:IsSecret(width) or width <= 0 then width = 60 end
+		rankWidth = math.ceil(width)
+		ranks:SetWidth(rankWidth)
+		ranks.chosen = self:AllRanks()
+		ranks.text:SetTextColor(Stoa:Color(ranks.chosen and "text" or "muted"))
+		ranks.line:SetShown(ranks.chosen)
+	end
+	local x, limit = 0, room - 190 - (rankWidth > 0 and rankWidth + 24 or 0)
 	for i, label in ipairs(labels) do
 		local word = tools.words[i]
 		if not word then
