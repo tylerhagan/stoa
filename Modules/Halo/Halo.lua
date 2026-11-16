@@ -350,7 +350,8 @@ function Halo:PlaceTarget()
 	-- In a group the cards sit under the Halo, over the resting spot, so
 	-- the plaque keeps its Halo spot there in and out of combat.
 	-- The slim console keeps that spot for the action bars.
-	if edge and not console.db.slim and Stoa:GetState() == Stoa.STATE_WORLD and not IsInGroup() then
+	-- Riding, the console folds to its travel line: no rim to sit on.
+	if edge and not console.db.slim and not console.riding and Stoa:GetState() == Stoa.STATE_WORLD and not IsInGroup() then
 		-- Pinned to the screen where the open console's top edge sits, never
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.

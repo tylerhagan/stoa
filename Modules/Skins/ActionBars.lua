@@ -180,9 +180,13 @@ end
 function Bars:UpdateTray()
 	if not self.tray then return end
 	local halo = handedToHalo(self)
-	local lit = not halo
+	-- Riding, the console folds to its travel line and the rows step out
+	-- (Riding.lua). Kept here too, so no later pass lights them again.
+	local console = Stoa.modules.Grimoire
+	local riding = not halo and console and console.riding or false
+	local lit = not halo and not riding
 	local mainLit = lit
-	local state = halo and "halo" or "lit"
+	local state = halo and "halo" or riding and "ride" or "lit"
 	if state == self.trayLit then return end
 	self.trayLit = state
 	local bars, targets = {}, {}
