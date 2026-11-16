@@ -36,26 +36,30 @@ CLASSES = [
 GROUPS = [
     ("The two states", "The console out of combat, the Halo in it, and what rides on them.", [
         "State", "Console", "Halo", "Roles", "Per spec", "Combat bar", "Coin art", "Procs", "Game auras",
-        "Reminders", "Mana play", "Swing timer", "Threat meter", "Timers", "Cooldown Manager"]),
+        "Reminders", "Mana play", "Swing timer", "Threat meter", "Timers", "Cooldown Manager", "Riding",
+        "Console light", "Small jobs"]),
     ("Groups", "Party and raid frames, healing and the people you play with.", [
         "Party cards", "Raid frames", "Click-casting", "Tank watch", "Target", "Pet", "Group buffs",
-        "Dungeon kit", "Social", "Auto-invite", "Company"]),
+        "Dungeon kit", "Dungeon companion", "Social", "Auto-invite", "Company"]),
     ("Around the screen", "Everything else the game draws, in STOA's dress.", [
         "Action bars", "At a glance", "Minimap", "Icon tray", "Top of screen", "Nameplates", "Chat", "Map",
         "Damage meters"]),
     ("Windows", "Blizzard's windows, kept and dressed.", [
         "Blizzard windows", "Windows", "Window stone", "More windows", "Moving windows", "Bags",
-        "Character sheet", "Tooltips", "Trainer", "Mail", "Merchants"]),
+        "Character sheet", "Spellbook", "Talent planner", "Tooltips", "Trainer", "Mail", "Merchants"]),
     ("Levelling and gear", "Small helps on the road to sixty.", [
         "Quest reward", "Quest items", "Gear scores", "Gear for each spec", "Auto-uprank", "Restock",
         "Junk list", "Loot feed", "Gathering", "Emergency item", "Characters"]),
     ("Comfort and setup", "Settings, presets and the little things.", [
         "Welcome", "Presets", "Settings", "Saved setups", "Backup", "Movers", "Snapping", "Comforts",
-        "Keybinding", "Away screen", "Tokens", "Colour vision"]),
+        "Keybinding", "Away screen", "Session recap", "Tips", "Motion", "Tokens", "Colour vision"]),
     ("Safety and other addons", "How STOA keeps out of trouble and plays with others.", [
         "Launch check", "Error guard", "Other addons", "Leatrix Plus", "STOA's look for other addons",
         "OneForAll", "DoesItDie", "Pawn", "For other addons", "Shared core", "Core"]),
 ]
+
+# The demo video on the overview (YouTube's no-cookie player, loaded lazily).
+VIDEO = "AI_lgZX461E"
 
 PAGES = [
     ("index.html", "Overview"),
@@ -295,6 +299,10 @@ def home(readme, ver):
   {combat}
 </section>
 <section class="bar block">
+  <h2>See it move</h2>
+  <div class="video"><iframe src="https://www.youtube-nocookie.com/embed/{video}" title="STOA in motion" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+</section>
+<section class="bar block">
   <h2>Up close</h2>
   {console}
   {party}
@@ -310,7 +318,7 @@ def home(readme, ver):
   <h2>Try it</h2>
   <p>Install from the CurseForge app, or unpack the release zip into <code>_forever_\\Interface\\AddOns</code>. Restart the game the first time. <a href="install.html">Install notes</a></p>
 </section>
-""".format(cf=CURSEFORGE, repo=REPO, ver=ver, world=shot("world", "wide", eager=True), cards=cards,
+""".format(cf=CURSEFORGE, repo=REPO, ver=ver, video=VIDEO, world=shot("world", "wide", eager=True), cards=cards,
            roles=inline(roles[0]) if roles else "", combat=shot("combat", "wide"), console=shot("console", "wide"),
            party=shot("party-healer", "wide"), gallery=gallery, nots_lead=inline(nots_lead.strip()), nots=nots_html)
 
