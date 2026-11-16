@@ -91,7 +91,11 @@ function Companion:Quests(where)
 		local info = call(log.GetInfo, i)
 		if type(info) == "table" then
 			if info.isHeader then
-				under = info.title == where.name
+				-- The log may head them with another name for the dungeon
+				-- ("The Stockade" inside "Stormwind Stockade").
+				local title = Stoa.safe.plain(info.title)
+				under = title == where.name
+					or (where.dungeon ~= nil and Stoa.Dungeons.find(title) == where.dungeon)
 			elseif under and info.questID then
 				local done = call(log.IsComplete, info.questID) and true or false
 				local progress

@@ -29,6 +29,8 @@ local Comforts = Stoa:NewModule("Comforts", {
 	keepTracking = true,
 	questGlow = false,
 	sparkle = true,
+	dismountCast = true,
+	dismountTaxi = true,
 })
 
 local FAR_CAMERA = 2.6
@@ -98,6 +100,26 @@ function Comforts:Camera()
 	else
 		Stoa.GameSettings:Restore("cameraDistanceMaxZoomFactor")
 	end
+end
+
+-- Getting off -----------------------------------------------------------------
+-- Casting a spell while mounted gets you off first (the game's own setting,
+-- flying mounts too), and opening the flight master's map gets you off so
+-- the flight can be picked. Both go back when switched off.
+
+function Comforts:DismountCast()
+	for _, cvar in ipairs({ "autoDismount", "autoDismountFlying" }) do
+		if self.db.dismountCast then
+			Stoa.GameSettings:Set("Comforts", cvar, "1")
+		else
+			Stoa.GameSettings:Restore(cvar)
+		end
+	end
+end
+
+function Comforts:Taxi()
+	if not self.db.dismountTaxi or held() or InCombatLockdown() then return end
+	if IsMounted and Stoa.safe.plain(IsMounted()) and Dismount then pcall(Dismount) end
 end
 
 -- Interact icon ---------------------------------------------------------------
@@ -550,6 +572,8 @@ function Comforts:OnEnable()
 	on("PLAYER_REGEN_DISABLED", "Errors", true)
 	on("PLAYER_REGEN_ENABLED", "Errors", false)
 	on("PLAYER_ENTERING_WORLD", "Camera")
+	on("PLAYER_ENTERING_WORLD", "DismountCast")
+	on("TAXIMAP_OPENED", "Taxi")
 	on("PLAYER_ENTERING_WORLD", "QuestGlow")
 	on("PLAYER_SOFT_INTERACT_CHANGED", "Sparkle")
 	on("NAME_PLATE_UNIT_ADDED", "Sparkle")
