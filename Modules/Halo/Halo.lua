@@ -941,7 +941,14 @@ function Halo:UpdateTarget()
 	end
 	-- The game calls creatures without a type "Not specified": say nothing.
 	local unspecified = kind == "Not specified" or kind == (rawget(_G, "UNKNOWN") or "")
-	if kind and not unspecified and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end
+	if plain(UnitIsPlayer("target")) then
+		-- A player has no creature type: their race and class instead.
+		local race, class = plain((UnitRace("target"))), plain((UnitClass("target")))
+		if race then words[#words + 1] = race:upper() end
+		if class then words[#words + 1] = class:upper() end
+	elseif kind and not unspecified then
+		words[#words + 1] = kind:upper()
+	end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
 		or (rank == "elite" or rank == "worldboss") and "elite" or nil

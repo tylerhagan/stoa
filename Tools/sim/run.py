@@ -728,6 +728,19 @@ do
 		SIM_ERRORS[#SIM_ERRORS + 1] = "Shield gauge: hidden with a shield up"
 	end
 end
+-- A player target's caption names their race and class.
+do
+	local halo = Stoa.modules.Halo
+	if halo and halo.target and halo.target.caption then
+		local realExists, realPlayer = UnitExists, UnitIsPlayer
+		UnitExists = function(u) return u == "player" or u == "target" end
+		UnitIsPlayer = function(u) return u == "player" or u == "target" end
+		halo:UpdateTarget()
+		local words = halo.target.caption:GetText() or ""
+		if not words:find("HUMAN") then SIM_ERRORS[#SIM_ERRORS + 1] = "Target caption: no race for a player (" .. words .. ")" end
+		UnitExists, UnitIsPlayer = realExists, realPlayer
+	end
+end
 -- Items your quests still need, read from the log's item goals.
 do
 	local realNum, realInfo, realGoals = C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.GetQuestObjectives
