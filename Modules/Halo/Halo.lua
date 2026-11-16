@@ -468,39 +468,10 @@ function Halo:BuildTarget(frame)
 	name:SetWidth(TARGET_BAR_W)
 	name:SetWordWrap(false)
 	-- The health bar: rounded, slim, carrying the percent and the health
-	-- inside it.
-	local hp = UI.bar(target, TARGET_BAR_W, TARGET_BAR_H, "health")
-	-- Coloured by UpdateTarget (hostile or not), so a theme pass mustn't
-	-- turn it back to the health colour.
-	UI.unpaint(hp)
+	-- inside it (shared with the tank watch).
+	local hp = UI.plaqueBar(target, TARGET_BAR_W, TARGET_BAR_H)
 	hp:SetPoint("TOPLEFT", TARGET_PAD, -48)
-	local outset = (TARGET_BAR_W * 64 / 512 - TARGET_BAR_H) / 2
-	local mask = hp:CreateMaskTexture()
-	mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-	mask:SetPoint("TOPLEFT", 0, outset)
-	mask:SetPoint("BOTTOMRIGHT", 0, -outset)
-	hp:GetStatusBarTexture():AddMaskTexture(mask)
-	-- A dark well rather than the usual faint track, so the words read.
-	hp.track:Hide()
-	local well = hp:CreateTexture(nil, "BACKGROUND")
-	well:SetAllPoints()
-	well:SetColorTexture(0, 0, 0, 0.6)
-	well:AddMaskTexture(mask)
-	-- Its words sit above anything drawn over the bar (Lethal.lua).
-	local words = CreateFrame("Frame", nil, hp)
-	words:SetAllPoints()
-	words:SetFrameLevel(hp:GetFrameLevel() + 6)
-	local rim = words:CreateTexture(nil, "BORDER")
-	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
-	rim:SetAllPoints(mask)
-	UI.tint(rim, "text", 0.18)
-	local health = UI.text(words, "sans", Stoa.typeSize.body, "text", "LEFT")
-	health:SetPoint("LEFT", 10, 0)
-	UI.legible(health)
-	local amount = UI.text(words, "sans", Stoa.typeSize.micro, "text", "LEFT")
-	amount:SetPoint("LEFT", health, "RIGHT", 8, 0)
-	amount:SetAlpha(0.8)
-	UI.legible(amount)
+	local words, health, amount = hp.words, hp.percent, hp.amount
 	target.healthWords = words
 	-- Mana, rage or energy as a fine line under the bar.
 	local power = UI.bar(target, TARGET_BAR_W - 16, 3, "mana")
@@ -982,15 +953,7 @@ end
 -- The health itself beside the percent, as the game gives it.
 function Halo:UpdateTargetAmount()
 	local fs = self.target and self.target.amount
-	if not fs then return end
-	local health = UnitHealth("target")
-	if Stoa:IsSecret(health) then
-		pcall(fs.SetText, fs, health)
-	elseif health and BreakUpLargeNumbers then
-		fs:SetText(BreakUpLargeNumbers(health))
-	else
-		fs:SetText(health or "")
-	end
+	if fs then UI.setHealthAmount(fs, "target") end
 end
 
 -- The power line, in the power's own colour; hidden for a target with none.

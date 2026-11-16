@@ -728,6 +728,16 @@ do
 		SIM_ERRORS[#SIM_ERRORS + 1] = "Shield gauge: hidden with a shield up"
 	end
 end
+-- The tank watch wears the target's plaque: medallion, rounded bar, power.
+do
+	local party = Stoa.modules.Party
+	if party and party.watch then
+		party:PreviewWatch()
+		local watch = party.watch
+		if watch.percent:GetText() ~= "62%" or not watch.plaque.medallion then SIM_ERRORS[#SIM_ERRORS + 1] = "Tank watch: preview not on the target's plaque" end
+		party:UpdateWatchPower("player")
+	end
+end
 -- A player target's caption names their race and class.
 do
 	local halo = Stoa.modules.Halo

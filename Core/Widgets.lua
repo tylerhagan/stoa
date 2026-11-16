@@ -1835,6 +1835,57 @@ function UI.plaque(frame, coinSide, opts)
 	return plaque
 end
 
+-- A plaque's health bar (the target and the tank watch): rounded, slim,
+-- in a dark well, carrying the percent and the health inside it. Returns
+-- the bar; bar.percent, bar.amount and bar.words (the frame over it) too.
+function UI.plaqueBar(frame, width, height)
+	local hp = UI.bar(frame, width, height, "health")
+	-- Coloured by its owner (hostile, low), so a theme pass mustn't turn it
+	-- back to the health colour.
+	UI.unpaint(hp)
+	local outset = (width * 64 / 512 - height) / 2
+	local mask = hp:CreateMaskTexture()
+	mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	mask:SetPoint("TOPLEFT", 0, outset)
+	mask:SetPoint("BOTTOMRIGHT", 0, -outset)
+	hp:GetStatusBarTexture():AddMaskTexture(mask)
+	-- A dark well rather than the usual faint track, so the words read.
+	hp.track:Hide()
+	local well = hp:CreateTexture(nil, "BACKGROUND")
+	well:SetAllPoints()
+	well:SetColorTexture(0, 0, 0, 0.6)
+	well:AddMaskTexture(mask)
+	-- Its words sit above anything drawn over the bar (Lethal.lua).
+	local words = CreateFrame("Frame", nil, hp)
+	words:SetAllPoints()
+	words:SetFrameLevel(hp:GetFrameLevel() + 6)
+	local rim = words:CreateTexture(nil, "BORDER")
+	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
+	rim:SetAllPoints(mask)
+	UI.tint(rim, "text", 0.18)
+	local percent = UI.text(words, "sans", Stoa.typeSize.body, "text", "LEFT")
+	percent:SetPoint("LEFT", 10, 0)
+	UI.legible(percent)
+	local amount = UI.text(words, "sans", Stoa.typeSize.micro, "text", "LEFT")
+	amount:SetPoint("LEFT", percent, "RIGHT", 8, 0)
+	amount:SetAlpha(0.8)
+	UI.legible(amount)
+	hp.mask, hp.words, hp.percent, hp.amount = mask, words, percent, amount
+	return hp
+end
+
+-- The health beside a plaque bar's percent, as the game gives it.
+function UI.setHealthAmount(fs, unit)
+	local health = UnitHealth(unit)
+	if Stoa:IsSecret(health) then
+		pcall(fs.SetText, fs, health)
+	elseif health and BreakUpLargeNumbers then
+		fs:SetText(BreakUpLargeNumbers(health))
+	else
+		fs:SetText(health or "")
+	end
+end
+
 -- Health as a whole percent. Combat health can be secret: newer clients
 -- hand out a percent that is safe to show; failing that, the plain health.
 function UI.setHealthPercent(fs, unit, fraction, sign)

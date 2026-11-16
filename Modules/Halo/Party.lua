@@ -666,10 +666,15 @@ end
 -- It shows with the Halo in combat, and in the /stoa test preview. Your
 -- click-casting bindings work on it in combat.
 
-local WATCH_WIDTH = 214
+-- The target plaque's size and spacing (Halo.lua), so the two match.
+local WATCH_WIDTH = 294
+local WATCH_HEIGHT = 100
 local WATCH_PAD = 14
--- Room on the right for the half of the coin inside the plaque.
-local WATCH_COIN_SPACE = UI.PLAQUE_COIN_SPACE
+-- Room on the right for the half of the medallion inside the plaque.
+local WATCH_COIN_SPACE = UI.PLAQUE_MEDALLION_SPACE
+local WATCH_BAR_W = WATCH_WIDTH - WATCH_PAD - WATCH_COIN_SPACE
+local WATCH_BAR_H = 14
+local WATCH_POWER = { [1] = "text", [3] = "accent" }
 local HURT_HEALTH = 0.7
 
 local function watchedUnit()
@@ -694,9 +699,10 @@ end
 function Party:BuildWatch()
 	local watch = CreateFrame("Frame", "StoaTankWatch", UIParent)
 	watch:SetFrameStrata("LOW")
-	watch:SetSize(WATCH_WIDTH + WATCH_PAD + WATCH_COIN_SPACE, 84)
-	-- A plaque like the target opposite: the coin faces the Halo.
-	local plaque = UI.plaque(watch, "RIGHT")
+	watch:SetSize(WATCH_WIDTH, WATCH_HEIGHT)
+	-- The same plaque as the target opposite: medallion, caption, name and
+	-- the rounded bar with the numbers in it.
+	local plaque = UI.plaque(watch, "RIGHT", { medallion = true })
 	watch.plaque = plaque
 	local halo = _G.StoaHalo
 	if halo then
@@ -708,30 +714,32 @@ function Party:BuildWatch()
 	watch:EnableMouse(false)
 
 	local label = UI.caption(watch, "Watching")
-	label:SetPoint("TOPLEFT", WATCH_PAD, -WATCH_PAD)
+	label:SetPoint("TOPLEFT", WATCH_PAD, -12)
 	local word = UI.caption(watch, "")
-	word:SetPoint("TOPRIGHT", -WATCH_COIN_SPACE, -WATCH_PAD)
-	local name = UI.text(watch, "serif", Stoa.typeSize.title, "text", "LEFT")
-	name:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
-	name:SetWidth(WATCH_WIDTH - 50)
+	word:SetPoint("TOPRIGHT", -WATCH_COIN_SPACE, -12)
+	local name = UI.text(watch, "serif", Stoa.typeSize.name, "text", "LEFT")
+	name:SetPoint("TOPLEFT", WATCH_PAD, -26)
+	name:SetWidth(WATCH_BAR_W)
 	name:SetWordWrap(false)
-	local percent = UI.text(watch, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -4)
-	local hp = UI.bar(watch, WATCH_WIDTH, 7, "health")
-	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -5)
-	hp:SetClipsChildren(true)
+	local hp = UI.plaqueBar(watch, WATCH_BAR_W, WATCH_BAR_H)
+	hp:SetPoint("TOPLEFT", WATCH_PAD, -48)
+	-- Their shields run on past the health, inside the same rounded well.
 	local absorb = CreateFrame("StatusBar", nil, hp)
 	absorb:SetStatusBarTexture(UI.WHITE)
 	absorb:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
-	absorb:SetSize(WATCH_WIDTH, 7)
+	absorb:SetSize(WATCH_BAR_W, WATCH_BAR_H)
 	absorb:SetStatusBarColor(Stoa:Color("shield"))
-	UI.engrave(hp, WATCH_WIDTH)
+	absorb:GetStatusBarTexture():AddMaskTexture(hp.mask)
+	absorb:SetFrameLevel(hp:GetFrameLevel() + 1)
+	-- Mana, rage or energy as a fine line under the bar.
+	local power = UI.bar(watch, WATCH_BAR_W - 16, 3, "mana")
+	power:SetPoint("TOP", hp, "BOTTOM", 0, -4)
 	-- Your buffs on them as the same tags the party cards carry.
-	local buffs = UI.pipRow(watch, hp, 5)
+	local buffs = UI.pipRow(watch, hp, 12)
 	watch.label = label
 
-	watch.name, watch.percent, watch.word, watch.hp = name, percent, word, hp
-	watch.absorb, watch.buffs = absorb, buffs
+	watch.name, watch.percent, watch.amount, watch.word, watch.hp = name, hp.percent, hp.amount, word, hp
+	watch.absorb, watch.buffs, watch.power = absorb, buffs, power
 	self.watch = watch
 	Stoa:RegisterMover("tankwatch", watch, "Tank watch")
 	self:BuildWatchClicks(watch)
@@ -785,7 +793,13 @@ function Party:PreviewWatch()
 	SetPortraitTexture(watch.plaque.portrait, "player")
 	watch.name:SetText("Brunhok")
 	watch.name:SetTextColor(Stoa:Color("text"))
-	watch.percent:SetText("62")
+	watch.percent:SetText("62%")
+	watch.amount:SetText("4,960")
+	watch.plaque:SetLevel("60")
+	watch.power:SetMinMaxValues(0, 100)
+	watch.power:SetValue(40)
+	watch.power:SetStatusBarColor(Stoa:Color("text"))
+	watch.power:Show()
 	watch.word:SetText("HURT")
 	watch.word:SetTextColor(Stoa:Color("accent"))
 	watch.hp:SetMinMaxValues(0, 100)
@@ -795,6 +809,21 @@ function Party:PreviewWatch()
 	watch.absorb:SetValue(14)
 	watch.buffs.sample = true
 	UI.setPips(watch.buffs, { { "SHLD 12", "shield" }, { "RNW" } })
+end
+
+-- The power line, in the power's own colour; hidden for none or the dead.
+function Party:UpdateWatchPower(unit)
+	local power = self.watch and self.watch.power
+	if not power then return end
+	unit = unit or self.watchedUnit
+	if not unit then return power:Hide() end
+	local max = UnitPowerMax(unit)
+	local has = Stoa:IsSecret(max) or ((Stoa:PlainNumber(max) or 0) > 0)
+	if not has or flag(UnitIsDeadOrGhost(unit)) then return power:Hide() end
+	UI.setUnitBar(power, unit, "power")
+	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType(unit)))
+	power:SetStatusBarColor(Stoa:Color(kind and WATCH_POWER[kind] or "mana"))
+	power:Show()
 end
 
 function Party:UpdateWatch()
@@ -845,10 +874,14 @@ function Party:UpdateWatch()
 	end
 	watch.word:SetText(word or "")
 	if token then watch.word:SetTextColor(Stoa:Color(token)) end
-	setPercent(watch.percent, unit, fraction)
+	UI.setHealthPercent(watch.percent, unit, fraction, true)
+	UI.setHealthAmount(watch.amount, unit)
 	local low = word == "LOW"
 	watch.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
 	watch.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+	local level = Stoa.safe.plain(UnitLevel(unit))
+	watch.plaque:SetLevel(level and (level < 0 and "??" or tostring(level)) or nil)
+	self:UpdateWatchPower(unit)
 
 	watch.absorb:SetMinMaxValues(0, UnitHealthMax(unit))
 	watch.absorb:SetValue(UnitGetTotalAbsorbs and UnitGetTotalAbsorbs(unit) or 0)
@@ -966,6 +999,14 @@ function Party:OnEnable()
 			if card then self:UpdateCard(card) end
 			if unit and self.watchedUnit and flag(UnitIsUnit(unit, self.watchedUnit)) then
 				self:UpdateWatch()
+			end
+		end)
+	end
+
+	for _, event in ipairs({ "UNIT_POWER_UPDATE", "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER" }) do
+		Stoa:On(event, function(unit)
+			if unit and self.watch and self.watch.shown and self.watchedUnit and flag(UnitIsUnit(unit, self.watchedUnit)) then
+				self:UpdateWatchPower()
 			end
 		end)
 	end
