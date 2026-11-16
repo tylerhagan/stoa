@@ -19,18 +19,16 @@ Stoa.WhatsNew = WhatsNew
 -- as "PRIEST"): each shows as a small tag in its class colour beside the
 -- line's name.
 local NOTE = {
-	edition = "1.3.0",
-	title = "New in STOA 1.3",
+	edition = "1.4.0",
+	title = "New in STOA 1.4",
 	lines = {
-		{ "Your characters, in one window", "Every character you've played with STOA with their level, place, gold, rest, lockouts and item level. Search finds an item in any character's bags or bank, and clicking a character shows their model and gear. Your bag search also says who else holds a match. /stoa alts opens it." },
-		{ "A dungeon companion", "Inside a five-player dungeon, out of a fight, a card where the quest list sits shows the bosses, ticked off as they fall, and your quests for it. It can be a slim line over the console instead." },
-		{ "A recap when you log out", "While the game counts down, a card shows what the session brought: time played, levels, experience an hour, gold, quests, deaths and your best find. /stoa recap shows it any time." },
-		{ "A talent planner", "Plan a build point by point for levels you haven't reached, keep named plans, share them as text and turn one into a game loadout. The Talent planner word on the talent window opens it. STOA never spends a point for you." },
-		{ "Small jobs on the console", "One line under Ready gathers what's worth doing before you head out: a missing buff, gear about to break, talent points, new spells not on a bar, restock items short and an emptied slot. Hover it for the list." },
-		{ "Light from the time of day", "The console's gold catches the sky from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk and moonlit blue at night, with a glass glint on your portrait. /stoa daylight 23 previews an hour." },
-		{ "Smoother, tidier", "STOA's windows, settings and cards rise in swiftly, the trainer window is tidied with Settings in its footer, rested stays blue on the experience bar, and books and letters read clearly." },
+		{ "Riding", "On a mount or a flight the console folds to a slim travel line: your speed, the zone and how far your quest is, with chat as a short fading feed and the bars out of the way. It also gets you off your mount to cast and at the flight master. /stoa ride previews it." },
+		{ "Tips", "When there's nothing to do before heading out, the Ready line shows a short tip about something STOA does that's easy to miss. Hover to read it, click to open its setting, right-click once you've got it." },
+		{ "A matching tank watch", "The watch frame wears the target's plaque: portrait medallion, rounded health bar with percent and amount, shield and power line." },
+		{ "Tidier windows", "The trainer's skill bar has its own full-width row, the spellbook list gains an All ranks word, and the character window keeps its shape when opened in a fight." },
+		{ "Smaller things", "Players' race and class on the target plaque, the dungeon companion finds Forever's dungeons and their quests, rested in plain blue on the experience bar, and the console's gold no longer turns silver after a flight." },
 	},
-	foot = "Each can be switched off in the settings. /stoa news shows this again.\n\nMy characters have waited long enough whilst I polished their interface. Updates will be slower until I reach 60, though anything broken still gets fixed quickly.",
+	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }
 
 local PAD = Stoa.space.xl
