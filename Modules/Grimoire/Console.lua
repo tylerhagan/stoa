@@ -1900,9 +1900,11 @@ function Console:PaintDaylit()
 	local lit = Stoa.daylight and CreateColor and true
 	for _, part in ipairs(self.daylitParts or {}) do
 		local region = part.region
-		-- A texture's colour carries its alpha, so a part faded by the fold
-		-- (folded in a fight, or riding) keeps its fade through a repaint.
-		local fade = region.stoaFade or 1
+		-- The fold fades parts with the region's own alpha (UI.fadeTo), kept
+		-- apart from the colour: a repaint while folded (the minute's
+		-- daylight step on a long flight) once baked the fade into the
+		-- colour, and the gold stayed see-through, reading silver, after.
+		local fade = 1
 		if not part.vertex then region:SetColorTexture(1, 1, 1, 1) end
 		if lit and region.SetGradient then
 			local top = CreateColor(r, g, b, a * fade)
@@ -1916,6 +1918,7 @@ function Console:PaintDaylit()
 		else
 			region:SetColorTexture(ar, ag, ab, aa * fade)
 		end
+		if region.stoaFade then region:SetAlpha(region.stoaFade) end
 	end
 	self:PaintDividers()
 	self:PaintGlass()
