@@ -1150,6 +1150,10 @@ do
 			assert(console.ride.speed:GetText() == "200", "speed reads " .. tostring(console.ride.speed:GetText()))
 			assert(console.ride.far:GetText() == "400 yd", "distance reads " .. tostring(console.ride.far:GetText()))
 			assert(bar:GetAlpha() == 0, "the bars stayed up")
+			local halo = Stoa.modules.Halo
+			if halo and halo.target and not IsInGroup() then
+				assert(not halo.target.plaque.docked, "the target stayed docked on the folded console")
+			end
 			local setHeight, height = console.frame.SetHeight, nil
 			console.frame.SetHeight = function(f, h) height = h return setHeight(f, h) end
 			console:SetOpen(true, true)

@@ -23,7 +23,7 @@ Console.RIDE_HEIGHT = RIDE_HEIGHT
 
 -- The action bars Edit Mode sets over the console. They are secure, so only
 -- their alpha changes, which the game allows at any time.
-local BARS = { "MainActionBar", "MainMenuBar", "MultiBarBottomLeft", "MultiBarBottomRight", "StanceBar", "PetActionBar" }
+local BARS = { "MainActionBar", "MainMenuBar", "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBar5", "MultiBar6", "MultiBar7", "StanceBar", "PetActionBar" }
 
 local plain = function(v) return Stoa.safe.plain(v) end
 
@@ -269,6 +269,9 @@ function Console:SetRiding(on)
 		if self.rideTicker then self.rideTicker:Cancel() self.rideTicker = nil end
 	end
 	self:Refold()
+	-- The target leaves its seat on the open console's rim for its Halo spot.
+	local halo = Stoa.modules.Halo
+	if halo and halo.enabled and halo.PlaceTarget then halo:PlaceTarget() end
 end
 
 function Console:CheckRiding()
