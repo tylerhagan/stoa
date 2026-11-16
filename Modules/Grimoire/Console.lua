@@ -25,6 +25,8 @@ local Console = Stoa:NewModule("Grimoire", {
 	formMana = true,
 	-- Faint lines between the console's sections.
 	dividers = true,
+	-- On a mount, the console folds to a travel line (Riding.lua).
+	riding = true,
 	-- The console's gold follows the game's time of day.
 	daylight = true,
 })
@@ -1546,14 +1548,18 @@ end
 -- The console is not a secure frame, so it can resize in combat.
 
 function Console:SetOpen(open, instant)
-	local target = open and self:OpenHeight() or SPINE_HEIGHT
+	-- Riding (Riding.lua): folded look, but a band tall enough for the
+	-- travel line, and the seal halfway between open and folded.
+	local riding = open and self.riding
+	if riding then open = false end
+	local target = riding and (self.RIDE_HEIGHT or SLIM_HEIGHT) or (open and self:OpenHeight() or SPINE_HEIGHT)
 	local frame = self.frame
 	local from = frame:GetHeight()
 	local start = GetTime()
 
 	local pagesAlpha = open and 1 or 0
 	-- The slim seal is small already, so it shrinks less into the spine.
-	local sealScale = open and 1 or (self.db.slim and 0.6 or 0.4)
+	local sealScale = open and 1 or ((self.db.slim or riding) and 0.6 or 0.4)
 	if self.slimCard and not open then self.slimCard:Hide() end
 
 	local function step(progress)
@@ -1568,6 +1574,9 @@ function Console:SetOpen(open, instant)
 		end
 		for _, part in ipairs(self.archParts) do
 			UI.fadeTo(part, open and progress or 1 - progress)
+			-- Hidden once folded: the gold lines' gradient keeps its own
+			-- alpha through a repaint, so a fade alone left the ring showing.
+			part:SetShown(open or progress < 1)
 		end
 		UI.fadeTo(self.bridge, open and 1 - progress or progress)
 		for _, part in ipairs(self.tabArt or {}) do
@@ -1888,22 +1897,24 @@ function Console:PaintDaylit()
 	-- underneath, so only the upper half of each piece catches it.
 	local r, g, b, a = Stoa:Color("daylit")
 	local ar, ag, ab, aa = Stoa:Color("accent")
-	local lit = Stoa.daylight and CreateColor and CreateColor(r, g, b, a)
-	local base = lit and CreateColor(ar, ag, ab, aa)
+	local lit = Stoa.daylight and CreateColor and true
 	for _, part in ipairs(self.daylitParts or {}) do
 		local region = part.region
+		-- A texture's colour carries its alpha, so a part faded by the fold
+		-- (folded in a fight, or riding) keeps its fade through a repaint.
+		local fade = region.stoaFade or 1
 		if not part.vertex then region:SetColorTexture(1, 1, 1, 1) end
 		if lit and region.SetGradient then
-			local top = lit
+			local top = CreateColor(r, g, b, a * fade)
 			if part.weight then
 				local w = part.weight
-				top = CreateColor(ar + (r - ar) * w, ag + (g - ag) * w, ab + (b - ab) * w, a)
+				top = CreateColor(ar + (r - ar) * w, ag + (g - ag) * w, ab + (b - ab) * w, a * fade)
 			end
-			pcall(region.SetGradient, region, "VERTICAL", base, top)
+			pcall(region.SetGradient, region, "VERTICAL", CreateColor(ar, ag, ab, aa * fade), top)
 		elseif part.vertex then
-			region:SetVertexColor(ar, ag, ab, aa)
+			region:SetVertexColor(ar, ag, ab, aa * fade)
 		else
-			region:SetColorTexture(ar, ag, ab, aa)
+			region:SetColorTexture(ar, ag, ab, aa * fade)
 		end
 	end
 	self:PaintDividers()
@@ -1942,7 +1953,7 @@ function Console:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("PLAYER_UPDATE_RESTING", function() self:UpdateSeal() end)
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
-	Stoa:On("STOA_STATE_CHANGED", function() self:SetOpen(shouldBeOpen(), Stoa.db.foldInstant) end)
+	Stoa:On("STOA_STATE_CHANGED", function() self:Refold() end)
 
 	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
 		if unit == "player" then self:UpdateSeal() end

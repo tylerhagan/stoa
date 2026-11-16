@@ -50,8 +50,14 @@ Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(0, snapAll) end)
 
 -- Paints a texture, status bar or font string with a theme token now and on
 -- every theme change.
+local paintOne
+
 function UI.paint(region, token, alpha)
-	table.insert(themed, { region = region, token = token, alpha = alpha })
+	local entry = { region = region, token = token, alpha = alpha }
+	table.insert(themed, entry)
+	-- Now, not just on the next theme pass: parts built late (list rows on
+	-- first open) would otherwise keep the game's white until one came.
+	paintOne(entry)
 	return region
 end
 
@@ -62,25 +68,27 @@ function UI.unpaint(region)
 	end
 end
 
-function UI.applyTheme()
-	for _, entry in ipairs(themed) do
-		local r, g, b, a = Stoa:Color(entry.token)
-		a = entry.alpha or a
-		if entry.gradient then
-			UI.setGradient(entry.region, entry.gradient, r, g, b, a)
-		elseif entry.vertex then
-			entry.region:SetVertexColor(r, g, b, a)
-		elseif entry.region.SetColorTexture then
-			entry.region:SetColorTexture(r, g, b, a)
-		elseif entry.region.SetStatusBarColor then
-			entry.region:SetStatusBarColor(r, g, b, a)
-		else
-			entry.region:SetTextColor(r, g, b, a)
-		end
-		-- A texture's colour carries its alpha, so recolouring undoes a fade.
-		-- Parts faded with UI.fadeTo keep theirs.
-		if entry.region.stoaFade then entry.region:SetAlpha(entry.region.stoaFade) end
+function paintOne(entry)
+	local r, g, b, a = Stoa:Color(entry.token)
+	a = entry.alpha or a
+	if entry.gradient then
+		UI.setGradient(entry.region, entry.gradient, r, g, b, a)
+	elseif entry.vertex then
+		entry.region:SetVertexColor(r, g, b, a)
+	elseif entry.region.SetColorTexture then
+		entry.region:SetColorTexture(r, g, b, a)
+	elseif entry.region.SetStatusBarColor then
+		entry.region:SetStatusBarColor(r, g, b, a)
+	else
+		entry.region:SetTextColor(r, g, b, a)
 	end
+	-- A texture's colour carries its alpha, so recolouring undoes a fade.
+	-- Parts faded with UI.fadeTo keep theirs.
+	if entry.region.stoaFade then entry.region:SetAlpha(entry.region.stoaFade) end
+end
+
+function UI.applyTheme()
+	for _, entry in ipairs(themed) do paintOne(entry) end
 end
 
 -- Sets a region's alpha so that a later theme pass keeps it.
@@ -1825,6 +1833,57 @@ function UI.plaque(frame, coinSide, opts)
 		plaque:SetReaction(plaque.reaction)
 	end)
 	return plaque
+end
+
+-- A plaque's health bar (the target and the tank watch): rounded, slim,
+-- in a dark well, carrying the percent and the health inside it. Returns
+-- the bar; bar.percent, bar.amount and bar.words (the frame over it) too.
+function UI.plaqueBar(frame, width, height)
+	local hp = UI.bar(frame, width, height, "health")
+	-- Coloured by its owner (hostile, low), so a theme pass mustn't turn it
+	-- back to the health colour.
+	UI.unpaint(hp)
+	local outset = (width * 64 / 512 - height) / 2
+	local mask = hp:CreateMaskTexture()
+	mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	mask:SetPoint("TOPLEFT", 0, outset)
+	mask:SetPoint("BOTTOMRIGHT", 0, -outset)
+	hp:GetStatusBarTexture():AddMaskTexture(mask)
+	-- A dark well rather than the usual faint track, so the words read.
+	hp.track:Hide()
+	local well = hp:CreateTexture(nil, "BACKGROUND")
+	well:SetAllPoints()
+	well:SetColorTexture(0, 0, 0, 0.6)
+	well:AddMaskTexture(mask)
+	-- Its words sit above anything drawn over the bar (Lethal.lua).
+	local words = CreateFrame("Frame", nil, hp)
+	words:SetAllPoints()
+	words:SetFrameLevel(hp:GetFrameLevel() + 6)
+	local rim = words:CreateTexture(nil, "BORDER")
+	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
+	rim:SetAllPoints(mask)
+	UI.tint(rim, "text", 0.18)
+	local percent = UI.text(words, "sans", Stoa.typeSize.body, "text", "LEFT")
+	percent:SetPoint("LEFT", 10, 0)
+	UI.legible(percent)
+	local amount = UI.text(words, "sans", Stoa.typeSize.micro, "text", "LEFT")
+	amount:SetPoint("LEFT", percent, "RIGHT", 8, 0)
+	amount:SetAlpha(0.8)
+	UI.legible(amount)
+	hp.mask, hp.words, hp.percent, hp.amount = mask, words, percent, amount
+	return hp
+end
+
+-- The health beside a plaque bar's percent, as the game gives it.
+function UI.setHealthAmount(fs, unit)
+	local health = UnitHealth(unit)
+	if Stoa:IsSecret(health) then
+		pcall(fs.SetText, fs, health)
+	elseif health and BreakUpLargeNumbers then
+		fs:SetText(BreakUpLargeNumbers(health))
+	else
+		fs:SetText(health or "")
+	end
 end
 
 -- Health as a whole percent. Combat health can be secret: newer clients

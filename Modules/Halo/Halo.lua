@@ -350,7 +350,8 @@ function Halo:PlaceTarget()
 	-- In a group the cards sit under the Halo, over the resting spot, so
 	-- the plaque keeps its Halo spot there in and out of combat.
 	-- The slim console keeps that spot for the action bars.
-	if edge and not console.db.slim and Stoa:GetState() == Stoa.STATE_WORLD and not IsInGroup() then
+	-- Riding, the console folds to its travel line: no rim to sit on.
+	if edge and not console.db.slim and not console.riding and Stoa:GetState() == Stoa.STATE_WORLD and not IsInGroup() then
 		-- Pinned to the screen where the open console's top edge sits, never
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.
@@ -467,39 +468,10 @@ function Halo:BuildTarget(frame)
 	name:SetWidth(TARGET_BAR_W)
 	name:SetWordWrap(false)
 	-- The health bar: rounded, slim, carrying the percent and the health
-	-- inside it.
-	local hp = UI.bar(target, TARGET_BAR_W, TARGET_BAR_H, "health")
-	-- Coloured by UpdateTarget (hostile or not), so a theme pass mustn't
-	-- turn it back to the health colour.
-	UI.unpaint(hp)
+	-- inside it (shared with the tank watch).
+	local hp = UI.plaqueBar(target, TARGET_BAR_W, TARGET_BAR_H)
 	hp:SetPoint("TOPLEFT", TARGET_PAD, -48)
-	local outset = (TARGET_BAR_W * 64 / 512 - TARGET_BAR_H) / 2
-	local mask = hp:CreateMaskTexture()
-	mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-	mask:SetPoint("TOPLEFT", 0, outset)
-	mask:SetPoint("BOTTOMRIGHT", 0, -outset)
-	hp:GetStatusBarTexture():AddMaskTexture(mask)
-	-- A dark well rather than the usual faint track, so the words read.
-	hp.track:Hide()
-	local well = hp:CreateTexture(nil, "BACKGROUND")
-	well:SetAllPoints()
-	well:SetColorTexture(0, 0, 0, 0.6)
-	well:AddMaskTexture(mask)
-	-- Its words sit above anything drawn over the bar (Lethal.lua).
-	local words = CreateFrame("Frame", nil, hp)
-	words:SetAllPoints()
-	words:SetFrameLevel(hp:GetFrameLevel() + 6)
-	local rim = words:CreateTexture(nil, "BORDER")
-	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
-	rim:SetAllPoints(mask)
-	UI.tint(rim, "text", 0.18)
-	local health = UI.text(words, "sans", Stoa.typeSize.body, "text", "LEFT")
-	health:SetPoint("LEFT", 10, 0)
-	UI.legible(health)
-	local amount = UI.text(words, "sans", Stoa.typeSize.micro, "text", "LEFT")
-	amount:SetPoint("LEFT", health, "RIGHT", 8, 0)
-	amount:SetAlpha(0.8)
-	UI.legible(amount)
+	local words, health, amount = hp.words, hp.percent, hp.amount
 	target.healthWords = words
 	-- Mana, rage or energy as a fine line under the bar.
 	local power = UI.bar(target, TARGET_BAR_W - 16, 3, "mana")
@@ -940,7 +912,14 @@ function Halo:UpdateTarget()
 	end
 	-- The game calls creatures without a type "Not specified": say nothing.
 	local unspecified = kind == "Not specified" or kind == (rawget(_G, "UNKNOWN") or "")
-	if kind and not unspecified and not plain(UnitIsPlayer("target")) then words[#words + 1] = kind:upper() end
+	if plain(UnitIsPlayer("target")) then
+		-- A player has no creature type: their race and class instead.
+		local race, class = plain((UnitRace("target"))), plain((UnitClass("target")))
+		if race then words[#words + 1] = race:upper() end
+		if class then words[#words + 1] = class:upper() end
+	elseif kind and not unspecified then
+		words[#words + 1] = kind:upper()
+	end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
 		or (rank == "elite" or rank == "worldboss") and "elite" or nil
@@ -974,15 +953,7 @@ end
 -- The health itself beside the percent, as the game gives it.
 function Halo:UpdateTargetAmount()
 	local fs = self.target and self.target.amount
-	if not fs then return end
-	local health = UnitHealth("target")
-	if Stoa:IsSecret(health) then
-		pcall(fs.SetText, fs, health)
-	elseif health and BreakUpLargeNumbers then
-		fs:SetText(BreakUpLargeNumbers(health))
-	else
-		fs:SetText(health or "")
-	end
+	if fs then UI.setHealthAmount(fs, "target") end
 end
 
 -- The power line, in the power's own colour; hidden for a target with none.

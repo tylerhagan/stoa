@@ -456,6 +456,47 @@ do
 		console:UpdateDaylight()
 	end
 end
+-- Finished quests on the XP bar: only quests ready to hand in count, not
+-- talk-to quests with no objectives or hidden tracking quests.
+do
+	local xpbar = Stoa.modules.XPBar
+	if xpbar and xpbar.QuestXP then
+		local saved, savedXP = C_QuestLog, GetQuestLogRewardXP
+		local quests = {
+			{ questID = 1, objectives = { { finished = true }, { finished = true } } },
+			{ questID = 2, objectives = { { finished = true }, { finished = false } } },
+			{ questID = 3, objectives = {} },
+			{ questID = 4, objectives = {}, ready = true },
+			{ questID = 5, objectives = { { finished = true } }, isHidden = true },
+		}
+		local byID = {}
+		for _, q in ipairs(quests) do byID[q.questID] = q end
+		C_QuestLog = {
+			GetNumQuestLogEntries = function() return #quests end,
+			GetInfo = function(i) return quests[i] end,
+			IsComplete = function() return true end,
+			IsFailed = function() return false end,
+			GetQuestObjectives = function(id) return byID[id].objectives end,
+			ReadyForTurnIn = function(id) return byID[id].ready or false end,
+		}
+		GetQuestLogRewardXP = function() return 100 end
+		local ok, xp, count = pcall(xpbar.QuestXP, xpbar)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: " .. tostring(xp)
+		elseif count ~= 2 or xp ~= 200 then SIM_ERRORS[#SIM_ERRORS + 1] = ("Quest XP: counted %s quests, %s XP (want 2, 200)"):format(tostring(count), tostring(xp)) end
+		C_QuestLog, GetQuestLogRewardXP = saved, savedXP
+	end
+end
+-- Dungeon names as Forever gives them find STOA's boss lists.
+do
+	local find = Stoa.Dungeons and Stoa.Dungeons.find
+	if find then
+		for game, ours in pairs({ ["Stormwind Stockade"] = "The Stockade", ["Deadmines"] = "The Deadmines", ["the stockade"] = "The Stockade", ["Sunken Temple"] = "The Temple of Atal'Hakkar", ["Scarlet Monastery - Library"] = "Scarlet Monastery" }) do
+			local found = find(game)
+			if not (found and found.name == ours) then SIM_ERRORS[#SIM_ERRORS + 1] = "Dungeons: " .. game .. " found " .. tostring(found and found.name) end
+		end
+		if find("Elwynn Forest") or find("The") then SIM_ERRORS[#SIM_ERRORS + 1] = "Dungeons: a zone matched a dungeon" end
+	end
+end
 -- Trainer window: the skill bar, the Settings dropdown and the rows dressed.
 do
 	if Stoa.modules.Windows then
@@ -688,6 +729,29 @@ do
 		SIM_ERRORS[#SIM_ERRORS + 1] = "Shield gauge: hidden with a shield up"
 	end
 end
+-- The tank watch wears the target's plaque: medallion, rounded bar, power.
+do
+	local party = Stoa.modules.Party
+	if party and party.watch then
+		party:PreviewWatch()
+		local watch = party.watch
+		if watch.percent:GetText() ~= "62%" or not watch.plaque.medallion then SIM_ERRORS[#SIM_ERRORS + 1] = "Tank watch: preview not on the target's plaque" end
+		party:UpdateWatchPower("player")
+	end
+end
+-- A player target's caption names their race and class.
+do
+	local halo = Stoa.modules.Halo
+	if halo and halo.target and halo.target.caption then
+		local realExists, realPlayer = UnitExists, UnitIsPlayer
+		UnitExists = function(u) return u == "player" or u == "target" end
+		UnitIsPlayer = function(u) return u == "player" or u == "target" end
+		halo:UpdateTarget()
+		local words = halo.target.caption:GetText() or ""
+		if not words:find("HUMAN") then SIM_ERRORS[#SIM_ERRORS + 1] = "Target caption: no race for a player (" .. words .. ")" end
+		UnitExists, UnitIsPlayer = realExists, realPlayer
+	end
+end
 -- Items your quests still need, read from the log's item goals.
 do
 	local realNum, realInfo, realGoals = C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.GetQuestObjectives
@@ -752,6 +816,8 @@ do
 		C_QuestLog.GetNumQuestLogEntries = function() return 2 end
 		C_QuestLog.GetInfo = function(i) return { questID = 100 + i, title = "Q" .. i } end
 		C_QuestLog.IsComplete = function(id) return id == 101 end
+		local realObjectives = C_QuestLog.GetQuestObjectives
+		C_QuestLog.GetQuestObjectives = function(id) return { { finished = id == 101 } } end
 		GetQuestLogRewardXP = function(id) return 1500 end
 		xpbar:UpdateQuests()
 		local stretch = bar.StatusBar.stoaQuests
@@ -766,6 +832,7 @@ do
 		xpbar:UpdateQuests()
 		if stretch and stretch:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest XP: stretch shown with nothing finished" end
 		C_QuestLog.GetNumQuestLogEntries, C_QuestLog.GetInfo, C_QuestLog.IsComplete, GetQuestLogRewardXP = realNum, realInfo, realComplete, realXP
+		C_QuestLog.GetQuestObjectives = realObjectives
 		container.bars = {}
 	end
 end
@@ -874,6 +941,13 @@ do
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: rows not grouped to the best rank"
 		end
 		if #spellbook:ListRows("zzz") ~= 0 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: search didn't narrow" end
+		-- All ranks: the best Smite, then Rank 1 under it, quieter.
+		spellbook.db.allRanks = true
+		local every = spellbook:ListRows("")
+		if not (#every == 3 and every[2].rank == "Rank 2" and every[3].rank == "Rank 1" and every[3].older and every[1].count == 1) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: all ranks not listed best first"
+		end
+		spellbook.db.allRanks = false
 		if spellbook.list then
 			spellbook.list.IsShown = function() return true end
 			spellbook.list.GetHeight = function() return 400 end
@@ -886,8 +960,12 @@ do
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: Shadow Magic not shortened"
 		end
 		if rows[1].count ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: heading has no count" end
-		if not (spellbook.tools and spellbook.tools.box and spellbook.tools.words[1]) then
+		if not (spellbook.tools and spellbook.tools.box and spellbook.tools.words[1] and spellbook.tools.ranks) then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: no STOA toolbar"
+		else
+			spellbook.tools.ranks:GetScript("OnClick")(spellbook.tools.ranks)
+			if not (spellbook.db.allRanks and spellbook.tools.ranks.chosen) then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: All ranks word didn't switch" end
+			spellbook.tools.ranks:GetScript("OnClick")(spellbook.tools.ranks)
 		end
 		spellbook.tools.box:SetText("zzz")
 		spellbook:FillList()
@@ -970,7 +1048,7 @@ do
 		IsInInstance = function() return true, "party" end
 		local where = "The Deadmines"
 		GetInstanceInfo = function() return where, "party", 1, "Normal", 5, 0, false, 36 end
-		local log = { { isHeader = true, title = "Westfall" }, { title = "Elsewhere", questID = 1 }, { isHeader = true, title = "The Deadmines" }, { title = "Red Silk Bandanas", questID = 2 }, { title = "Oh Brother...", questID = 3 } }
+		local log = { { isHeader = true, title = "Westfall" }, { title = "Elsewhere", questID = 1 }, { isHeader = true, title = "Deadmines" }, { title = "Red Silk Bandanas", questID = 2 }, { title = "Oh Brother...", questID = 3 } }
 		C_QuestLog.GetNumQuestLogEntries = function() return #log, 2 end
 		C_QuestLog.GetInfo = function(i) return log[i] end
 		C_QuestLog.IsComplete = function(id) return id == 3 end
@@ -1070,6 +1148,54 @@ do
 			C_ClassTalents, C_Item.GetItemCount, GetInventoryItemID, GetActionInfo, Stoa.missingBuffs, Stoa.Spells.each, Stoa.Spells.name = unpack(real, 1, 7)
 		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Small jobs: " .. e end
+	end
+end
+-- Riding: mounting folds the full console to the travel line with chat
+-- lifted and the bars faded; a fight brings it all back.
+do
+	local console = Stoa.modules.Grimoire
+	if console and console.frame and console.CheckRiding and not console.db.slim then
+		local ok, e = xpcall(function()
+			local real = { IsMounted, C_SuperTrack, C_QuestLog.GetDistanceSqToQuest, C_QuestLog.GetTitleForQuestID, GetUnitSpeed }
+			local realBar = MultiBarBottomLeft
+			local bar = CreateFrame("Frame")
+			MultiBarBottomLeft = bar
+			local alpha = 0.8
+			bar.SetAlpha = function(_, a) alpha = a end
+			bar.GetAlpha = function() return alpha end
+			IsMounted = function() return true end
+			GetUnitSpeed = function() return 14 end
+			C_SuperTrack = { GetSuperTrackedQuestID = function() return 99 end }
+			C_QuestLog.GetDistanceSqToQuest = function() return 400 * 400 end
+			C_QuestLog.GetTitleForQuestID = function() return "Wanted: Hogger" end
+			fire("PLAYER_MOUNT_DISPLAY_CHANGED")
+			assert(console.riding, "mounting didn't start riding")
+			assert(console.ride and console.ride:IsShown(), "the travel line is hidden")
+			assert(console.ride.speed:GetText() == "200", "speed reads " .. tostring(console.ride.speed:GetText()))
+			assert(console.ride.far:GetText() == "400 yd", "distance reads " .. tostring(console.ride.far:GetText()))
+			assert(bar:GetAlpha() == 0, "the bars stayed up")
+			local halo = Stoa.modules.Halo
+			if halo and halo.target and not IsInGroup() then
+				assert(not halo.target.plaque.docked, "the target stayed docked on the folded console")
+			end
+			local setHeight, height = console.frame.SetHeight, nil
+			console.frame.SetHeight = function(f, h) height = h return setHeight(f, h) end
+			console:SetOpen(true, true)
+			console.frame.SetHeight = setHeight
+			assert(height == console.RIDE_HEIGHT, "riding height " .. tostring(height))
+			local lockdown = InCombatLockdown
+			InCombatLockdown = function() return true end
+			console:CheckRiding()
+			InCombatLockdown = lockdown
+			assert(not console.riding, "a fight left the travel line up")
+			assert(math.abs(bar:GetAlpha() - 0.8) < 0.01, "the bars came back at " .. bar:GetAlpha())
+			IsMounted, C_SuperTrack, C_QuestLog.GetDistanceSqToQuest, C_QuestLog.GetTitleForQuestID, GetUnitSpeed = unpack(real, 1, 5)
+			MultiBarBottomLeft = realBar
+			fire("PLAYER_MOUNT_DISPLAY_CHANGED")
+			assert(not console.riding, "getting off left the travel line up")
+			console:SetOpen(true, true)
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Riding: " .. e end
 	end
 end
 -- The talent planner: marks over the trees, the row rule, the order, sharing.
