@@ -980,7 +980,7 @@ do
 		IsInInstance = function() return true, "party" end
 		local where = "The Deadmines"
 		GetInstanceInfo = function() return where, "party", 1, "Normal", 5, 0, false, 36 end
-		local log = { { isHeader = true, title = "Westfall" }, { title = "Elsewhere", questID = 1 }, { isHeader = true, title = "The Deadmines" }, { title = "Red Silk Bandanas", questID = 2 }, { title = "Oh Brother...", questID = 3 } }
+		local log = { { isHeader = true, title = "Westfall" }, { title = "Elsewhere", questID = 1 }, { isHeader = true, title = "Deadmines" }, { title = "Red Silk Bandanas", questID = 2 }, { title = "Oh Brother...", questID = 3 } }
 		C_QuestLog.GetNumQuestLogEntries = function() return #log, 2 end
 		C_QuestLog.GetInfo = function(i) return log[i] end
 		C_QuestLog.IsComplete = function(id) return id == 3 end
