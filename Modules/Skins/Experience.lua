@@ -267,14 +267,32 @@ end
 -- while a companion (OneForAll's quest XP) draws its own.
 local call = Stoa.safe.call
 
+-- Finished means ready to hand in: every objective done. The game also
+-- calls a quest complete when it has no objectives at all (talk to
+-- someone, take a letter somewhere) and for hidden tracking quests, which
+-- filled the stretch with quests that weren't done; those count only when
+-- the game says they're ready to turn in.
+local function finished(log, id)
+	if log.IsFailed and call(log.IsFailed, id) then return false end
+	if not call(log.IsComplete, id) then return false end
+	local objectives = log.GetQuestObjectives and call(log.GetQuestObjectives, id)
+	if type(objectives) == "table" and #objectives > 0 then
+		for _, objective in ipairs(objectives) do
+			if type(objective) == "table" and not objective.finished then return false end
+		end
+		return true
+	end
+	return log.ReadyForTurnIn and call(log.ReadyForTurnIn, id) and true or false
+end
+
 function XPBar:QuestXP()
 	local total, count = 0, 0
 	local log = C_QuestLog
 	if not (log and log.GetNumQuestLogEntries and log.GetInfo and log.IsComplete and GetQuestLogRewardXP) then return 0, 0 end
 	for index = 1, Stoa:PlainNumber(call(log.GetNumQuestLogEntries)) or 0 do
 		local info = call(log.GetInfo, index)
-		local id = type(info) == "table" and not info.isHeader and info.questID
-		if id and call(log.IsComplete, id) then
+		local id = type(info) == "table" and not info.isHeader and not info.isHidden and info.questID
+		if id and finished(log, id) then
 			local xp = Stoa:PlainNumber(call(GetQuestLogRewardXP, id))
 			if xp and xp > 0 then
 				total, count = total + xp, count + 1
