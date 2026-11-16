@@ -50,8 +50,14 @@ Stoa:On("PLAYER_ENTERING_WORLD", function() C_Timer.After(0, snapAll) end)
 
 -- Paints a texture, status bar or font string with a theme token now and on
 -- every theme change.
+local paintOne
+
 function UI.paint(region, token, alpha)
-	table.insert(themed, { region = region, token = token, alpha = alpha })
+	local entry = { region = region, token = token, alpha = alpha }
+	table.insert(themed, entry)
+	-- Now, not just on the next theme pass: parts built late (list rows on
+	-- first open) would otherwise keep the game's white until one came.
+	paintOne(entry)
 	return region
 end
 
@@ -62,25 +68,27 @@ function UI.unpaint(region)
 	end
 end
 
-function UI.applyTheme()
-	for _, entry in ipairs(themed) do
-		local r, g, b, a = Stoa:Color(entry.token)
-		a = entry.alpha or a
-		if entry.gradient then
-			UI.setGradient(entry.region, entry.gradient, r, g, b, a)
-		elseif entry.vertex then
-			entry.region:SetVertexColor(r, g, b, a)
-		elseif entry.region.SetColorTexture then
-			entry.region:SetColorTexture(r, g, b, a)
-		elseif entry.region.SetStatusBarColor then
-			entry.region:SetStatusBarColor(r, g, b, a)
-		else
-			entry.region:SetTextColor(r, g, b, a)
-		end
-		-- A texture's colour carries its alpha, so recolouring undoes a fade.
-		-- Parts faded with UI.fadeTo keep theirs.
-		if entry.region.stoaFade then entry.region:SetAlpha(entry.region.stoaFade) end
+function paintOne(entry)
+	local r, g, b, a = Stoa:Color(entry.token)
+	a = entry.alpha or a
+	if entry.gradient then
+		UI.setGradient(entry.region, entry.gradient, r, g, b, a)
+	elseif entry.vertex then
+		entry.region:SetVertexColor(r, g, b, a)
+	elseif entry.region.SetColorTexture then
+		entry.region:SetColorTexture(r, g, b, a)
+	elseif entry.region.SetStatusBarColor then
+		entry.region:SetStatusBarColor(r, g, b, a)
+	else
+		entry.region:SetTextColor(r, g, b, a)
 	end
+	-- A texture's colour carries its alpha, so recolouring undoes a fade.
+	-- Parts faded with UI.fadeTo keep theirs.
+	if entry.region.stoaFade then entry.region:SetAlpha(entry.region.stoaFade) end
+end
+
+function UI.applyTheme()
+	for _, entry in ipairs(themed) do paintOne(entry) end
 end
 
 -- Sets a region's alpha so that a later theme pass keeps it.
