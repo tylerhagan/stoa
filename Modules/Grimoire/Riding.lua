@@ -254,6 +254,8 @@ function Console:SetRiding(on)
 	self.riding = on
 	if on and not self.ride then self:BuildRide() end
 	fadeBars(on and 0 or 1)
+	local bars = Stoa.modules.ActionBars
+	if bars and bars.enabled and bars.UpdateTray then xpcall(bars.UpdateTray, Stoa.catch, bars) end
 	if on and not self.feed then self:BuildFeed() end
 	if self.feed then self.feed.entries = {} self:RenderFeed() end
 	self:ClearChat(on and not typing())
