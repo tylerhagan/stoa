@@ -677,6 +677,8 @@ end
 
 -- The skill bar under the title: a thin rounded STOA bar, the numbers in
 -- STOA's type, Blizzard's framed blue bar gone.
+local TRAINER_BAR_ROOM = 14
+
 local function dressTrainerBar()
 	local bar = ClassTrainerStatusBar
 	if not bar or bar.stoaDressed then return end
@@ -732,7 +734,8 @@ end
 
 local function dressTrainer()
 	local frame = ClassTrainerFrame
-	if not frame then return end
+	if not frame or frame.stoaTrainer then return end
+	frame.stoaTrainer = true
 	Windows:Dress(frame)
 	stripInside(frame, 4)
 	dressTrainerBar()
@@ -757,6 +760,41 @@ local function dressTrainer()
 			dropdown:SetPoint("RIGHT", train, "LEFT", -12, 0)
 			if dropdown.GetFrameLevel and train.GetFrameLevel and dropdown:GetFrameLevel() < train:GetFrameLevel() then
 				dropdown:SetFrameLevel(train:GetFrameLevel())
+			end
+		end
+		-- The skill bar leaves the header for a full-width row of its own
+		-- above the list: the list and the window grow down to make room.
+		local bar, inset = ClassTrainerStatusBar, frame.Inset
+		if bar and inset and not frame.stoaBarRow and not InCombatLockdown() then
+			local point, rel, relPoint, x, y
+			for i = 1, (inset.GetNumPoints and inset:GetNumPoints() or 1) do
+				point, rel, relPoint, x, y = inset:GetPoint(i)
+				if point == "TOPLEFT" then break end
+			end
+			if point == "TOPLEFT" and type(y) == "number" then
+				frame.stoaBarRow = true
+				inset:SetPoint(point, rel, relPoint, x, y - TRAINER_BAR_ROOM)
+				frame:SetHeight(frame:GetHeight() + TRAINER_BAR_ROOM)
+				bar:ClearAllPoints()
+				bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y + 6)
+				bar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, y + 6)
+				-- With a skill step (the next rank) shown, Blizzard ends the
+				-- top list a set distance from the window's top; that end
+				-- moves down with it, or the step row covers the list.
+				local function lowerStepRow()
+					if not (frame.bottomInset and frame.bottomInset:IsShown()) or InCombatLockdown() then return end
+					for i = 1, (inset.GetNumPoints and inset:GetNumPoints() or 1) do
+						local p, r, rp, px, py = inset:GetPoint(i)
+						if p == "BOTTOMRIGHT" and rp == "TOPRIGHT" and type(py) == "number" then
+							inset:SetPoint(p, r, rp, px, py - TRAINER_BAR_ROOM)
+							break
+						end
+					end
+				end
+				if _G.ClassTrainerFrame_Update then
+					hooksecurefunc("ClassTrainerFrame_Update", function() Stoa.safe.guarded(lowerStepRow) end)
+				end
+				lowerStepRow()
 			end
 		end
 		-- Your money sits at the left of the footer, level with Train.
@@ -861,13 +899,17 @@ function Windows:OnEnable()
 	guarded(dressTooltips)
 	guarded(dressReadyCheck)
 	-- The trainer window loads with its own addon the first time it opens.
-	if ClassTrainerFrame then
+	-- Forever's trainer addon has a bootstrap part that loads at startup,
+	-- so its ADDON_LOADED can come before STOA listens and not again when
+	-- the window itself loads. Opening a trainer dresses it as a backstop.
+	if ClassTrainerFrame then guarded(dressTrainer) end
+	Stoa:On("ADDON_LOADED", function(name)
+		if name == "Blizzard_TrainerUI" then guarded(dressTrainer) end
+	end)
+	Stoa:On("TRAINER_SHOW", function()
 		guarded(dressTrainer)
-	else
-		Stoa:On("ADDON_LOADED", function(name)
-			if name == "Blizzard_TrainerUI" then guarded(dressTrainer) end
-		end)
-	end
+		C_Timer.After(0, function() guarded(dressTrainer) end)
+	end)
 	Stoa:On("STOA_THEME_CHANGED", function() UI.applyTheme() end)
 	-- Quest and gossip buttons are made when a panel first opens.
 	for _, frame in ipairs({ QuestFrame, GossipFrame, MerchantFrame }) do
