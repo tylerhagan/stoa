@@ -873,6 +873,13 @@ do
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: rows not grouped to the best rank"
 		end
 		if #spellbook:ListRows("zzz") ~= 0 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: search didn't narrow" end
+		-- All ranks: the best Smite, then Rank 1 under it, quieter.
+		spellbook.db.allRanks = true
+		local every = spellbook:ListRows("")
+		if not (#every == 3 and every[2].rank == "Rank 2" and every[3].rank == "Rank 1" and every[3].older and every[1].count == 1) then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: all ranks not listed best first"
+		end
+		spellbook.db.allRanks = false
 		if spellbook.list then
 			spellbook.list.IsShown = function() return true end
 			spellbook.list.GetHeight = function() return 400 end
@@ -885,8 +892,12 @@ do
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook: Shadow Magic not shortened"
 		end
 		if rows[1].count ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: heading has no count" end
-		if not (spellbook.tools and spellbook.tools.box and spellbook.tools.words[1]) then
+		if not (spellbook.tools and spellbook.tools.box and spellbook.tools.words[1] and spellbook.tools.ranks) then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: no STOA toolbar"
+		else
+			spellbook.tools.ranks:GetScript("OnClick")(spellbook.tools.ranks)
+			if not (spellbook.db.allRanks and spellbook.tools.ranks.chosen) then SIM_ERRORS[#SIM_ERRORS + 1] = "Spellbook list: All ranks word didn't switch" end
+			spellbook.tools.ranks:GetScript("OnClick")(spellbook.tools.ranks)
 		end
 		spellbook.tools.box:SetText("zzz")
 		spellbook:FillList()
