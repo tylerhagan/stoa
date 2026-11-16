@@ -456,6 +456,17 @@ do
 		console:UpdateDaylight()
 	end
 end
+-- Dungeon names as Forever gives them find STOA's boss lists.
+do
+	local find = Stoa.Dungeons and Stoa.Dungeons.find
+	if find then
+		for game, ours in pairs({ ["Stormwind Stockade"] = "The Stockade", ["Deadmines"] = "The Deadmines", ["the stockade"] = "The Stockade", ["Sunken Temple"] = "The Temple of Atal'Hakkar", ["Scarlet Monastery - Library"] = "Scarlet Monastery" }) do
+			local found = find(game)
+			if not (found and found.name == ours) then SIM_ERRORS[#SIM_ERRORS + 1] = "Dungeons: " .. game .. " found " .. tostring(found and found.name) end
+		end
+		if find("Elwynn Forest") or find("The") then SIM_ERRORS[#SIM_ERRORS + 1] = "Dungeons: a zone matched a dungeon" end
+	end
+end
 -- Trainer window: the skill bar, the Settings dropdown and the rows dressed.
 do
 	if Stoa.modules.Windows then
