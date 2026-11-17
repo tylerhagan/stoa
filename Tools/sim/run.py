@@ -1464,6 +1464,9 @@ do
 	drain()
 	local card = _G.StoaWhisperCard
 	if not (card and card:IsShown()) then error("whisper card: a whisper didn't show it") end
+	fire("CHAT_MSG_WHISPER", "me too", "Other-Realm", "", "", "", "", 0, 0, "", 0, 2, "Player-1-0002")
+	drain()
+	if not tostring(card.who:GetText() or ""):find("Multiple people") then error("whisper card: two people didn't say so") end
 end
 -- A fresh shield in a fight is measured again as the gauge's top.
 do

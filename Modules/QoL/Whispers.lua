@@ -1,7 +1,8 @@
 -- Stoa QoL: whisper card. A whisper is easy to miss among the rest of the
 -- chat, so a small card rises just above the chat tabs: who whispered (in
 -- their class colour) and the start of what they said. More from the same
--- person adds to the count. Click to answer, right-click to put it away;
+-- person adds to the count; a second person turns it into one card naming
+-- everyone who's whispering. Click to answer, right-click to put it away;
 -- it fades on its own after a while, and waits while the mouse is on it.
 local _, ns = ...
 local Stoa = ns.Stoa
@@ -49,7 +50,7 @@ function Whispers:Build()
 	card:SetScript("OnEnter", function()
 		self.held = true
 		GameTooltip:SetOwner(card, "ANCHOR_TOP")
-		GameTooltip:AddLine("Click to answer", 1, 1, 1)
+		GameTooltip:AddLine("Click to answer " .. (self.last or ""), 1, 1, 1)
 		GameTooltip:AddLine("Right-click to put it away", Stoa:Color("muted"))
 		GameTooltip:Show()
 	end)
@@ -82,28 +83,37 @@ function Whispers:Heard(text, author, guid, bnet)
 	local away = Stoa.modules.Away
 	if away and away.shown then return end
 	if not self.card then self:Build() end
-	local name = short(author)
-	-- Several from one person add up; someone new starts again.
-	if name and name == self.from then
-		self.count = (self.count or 1) + 1
-	else
-		self.count = 1
+	local name = short(author) or "Someone"
+	-- Everyone who whispered while the card is up, in order.
+	self.people = self.people or {}
+	if not self.people[name] then
+		self.people[name] = true
+		self.order = self.order or {}
+		self.order[#self.order + 1] = name
 	end
-	self.from, self.reply, self.bnet = name, author, bnet
+	self.count = (self.count or 0) + 1
+	-- A click answers whoever spoke last.
+	self.reply, self.bnet = not Stoa:IsSecret(author) and author or nil, bnet
 
-	local label = name or "Someone"
-	local r, g, b = Stoa:Color("text")
-	if bnet then
-		r, g, b = 0.51, 0.77, 1
-	elseif guid and not Stoa:IsSecret(guid) and GetPlayerInfoByGUID then
-		local ok, _, class = pcall(GetPlayerInfoByGUID, guid)
-		local color = ok and class and not Stoa:IsSecret(class) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-		if color then r, g, b = color.r, color.g, color.b end
-	end
 	local card = self.card
-	card.who:SetText(label .. " whispered" .. (self.count > 1 and ("  ·  " .. self.count) or ""))
-	card.who:SetTextColor(r, g, b)
-	if not pcall(card.said.SetText, card.said, text or "") then card.said:SetText("") end
+	if #self.order > 1 then
+		card.who:SetText("Multiple people are whispering you")
+		card.who:SetTextColor(Stoa:Color("text"))
+		card.said:SetText(table.concat(self.order, ", "))
+	else
+		local r, g, b = Stoa:Color("text")
+		if bnet then
+			r, g, b = 0.51, 0.77, 1
+		elseif guid and not Stoa:IsSecret(guid) and GetPlayerInfoByGUID then
+			local ok, _, class = pcall(GetPlayerInfoByGUID, guid)
+			local color = ok and class and not Stoa:IsSecret(class) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+			if color then r, g, b = color.r, color.g, color.b end
+		end
+		card.who:SetText(name .. " whispered" .. (self.count > 1 and ("  ·  " .. self.count) or ""))
+		card.who:SetTextColor(r, g, b)
+		if not pcall(card.said.SetText, card.said, text or "") then card.said:SetText("") end
+	end
+	self.last = name
 
 	self:Place()
 	self.until_ = GetTime() + STAY
@@ -130,7 +140,7 @@ end
 
 function Whispers:Dismiss()
 	if self.ticker then self.ticker:Cancel() self.ticker = nil end
-	self.from, self.count, self.held = nil, nil, false
+	self.people, self.order, self.count, self.held, self.last = nil, nil, nil, false, nil
 	if self.card then
 		self.card:Hide()
 		GameTooltip:Hide()
