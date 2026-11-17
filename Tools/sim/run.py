@@ -1458,6 +1458,13 @@ drain()
 UnitGetTotalAbsorbs = function() return SECRET end
 fire("UNIT_ABSORB_AMOUNT_CHANGED", "player")
 drain()
+-- A whisper brings up the card.
+do
+	fire("CHAT_MSG_WHISPER", "hi there", "Friend-Realm", "", "", "", "", 0, 0, "", 0, 1, "Player-1-0001")
+	drain()
+	local card = _G.StoaWhisperCard
+	if not (card and card:IsShown()) then error("whisper card: a whisper didn't show it") end
+end
 -- A fresh shield in a fight is measured again as the gauge's top.
 do
 	local halo = Stoa.modules.Halo
