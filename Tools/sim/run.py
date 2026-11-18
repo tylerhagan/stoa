@@ -1078,6 +1078,18 @@ do
 		companion:Refresh()
 		data = companion.data
 		if all ~= 8 or not data or #data.bosses ~= 2 or data.down ~= 1 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: wings wrong (" .. all .. " then " .. (data and #data.bosses or 0) .. ")" end
+		-- A Forever dungeon, and a kill the list doesn't name.
+		where = "Excavation Site: Wetlands"
+		companion.db.run = nil
+		companion:Refresh()
+		fire("ENCOUNTER_END", 301, "Saltspine", 1, 5, 1)
+		fire("ENCOUNTER_END", 302, "Someone Unlisted", 1, 5, 1)
+		drain()
+		companion:Refresh()
+		data = companion.data
+		if not (companion.card and companion.card:IsShown()) or not data or #data.bosses ~= 5 or data.down ~= 2 then
+			SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: Excavation Site wrong (" .. (data and (#data.bosses .. " bosses, " .. data.down .. " down") or "no data") .. ")"
+		end
 		companion:SetView("line")
 		if not (companion.bar and companion.bar:IsShown()) or companion.card:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the line view didn't replace the card" end
 		companion:SetView("card")
