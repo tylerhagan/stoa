@@ -221,6 +221,11 @@ local function dressModule(module)
 	if module.AddBlock then
 		hooksecurefunc(module, "AddBlock", function(_, block) guarded(dressBlock, block) end)
 	end
+	-- The tracker's own update runs through a saved function (not
+	-- tracker.Update), so the overflow fade follows each section's layout.
+	if module.EndLayout then
+		hooksecurefunc(module, "EndLayout", function() Top:SoonFade() end)
+	end
 	if module.EnumerateActiveBlocks then
 		module:EnumerateActiveBlocks(function(block) guarded(dressBlock, block) end)
 	end
@@ -254,6 +259,16 @@ local function below(frame, floor)
 	local ok, bottom = pcall(frame.GetBottom, frame)
 	bottom = ok and Stoa:PlainNumber(bottom)
 	return bottom and bottom * frame:GetEffectiveScale() < floor
+end
+
+-- Once per frame, after every section has laid out.
+function Top:SoonFade()
+	if self.fadePending then return end
+	self.fadePending = true
+	C_Timer.After(0, function()
+		Top.fadePending = false
+		guarded(Top.FadeOverflow, Top)
+	end)
 end
 
 function Top:FadeOverflow()
