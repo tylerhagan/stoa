@@ -106,6 +106,7 @@ What works today:
 | Bags | Rounded item slots with a hairline edge; quality shown as an edge colour plus a corner mark for epic and above, item level on gear, free slots with any currencies you show on the backpack, money in g/s/c letters (hover it for every character's gold and the total), a Sort button, and a combined or separate layout option. The reagent bag opens with the combined bag as its bottom section, in the same ten columns (a setting) |
 | Character sheet | A STOA panel, quality edges and item level on every equipment slot, WORN (under 30%) and BROKEN words for durability, an average item level line, and item levels in the inspect window |
 | Damage meters | Blizzard's meter windows with no panel, just outlined words and faint bars (your own in the accent, names in class colour), side by side in the top-left corner |
+| Whisper card | A whisper brings up a small card just above the chat tabs: who it's from, in their class colour, and the start of what they said, with a count when they send more. Click to answer, right-click to put it away; it fades after a few seconds and waits while the mouse is on it. `/stoa whisper` shows a sample |
 | Comforts | Each its own setting, and Shift stops any of it: faster auto loot, a further camera, skip one-option gossip (on by default); accept quests, hand in quests (a choice of reward always waits for you), skip cinematics, quiet red errors in combat (off by default); hide other people's duel results and drunken lines (on); turn the last tracking you chose (Find Minerals, Find Herbs...) back on after login and death (on); decline duels, release in battlegrounds, accept resurrections (off) |
 | Merchants | Sells grey junk and anything you've marked as junk, and repairs, from guild funds when allowed |
 | Restock | Each character keeps a list of things it always carries and how many (candles, ammo, poisons, food and water); any vendor that sells one tops it back up, in whole bundles, then says what it bought. Token and honour items are never bought. Shift as the vendor opens skips it. `/stoa restock add <item> 20` or Settings > Comforts |
@@ -180,6 +181,7 @@ Fonts are the main gap: see below.
 | `/stoa recap` | Show this session's recap |
 | `/stoa ride` | Preview the travel line |
 | `/stoa daylight 23` | Show the console's light at that hour; `/stoa daylight` goes back to the game's clock |
+| `/stoa whisper` | Show a sample whisper card |
 | `/stoa tips` | Bring back the tips you've marked as got it |
 | `/stoa check` | Check the spell IDs, game functions and Blizzard frames STOA relies on against this game build |
 | `/stoa report` | Your version, game build, spec, theme and screen and UI scale, language, game settings STOA holds, other addons and any errors STOA caught, ready to copy |

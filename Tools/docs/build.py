@@ -40,7 +40,7 @@ GROUPS = [
         "Console light", "Small jobs"]),
     ("Groups", "Party and raid frames, healing and the people you play with.", [
         "Party cards", "Raid frames", "Click-casting", "Tank watch", "Target", "Pet", "Group buffs",
-        "Dungeon kit", "Dungeon companion", "Social", "Auto-invite", "Company"]),
+        "Dungeon kit", "Dungeon companion", "Whisper card", "Social", "Auto-invite", "Company"]),
     ("Around the screen", "Everything else the game draws, in STOA's dress.", [
         "Action bars", "At a glance", "Minimap", "Icon tray", "Top of screen", "Nameplates", "Chat", "Map",
         "Damage meters"]),

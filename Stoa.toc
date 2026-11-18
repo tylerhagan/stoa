@@ -51,6 +51,7 @@ Modules\QoL\Mail.lua
 Modules\QoL\Bind.lua
 Modules\QoL\Away.lua
 Modules\QoL\Tips.lua
+Modules\QoL\Whispers.lua
 Modules\QoL\Session.lua
 Modules\QoL\Companion.lua
 Modules\QoL\GearSets.lua
