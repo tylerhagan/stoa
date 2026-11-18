@@ -106,6 +106,16 @@ end
 local function addPair(tip, label, value, r, g, b)
 	if value == nil then return end
 	local mr, mg, mb = Stoa:Color("muted")
+	-- A secret value (a name in a dungeon fight) can be shown but not
+	-- measured, so the card doesn't widen for it and a right-hand value ran
+	-- out past its edge. Those go on one left-aligned line instead.
+	if Stoa:IsSecret(value) then
+		local hex = ("|cff%02x%02x%02x"):format((r or 1) * 255, (g or 1) * 255, (b or 1) * 255)
+		local ok = pcall(function()
+			tip:AddLine(Stoa:Hex("muted") .. label .. "|r   " .. hex .. value .. "|r")
+		end)
+		if ok then return end
+	end
 	pcall(tip.AddDoubleLine, tip, label, value, mr, mg, mb, r or 1, g or 1, b or 1)
 end
 
