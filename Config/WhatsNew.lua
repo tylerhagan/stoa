@@ -19,14 +19,13 @@ Stoa.WhatsNew = WhatsNew
 -- as "PRIEST"): each shows as a small tag in its class colour beside the
 -- line's name.
 local NOTE = {
-	edition = "1.4.0",
-	title = "New in STOA 1.4",
+	edition = "1.4.5",
+	title = "New in STOA 1.4.5",
 	lines = {
-		{ "Riding", "On a mount or a flight the console folds to a slim travel line: your speed, the zone and how far your quest is, with chat as a short fading feed and the bars out of the way. It also gets you off your mount to cast and at the flight master. /stoa ride previews it." },
-		{ "Tips", "When there's nothing to do before heading out, the Ready line shows a short tip about something STOA does that's easy to miss. Hover to read it, click to open its setting, right-click once you've got it." },
-		{ "A matching tank watch", "The watch frame wears the target's plaque: portrait medallion, rounded health bar with percent and amount, shield and power line." },
-		{ "Tidier windows", "The trainer's skill bar has its own full-width row, the spellbook list gains an All ranks word, and the character window keeps its shape when opened in a fight." },
-		{ "Smaller things", "Players' race and class on the target plaque, the dungeon companion finds Forever's dungeons and their quests, rested in plain blue on the experience bar, and the console's gold no longer turns silver after a flight." },
+		{ "Whisper card", "A whisper brings up a small card above the chat tabs: who it's from and the start of what they said. Click to answer, right-click to put it away. /stoa whisper shows a sample." },
+		{ "Forever's new dungeons", "The dungeon companion knows all nine new dungeons and their bosses, from Hall of Thanes to Shaper's Terrace, and ticks off optional bosses when you target their corpse." },
+		{ "Quest timers", "A timed quest counts down in a small card beside the quest list's heading, instead of a box over the list." },
+		{ "A tidier quest list", "Quests that would run over the console fade out, and the dungeon fight error about secret auras is gone." },
 	},
 	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }

@@ -4,6 +4,14 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.4.5
+
+- Whisper card: a whisper brings up a small card just above the chat tabs with who it's from (in their class colour) and the start of what they said. Click to answer, right-click to put it away; it fades on its own and waits while the mouse is on it. More from the same person adds a count, and a second person makes it "Multiple people are whispering you". Settings > Comforts turns it off; /stoa whisper shows a sample.
+- Dungeon companion: knows Forever's nine new dungeons (Hall of Thanes, Ruins of Lordaeron, Excavation Site: Wetlands, City of Dalaran, The Drowned City, Krol'Dok Stronghold, Alcaz Island Prison, Blackmaw Hold and Shaper's Terrace) and their bosses. A boss the game doesn't count as an encounter (such as Highland Horror) is ticked off when you target or point at its corpse, and a kill the list doesn't name still shows.
+- Quest timers: a timed quest shows in a small STOA card beside the quest list's heading, counting down, in place of the game's box that covered the list.
+- Quest list: quests that would run down over the console, the menu or the bags fade out instead of overlapping them.
+- Fixes: no more "Auras cannot be accessed when secret while tainted by Stoa" error in dungeon fights (STOA no longer resizes the quest list); a target's name in a dungeon fight stays inside the tooltip.
+
 ## 1.4.1
 
 - Shield gauge: a new shield in a fight now shows full straight away. Before, the gauge could keep a reading taken as the last shield broke and show the new one empty.
