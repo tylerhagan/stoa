@@ -35,7 +35,12 @@ function Companion:Where()
 	if not inside or kind ~= "party" then return nil end
 	local name, _, _, _, _, _, _, instanceID = GetInstanceInfo()
 	if not name or Stoa:IsSecret(name) then return nil end
-	return { name = name, instanceID = instanceID, dungeon = Stoa.Dungeons and Stoa.Dungeons.find(name) }
+	-- Only the dungeons STOA knows. Other party instances (Forever's
+	-- excavation sites) have no bosses to list, and the quest list should
+	-- stay as it is there.
+	local dungeon = Stoa.Dungeons and Stoa.Dungeons.find(name)
+	if not dungeon then return nil end
+	return { name = name, instanceID = instanceID, dungeon = dungeon }
 end
 
 -- The run: which bosses fell, kept over a /reload.
