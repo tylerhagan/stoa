@@ -221,18 +221,25 @@ local function dressModule(module)
 	if module.AddBlock then
 		hooksecurefunc(module, "AddBlock", function(_, block) guarded(dressBlock, block) end)
 	end
+	-- The tracker's own update runs through a saved function (not
+	-- tracker.Update), so the overflow fade follows each section's layout.
+	if module.EndLayout then
+		hooksecurefunc(module, "EndLayout", function() Top:SoonFade() end)
+	end
 	if module.EnumerateActiveBlocks then
 		module:EnumerateActiveBlocks(function(block) guarded(dressBlock, block) end)
 	end
 end
 
--- The tracker grows down to its Edit Mode height (or the screen's foot),
--- which with a long quest log ran it over the bags, the menu and the
--- console. Its height is capped so it stops above the highest of them; the
--- tracker then folds what doesn't fit, as it does at its own limit.
+-- The tracker's height is left to the game: resizing it from addon code
+-- taints its update queue for the rest of the session, and in a dungeon
+-- fight the scenario section then fails reading secret auras ("Auras cannot
+-- be accessed when secret while tainted by Stoa"). Instead, quests that
+-- would run down over the console, the menu or the bags fade out (alpha
+-- only, which touches none of the tracker's own data).
 local FLOOR_GAP = 10
 
-local function floorY(scale)
+local function floorY()
 	local best = 0
 	local console = Stoa.modules.Grimoire
 	if console and console.OpenHeight and console.frame and console.frame:IsShown() then
@@ -245,18 +252,37 @@ local function floorY(scale)
 			if top then best = math.max(best, top * frame:GetEffectiveScale()) end
 		end
 	end
-	return best / scale
+	return best
 end
 
-function Top:FitTracker()
+local function below(frame, floor)
+	local ok, bottom = pcall(frame.GetBottom, frame)
+	bottom = ok and Stoa:PlainNumber(bottom)
+	return bottom and bottom * frame:GetEffectiveScale() < floor
+end
+
+-- Once per frame, after every section has laid out.
+function Top:SoonFade()
+	if self.fadePending then return end
+	self.fadePending = true
+	C_Timer.After(0, function()
+		Top.fadePending = false
+		guarded(Top.FadeOverflow, Top)
+	end)
+end
+
+function Top:FadeOverflow()
 	local tracker = _G.ObjectiveTrackerFrame
 	if not tracker or (tracker.IsForbidden and tracker:IsForbidden()) then return end
-	local ok, top = pcall(tracker.GetTop, tracker)
-	top = ok and Stoa:PlainNumber(top)
-	local height = Stoa:PlainNumber(tracker:GetHeight())
-	if not (top and height) then return end
-	local room = top - floorY(tracker:GetEffectiveScale()) - FLOOR_GAP
-	if room > 60 and height > room + 0.5 then tracker:SetHeight(room) end
+	local floor = floorY() + FLOOR_GAP * UIParent:GetEffectiveScale()
+	for _, module in ipairs(tracker.modules or {}) do
+		if not (module.IsForbidden and module:IsForbidden()) and module.EnumerateActiveBlocks then
+			if module.Header then module.Header:SetAlpha(below(module.Header, floor) and 0 or 1) end
+			module:EnumerateActiveBlocks(function(block)
+				block:SetAlpha(below(block, floor) and 0 or 1)
+			end)
+		end
+	end
 end
 
 function Top:Tracker()
@@ -269,10 +295,6 @@ function Top:Tracker()
 	end
 	dressHeader(tracker.Header, tracker.IsCollapsed and tracker:IsCollapsed())
 	for _, module in ipairs(tracker.modules or {}) do guarded(dressModule, module) end
-	if tracker.UpdateHeight then
-		hooksecurefunc(tracker, "UpdateHeight", function() guarded(Top.FitTracker, Top) end)
-	end
-	guarded(self.FitTracker, self)
 	if tracker.AddModule then
 		hooksecurefunc(tracker, "AddModule", function(_, module) guarded(dressModule, module) end)
 	end
@@ -280,6 +302,7 @@ function Top:Tracker()
 	if tracker.Update then
 		hooksecurefunc(tracker, "Update", function()
 			if Top.trackerFocused then guarded(Top.FocusTracker, Top) end
+			guarded(Top.FadeOverflow, Top)
 		end)
 	end
 end
@@ -510,6 +533,88 @@ function Top:FocusTracker()
 	self.trackerFocused = folded
 end
 
+-- Quest timers -------------------------------------------------------------------
+
+-- The game's quest timer box sits on top of the quest list and the list
+-- only makes room for it at its next relayout, so it covered the headings.
+-- STOA hides that box and shows the timers itself: a quiet card left of
+-- the list's heading, one line per timed quest, counting down.
+local function clock(seconds)
+	seconds = math.max(0, math.floor(seconds))
+	if seconds >= 3600 then return ("%d:%02d:%02d"):format(seconds / 3600, (seconds % 3600) / 60, seconds % 60) end
+	return ("%d:%02d"):format(seconds / 60, seconds % 60)
+end
+
+function Top:QuestTimers()
+	local log = C_QuestLog
+	if not (log and log.GetQuestTimers) then return end
+	local list = {}
+	local ok, timers = pcall(log.GetQuestTimers)
+	for _, info in ipairs(ok and type(timers) == "table" and timers or {}) do
+		local left = Stoa:PlainNumber(info.questTimer)
+		if left and left > 0 then
+			local title = log.GetTitleForQuestID and Stoa.safe.plain(Stoa.safe.call(log.GetTitleForQuestID, info.questID))
+			list[#list + 1] = { id = info.questID, ends = GetTime() + left, title = title or "Timed quest" }
+		end
+	end
+	self.timers = list
+	local box = _G.QuestTimerFrame
+	if box and not (box.IsForbidden and box:IsForbidden()) and not box.stoaHidden then
+		box.stoaHidden = true
+		hooksecurefunc(box, "Show", function(frame) frame:Hide() end)
+		box:Hide()
+	end
+	local card = self.timerCard
+	if #list == 0 then
+		if card then card:Hide() end
+		if self.timerTicker then self.timerTicker:Cancel() self.timerTicker = nil end
+		return
+	end
+	if not card then
+		card = CreateFrame("Frame", "StoaQuestTimers", UIParent)
+		card:SetFrameStrata("MEDIUM")
+		card:SetWidth(220)
+		UI.roundPanel(card)
+		card.rows = {}
+		self.timerCard = card
+	end
+	local tracker = _G.ObjectiveTrackerFrame
+	card:ClearAllPoints()
+	if tracker and tracker.Header and not (tracker.IsForbidden and tracker:IsForbidden()) then
+		card:SetPoint("TOPRIGHT", tracker.Header, "TOPLEFT", -10, 4)
+	else
+		card:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -320, -260)
+	end
+	for i, timer in ipairs(list) do
+		local row = card.rows[i]
+		if not row then
+			row = {}
+			row.name = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+			row.name:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -8 - (i - 1) * 22)
+			row.name:SetPoint("RIGHT", card, "RIGHT", -64, 0)
+			row.name:SetWordWrap(false)
+			row.time = UI.text(card, "sans", Stoa.typeSize.body, "accent", "RIGHT")
+			row.time:SetPoint("RIGHT", card, "RIGHT", -12, 0)
+			row.time:SetPoint("TOP", row.name, "TOP", 0, 1)
+			card.rows[i] = row
+		end
+		row.name:SetText(timer.title)
+		row.name:Show()
+		row.time:Show()
+	end
+	for i = #list + 1, #card.rows do card.rows[i].name:Hide() card.rows[i].time:Hide() end
+	card:SetHeight(16 + #list * 22 - 6)
+	local function tick()
+		for i, timer in ipairs(self.timers or {}) do
+			local row = card.rows[i]
+			if row then row.time:SetText(clock(timer.ends - GetTime())) end
+		end
+	end
+	tick()
+	card:Show()
+	if not self.timerTicker then self.timerTicker = C_Timer.NewTicker(1, function() guarded(tick) end) end
+end
+
 function Top:OnEnable()
 	guarded(self.Buffs, self)
 	guarded(self.Tracker, self)
@@ -525,8 +630,8 @@ function Top:OnEnable()
 	-- Buff buttons can be made after login (the consolidation tooltip, edit mode).
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		C_Timer.After(1, function() guarded(Top.Buffs, Top) end)
-		-- The menu and bags settle after login; fit the tracker to where they end up.
-		C_Timer.After(2, function() if Top.trackerDressed then guarded(Top.FitTracker, Top) end end)
+		-- The console, menu and bags settle after login.
+		C_Timer.After(2, function() guarded(Top.FadeOverflow, Top) end)
 	end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Top.inFight = true; guarded(Top.FocusTracker, Top) end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() Top.inFight = false; guarded(Top.FocusTracker, Top) end)
@@ -545,6 +650,7 @@ function Top:OnEnable()
 		local want = (hold and not over) or false
 		if want ~= (Top.trackerFocused or false) then guarded(Top.FocusTracker, Top) end
 	end)
+	Stoa:On("QUEST_LOG_UPDATE", function() guarded(Top.QuestTimers, Top) end)
 	Stoa:On("STOA_THEME_CHANGED", function()
 		zoneColour()
 		local tracker = _G.ObjectiveTrackerFrame
