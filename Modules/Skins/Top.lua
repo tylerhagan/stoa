@@ -479,6 +479,88 @@ function Top:FocusTracker()
 	self.trackerFocused = folded
 end
 
+-- Quest timers -------------------------------------------------------------------
+
+-- The game's quest timer box sits on top of the quest list and the list
+-- only makes room for it at its next relayout, so it covered the headings.
+-- STOA hides that box and shows the timers itself: a quiet card left of
+-- the list's heading, one line per timed quest, counting down.
+local function clock(seconds)
+	seconds = math.max(0, math.floor(seconds))
+	if seconds >= 3600 then return ("%d:%02d:%02d"):format(seconds / 3600, (seconds % 3600) / 60, seconds % 60) end
+	return ("%d:%02d"):format(seconds / 60, seconds % 60)
+end
+
+function Top:QuestTimers()
+	local log = C_QuestLog
+	if not (log and log.GetQuestTimers) then return end
+	local list = {}
+	local ok, timers = pcall(log.GetQuestTimers)
+	for _, info in ipairs(ok and type(timers) == "table" and timers or {}) do
+		local left = Stoa:PlainNumber(info.questTimer)
+		if left and left > 0 then
+			local title = log.GetTitleForQuestID and Stoa.safe.plain(Stoa.safe.call(log.GetTitleForQuestID, info.questID))
+			list[#list + 1] = { id = info.questID, ends = GetTime() + left, title = title or "Timed quest" }
+		end
+	end
+	self.timers = list
+	local box = _G.QuestTimerFrame
+	if box and not (box.IsForbidden and box:IsForbidden()) and not box.stoaHidden then
+		box.stoaHidden = true
+		hooksecurefunc(box, "Show", function(frame) frame:Hide() end)
+		box:Hide()
+	end
+	local card = self.timerCard
+	if #list == 0 then
+		if card then card:Hide() end
+		if self.timerTicker then self.timerTicker:Cancel() self.timerTicker = nil end
+		return
+	end
+	if not card then
+		card = CreateFrame("Frame", "StoaQuestTimers", UIParent)
+		card:SetFrameStrata("MEDIUM")
+		card:SetWidth(220)
+		UI.roundPanel(card)
+		card.rows = {}
+		self.timerCard = card
+	end
+	local tracker = _G.ObjectiveTrackerFrame
+	card:ClearAllPoints()
+	if tracker and tracker.Header and not (tracker.IsForbidden and tracker:IsForbidden()) then
+		card:SetPoint("TOPRIGHT", tracker.Header, "TOPLEFT", -10, 4)
+	else
+		card:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -320, -260)
+	end
+	for i, timer in ipairs(list) do
+		local row = card.rows[i]
+		if not row then
+			row = {}
+			row.name = UI.text(card, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+			row.name:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -8 - (i - 1) * 22)
+			row.name:SetPoint("RIGHT", card, "RIGHT", -64, 0)
+			row.name:SetWordWrap(false)
+			row.time = UI.text(card, "sans", Stoa.typeSize.body, "accent", "RIGHT")
+			row.time:SetPoint("RIGHT", card, "RIGHT", -12, 0)
+			row.time:SetPoint("TOP", row.name, "TOP", 0, 1)
+			card.rows[i] = row
+		end
+		row.name:SetText(timer.title)
+		row.name:Show()
+		row.time:Show()
+	end
+	for i = #list + 1, #card.rows do card.rows[i].name:Hide() card.rows[i].time:Hide() end
+	card:SetHeight(16 + #list * 22 - 6)
+	local function tick()
+		for i, timer in ipairs(self.timers or {}) do
+			local row = card.rows[i]
+			if row then row.time:SetText(clock(timer.ends - GetTime())) end
+		end
+	end
+	tick()
+	card:Show()
+	if not self.timerTicker then self.timerTicker = C_Timer.NewTicker(1, function() guarded(tick) end) end
+end
+
 function Top:OnEnable()
 	guarded(self.Buffs, self)
 	guarded(self.Tracker, self)
@@ -512,6 +594,7 @@ function Top:OnEnable()
 		local want = (hold and not over) or false
 		if want ~= (Top.trackerFocused or false) then guarded(Top.FocusTracker, Top) end
 	end)
+	Stoa:On("QUEST_LOG_UPDATE", function() guarded(Top.QuestTimers, Top) end)
 	Stoa:On("STOA_THEME_CHANGED", function()
 		zoneColour()
 		local tracker = _G.ObjectiveTrackerFrame

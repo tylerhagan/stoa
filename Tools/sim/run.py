@@ -1041,6 +1041,21 @@ do
 		session.card:Hide()
 	end
 end
+-- Quest timers: STOA's own card shows a timed quest counting down.
+do
+	local savedTimers, savedTitle = C_QuestLog.GetQuestTimers, C_QuestLog.GetTitleForQuestID
+	C_QuestLog.GetQuestTimers = function() return { { questID = 77, questTimer = 132 } } end
+	C_QuestLog.GetTitleForQuestID = function() return "Prehistoric Prism" end
+	fire("QUEST_LOG_UPDATE")
+	drain()
+	local card = _G.StoaQuestTimers
+	if not (card and card:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest timers: the card didn't show" end
+	C_QuestLog.GetQuestTimers = function() return {} end
+	fire("QUEST_LOG_UPDATE")
+	drain()
+	if card and card:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Quest timers: the card didn't go" end
+	C_QuestLog.GetQuestTimers, C_QuestLog.GetTitleForQuestID = savedTimers, savedTitle
+end
 -- The dungeon companion: bosses from STOA's list, quests under the
 -- dungeon's header, a boss ticked off by its kill's name, wings, the
 -- preview command, the card and the slim line.
