@@ -215,7 +215,8 @@ function Raid:OnEnable()
 	-- every hit), so they're gathered and each cell is drawn once a tenth
 	-- of a second at most.
 	local dirty = {}
-	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_CONNECTION", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED" }) do
+	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_CONNECTION", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED",
+		"INCOMING_RESURRECT_CHANGED", "INCOMING_SUMMON_CHANGED" }) do
 		Stoa:On(event, function(unit)
 			if unit and IsInRaid() then dirty[unit] = true end
 		end)

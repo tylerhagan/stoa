@@ -627,8 +627,50 @@ local function tryAll()
 	end
 end
 
+-- The group loot roll cards (need, greed, pass): the stone toast gives way
+-- to a Stoa card, the item's name takes the serif and the timer runs as a
+-- flat accent bar. Nothing moves; the item's quality border and the game's
+-- own buttons stay. These aren't protected, so they dress at once.
+local function dressRoll(frame)
+	if frame.stoaRollDressed or forbidden(frame) then return end
+	frame.stoaRollDressed = true
+	hide(frame.Background)
+	hide(frame.Border)
+	hide(frame.NineSlice)
+	hide(frame.Bg)
+	UI.surface(frame, "card", { alpha = 0.96 })
+	if frame.Name then Stoa:SetFont(frame.Name, "serif", Stoa.typeSize.label) end
+	local timer = frame.Timer
+	if timer and timer.SetStatusBarTexture then
+		timer:SetStatusBarTexture(UI.WHITE)
+		timer:SetStatusBarColor(Stoa:Color("accent"))
+		timer:SetHeight(3)
+		if timer.Background then timer.Background:SetColorTexture(1, 1, 1, 0.08) end
+		-- The game tucks the timer a level under the card on every show,
+		-- where the new fill would cover it.
+		local function lift() timer:SetFrameLevel(frame:GetFrameLevel() + 1) end
+		frame:HookScript("OnShow", lift)
+		lift()
+	end
+end
+
+local function dressRolls()
+	for i = 1, 4 do
+		local frame = _G["GroupLootFrame" .. i]
+		if type(frame) == "table" and frame.GetObjectType then xpcall(dressRoll, Stoa.catch, frame) end
+	end
+end
+
 function More:OnEnable()
 	tryAll()
+	dressRolls()
+	Stoa:On("STOA_THEME_CHANGED", function()
+		for i = 1, 4 do
+			local frame = _G["GroupLootFrame" .. i]
+			local timer = type(frame) == "table" and frame.stoaRollDressed and frame.Timer
+			if timer then timer:SetStatusBarColor(Stoa:Color("accent")) end
+		end
+	end)
 	-- Load-on-demand windows (spellbook, auction house, communities, group
 	-- finder) make their frames when their addon loads.
 	Stoa:On("ADDON_LOADED", function(addon)

@@ -2068,7 +2068,7 @@ end
 -- place, in its colour. Returns true when it did.
 local CELL_WORDS = {
 	MAGIC = "MAG", DISEASE = "DIS", CURSE = "CUR", POISON = "POI", DISPEL = "DSP",
-	LOW = "LOW", DEAD = "DEAD", OFFLINE = "OFF",
+	LOW = "LOW", DEAD = "DEAD", OFFLINE = "OFF", SUMMON = "SUM",
 	READY = "RDY", ["NOT READY"] = "NOT", WAITING = "...",
 }
 function UI.cellWord(card, word, token)

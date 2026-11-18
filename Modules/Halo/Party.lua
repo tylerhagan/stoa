@@ -455,6 +455,15 @@ function Party:UpdateCard(card)
 	elseif flag(UnitIsDeadOrGhost(unit)) then
 		gone = "DEAD"
 	end
+	-- Help on its way: someone is raising them, or a summon waits on them.
+	local coming
+	if gone == "DEAD" and UnitHasIncomingResurrection and flag(UnitHasIncomingResurrection(unit)) then
+		coming = "RES"
+	elseif gone ~= "OFFLINE" and C_IncomingSummon and C_IncomingSummon.IncomingSummonStatus then
+		local ok, status = pcall(C_IncomingSummon.IncomingSummonStatus, unit)
+		-- 1 is a summon still waiting on their answer.
+		if ok and Stoa.safe.plain(status) == 1 then coming = "SUMMON" end
+	end
 
 	local pips = {}
 	local fraction = healthFraction(unit)
@@ -465,9 +474,10 @@ function Party:UpdateCard(card)
 	if gone then
 		card.percent:SetText("-")
 		card.hp:SetValue(0)
-		pips[1] = { gone }
+		pips[1] = { coming or gone, coming and "accent" }
 	else
 		setPercent(card.percent, unit, fraction)
+		if coming then pips[1] = { coming, "accent" } end
 		if dispel then pips[#pips + 1] = { dispel.word, dispel.token } end
 		if not self:Quiet() then
 			if low then pips[#pips + 1] = { "LOW", "danger" } end
@@ -489,6 +499,8 @@ function Party:UpdateCard(card)
 	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
 	if ready then
 		UI.cellWord(card, ready[1], readyToken)
+	elseif coming then
+		UI.cellWord(card, coming, "accent")
 	elseif gone then
 		UI.cellWord(card, gone, "muted")
 	elseif dispel then
@@ -1008,7 +1020,8 @@ function Party:OnEnable()
 	Stoa:On("RAID_TARGET_UPDATE", function()
 		for _, card in ipairs(self.cards) do self:UpdateMark(card) end
 	end)
-	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED" }) do
+	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED",
+		"INCOMING_RESURRECT_CHANGED", "INCOMING_SUMMON_CHANGED" }) do
 		Stoa:On(event, function(unit)
 			local card = cardFor(self, unit)
 			if card then self:UpdateCard(card) end
