@@ -285,7 +285,7 @@ end
 -- by casting it) per character, and turns it back on out of combat.
 
 local function trackingInfo(index)
-	local a, b, c, d, e, f = C_Minimap.GetTrackingInfo(index)
+	local a, _, c, _, _, f = C_Minimap.GetTrackingInfo(index)
 	if type(a) == "table" then return a.name, a.active, a.spellID end
 	-- Older shape: name, texture, active, category, nested, spellID.
 	return a, c, f

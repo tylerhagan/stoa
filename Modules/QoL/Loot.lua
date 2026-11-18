@@ -82,17 +82,18 @@ end
 function Loot:Render()
 	local frame = self.frame
 	if not frame then return end
-	local now = GetTime()
-	local live = {}
-	for _, entry in ipairs(self.entries) do
-		local age = now - entry.at
-		if age < self.db.seconds then live[#live + 1] = { entry = entry, age = age } end
-	end
+	local entries = self.entries
+	-- Nothing to show and nothing left on screen: most seconds of a session.
+	if #entries == 0 and not self.drawn then return end
+	local now, keep = GetTime(), self.db.seconds
+	-- Oldest first, so lines past their time leave from the front.
+	while entries[1] and now - entries[1].at >= keep do table.remove(entries, 1) end
+	local count = #entries
 	for i, fs in ipairs(self.rows) do
-		local item = live[#live - (i - 1)]
-		if item then
-			fs:SetText(item.entry.text)
-			local left = self.db.seconds - item.age
+		local entry = entries[count - (i - 1)]
+		if entry then
+			fs:SetText(entry.text)
+			local left = keep - (now - entry.at)
 			fs:SetAlpha(left < FADE_SECONDS and math.max(left / FADE_SECONDS, 0) or 1)
 			fs:Show()
 		else
@@ -100,6 +101,7 @@ function Loot:Render()
 			fs:Hide()
 		end
 	end
+	self.drawn = count > 0
 end
 
 function Loot:Build()

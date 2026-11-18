@@ -68,11 +68,6 @@ function GameSettings:RestoreAll()
 	for name in pairs(ledger()) do self:Restore(name) end
 end
 
--- Whether Stoa holds name now, for settings pages and /stoa report.
-function GameSettings:Held(name)
-	return ledger()[name] ~= nil
-end
-
 -- The settings Stoa holds now, by name, for /stoa report.
 function GameSettings:List()
 	local list = {}

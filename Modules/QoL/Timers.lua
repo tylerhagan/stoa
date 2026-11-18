@@ -79,6 +79,7 @@ function Timers:Start(kind, label, duration, token, opts)
 	bar.remaining = opts.remaining or duration
 	bar.rate = opts.rate or 1
 	bar.paused = opts.paused
+	bar.second = nil
 	bar:SetMinMaxValues(0, duration or 1)
 	bar:SetScript("OnUpdate", function(self, elapsed)
 		if self.paused then return end
@@ -89,10 +90,19 @@ function Timers:Start(kind, label, duration, token, opts)
 				return
 			end
 			self:SetValue(math.max(self.remaining, 0))
-			self.time:SetText(clock(math.max(self.remaining, 0)))
+			-- The words change once a second, not once a frame.
+			local second = math.floor(math.max(self.remaining, 0) + 0.5)
+			if second ~= self.second then
+				self.second = second
+				self.time:SetText(clock(second))
+			end
 		else
 			self:SetValue(1)
-			self.time:SetText(clock(GetTime() - self.started) .. "  timing")
+			local second = math.floor(GetTime() - self.started + 0.5)
+			if second ~= self.second then
+				self.second = second
+				self.time:SetText(clock(second) .. "  timing")
+			end
 		end
 	end)
 	bar:Show()

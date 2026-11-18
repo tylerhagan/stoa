@@ -66,8 +66,7 @@ end
 Power.RULE_SECONDS = RULE_SECONDS
 Power.TICK_SECONDS = TICK_SECONDS
 
-Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
-	if unit ~= "player" then return end
+Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(_, _, spellID)
 	spellID = Stoa:PlainNumber(spellID)
 	local cost = spellID and Stoa.Spells and Stoa.Spells.cost(spellID, MANA)
 	if cost and cost > 0 then
@@ -76,8 +75,8 @@ Stoa:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
 	end
 end)
 
-local function watch(unit, kind)
-	if unit ~= "player" or (kind and kind ~= "MANA") then return end
+local function watch(_, kind)
+	if kind and kind ~= "MANA" then return end
 	local current = Power.mana()
 	if current and lastMana and current > lastMana and Power.ruleLeft() == 0 then
 		Stoa:Fire("STOA_POWER_TICK")
@@ -90,8 +89,8 @@ local function watch(unit, kind)
 	lastMana = current
 end
 
-Stoa:On("UNIT_POWER_FREQUENT", watch)
-Stoa:On("UNIT_POWER_UPDATE", watch)
+Stoa:OnUnit("UNIT_POWER_FREQUENT", { "player" }, watch)
+Stoa:OnUnit("UNIT_POWER_UPDATE", { "player" }, watch)
 Stoa:On("PLAYER_ENTERING_WORLD", function()
 	lastMana = Power.mana()
 end)

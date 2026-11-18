@@ -452,9 +452,8 @@ local ENTRIES = {
 		if type(data) == "table" and data.name then
 			name, reaction, value = data.name, data.reaction, data.currentStanding
 		else
-			local standing, _, _, current
-			name, standing, _, _, current = call(GetWatchedFactionInfo)
-			reaction, value = standing, current
+			local _
+			name, reaction, _, _, value = call(GetWatchedFactionInfo)
 		end
 		reaction, value = plain(reaction), plain(value)
 		local word = reaction and _G["FACTION_STANDING_LABEL" .. reaction]
@@ -1073,7 +1072,11 @@ function Tally:OnEnable()
 		if name and plain(current) then session.rep = { name, plain(current) } end
 	end
 	self:Build(console)
-	Stoa:NewTicker(REFRESH_SECONDS, function() self:Refresh() end)
+	-- Read only while the lines can be seen; they catch up as they show.
+	Stoa:NewTicker(REFRESH_SECONDS, function()
+		if self.page:IsVisible() then self:Refresh() end
+	end)
+	self.page:HookScript("OnShow", function() self:Refresh() end)
 	Stoa:On("PLAYER_ENTERING_WORLD", function() self:Refresh() end)
 	Stoa:On("ZONE_CHANGED_NEW_AREA", function() self:Refresh() end)
 	Stoa:On("STOA_ROLE_CHANGED", function() self:Refresh() end)

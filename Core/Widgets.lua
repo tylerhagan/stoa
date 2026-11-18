@@ -1740,8 +1740,8 @@ function UI.plaque(frame, coinSide, opts)
 	-- A quiet edge for everyone; elite gold, rare silver.
 	function plaque:SetRank(rank)
 		plaque.rank = rank
-		local r, g, b, a = Stoa:Color("text")
-		a = 0.16
+		local r, g, b = Stoa:Color("text")
+		local a = 0.16
 		if rank == "elite" then r, g, b = Stoa:Color("accent"); a = 0.9 end
 		if rank == "rare" then r, g, b = unpack(SILVER); a = 0.9 end
 		if edge then edge:SetVertexColor(r, g, b, a) end

@@ -494,7 +494,6 @@ function Character:PlaceTabs()
 	local frame = CharacterFrame
 	local tabs = frame and frame.ModeTabs and frame.ModeTabs.Tabs
 	if not tabs or blocked(frame) then return end
-	local close = frame.CloseButton or _G.CharacterFrameCloseButton
 	local previous
 	for i = #tabs, 1, -1 do
 		local tab = tabs[i]
@@ -860,7 +859,6 @@ local function dressCharacter()
 	-- Title and level make a two-line header, so this window's band reaches
 	-- down to where the sheet starts; the level is seated as its settle step.
 	frame.stoaBandHeight = 58
-	local windows = Stoa.modules.Windows
 	if windows and windows.OnSettle then windows:OnSettle(frame, function() guarded(seatLevel) end) end
 	frame:HookScript("OnShow", function()
 		guarded(seatLevel)

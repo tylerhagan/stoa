@@ -190,13 +190,8 @@ function Console:BuildArt(frame)
 	local function tileLeather()
 		local width, height = leather:GetWidth(), leather:GetHeight()
 		if not width or width <= 0 then return end
-		-- Screen pixels per UI unit here; the painting's scale if unknown.
+		-- The leather tiles at the painting's own scale, like the art over it.
 		local perUnit = 1 / ART_SCALE
-		local _, screenHeight = GetPhysicalScreenSize and GetPhysicalScreenSize()
-		local scale = leather:GetEffectiveScale()
-		if screenHeight and screenHeight > 0 and scale and scale > 0 then
-			perUnit = scale * screenHeight / 768
-		end
 		leather:SetTexCoord(0, width * perUnit / LEATHER_W, 0, height * perUnit / LEATHER_H)
 	end
 	tileLeather()
@@ -1967,18 +1962,14 @@ function Console:OnEnable()
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_STATE_CHANGED", function() self:Refold() end)
 
-	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
-		if unit == "player" then self:UpdateSeal() end
-	end)
+	Stoa:OnUnit("UNIT_PORTRAIT_UPDATE", { "player" }, function() self:UpdateSeal() end)
 	if self.sealShield then
 		local function update(changed)
 			local was = self.sealShield:IsShown()
 			self.sealShield:Update("player", changed)
 			if was ~= self.sealShield:IsShown() then self:PlaceCrest() end
 		end
-		Stoa:On("UNIT_ABSORB_AMOUNT_CHANGED", function(unit)
-			if unit == "player" then update(true) end
-		end)
+		Stoa:OnUnit("UNIT_ABSORB_AMOUNT_CHANGED", { "player" }, function() update(true) end)
 		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
 			Stoa:On(event, function() update() end)
 		end
@@ -1991,7 +1982,7 @@ function Console:OnEnable()
 		if IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
 	end)
 
-	Stoa:On("UNIT_HEALTH", function(unit)
+	Stoa:OnUnit("UNIT_HEALTH", { "player", "party1", "party2", "party3", "party4" }, function(unit)
 		if unit == "player" then
 			setUnitBar(self.health, "player", "health")
 			self.healthText:SetText(UnitHealth("player"))
@@ -2035,7 +2026,7 @@ function Console:OnEnable()
 	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDaylit() end)
 	self:UpdateDaylight()
 	self:PaintDaylit()
-	C_Timer.NewTicker(60, function() self:UpdateDaylight() end)
+	Stoa:NewTicker(60, function() self:UpdateDaylight() end)
 	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
 		Stoa:On(event, function() self:UpdateKit() self:UpdateJobs() end)
 	end

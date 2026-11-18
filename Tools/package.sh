@@ -26,6 +26,7 @@ git archive --format=zip --prefix=Stoa/ -o "$out" "$ref" -- . \
 	':(exclude)docs' \
 	':(exclude).gitignore' \
 	':(exclude).gitattributes' \
-	':(exclude).pkgmeta'
+	':(exclude).pkgmeta' \
+	':(exclude).luacheckrc'
 
 echo "Built $out"

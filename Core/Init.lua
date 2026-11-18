@@ -84,27 +84,40 @@ frame:SetScript("OnEvent", function(_, event, ...)
 	Stoa:Fire(event, ...)
 end)
 
--- Unit events for one or two units only. UNIT_AURA and UNIT_POWER_FREQUENT
+-- Unit events for a few units only. UNIT_AURA and UNIT_POWER_FREQUENT
 -- fire for every unit nearby; asking the game for just the units you want
 -- (RegisterUnitEvent) keeps a 40-man raid from waking every handler.
 -- Stoa:OnUnit("UNIT_AURA", { "player", "target" }, fn) gets fn(unit, ...).
+-- The game takes two units a listener, so a longer list gets one for
+-- each pair.
 function Stoa:OnUnit(event, units, fn)
 	local owner = Stoa.loading
-	local listener = CreateFrame("Frame")
-	local ok = pcall(listener.RegisterUnitEvent, listener, event, units[1], units[2])
-	if not ok then return Stoa:On(event, function(unit, ...)
-		if unit == units[1] or unit == units[2] then return fn(unit, ...) end
-	end) end
+	local listeners = {}
 	local function handler(err)
-		if Stoa:Fail(err, owner) then listener:UnregisterAllEvents() end
+		if Stoa:Fail(err, owner) then
+			for _, listener in ipairs(listeners) do listener:UnregisterAllEvents() end
+		end
 	end
-	listener:SetScript("OnEvent", function(_, fired, unit, ...)
+	local function onEvent(_, fired, unit, ...)
 		if fired ~= event then return end
 		local module = owner and Stoa.modules[owner]
 		if module and module.tripped then return end
 		xpcall(fn, handler, unit, ...)
-	end)
-	return listener
+	end
+	for i = 1, #units, 2 do
+		local listener = CreateFrame("Frame")
+		if not pcall(listener.RegisterUnitEvent, listener, event, units[i], units[i + 1]) then
+			-- No unit filter on this client: the plain event, filtered here.
+			for _, made in ipairs(listeners) do made:UnregisterAllEvents() end
+			local wanted = {}
+			for _, unit in ipairs(units) do wanted[unit] = true end
+			return Stoa:On(event, function(unit, ...)
+				if wanted[unit] then return fn(unit, ...) end
+			end)
+		end
+		listener:SetScript("OnEvent", onEvent)
+		listeners[#listeners + 1] = listener
+	end
 end
 
 -- Modules -------------------------------------------------------------------

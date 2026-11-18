@@ -1341,7 +1341,7 @@ function Halo:OnEnable()
 		self:UpdateSignature()
 		self:UpdateReminders()
 	end)
-	Stoa:On("UNIT_DISPLAYPOWER", function(unit)
+	Stoa:OnUnit("UNIT_DISPLAYPOWER", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
 		if unit == "target" then self:UpdateTargetPower() end
 	end)
@@ -1433,9 +1433,7 @@ function Halo:OnEnable()
 		if unit == "target" then self:UpdateTarget() end
 	end)
 	Stoa:On("UNIT_THREAT_SITUATION_UPDATE", function() self:UpdateThreat() end)
-	Stoa:On("UNIT_THREAT_LIST_UPDATE", function(unit)
-		if unit == "target" then self:UpdateThreat() end
-	end)
+	Stoa:OnUnit("UNIT_THREAT_LIST_UPDATE", { "target" }, function() self:UpdateThreat() end)
 
 	local function onCast(channel)
 		return function(unit)
@@ -1458,12 +1456,12 @@ function Halo:OnEnable()
 		if busy(UnitCastingInfo) or busy(UnitChannelInfo) then return end
 		self:StopCast()
 	end
-	Stoa:On("UNIT_SPELLCAST_START", onCast(false))
-	Stoa:On("UNIT_SPELLCAST_DELAYED", onCast(false))
-	Stoa:On("UNIT_SPELLCAST_CHANNEL_START", onCast(true))
-	Stoa:On("UNIT_SPELLCAST_CHANNEL_UPDATE", onCast(true))
-	Stoa:On("UNIT_SPELLCAST_STOP", onStop)
-	Stoa:On("UNIT_SPELLCAST_FAILED", onStop)
-	Stoa:On("UNIT_SPELLCAST_INTERRUPTED", onStop)
-	Stoa:On("UNIT_SPELLCAST_CHANNEL_STOP", onStop)
+	Stoa:OnUnit("UNIT_SPELLCAST_START", { "player", "target" }, onCast(false))
+	Stoa:OnUnit("UNIT_SPELLCAST_DELAYED", { "player", "target" }, onCast(false))
+	Stoa:OnUnit("UNIT_SPELLCAST_CHANNEL_START", { "player", "target" }, onCast(true))
+	Stoa:OnUnit("UNIT_SPELLCAST_CHANNEL_UPDATE", { "player", "target" }, onCast(true))
+	Stoa:OnUnit("UNIT_SPELLCAST_STOP", { "player", "target" }, onStop)
+	Stoa:OnUnit("UNIT_SPELLCAST_FAILED", { "player", "target" }, onStop)
+	Stoa:OnUnit("UNIT_SPELLCAST_INTERRUPTED", { "player", "target" }, onStop)
+	Stoa:OnUnit("UNIT_SPELLCAST_CHANNEL_STOP", { "player", "target" }, onStop)
 end

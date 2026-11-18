@@ -10,7 +10,7 @@ then prints the errors and the global names the mock didn't know.
 Names are checked against Tools/sim/api.txt (what Forever's own UI source
 has, see apilist.py) and Tools/sim/known_missing.txt. A call to a global
 function, C_ function or named frame that is in neither is INVENTED, and the
-run exits 1 unless --lenient is given. Names Stoa only tests for existence
+run exits 1 unless --lenient is given. Any other error exits 1 as well. Names Stoa only tests for existence
 (`if C_Foo and C_Foo.Bar then`) are not counted: names outside the lists read
 as nil, as in the game, and only an unguarded use fails.
 """
@@ -229,6 +229,12 @@ end
 do
 	local ok, e = xpcall(function()
 		local gs = Stoa.GameSettings
+		local function held(name)
+			for _, kept in ipairs(gs:List()) do
+				if kept == name then return true end
+			end
+			return false
+		end
 		SIM_CVARS.simTest = "7"
 		gs:Set("Comforts", "simTest", "9")
 		assert(SIM_CVARS.simTest == "9", "set")
@@ -239,9 +245,9 @@ do
 		gs:Restore("simTest")
 		assert(SIM_CVARS.simTest == "3", "player's value kept")
 		Stoa.modules.Comforts:Camera()
-		assert(gs:Held("cameraDistanceMaxZoomFactor"), "far camera noted")
+		assert(held("cameraDistanceMaxZoomFactor"), "far camera noted")
 		SlashCmdList.STOA("restore")
-		assert(not gs:Held("cameraDistanceMaxZoomFactor"), "restore all")
+		assert(not held("cameraDistanceMaxZoomFactor"), "restore all")
 		assert(SIM_CVARS.cameraDistanceMaxZoomFactor == "0", "camera put back")
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Game settings: " .. e end
@@ -1640,5 +1646,6 @@ if "-v" in sys.argv:
 
 if "-v" in sys.argv:
     print("MOCK STAND-INS DROPPED (not in api.txt):", " ".join(sorted(k for k in G.SIM_REMOVED.keys())))
-if invented and not LENIENT:
+# An error fails the run, so a check that runs this (CI) stops on it.
+if errs or (invented and not LENIENT):
     sys.exit(1)

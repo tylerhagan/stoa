@@ -10,6 +10,8 @@
 -- exactly as Blizzard draws them.
 local _, ns = ...
 local Stoa = ns.Stoa
+-- Hooks on the game's code are guarded (Core/Report.lua).
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local More = Stoa:NewModule("MoreWindows")
@@ -316,7 +318,7 @@ function AFTER.macro(frame)
 	local selector = frame.MacroSelector
 	if selector and selector.RunSetup and not selector.stoaSlotsHooked then
 		selector.stoaSlotsHooked = true
-		Stoa.SafeHook(selector, "RunSetup", function(_, button) dressMacroSlot(button) end)
+		hooksecurefunc(selector, "RunSetup", function(_, button) dressMacroSlot(button) end)
 		if selector.EnumerateButtons and selector.initialized then
 			for button in selector:EnumerateButtons() do dressMacroSlot(button) end
 		end
