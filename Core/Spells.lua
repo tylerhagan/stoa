@@ -34,6 +34,35 @@ function Spells.localName(spellID, english)
 	return name
 end
 
+-- Whether the game speaks English, where an English name is the game's own.
+local locale = GetLocale and GetLocale() or "enUS"
+Stoa.english = locale == "enUS" or locale == "enGB"
+
+-- The same for a spell whose ID on Forever isn't settled: the English name
+-- is right on an English client whatever the ID turns out to be, so the ID
+-- is only asked for in other languages.
+function Spells.unsureName(spellID, english)
+	if Stoa.english then return english end
+	return Spells.localName(spellID, english)
+end
+
+-- A paladin's seals, by the game's names for them. In English "Seal of"
+-- also catches one this list hasn't met.
+local SEALS = {
+	{ 21084, "Seal of Righteousness" }, { 21082, "Seal of the Crusader" }, { 20375, "Seal of Command" },
+	{ 20166, "Seal of Wisdom" }, { 20165, "Seal of Light" }, { 20164, "Seal of Justice" },
+	{ 1311649, "Seal of Fury" },
+}
+local sealNames
+function Spells.isSeal(name)
+	if type(name) ~= "string" or Stoa:IsSecret(name) then return false end
+	if not sealNames then
+		sealNames = {}
+		for _, seal in ipairs(SEALS) do sealNames[Spells.localName(seal[1], seal[2])] = true end
+	end
+	return sealNames[name] or (Stoa.english and name:sub(1, 8) == "Seal of ") or false
+end
+
 function Spells.knows(spellID)
 	if not spellID then return false end
 	if IsPlayerSpell and call(IsPlayerSpell, spellID) then return true end

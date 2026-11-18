@@ -1425,6 +1425,30 @@ function UI.itemButton(parent, name, size)
 	return button
 end
 
+-- A raid target mark (skull, cross, star and the rest): the game's own
+-- icon for whichever mark the unit wears, hidden when it wears none.
+-- mark:Update(unit) returns whether it shows.
+local RAID_MARKS = "Interface\\TargetingFrame\\UI-RaidTargetingIcons"
+function UI.raidMark(parent, size)
+	local mark = parent:CreateTexture(nil, "OVERLAY", nil, 7)
+	mark:SetTexture(RAID_MARKS)
+	mark:SetSize(size, size)
+	mark:Hide()
+	function mark:Update(unit)
+		local index = unit and UnitExists(unit) and GetRaidTargetIndex and GetRaidTargetIndex(unit)
+		-- A value the fight hides can't be read: the mark stays as it was.
+		if Stoa:IsSecret(index) then return self:IsShown() end
+		if type(index) == "number" and index >= 1 and index <= 8 and SetRaidTargetIconTexture then
+			SetRaidTargetIconTexture(self, index)
+			self:Show()
+			return true
+		end
+		self:Hide()
+		return false
+	end
+	return mark
+end
+
 function UI.unitCard(card, styleName)
 	-- The rulebook's card surface: panel fill and one hairline edge, as on
 	-- tooltips and plaques. A stronger border shows states (a dispel, low
@@ -1459,6 +1483,14 @@ function UI.unitCard(card, styleName)
 
 	card.pips = {}
 	for i = 1, MAX_PIPS do card.pips[i] = makePip(card) end
+
+	-- A raid target mark rides the top right corner, over the bar.
+	local corner = CreateFrame("Frame", nil, card)
+	corner:SetSize(1, 1)
+	corner:SetPoint("CENTER", card, "TOPRIGHT", -3, -3)
+	corner:SetFrameLevel(card:GetFrameLevel() + 6)
+	card.mark = UI.raidMark(corner, 14)
+	card.mark:SetPoint("CENTER")
 
 	UI.styleCard(card, styleName)
 	UI.applyTheme()

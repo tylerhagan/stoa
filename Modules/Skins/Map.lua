@@ -5,7 +5,8 @@
 --   Levels: a quiet "Level 10-20" beside the map's title and on the minimap's
 --   zone tooltip. The game's own numbers (C_Map.GetMapLevels) are used when
 --   it has them; Forever gives none, so a small table of the classic
---   levelling zones fills in. English zone names only.
+--   levelling zones fills in, by English name and, in other languages, by
+--   the game's own name for each zone's area.
 --
 -- Revealing unexplored areas is not done: the game only reports the areas
 -- you have explored (C_MapExplorationInfo.GetExploredMapTextures), and the
@@ -42,6 +43,30 @@ local ZONES = {
 }
 Map.ZONES = ZONES
 
+-- The same zones by the game's area IDs, which give each one's name in the
+-- game's language. Read once, the first time a zone is asked for.
+local AREAS = {
+	["Dun Morogh"] = 1, ["Elwynn Forest"] = 12, ["Teldrassil"] = 141, ["Durotar"] = 14, ["Mulgore"] = 215,
+	["Tirisfal Glades"] = 85, ["Westfall"] = 40, ["Loch Modan"] = 38, ["Darkshore"] = 148,
+	["Silverpine Forest"] = 130, ["The Barrens"] = 17, ["Redridge Mountains"] = 44,
+	["Stonetalon Mountains"] = 406, ["Ashenvale"] = 331, ["Duskwood"] = 10, ["Wetlands"] = 11,
+	["Hillsbrad Foothills"] = 267, ["Thousand Needles"] = 400, ["Alterac Mountains"] = 36,
+	["Arathi Highlands"] = 45, ["Desolace"] = 405, ["Stranglethorn Vale"] = 33, ["Dustwallow Marsh"] = 15,
+	["Badlands"] = 3, ["Swamp of Sorrows"] = 8, ["Feralas"] = 357, ["The Hinterlands"] = 47, ["Tanaris"] = 440,
+	["Searing Gorge"] = 51, ["Azshara"] = 16, ["Blasted Lands"] = 4, ["Un'Goro Crater"] = 490, ["Felwood"] = 361,
+	["Burning Steppes"] = 46, ["Western Plaguelands"] = 28, ["Eastern Plaguelands"] = 139,
+	["Winterspring"] = 618, ["Deadwind Pass"] = 41, ["Silithus"] = 1377, ["Moonglade"] = 493,
+}
+local translated
+local function translateZones()
+	translated = true
+	if Stoa.english or not (C_Map and C_Map.GetAreaInfo) then return end
+	for english, areaID in pairs(AREAS) do
+		local name = Stoa.safe.plain(Stoa.safe.call(C_Map.GetAreaInfo, areaID))
+		if type(name) == "string" and name ~= "" and not ZONES[name] then ZONES[name] = ZONES[english] end
+	end
+end
+
 -- "Level 10-20" for a zone, or nil. The game's numbers come first.
 function Map:Levels(name, mapID)
 	if mapID and C_Map and C_Map.GetMapLevels then
@@ -51,6 +76,7 @@ function Map:Levels(name, mapID)
 			return low == high and ("Level %d"):format(low) or ("Level %d-%d"):format(low, high)
 		end
 	end
+	if not translated then translateZones() end
 	local zone = type(name) == "string" and not Stoa:IsSecret(name) and ZONES[name]
 	if not zone then return nil end
 	return ("Level %d-%d"):format(zone[1], zone[2])

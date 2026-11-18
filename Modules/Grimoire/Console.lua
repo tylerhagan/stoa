@@ -190,12 +190,23 @@ function Console:BuildArt(frame)
 	local function tileLeather()
 		local width, height = leather:GetWidth(), leather:GetHeight()
 		if not width or width <= 0 then return end
-		-- The leather tiles at the painting's own scale, like the art over it.
+		-- One texel of leather to one pixel of screen, so the grain is as
+		-- crisp as it was painted at any resolution or UI scale; the
+		-- painting's own scale if the screen can't be asked.
 		local perUnit = 1 / ART_SCALE
+		local screenHeight = GetPhysicalScreenSize and select(2, GetPhysicalScreenSize())
+		local scale = leather:GetEffectiveScale()
+		if screenHeight and screenHeight > 0 and scale and scale > 0 then
+			perUnit = scale * screenHeight / 768
+		end
 		leather:SetTexCoord(0, width * perUnit / LEATHER_W, 0, height * perUnit / LEATHER_H)
 	end
 	tileLeather()
 	frame:HookScript("OnSizeChanged", tileLeather)
+	-- The scale isn't settled until the world is in, and can change after.
+	for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED" }) do
+		Stoa:On(event, tileLeather)
+	end
 
 	local edge = layer("Edge", -5)
 	edge:SetHeight(EDGE_H * ART_SCALE)

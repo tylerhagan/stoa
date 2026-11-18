@@ -49,12 +49,19 @@ local MARK_LENGTH = 40
 local DURATIONS = { holyShield = 10, consecration = 8 }
 
 -- Judging these seals leaves a mark on the target; the rest only hit.
-local MARKS = {
-	["Seal of the Crusader"] = { name = "Judgement of the Crusader", length = MARK_LENGTH },
-	["Seal of Wisdom"] = { name = "Judgement of Wisdom", length = MARK_LENGTH },
-	["Seal of Light"] = { name = "Judgement of Light", length = MARK_LENGTH },
-	["Seal of Justice"] = { name = "Judgement of Justice", length = 10 },
-}
+-- Keyed by the seal's name in the game's language, as buffs and casts give it.
+local MARKS = {}
+do
+	local localName = Stoa.Spells.unsureName
+	for _, mark in ipairs({
+		{ 21082, "Seal of the Crusader", 21183, "Judgement of the Crusader", MARK_LENGTH },
+		{ 20166, "Seal of Wisdom", 20186, "Judgement of Wisdom", MARK_LENGTH },
+		{ 20165, "Seal of Light", 20185, "Judgement of Light", MARK_LENGTH },
+		{ 20164, "Seal of Justice", 20184, "Judgement of Justice", 10 },
+	}) do
+		MARKS[localName(mark[1], mark[2])] = { name = localName(mark[3], mark[4]), length = mark[5] }
+	end
+end
 
 local COINS = {
 	MELEE = {
@@ -141,7 +148,7 @@ function Paladin:Seal()
 		local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
 		if not ok or not aura then break end
 		local name = aura.name
-		if not Stoa:IsSecret(name) and name and name:sub(1, 8) == "Seal of " then
+		if Stoa.Spells.isSeal(name) then
 			local left = auraLeft(aura)
 			return name, left and (GetTime() + left), aura
 		end
@@ -187,7 +194,7 @@ function Paladin:NoteCast(spellID)
 		if now - record.at > record.length then self.marks[who] = nil end
 	end
 
-	if name:sub(1, 8) == "Seal of " then
+	if Stoa.Spells.isSeal(name) then
 		self.sealCast = { name = name, at = now }
 		-- The seal you fight with, for when it drops.
 		if not MARKS[name] then self.mainSeal = name end
@@ -375,9 +382,7 @@ local function assisted()
 end
 
 local function undeadOrDemon()
-	local kind = UnitCreatureType("target")
-	if Stoa:IsSecret(kind) or not kind then return false end
-	return kind == "Undead" or kind == "Demon"
+	return Stoa.creatureIs("target", "Undead", "Demon")
 end
 
 -- The guides' priority. Cooldowns are hidden in combat, so where it comes

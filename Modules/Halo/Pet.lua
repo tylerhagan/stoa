@@ -136,7 +136,7 @@ function Pet:Words()
 		and not plain(UnitIsDeadOrGhost("player")) then
 		if self.char().dead and knows(REVIVE_PET) then
 			out[#out + 1] = "PET DEAD, REVIVE"
-		elseif not (Stoa.aura.byName and Stoa.aura.byName("player", "Demonic Sacrifice")) then
+		elseif not (Stoa.aura.byName and Stoa.aura.byName("player", Stoa.Spells.unsureName(18788, "Demonic Sacrifice"))) then
 			out[#out + 1] = "CALL PET"
 		end
 	end

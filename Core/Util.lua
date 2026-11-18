@@ -134,6 +134,38 @@ function Stoa.fullName()
 	return name
 end
 
+-- Creature kinds ------------------------------------------------------------
+-- UnitCreatureType answers in the game's language, so a kind is asked for
+-- by its English word here and matched through the game's own type IDs.
+
+local CREATURE_TYPES = {
+	Beast = 1, Dragonkin = 2, Demon = 3, Elemental = 4, Giant = 5, Undead = 6,
+	Humanoid = 7, Critter = 8, Mechanical = 9, ["Not specified"] = 10,
+}
+local creatureWords = {}
+
+local function creatureWord(english)
+	local word = creatureWords[english]
+	if word == nil then
+		local info = C_CreatureInfo and C_CreatureInfo.GetCreatureTypeInfo
+			and Stoa.safe.call(C_CreatureInfo.GetCreatureTypeInfo, CREATURE_TYPES[english])
+		word = type(info) == "table" and Stoa.safe.plain(info.name) or false
+		creatureWords[english] = word
+	end
+	return word
+end
+
+-- Whether the unit is one of these kinds: Stoa.creatureIs("target", "Undead", "Demon").
+function Stoa.creatureIs(unit, ...)
+	local kind = Stoa.safe.plain(UnitCreatureType(unit))
+	if not kind then return false end
+	for i = 1, select("#", ...) do
+		local english = select(i, ...)
+		if kind == english or kind == creatureWord(english) then return true end
+	end
+	return false
+end
+
 -- Frames --------------------------------------------------------------------
 
 Stoa.frames = {}

@@ -60,6 +60,7 @@ local COOLDOWNS = {
 local VULNERABILITY_LENGTH = 30
 -- The Hot Streak buff's name: the instant Pyroblast is ready.
 local HOT_STREAK_NAMES = { "Hot Streak!", "Hot Streak" }
+if not Stoa.english then HOT_STREAK_NAMES = { Stoa.Spells.unsureName(48108, "Hot Streak") } end
 -- After a Frostbolt lands, Ice Lance is the press for this long.
 local LANCE_WINDOW = 1.5
 

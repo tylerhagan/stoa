@@ -26,3 +26,6 @@ jobs:
             python3 Tools/sim/run.py "$class" > sim.txt || { cat sim.txt; exit 1; }
             head -n 1 sim.txt
           done
+          # Once more as a client in another language.
+          STOA_SIM_LOCALE=deDE python3 Tools/sim/run.py PALADIN > sim.txt || { cat sim.txt; exit 1; }
+          head -n 1 sim.txt

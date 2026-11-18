@@ -57,8 +57,10 @@ local SPELLS = {
 }
 local nameOf = Sign.names(SPELLS)
 
--- English names for the Eclipse buffs, until their Forever IDs are known.
-local LUNAR, SOLAR = "Lunar Eclipse", "Solar Eclipse"
+-- The Eclipse buffs by name: their Forever IDs aren't settled, so the IDs
+-- are only asked for the name in other languages.
+local LUNAR = Stoa.Spells.unsureName(48518, "Lunar Eclipse")
+local SOLAR = Stoa.Spells.unsureName(48517, "Solar Eclipse")
 
 local DURATIONS = {
 	moonfire = 12, insectSwarm = 12, faerieFire = 40, faerieFeral = 40,

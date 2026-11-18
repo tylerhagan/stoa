@@ -6,6 +6,7 @@ then prints the errors and the global names the mock didn't know.
 
     python3 Tools/sim/run.py [CLASS] [-v] [--lenient]     # needs: pip install lupa
     STOA_SIM_ADDONS=Bagnon,ElvUI python3 Tools/sim/run.py   # other addons loaded
+    STOA_SIM_LOCALE=deDE python3 Tools/sim/run.py           # another language
 
 Names are checked against Tools/sim/api.txt (what Forever's own UI source
 has, see apilist.py) and Tools/sim/known_missing.txt. A call to a global
@@ -34,6 +35,8 @@ others = lua.table()
 for folder in filter(None, os.environ.get("STOA_SIM_ADDONS", "").split(",")):
     others[folder.strip()] = True
 G.SIM_OTHER_ADDONS = others
+if os.environ.get("STOA_SIM_LOCALE"):
+    lua.execute("local l = '%s'; GetLocale = function() return l end" % re.sub(r"[^A-Za-z]", "", os.environ["STOA_SIM_LOCALE"]))
 if os.environ.get("STOA_SIM_INTERFACE"):
     lua.execute("local i = %d; GetBuildInfo = function() return '1.15.8', '99999', 'Oct 1 2026', i end" % int(os.environ["STOA_SIM_INTERFACE"]))
 lua.execute("""

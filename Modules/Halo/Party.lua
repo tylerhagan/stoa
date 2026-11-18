@@ -428,11 +428,23 @@ local function setPercent(fs, unit, fraction)
 	UI.setHealthPercent(fs, unit, fraction)
 end
 
+-- The raid target mark on a card's corner, sized to the card.
+function Party:UpdateMark(card)
+	local mark = card.mark
+	if not mark then return end
+	if mark:Update(not card.preview and card.unit or nil) then
+		local height = Stoa:PlainNumber(card:GetHeight()) or 40
+		local size = math.max(9, math.min(14, height * 0.36))
+		mark:SetSize(size, size)
+	end
+end
+
 function Party:UpdateCard(card)
 	local unit = card.unit
 	-- Cards showing the /stoa test preview keep their sample data.
 	if card.preview or not unit or not UnitExists(unit) then return end
 
+	self:UpdateMark(card)
 	card.name:SetText(UnitName(unit))
 	card.name:SetTextColor(UI.classColor(unit))
 	UI.setUnitBar(card.hp, unit, "health")
@@ -992,6 +1004,9 @@ function Party:OnEnable()
 	Stoa:On("UNIT_CONNECTION", function(unit)
 		local card = cardFor(self, unit)
 		if card then self:UpdateCard(card) end
+	end)
+	Stoa:On("RAID_TARGET_UPDATE", function()
+		for _, card in ipairs(self.cards) do self:UpdateMark(card) end
 	end)
 	for _, event in ipairs({ "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_NAME_UPDATE", "UNIT_FLAGS", "UNIT_AURA", "UNIT_ABSORB_AMOUNT_CHANGED" }) do
 		Stoa:On(event, function(unit)

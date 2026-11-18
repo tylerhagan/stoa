@@ -400,8 +400,10 @@ end
 
 -- Gathering ----------------------------------------------------------------------------
 -- Herb and ore nodes: the skill a node needs, from a table of the classic
--- ones by their English names (other languages get no line), against your
--- own. "Ooze Covered" nodes need what the plain ones do.
+-- ones by their English names, against your own. "Ooze Covered" nodes need
+-- what the plain ones do. In other languages a herb node is known by the
+-- game's name for the herb it gives (the two match); ore veins have no such
+-- name to ask for, so they get a line in English only.
 
 local HERBS = {
 	Peacebloom = 1, Silverleaf = 1, Earthroot = 15, Mageroyal = 50, Briarthorn = 70,
@@ -422,13 +424,45 @@ local ORES = {
 }
 Tooltip.HERBS, Tooltip.ORES = HERBS, ORES
 
+-- Each herb's item, for its name in the game's language.
+local HERB_ITEMS = {
+	Peacebloom = 2447, Silverleaf = 765, Earthroot = 2449, Mageroyal = 785, Briarthorn = 2450,
+	Stranglekelp = 3820, Bruiseweed = 2453, ["Wild Steelbloom"] = 3355, ["Grave Moss"] = 3369,
+	Kingsblood = 3356, Liferoot = 3357, Fadeleaf = 3818, Goldthorn = 3821,
+	["Khadgar's Whisker"] = 3358, Wintersbite = 3819, Firebloom = 4625, ["Purple Lotus"] = 8831,
+	["Arthas' Tears"] = 8836, Sungrass = 8838, Blindweed = 8839, ["Ghost Mushroom"] = 8845,
+	Gromsblood = 8846, ["Golden Sansam"] = 13464, Dreamfoil = 13463, ["Mountain Silversage"] = 13465,
+	Plaguebloom = 13466, Icecap = 13467, ["Black Lotus"] = 13468,
+}
+-- The game hands out item names as it loads them, so the ones still
+-- missing are asked for again on a later look.
+local herbWords, herbsLeft = {}, nil
+local function englishHerb(name)
+	if Stoa.english or not (C_Item and C_Item.GetItemNameByID) then return name end
+	if herbWords[name] then return herbWords[name] end
+	if herbsLeft == nil then
+		herbsLeft = {}
+		for english, itemID in pairs(HERB_ITEMS) do herbsLeft[english] = itemID end
+	end
+	for english, itemID in pairs(herbsLeft) do
+		local word = Stoa.safe.plain(Stoa.safe.call(C_Item.GetItemNameByID, itemID))
+		if type(word) == "string" and word ~= "" then
+			herbWords[word] = english
+			herbsLeft[english] = nil
+		elseif C_Item.RequestLoadItemDataByID then
+			Stoa.safe.call(C_Item.RequestLoadItemDataByID, itemID)
+		end
+	end
+	return herbWords[name] or name
+end
+
 -- The profession skill lines, which don't change with the game's language.
 local SKILL_LINES = { Herbalism = 182, Mining = 186 }
 
 -- What a node needs: profession name, skill. Nil for anything else.
 function Tooltip.NodeNeeds(name)
 	if type(name) ~= "string" or Stoa:IsSecret(name) then return nil end
-	name = name:gsub("^Ooze Covered ", "")
+	name = englishHerb(name:gsub("^Ooze Covered ", ""))
 	if HERBS[name] then return "Herbalism", HERBS[name] end
 	if ORES[name] then return "Mining", ORES[name] end
 end

@@ -416,6 +416,7 @@ function Halo:LayoutTarget(curve)
 	end
 	self:UpdateTargetPower()
 	self:UpdateTargetPips()
+	self:UpdateTargetMark()
 end
 
 function Halo:BuildTarget(frame)
@@ -866,6 +867,20 @@ function Halo:UpdateUnitChip(chip)
 	chip.hp:SetStatusBarColor(Stoa:Color(foe and "hostile" or "health"))
 end
 
+-- The target's raid mark at the right end of its name line; the name
+-- gives it room while it shows.
+local TARGET_MARK = 16
+function Halo:UpdateTargetMark()
+	local target = self.target
+	if not (target and target.name) then return end
+	if not target.mark then
+		target.mark = UI.raidMark(target, TARGET_MARK)
+		target.mark:SetPoint("LEFT", target.name, "LEFT", TARGET_BAR_W - TARGET_MARK, 0)
+	end
+	local shown = target.mark:Update("target")
+	target.name:SetWidth(TARGET_BAR_W - (shown and TARGET_MARK + 6 or 0))
+end
+
 function Halo:ResetTargetName()
 	local fs = self.target and self.target.name
 	if not fs or not UnitExists("target") then return end
@@ -887,6 +902,7 @@ function Halo:UpdateTarget()
 	-- game skips a SetText with the same words.
 	C_Timer.After(0.1, function() self:ResetTargetName() end)
 	target.name:SetTextColor(UI.classColor("target"))
+	self:UpdateTargetMark()
 	UI.setUnitBar(target.hp, "target", "health")
 	UI.setHealthPercent(target.health, "target", nil, true)
 	self:UpdateTargetAmount()
@@ -911,7 +927,7 @@ function Halo:UpdateTarget()
 		target.plaque:SetLevel(levelText)
 	end
 	-- The game calls creatures without a type "Not specified": say nothing.
-	local unspecified = kind == "Not specified" or kind == (rawget(_G, "UNKNOWN") or "")
+	local unspecified = Stoa.creatureIs("target", "Not specified") or kind == (rawget(_G, "UNKNOWN") or "")
 	if plain(UnitIsPlayer("target")) then
 		-- A player has no creature type: their race and class instead.
 		local race, class = plain((UnitRace("target"))), plain((UnitClass("target")))
@@ -1379,12 +1395,25 @@ function Halo:OnEnable()
 		end
 		-- A fresh shield on you (any absorb: Power Word: Shield, an Aegis,
 		-- a Ward, a Barrier) is the gauge's new top, even in a fight.
-		local ABSORB = { "Shield", "Barrier", "Ward", "Aegis" }
+		-- The classic ones are known by the game's own names for them, in
+		-- any language; in English the words catch the rest.
+		local ABSORB = Stoa.english and { "Shield", "Barrier", "Ward", "Aegis" } or {}
+		local shields
 		local function absorbing(aura)
 			local id = aura and aura.spellId
 			if not id or Stoa:IsSecret(id) then return false end
 			local name = Stoa.Spells and Stoa.Spells.name(id)
 			if type(name) ~= "string" then return false end
+			if not shields then
+				shields = {}
+				for _, spell in ipairs({
+					{ 17, "Power Word: Shield" }, { 11426, "Ice Barrier" }, { 1463, "Mana Shield" }, { 543, "Fire Ward" },
+					{ 6143, "Frost Ward" }, { 6229, "Shadow Ward" }, { 7812, "Sacrifice" },
+				}) do
+					shields[Stoa.Spells.localName(spell[1], spell[2])] = true
+				end
+			end
+			if shields[name] then return true end
 			for _, word in ipairs(ABSORB) do
 				if name:find(word, 1, true) then return true end
 			end
@@ -1427,6 +1456,7 @@ function Halo:OnEnable()
 		self:UpdateTarget()
 		self:UpdateTargetCast()
 	end)
+	Stoa:On("RAID_TARGET_UPDATE", function() self:UpdateTargetMark() end)
 	-- A creature not yet seen this session has no name until the game has
 	-- looked it up, a moment after targeting; fill it in when it arrives.
 	Stoa:OnUnit("UNIT_NAME_UPDATE", { "target" }, function(unit)

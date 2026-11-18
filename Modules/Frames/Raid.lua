@@ -239,6 +239,11 @@ function Raid:OnEnable()
 	end
 	Stoa:On("PLAYER_TARGET_CHANGED", updateAll)
 	Stoa:On("STOA_THEME_CHANGED", updateAll)
+	Stoa:On("RAID_TARGET_UPDATE", function()
+		for cell in pairs(cells) do
+			if cell.unit then party:UpdateMark(cell) end
+		end
+	end)
 	-- Buff timers count down.
 	Stoa:NewTicker(1, function()
 		if IsInRaid() then updateAll() end
