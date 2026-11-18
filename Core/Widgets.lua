@@ -1436,10 +1436,11 @@ function UI.raidMark(parent, size)
 	mark:Hide()
 	function mark:Update(unit)
 		local index = unit and UnitExists(unit) and GetRaidTargetIndex and GetRaidTargetIndex(unit)
-		-- A value the fight hides can't be read: the mark stays as it was.
-		if Stoa:IsSecret(index) then return self:IsShown() end
-		if type(index) == "number" and index >= 1 and index <= 8 and SetRaidTargetIconTexture then
-			SetRaidTargetIconTexture(self, index)
+		-- Forever hides the mark's number from addons, so it can't be read
+		-- or compared; it is handed to the icon as it comes. Its type still
+		-- shows: a number is a mark, anything else is none.
+		if type(index) == "number" and self.SetSpriteSheetCell
+			and pcall(self.SetSpriteSheetCell, self, index, 4, 4) then
 			self:Show()
 			return true
 		end
