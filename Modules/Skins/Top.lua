@@ -226,11 +226,49 @@ local function dressModule(module)
 	end
 end
 
--- The tracker's height is left to the game. STOA used to cap it above the
--- console with SetHeight, but resizing the tracker from addon code taints
--- its update queue for the rest of the session, and in a dungeon fight the
--- scenario section then fails reading secret auras ("Auras cannot be
--- accessed when secret while tainted by Stoa").
+-- The tracker's height is left to the game: resizing it from addon code
+-- taints its update queue for the rest of the session, and in a dungeon
+-- fight the scenario section then fails reading secret auras ("Auras cannot
+-- be accessed when secret while tainted by Stoa"). Instead, quests that
+-- would run down over the console, the menu or the bags fade out (alpha
+-- only, which touches none of the tracker's own data).
+local FLOOR_GAP = 10
+
+local function floorY()
+	local best = 0
+	local console = Stoa.modules.Grimoire
+	if console and console.OpenHeight and console.frame and console.frame:IsShown() then
+		best = (Stoa:PlainNumber(console:OpenHeight()) or 0) * UIParent:GetEffectiveScale()
+	end
+	for _, frame in ipairs({ _G.MicroMenuContainer or _G.MicroMenu, _G.BagsBar }) do
+		if frame and frame:IsShown() and not (frame.IsForbidden and frame:IsForbidden()) then
+			local ok, top = pcall(frame.GetTop, frame)
+			top = ok and Stoa:PlainNumber(top)
+			if top then best = math.max(best, top * frame:GetEffectiveScale()) end
+		end
+	end
+	return best
+end
+
+local function below(frame, floor)
+	local ok, bottom = pcall(frame.GetBottom, frame)
+	bottom = ok and Stoa:PlainNumber(bottom)
+	return bottom and bottom * frame:GetEffectiveScale() < floor
+end
+
+function Top:FadeOverflow()
+	local tracker = _G.ObjectiveTrackerFrame
+	if not tracker or (tracker.IsForbidden and tracker:IsForbidden()) then return end
+	local floor = floorY() + FLOOR_GAP * UIParent:GetEffectiveScale()
+	for _, module in ipairs(tracker.modules or {}) do
+		if not (module.IsForbidden and module:IsForbidden()) and module.EnumerateActiveBlocks then
+			if module.Header then module.Header:SetAlpha(below(module.Header, floor) and 0 or 1) end
+			module:EnumerateActiveBlocks(function(block)
+				block:SetAlpha(below(block, floor) and 0 or 1)
+			end)
+		end
+	end
+end
 
 function Top:Tracker()
 	local tracker = _G.ObjectiveTrackerFrame
@@ -249,6 +287,7 @@ function Top:Tracker()
 	if tracker.Update then
 		hooksecurefunc(tracker, "Update", function()
 			if Top.trackerFocused then guarded(Top.FocusTracker, Top) end
+			guarded(Top.FadeOverflow, Top)
 		end)
 	end
 end
@@ -576,6 +615,8 @@ function Top:OnEnable()
 	-- Buff buttons can be made after login (the consolidation tooltip, edit mode).
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		C_Timer.After(1, function() guarded(Top.Buffs, Top) end)
+		-- The console, menu and bags settle after login.
+		C_Timer.After(2, function() guarded(Top.FadeOverflow, Top) end)
 	end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Top.inFight = true; guarded(Top.FocusTracker, Top) end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() Top.inFight = false; guarded(Top.FocusTracker, Top) end)
