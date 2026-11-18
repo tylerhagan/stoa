@@ -85,6 +85,24 @@ function Companion:Killed(name)
 	end
 end
 
+-- Some bosses don't count as an encounter for the game (optional ones
+-- such as Highland Horror), so no kill comes. A listed boss also falls
+-- when you target or point at its corpse, or have it targeted as the
+-- fight ends.
+function Companion:CheckCorpse(unit)
+	if not self.data or not UnitExists(unit) or not (UnitIsDead and UnitIsDead(unit)) then return end
+	local name = UnitName(unit)
+	if type(name) ~= "string" or Stoa:IsSecret(name) then return end
+	local want = name:lower()
+	for _, boss in ipairs(self.data.bosses) do
+		if not boss.dead and boss.name:lower() == want then
+			self:Killed(boss.name)
+			self:Soon()
+			return
+		end
+	end
+end
+
 function Companion:Quests(where)
 	local list = {}
 	local log = C_QuestLog
@@ -567,7 +585,12 @@ function Companion:OnEnable()
 	Stoa:On("ZONE_CHANGED_NEW_AREA", soon)
 	Stoa:On("QUEST_LOG_UPDATE", function() if self.data then soon() end end)
 	Stoa:On("PLAYER_REGEN_DISABLED", soon)
-	Stoa:On("PLAYER_REGEN_ENABLED", soon)
+	Stoa:On("PLAYER_REGEN_ENABLED", function()
+		pcall(self.CheckCorpse, self, "target")
+		soon()
+	end)
+	Stoa:On("PLAYER_TARGET_CHANGED", function() pcall(self.CheckCorpse, self, "target") end)
+	Stoa:On("UPDATE_MOUSEOVER_UNIT", function() pcall(self.CheckCorpse, self, "mouseover") end)
 	Stoa:On("ENCOUNTER_END", function(_, encounterName, _, _, success)
 		if plain(success) ~= 1 or Stoa:IsSecret(encounterName) then return end
 		self:Killed(encounterName)

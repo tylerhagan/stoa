@@ -1090,6 +1090,17 @@ do
 		if not (companion.card and companion.card:IsShown()) or not data or #data.bosses ~= 5 or data.down ~= 2 then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: Excavation Site wrong (" .. (data and (#data.bosses .. " bosses, " .. data.down .. " down") or "no data") .. ")"
 		end
+		-- Highland Horror has no encounter: its corpse targeted ticks it off.
+		local savedDead, savedName, savedExists = UnitIsDead, UnitName, UnitExists
+		UnitIsDead = function() return true end
+		UnitExists = function() return true end
+		UnitName = function(unit) if unit == "target" then return "Highland Horror" end return savedName(unit) end
+		fire("PLAYER_TARGET_CHANGED")
+		drain()
+		companion:Refresh()
+		UnitIsDead, UnitName, UnitExists = savedDead, savedName, savedExists
+		data = companion.data
+		if not data or data.down ~= 3 then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: a targeted boss corpse didn't tick it off (" .. (data and data.down or 0) .. " down)" end
 		companion:SetView("line")
 		if not (companion.bar and companion.bar:IsShown()) or companion.card:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Companion: the line view didn't replace the card" end
 		companion:SetView("card")
