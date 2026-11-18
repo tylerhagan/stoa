@@ -73,10 +73,32 @@ function Companion:Killed(name)
 	local where = self:Where()
 	if not where or type(name) ~= "string" then return end
 	local run = self:Run(where)
+	if not run.killed[name:lower()] then
+		run.fell = run.fell or {}
+		run.fell[#run.fell + 1] = name
+	end
 	run.killed[name:lower()] = true
 	for _, wing in ipairs(where.dungeon and where.dungeon.wings or {}) do
 		for _, boss in ipairs(wing.bosses) do
 			if boss:lower() == name:lower() then run.wing = wing.name end
+		end
+	end
+end
+
+-- Some bosses don't count as an encounter for the game (optional ones
+-- such as Highland Horror), so no kill comes. A listed boss also falls
+-- when you target or point at its corpse, or have it targeted as the
+-- fight ends.
+function Companion:CheckCorpse(unit)
+	if not self.data or not UnitExists(unit) or not (UnitIsDead and UnitIsDead(unit)) then return end
+	local name = UnitName(unit)
+	if type(name) ~= "string" or Stoa:IsSecret(name) then return end
+	local want = name:lower()
+	for _, boss in ipairs(self.data.bosses) do
+		if not boss.dead and boss.name:lower() == want then
+			self:Killed(boss.name)
+			self:Soon()
+			return
 		end
 	end
 end
@@ -122,9 +144,19 @@ function Companion:Gather()
 	local bosses = self:Bosses(where, run)
 	local down = 0
 	local nextBoss
+	local listed = {}
 	for _, boss in ipairs(bosses) do
+		listed[boss.name:lower()] = true
 		boss.dead = run.killed[boss.name:lower()] or false
 		if boss.dead then down = down + 1 elseif not nextBoss then nextBoss = boss end
+	end
+	-- A kill STOA's list doesn't have (a new dungeon, or the game names the
+	-- boss differently) still shows, ticked off, after the listed ones.
+	for _, name in ipairs(run.fell or {}) do
+		if not listed[name:lower()] then
+			bosses[#bosses + 1] = { name = name, dead = true }
+			down = down + 1
+		end
 	end
 	if nextBoss then nextBoss.next = true end
 	local quests = self:Quests(where)
@@ -318,7 +350,7 @@ function Companion:FillCard(data)
 	card.levels:SetText(data.levels or (self.preview and "Preview" or ""))
 
 	local bosses = #data.bosses
-	card.bossCount:SetText(bosses > 0 and ("%d of %d bosses"):format(data.down, bosses) or "No bosses listed")
+	card.bossCount:SetText(bosses > 0 and ("%d of %d bosses"):format(data.down, bosses) or "Bosses show as they fall")
 	card.questCount:SetText(#data.quests > 0 and ("%d of %d quests done"):format(data.questsDone, #data.quests) or "")
 	self:FillStrip(data.bosses)
 
@@ -553,7 +585,12 @@ function Companion:OnEnable()
 	Stoa:On("ZONE_CHANGED_NEW_AREA", soon)
 	Stoa:On("QUEST_LOG_UPDATE", function() if self.data then soon() end end)
 	Stoa:On("PLAYER_REGEN_DISABLED", soon)
-	Stoa:On("PLAYER_REGEN_ENABLED", soon)
+	Stoa:On("PLAYER_REGEN_ENABLED", function()
+		pcall(self.CheckCorpse, self, "target")
+		soon()
+	end)
+	Stoa:On("PLAYER_TARGET_CHANGED", function() pcall(self.CheckCorpse, self, "target") end)
+	Stoa:On("UPDATE_MOUSEOVER_UNIT", function() pcall(self.CheckCorpse, self, "mouseover") end)
 	Stoa:On("ENCOUNTER_END", function(_, encounterName, _, _, success)
 		if plain(success) ~= 1 or Stoa:IsSecret(encounterName) then return end
 		self:Killed(encounterName)
