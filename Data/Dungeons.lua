@@ -42,6 +42,17 @@ Stoa.Dungeons = {
 		{ name = "Main Gate", bosses = { "Timmy the Cruel", "Malor the Zealous", "Cannon Master Willey", "Archivist Galford", "Balnazzar" } },
 		{ name = "Service Entrance", bosses = { "Magistrate Barthilas", "Nerub'enkan", "Baroness Anastari", "Maleki the Pallid", "Ramstein the Gorger", "Baron Rivendare" } },
 	} },
+	-- New in Forever. Names from the early guides; a boss the game names
+	-- differently still shows on the card once it falls.
+	{ name = "Hall of Thanes", bosses = { "Faldrim Anvilmar", "Magmatus", "Plunder", "Durgen Dirgehammer" } },
+	{ name = "Ruins of Lordaeron", bosses = { "Witherfang", "The Baron", "Viktor the Vile", "The Abandoned", "Bjork", "Rath'mael" } },
+	{ name = "Excavation Site: Wetlands", bosses = { "Saltspine", "Shadetooth", "Highland Horror", "Relic Guardian" } },
+	{ name = "City of Dalaran", bosses = { "Atrexis the Grave Knight", "Lyn the Ignored", "Mana Devourer", "Arcane Anomaly", "Fel Ancient", "Arcanic Enigma", "Unstable Sentry", "Shade of the Archmage" } },
+	{ name = "The Drowned City", bosses = { "Zul'Alai", "Var'Taka", "Captain Dreadrise", "Deathless Marrow", "Primeval Elemental", "Min'loth the Serpent" } },
+	{ name = "Krol'Dok Stronghold", bosses = { "Slavecrusher Grox", "Twilight Commander Zarmok", "War Handler Ashka", "Nar'gurk", "Bossman Toof", "Overlord Mugg" } },
+	{ name = "Alcaz Island Prison", bosses = { "Tidemistress Ca'zass", "Overseer Wrex", "Katerina the Cleaner", "Zarla Ober", "The Questioner" } },
+	{ name = "Blackmaw Hold", bosses = { "Withermaw", "Bonesnout the Unbroken", "Impaan the Imprisoner", "Unbound Spirit", "Elder Shaman Bloodmane", "Blackmaw Behemoth", "Varrox Bleakhoof" } },
+	{ name = "Shaper's Terrace", bosses = { "Cinder", "Titanosaur", "Snowtalon", "Tor'Rel and Izha'Rel", "Vitrix", "Direhorn Matriarch", "Thunderhoof", "Venomridge", "Bolt", "Nanaya" } },
 }
 
 -- A name to compare: lower case, without a leading "The" or punctuation

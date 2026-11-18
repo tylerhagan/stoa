@@ -35,12 +35,7 @@ function Companion:Where()
 	if not inside or kind ~= "party" then return nil end
 	local name, _, _, _, _, _, _, instanceID = GetInstanceInfo()
 	if not name or Stoa:IsSecret(name) then return nil end
-	-- Only the dungeons STOA knows. Other party instances (Forever's
-	-- excavation sites) have no bosses to list, and the quest list should
-	-- stay as it is there.
-	local dungeon = Stoa.Dungeons and Stoa.Dungeons.find(name)
-	if not dungeon then return nil end
-	return { name = name, instanceID = instanceID, dungeon = dungeon }
+	return { name = name, instanceID = instanceID, dungeon = Stoa.Dungeons and Stoa.Dungeons.find(name) }
 end
 
 -- The run: which bosses fell, kept over a /reload.
@@ -78,6 +73,10 @@ function Companion:Killed(name)
 	local where = self:Where()
 	if not where or type(name) ~= "string" then return end
 	local run = self:Run(where)
+	if not run.killed[name:lower()] then
+		run.fell = run.fell or {}
+		run.fell[#run.fell + 1] = name
+	end
 	run.killed[name:lower()] = true
 	for _, wing in ipairs(where.dungeon and where.dungeon.wings or {}) do
 		for _, boss in ipairs(wing.bosses) do
@@ -127,9 +126,19 @@ function Companion:Gather()
 	local bosses = self:Bosses(where, run)
 	local down = 0
 	local nextBoss
+	local listed = {}
 	for _, boss in ipairs(bosses) do
+		listed[boss.name:lower()] = true
 		boss.dead = run.killed[boss.name:lower()] or false
 		if boss.dead then down = down + 1 elseif not nextBoss then nextBoss = boss end
+	end
+	-- A kill STOA's list doesn't have (a new dungeon, or the game names the
+	-- boss differently) still shows, ticked off, after the listed ones.
+	for _, name in ipairs(run.fell or {}) do
+		if not listed[name:lower()] then
+			bosses[#bosses + 1] = { name = name, dead = true }
+			down = down + 1
+		end
 	end
 	if nextBoss then nextBoss.next = true end
 	local quests = self:Quests(where)
@@ -323,7 +332,7 @@ function Companion:FillCard(data)
 	card.levels:SetText(data.levels or (self.preview and "Preview" or ""))
 
 	local bosses = #data.bosses
-	card.bossCount:SetText(bosses > 0 and ("%d of %d bosses"):format(data.down, bosses) or "No bosses listed")
+	card.bossCount:SetText(bosses > 0 and ("%d of %d bosses"):format(data.down, bosses) or "Bosses show as they fall")
 	card.questCount:SetText(#data.quests > 0 and ("%d of %d quests done"):format(data.questsDone, #data.quests) or "")
 	self:FillStrip(data.bosses)
 
