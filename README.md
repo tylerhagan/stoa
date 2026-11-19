@@ -29,13 +29,19 @@ Layouts are built per **role** (Tank, Healer, Melee DPS, Ranged DPS), with a sma
 
 ![Party cards for a healer](docs/screenshots/party-healer.jpg)
 
+**Windows:** the character sheet, the Characters page, the spellbook, talents, settings and bags.
+
 <p>
-<img src="docs/screenshots/tooltip-compare.jpg" alt="Item tooltip with upgrade line" width="66%">
-<img src="docs/screenshots/training.jpg" alt="The Training page" width="30%">
+<img src="docs/screenshots/character.jpg" alt="The character sheet" width="50%">
+<img src="docs/screenshots/characters.jpg" alt="The Characters page" width="46%">
+</p>
+<p>
+<img src="docs/screenshots/spellbook.jpg" alt="The spellbook" width="31%">
+<img src="docs/screenshots/talents.jpg" alt="Talents" width="66%">
 </p>
 <p>
 <img src="docs/screenshots/settings.jpg" alt="STOA settings" width="66%">
-<img src="docs/screenshots/mail.jpg" alt="The mailbox" width="30%">
+<img src="docs/screenshots/bags.jpg" alt="Bags" width="28%">
 </p>
 
 ## What STOA is not
