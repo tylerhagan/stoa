@@ -632,6 +632,122 @@ local function safely(fn)
 	end)
 end
 
+-- Chat is housed only while no other chat addon was kept for the job
+-- (Core/Conflicts.lua): theirs draws its own frame and tabs.
+local function housesChat(db)
+	return db.houseChat and not (Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook"))
+end
+Console.HousesChat = function(self) return housesChat(self.db) end
+
+-- Another chat addon was kept: the chat is theirs to dress, but Stoa's Edit
+-- Mode layout rests it inside the console, where it would lie across the
+-- pages. While it overlaps the console it is stood just above the edge;
+-- anywhere else it is left alone.
+local function liftChat()
+	local chat = ChatFrame1
+	if not chat or Console.bare then return end
+	local bottom, top = chat:GetBottom(), Console:OpenHeight()
+	if type(bottom) ~= "number" or (issecretvalue and issecretvalue(bottom)) or bottom >= top then return end
+	if InCombatLockdown() and chat.IsProtected and chat:IsProtected() then return end
+	chat:ClearAllPoints()
+	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), top + SLIM_CHAT_LIFT)
+end
+
+-- Daylight UI keeps "room along the bottom edge": its own data bar reports a
+-- height and every piece the player hasn't placed by hand (chat, meters,
+-- bars) starts above it. Stoa reports the console's height the same way, so
+-- Daylight's pieces stand on the console instead of under it. Its frames are
+-- never moved from here. True while Daylight is there to take the report.
+local roomWatched = false
+
+local function daylightRoom()
+	local dui = _G.DaylightUI
+	local movers = type(dui) == "table" and dui.Movers
+	if not (type(movers) == "table" and type(movers.SetBottomRoom) == "function") then return false end
+	if Console.bare then return true end
+	local want = Console:OpenHeight()
+	local function report()
+		if InCombatLockdown() then return end
+		local now = type(movers.BottomRoom) == "function" and movers.BottomRoom() or 0
+		if type(now) == "number" and now < want then pcall(movers.SetBottomRoom, want) end
+	end
+	report()
+	if not roomWatched and type(dui.On) == "function" then
+		roomWatched = true
+		-- Daylight's data bar reports its own height (or none) now and then.
+		pcall(dui.On, "BottomRoomChanged", function(px)
+			if type(px) == "number" and px < want then C_Timer.After(0, function() safely(report) end) end
+		end)
+	end
+	return true
+end
+
+-- Daylight UI's chat kept, and the chat wanted in the console: its panel is
+-- docked on the console's left page, where Stoa's own chat would stand.
+-- Daylight's mover for it is suspended (its saved spot stays, and comes back
+-- when the two part), and its size is overridden through
+-- Daylight's plugin API, which never saves them. Daylight's code is only
+-- called, never copied; if any call is missing the chat just stands above
+-- the console.
+local DOCK_PAD = 18 -- Daylight's panel is this much larger than its chat size
+-- Daylight pads its panel itself, so it runs nearly edge to edge.
+local DOCK_BOTTOM, DOCK_TOP, DOCK_SIDE = 6, 8, 8
+local DOCK_TABS = 50 -- Daylight's tab row and the padding over it, clear of the border
+local dockView, dockSized = nil, false
+
+local function wantsDock(db)
+	return db.houseChat and not db.slim and not Console.bare
+		and Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook")
+		and C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("DaylightUI_Chat") or false
+end
+Console.DocksChat = function(self) return wantsDock(self.db) end
+
+local function dockChat()
+	if not wantsDock(Console.db) then return false end
+	local dui = _G.DaylightUI
+	local api = type(dui) == "table" and dui.API
+	local movers = type(dui) == "table" and dui.Movers
+	if not (type(api) == "table" and type(api.For) == "function" and type(movers) == "table"
+		and type(movers.Suspend) == "function" and type(movers.Get) == "function") then return false end
+	local entry = movers.Get("chat")
+	local holder = type(entry) == "table" and entry.frame
+	if not (type(holder) == "table" and holder.SetPoint and holder.GetScale) then return false end
+	if InCombatLockdown() then return true end
+	local scale = holder:GetScale()
+	if type(scale) ~= "number" or scale <= 0 then scale = 1 end
+	if not dockSized then
+		dockSized = true
+		dockView = dockView or api.For("STOA")
+		if type(dockView) == "table" and type(dockView.Override) == "function" then
+			local width = math.floor((Console:ChatWidth() + 2 * DOCK_SIDE) / scale) - DOCK_PAD
+			-- With the art the gold border sits a little under the console's top.
+			-- Daylight's tab row stands above that border, as Stoa's own tabs
+			-- do, so the lines get the page's whole height.
+			local top = (artOn() and ART_CHAT_GAP + 2 or DOCK_TOP) - DOCK_TABS
+			local height = math.floor((Console:OpenHeight() - DOCK_BOTTOM - top) / scale) - DOCK_PAD
+			pcall(dockView.Override, "Chat", "matchInfo", false)
+			pcall(dockView.Override, "Chat", "width", width)
+			pcall(dockView.Override, "Chat", "height", height)
+			-- The panel keeps Daylight's own background: it fades in on
+			-- hover and backs the tab row where that stands over the world.
+		end
+	end
+	if not pcall(movers.Suspend, "chat", true) then return false end
+	holder:ClearAllPoints()
+	holder:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset() - DOCK_SIDE) / scale, DOCK_BOTTOM / scale)
+	return true
+end
+
+-- Whoever else has the chat: Daylight's panel is docked or stands above the
+-- console; any other addon's chat is the game's frame, lifted if it lies on
+-- the console.
+local function clearChat()
+	local ok, docked = pcall(dockChat)
+	if ok and docked then return end
+	if daylightRoom() then return end
+	liftChat()
+end
+
 -- With the console switched off (the Minimal preset) there is no frame to
 -- house things in, but Blizzard's bar art, menu, bags and chat still need
 -- the same care: the gryphons and stone go, the menu and bags rest in the
@@ -640,7 +756,7 @@ function Console:OnOff()
 	self.bare = true
 	local db = self.db
 	local function apply()
-		if db.houseChat then
+		if housesChat(db) then
 			safely(placeChat)
 			safely(guardChat)
 		end
@@ -672,11 +788,17 @@ function Console:House()
 	local db = self.db
 
 	local function apply()
-		if db.houseChat then
+		if housesChat(db) then
 			safely(placeChat)
 			safely(guardChat)
 			if artOn() then safely(buildTabs) end
+		elseif db.houseChat then
+			safely(clearChat)
+			-- The other addon and Edit Mode place the chat a moment after login.
+			C_Timer.After(2, function() safely(clearChat) end)
 		end
+		-- Daylight's other pieces keep clear of the console too.
+		safely(daylightRoom)
 		if db.hideBarArt then safely(hideBarArt) end
 		if db.houseMenu then
 			safely(placeMenu)
@@ -684,7 +806,7 @@ function Console:House()
 		end
 	end
 
-	if db.houseChat or db.slim then
+	if housesChat(db) or db.slim or wantsDock(db) then
 		-- Notes now arrive in chat, so the notes page steps aside (the slim
 		-- line has no room for it either way).
 		self.leftPage:Hide()
@@ -709,7 +831,7 @@ function Console:House()
 		EventRegistry:RegisterCallback("EditMode.Exit", apply, self)
 	end
 
-	if db.houseChat and artOn() then
+	if housesChat(db) and artOn() then
 		-- Read-only hooks: Stoa's tabs follow the dock, nothing is changed.
 		for _, name in ipairs({ "FCFDock_UpdateTabs", "FCFDock_SelectWindow", "FCF_SetWindowName", "FCF_OpenNewWindow", "FCF_Close", "FCF_DockFrame", "FCF_UnDockFrame" }) do
 			if _G[name] then hooksecurefunc(name, safeRefresh) end

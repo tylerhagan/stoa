@@ -176,6 +176,8 @@ function Away:Allowed()
 end
 
 function Away:Show()
+	-- A companion's away screen is up instead (Core/Companions.lua).
+	if Stoa:SharedBy("away") then return end
 	if self.shown or not self:Allowed() then return end
 	if not self.frame then self:Build() end
 	self.shown, self.since, self.whispers = true, GetTime(), {}

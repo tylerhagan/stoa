@@ -196,6 +196,22 @@ function Layout:FollowScreen()
 	if ready(kind) and not self:OnStoa(kind) then self:Apply(false, kind) end
 end
 
+-- Daylight UI adds an Edit Mode layout of its own and switches to it. With
+-- Stoa's console and action bars in use, the bars then stand where that
+-- layout puts them instead of in the console. A layout is the player's to
+-- choose, so Stoa only says so, once a session.
+function Layout:Hint()
+	if self.hinted or self:OnStoa() or self:OnPreset() then return end
+	if not (Stoa:IsModuleEnabled("Grimoire") and Stoa:IsModuleEnabled("ActionBars")) then return end
+	if Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ActionBars") then return end
+	local info = C_EditMode.GetLayouts()
+	local active = info and info.layouts and info.activeLayout and info.layouts[info.activeLayout - presets()]
+	local name = active and active.layoutName
+	if type(name) ~= "string" or not name:find("^DaylightUI") then return end
+	self.hinted = true
+	Stoa:Print(("The Edit Mode layout \"%s\" is active, so the action bars aren't in STOA's console. /stoa editmode switches to STOA's layout."):format(name))
+end
+
 function Layout:OnEnable()
 	local queued = false
 	local function follow()
@@ -229,7 +245,10 @@ function Layout:OnEnable()
 				self:Apply(false, kind)
 				return
 			end
-			if Stoa.char.layoutApplied then return end
+			if Stoa.char.layoutApplied then
+				self:Hint()
+				return
+			end
 			if self:OnPreset() then
 				self:Apply(false, kind)
 			else

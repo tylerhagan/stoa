@@ -4,6 +4,20 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.5.1
+
+- Daylight UI: STOA now recognises Daylight UI's modules (bags, nameplates, chat, tooltips, action bars, unit frames, window skins, buffs, quest tracker and info panel) and asks which of the two you want for each part, as it does for Bagnon or Plater. Until you choose, STOA's part steps aside. /stoa addons asks again.
+- One page for several addons: when more than one part is shared with other addons (Daylight UI can bring ten), STOA asks about all of them on one page, a row for each with Keep theirs and Use STOA's, instead of one question after another.
+- Other addons in Settings: Settings > Setup > Other addons lists each part another addon is doing too, with Keep theirs or Use STOA's, so a choice made or missed at login can be changed later.
+- Chat with another chat addon: when you keep another addon's chat (Daylight UI, Prat, Chattynator, Glass, Chatter), STOA no longer holds the chat in the console or draws its own tabs over it, and its chat comforts step aside too. The console's notes page takes that room. If the chat would lie across the console, STOA stands it just above the console's edge.
+- Daylight UI's chat in the console: when you keep Daylight UI's chat and STOA's "chat in the console" setting is on, Daylight's chat panel is docked on the console's left page, sized to fit, with its tab row standing on the console's top edge. Daylight's own saved position and size are left untouched and return if you turn the setting off. On the slim console it stands above the line.
+- Daylight UI's character window: with both addons dressing the character window the names were drawn twice. STOA now asks which of the two you want; choosing STOA's switches Daylight UI's character window off in Daylight's own settings, not the whole addon.
+- Daylight UI's Edit Mode layout: when it is the active layout while STOA's console and action bars are in use, STOA says so at login and names the command that switches to its own layout (/stoa editmode). It never switches by itself.
+- Daylight UI's small helpers: where Daylight UI's quality-of-life module has a helper switched on that STOA has too (faster looting, the loot feed, accepting and handing in quests, one-option gossip, the far camera, quest item sparkles, hiding red error text, the away screen), STOA's copy waits, as it does beside Leatrix Plus. /stoa addons lists who has which job.
+- Target plaque with other unit frames: when you keep Daylight UI's or Shadowed Unit Frames' unit frames, STOA's target plaque stays away, so the target isn't shown twice.
+- Daylight UI's pieces and the console: STOA tells Daylight UI how tall the console is, so Daylight's chat, meters and bars start above it instead of under it. Pieces you placed by hand in Daylight UI stay where you put them.
+- Classic feel: the preset now also hands the spellbook, talents and experience bar back to Blizzard, as it already did for windows, bags, the character sheet, tooltips and nameplates. Its note in Settings said the opposite of what it does and is corrected.
+
 ## 1.5.0
 
 - Raid target marks: a skull, cross, star or any other mark shows at the right end of the name on the target plaque, and on the top right corner of party and raid cards for marked group members.

@@ -38,7 +38,7 @@ local PRESET_WORDS = {
 	slim = { "Slim", "The console as one plain line: level, health and mana, and a word each for Ready, Journey and Company, whose pages open on hover. Chat and the bars stand above it; no At a glance." },
 	minimal = { "Minimal", "No console. Health and mana rest as two faint arcs around your character and the Halo rises in a fight; the target and party rest faint out of combat. STOA's look and comforts stay." },
 	quiet = { "Quiet", "Fewer words than Full: no tooltip details, quest line or At a glance; the Cooldown Manager's rows hidden; the click grid folded for healers, hidden otherwise. STOA's look stays." },
-	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, tooltips, top of screen and nameplates instead of STOA's. The console, Halo, frames and words stay as in Full." },
+	classic = { "Classic feel", "Blizzard's own windows, bags, character sheet, spellbook and talents, experience bar, tooltips, top of screen and nameplates instead of STOA's. The console, Halo, frames and words stay as in Full." },
 	taer = { "Same as Designer", "Full as its designer plays it: painted frames, three bar rows, a longer calm, the loot feed in the world, faded nameplates, quests accepted for you and the designer's Edit Mode layout." },
 }
 
@@ -57,7 +57,7 @@ local TAER = {
 local ACCOUNT_DEFAULTS = { ornament = "plain", calm = "5" }
 -- Kept when leaving the preset: a theme is the player's own pick.
 local KEEP_ON_LEAVE = { theme = true }
-local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "Tooltip", "Top", "Plates" }
+local SKINS = { "Windows", "MoreWindows", "Bags", "Character", "XPBar", "Tooltip", "Top", "Plates" }
 
 -- Settings every preset resets: { module, key }.
 local TOUCHED = {
@@ -66,6 +66,7 @@ local TOUCHED = {
 	{ "Grimoire", "slim" }, { "Grimoire", "enabled" },
 	{ "Halo", "restArcs" }, { "Halo", "restFade" }, { "Party", "restFade" },
 	{ "Party", "strips" }, { "Halo", "targetStrip" },
+	{ "Spellbook", "layout" }, { "Spellbook", "talents" },
 }
 
 local function playsHealer()
@@ -97,6 +98,8 @@ local function changesFor(name)
 		list[#list + 1] = { "Tally", "enabled", false }
 	elseif name == "classic" then
 		for _, module in ipairs(SKINS) do list[#list + 1] = { module, "enabled", false } end
+		list[#list + 1] = { "Spellbook", "layout", false }
+		list[#list + 1] = { "Spellbook", "talents", false }
 	elseif name == "taer" then
 		for _, change in ipairs(TAER) do list[#list + 1] = change end
 	end

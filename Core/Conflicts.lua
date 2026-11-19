@@ -34,31 +34,33 @@ local RULES = {
 			{ "Bagnon", "Bagnon" }, { "Baganator", "Baganator" }, { "AdiBags", "AdiBags" },
 			{ "ArkInventory", "ArkInventory" }, { "BetterBags", "BetterBags" },
 			{ "Combuctor", "Combuctor" }, { "LiteBag", "LiteBag" }, { "Inventorian", "Inventorian" },
-			{ "Sorted", "Sorted" },
+			{ "Sorted", "Sorted" }, { "DaylightUI_Bags", "Daylight UI Bags" },
 		},
 	},
 	{
 		key = "plates", job = "nameplates", modules = { "Plates" },
 		addons = {
+			{ "DaylightUI_Nameplates", "Daylight UI Nameplates" },
 			{ "Plater", "Plater" }, { "TidyPlates_ThreatPlates", "Threat Plates" },
 			{ "TidyPlates", "TidyPlates" }, { "Kui_Nameplates", "KuiNameplates" },
 			{ "NeatPlates", "NeatPlates" }, { "Platynator", "Platynator" },
 		},
 	},
 	{
-		key = "chat", job = "the chat", modules = { "ChatLook" },
+		key = "chat", job = "the chat", modules = { "ChatLook", "Chat" },
 		addons = {
+			{ "DaylightUI_Chat", "Daylight UI Chat" },
 			{ "Prat-3.0", "Prat" }, { "Chattynator", "Chattynator" },
 			{ "Glass", "Glass" }, { "Chatter", "Chatter" },
 		},
 	},
 	{
 		key = "tooltip", job = "tooltips", modules = { "Tooltip" },
-		addons = { { "TipTac", "TipTac" }, { "TinyTooltip", "TinyTooltip" }, { "TipTop", "TipTop" } },
+		addons = { { "TipTac", "TipTac" }, { "TinyTooltip", "TinyTooltip" }, { "TipTop", "TipTop" }, { "DaylightUI_Tooltip", "Daylight UI Tooltip" } },
 	},
 	{
 		key = "bars", job = "action bars", modules = { "ActionBars" },
-		addons = { { "Bartender4", "Bartender" }, { "Dominos", "Dominos" } },
+		addons = { { "Bartender4", "Bartender" }, { "Dominos", "Dominos" }, { "DaylightUI_ActionBars", "Daylight UI Action Bars" } },
 	},
 	{
 		key = "minimap", job = "the minimap", modules = { "Minimap" },
@@ -75,7 +77,10 @@ local RULES = {
 		key = "group", job = "party and raid frames", modules = { "Party", "Raid" },
 		addons = {
 			{ "VuhDo", "VuhDo" }, { "Grid2", "Grid2" }, { "Cell", "Cell" },
-			{ "HealBot", "HealBot" }, { "ShadowedUnitFrames", "Shadowed Unit Frames" },
+			{ "HealBot", "HealBot" },
+			-- These draw a target frame too, so Stoa's target plaque goes with them.
+			{ "ShadowedUnitFrames", "Shadowed Unit Frames", { "Target" } },
+			{ "DaylightUI_UnitFrames", "Daylight UI Unit Frames", { "Target" } },
 		},
 	},
 	{
@@ -94,6 +99,46 @@ local RULES = {
 		key = "map", job = "the world map", modules = { "Map" },
 		addons = { { "Mapster", "Mapster" } },
 	},
+	{
+		key = "windows", job = "the game's windows", modules = { "Windows", "MoreWindows", "Character", "Spellbook" },
+		addons = { { "DaylightUI_Skins", "Daylight UI Window Skins" } },
+	},
+	{
+		key = "top", job = "buffs and the quest list", modules = { "Top" },
+		addons = { { "DaylightUI_Buffs", "Daylight UI Buffs" }, { "DaylightUI_Quests", "Daylight UI Quest Tracker" } },
+	},
+	{
+		key = "corner", job = "the minimap, experience bar and meters", modules = { "Minimap", "XPBar", "Meters" },
+		addons = { { "DaylightUI_InfoPanel", "Daylight UI Info Panel" } },
+	},
+}
+
+-- Daylight UI's character window is part of its core, switched by its own
+-- setting.
+local function daylight(scope, path, value)
+	local dui = _G.DaylightUI
+	if type(dui) ~= "table" or type(dui.Get) ~= "function" or type(dui.Set) ~= "function" then return nil end
+	if value == nil then
+		local ok, now = pcall(dui.Get, dui, scope, path)
+		if ok then return now end
+		return nil
+	end
+	pcall(dui.Set, dui, scope, path, value)
+end
+
+RULES[#RULES + 1] = {
+	key = "sheet", job = "the character window", modules = { "Character" },
+	addons = { {
+		"DaylightUI", "Daylight UI's character window",
+		on = function()
+			local dui = _G.DaylightUI
+			if type(dui) ~= "table" or type(dui.GetModule) ~= "function" then return false end
+			local ok, module = pcall(dui.GetModule, dui, "Character")
+			return ok and module ~= nil and daylight("Character", "enabled") ~= false
+		end,
+		off = function() daylight("Character", "enabled", false) end,
+		back = function() daylight("Character", "enabled", true) end,
+	} },
 }
 
 local function isLoaded(folder)
@@ -107,6 +152,24 @@ local function disable(folder)
 	elseif DisableAddOn then
 		DisableAddOn(folder)
 	end
+end
+
+local function enable(folder)
+	if C_AddOns and C_AddOns.EnableAddOn then
+		C_AddOns.EnableAddOn(folder)
+	elseif EnableAddOn then
+		EnableAddOn(folder)
+	end
+end
+
+-- A part of a larger addon (an entry with on, off and back) is switched in
+-- that addon's own settings instead of turning the whole addon off.
+local function turnOff(addon)
+	if addon.off then addon.off() else disable(addon[1]) end
+end
+
+local function turnOn(addon)
+	if addon.back then addon.back() else enable(addon[1]) end
 end
 
 local function choices()
@@ -147,12 +210,24 @@ end
 function Conflicts:Settle(entry, choice)
 	entry.asked = true
 	if choice == "ours" then
-		for _, addon in ipairs(entry.loaded) do disable(addon[1]) end
+		for _, addon in ipairs(entry.loaded) do turnOff(addon) end
 		choices()[entry.rule.key] = nil
 		return true
 	end
 	choices()[entry.rule.key] = "theirs"
 	return false
+end
+
+-- From Settings: "theirs" keeps the other addon, "ours" turns it off (and
+-- "theirs" or "ask" turns it back on if this session turned it off), "ask"
+-- forgets the answer. All of it takes effect at the next reload.
+function Conflicts:Pick(entry, choice)
+	entry.asked = true
+	entry.picked = choice
+	for _, addon in ipairs(entry.loaded) do
+		if choice == "ours" then turnOff(addon) else turnOn(addon) end
+	end
+	choices()[entry.rule.key] = choice == "theirs" and "theirs" or nil
 end
 
 -- Called once at login, before modules are enabled.
@@ -162,7 +237,7 @@ function Conflicts:Check()
 	for _, rule in ipairs(RULES) do
 		local loaded = {}
 		for _, addon in ipairs(rule.addons) do
-			if isLoaded(addon[1]) then loaded[#loaded + 1] = addon end
+			if isLoaded(addon[1]) and (not addon.on or addon.on()) then loaded[#loaded + 1] = addon end
 		end
 		-- A part the player already switched off has nothing to fight over.
 		local running = rule.suite
@@ -174,6 +249,10 @@ function Conflicts:Check()
 			found[#found + 1] = { rule = rule, loaded = loaded }
 			if not rule.suite then
 				for _, name in ipairs(rule.modules) do aside[name] = rule end
+				-- An addon that does more than the rule's job names the rest.
+				for _, addon in ipairs(loaded) do
+					for _, name in ipairs(addon[3] or {}) do aside[name] = rule end
+				end
 			end
 		end
 	end
@@ -265,7 +344,7 @@ function Conflicts:Answer(choice, button)
 	if not own then self.page:Hide() end
 	local rule = entry.rule
 	if choice == "ours" then
-		for _, addon in ipairs(entry.loaded) do disable(addon[1]) end
+		for _, addon in ipairs(entry.loaded) do turnOff(addon) end
 		choices()[rule.key] = nil
 		if not own then Stoa:Reload() end
 	elseif rule.suite then
@@ -278,18 +357,150 @@ function Conflicts:Answer(choice, button)
 	end
 end
 
--- Asks about each clash not settled before, one at a time. While the
--- welcome page is still to come or open, it asks those itself; only a
+-- Several clashes at once (a modular UI such as Daylight UI brings many):
+-- one page with a row for each, both choices on the row, and one button.
+local LIST_WIDTH, ROW_HEIGHT, ROWS_TOP = 640, 46, 132
+
+function Conflicts:BuildList()
+	local page = CreateFrame("Frame", "StoaAddonsList", UIParent)
+	page:SetSize(LIST_WIDTH, HEIGHT)
+	page:SetPoint("CENTER", 0, 60)
+	page:SetFrameStrata("DIALOG")
+	page:EnableMouse(true)
+	page:SetMovable(true)
+	page:RegisterForDrag("LeftButton")
+	page:SetScript("OnDragStart", page.StartMoving)
+	page:SetScript("OnDragStop", page.StopMovingOrSizing)
+	page:Hide()
+	UI.windowPanel(page, 0.97, { header = 64, footer = 58 })
+
+	local title = UI.text(page, "serif", Stoa.typeSize.title, "text", "LEFT")
+	title:SetPoint("TOPLEFT", PAD, -PAD + 4)
+	title:SetText("Other addons, shared jobs")
+
+	local body = UI.text(page, "sans", Stoa.typeSize.label, "text", "LEFT")
+	body:SetPoint("TOPLEFT", PAD, -82)
+	body:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+	body:SetWordWrap(true)
+	body:SetText("These addons look after parts of the screen STOA does too. Pick one for each, so they don't get in each other's way.")
+
+	local note = UI.text(page, "italic", Stoa.typeSize.body, "muted", "LEFT")
+	note:SetPoint("BOTTOMLEFT", PAD, PAD - 2)
+	note:SetPoint("RIGHT", page, "RIGHT", -PAD - 190, 0)
+	note:SetWordWrap(true)
+	note:SetText("Using STOA's turns the other addon's part off. /stoa addons asks again.")
+
+	page.done = UI.button(page, "Done", 170, function(button) self:AnswerAll(button) end, true)
+	page.done:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
+	page.rows = {}
+	self.list = page
+end
+
+-- Shows each row's choice, and whether the button will reload.
+function Conflicts:PaintList()
+	local page, reload = self.list, false
+	for i, entry in ipairs(self.listing or {}) do
+		local row = page.rows[i]
+		row.theirs:SetSelected(entry.choice ~= "ours")
+		row.ours:SetSelected(entry.choice == "ours")
+		if entry.choice == "ours" then reload = true end
+	end
+	page.done:SetReloads(reload)
+	page.done.text:SetText(reload and "Done, and reload" or "Done")
+end
+
+function Conflicts:AskAll(entries)
+	if not self.list then self:BuildList() end
+	local page = self.list
+	self.listing = entries
+	for i, entry in ipairs(entries) do
+		local row = page.rows[i]
+		if not row then
+			row = CreateFrame("Frame", nil, page)
+			row:SetHeight(ROW_HEIGHT)
+			row:SetPoint("TOPLEFT", PAD, -ROWS_TOP - (i - 1) * ROW_HEIGHT)
+			row:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+			row.job = UI.text(row, "sans", Stoa.typeSize.label, "text", "LEFT")
+			row.job:SetPoint("TOPLEFT", 0, -4)
+			row.job:SetPoint("RIGHT", row, "RIGHT", -250, 0)
+			row.job:SetWordWrap(false)
+			row.them = UI.text(row, "sans", Stoa.typeSize.body, "muted", "LEFT")
+			row.them:SetPoint("TOPLEFT", row.job, "BOTTOMLEFT", 0, -3)
+			row.them:SetPoint("RIGHT", row, "RIGHT", -250, 0)
+			row.them:SetWordWrap(false)
+			row.ours = UI.button(row, "Use STOA's", 110, function()
+				self.listing[i].choice = "ours"
+				self:PaintList()
+			end)
+			row.ours:SetPoint("RIGHT", 0, 0)
+			row.theirs = UI.button(row, "Keep theirs", 110, function()
+				self.listing[i].choice = "theirs"
+				self:PaintList()
+			end)
+			row.theirs:SetPoint("RIGHT", row.ours, "LEFT", -8, 0)
+			page.rows[i] = row
+		end
+		entry.choice = entry.choice or "theirs"
+		row.job:SetText((entry.rule.job:gsub("^%l", string.upper)))
+		row.them:SetText(names(entry.loaded))
+		row:Show()
+	end
+	for i = #entries + 1, #page.rows do page.rows[i]:Hide() end
+	page:SetHeight(ROWS_TOP + #entries * ROW_HEIGHT + 58 + PAD)
+	self:PaintList()
+	page:Show()
+end
+
+function Conflicts:AnswerAll(button)
+	local entries = self.listing
+	if not entries then return end
+	self.listing = nil
+	local own = button and button.reloads
+	if not own then self.list:Hide() end
+	local kept = {}
+	for _, entry in ipairs(entries) do
+		if entry.choice == "ours" then
+			for _, addon in ipairs(entry.loaded) do turnOff(addon) end
+			choices()[entry.rule.key] = nil
+		else
+			choices()[entry.rule.key] = "theirs"
+			kept[#kept + 1] = entry.rule.job
+		end
+	end
+	if #kept > 0 and not own then
+		Stoa:Print(("Leaving %s to the other %s. /stoa addons to change."):format(
+			#kept < 2 and kept[1] or (table.concat(kept, ", ", 1, #kept - 1) .. " and " .. kept[#kept]),
+			#kept < 2 and "addon" or "addons"))
+	end
+	if not own then self:Next() end
+end
+
+-- Asks about each clash not settled before: a whole UI first and alone,
+-- one other alone on the small page, several together on the list. While
+-- the welcome page is still to come or open, it asks those itself; only a
 -- whole UI is asked about here.
 function Conflicts:Next()
 	local saved = choices()
 	local welcoming = Stoa.Welcome and Stoa.Welcome:Pending()
+	local waiting = {}
 	for _, entry in ipairs(found) do
 		if not entry.asked and saved[entry.rule.key] ~= "theirs" and (entry.rule.suite or not welcoming) then
-			entry.asked = true
-			Stoa:AfterCombat(function() self:Ask(entry) end)
-			return
+			if entry.rule.suite then
+				entry.asked = true
+				Stoa:AfterCombat(function() self:Ask(entry) end)
+				return
+			end
+			waiting[#waiting + 1] = entry
 		end
+	end
+	if #waiting == 1 then
+		waiting[1].asked = true
+		Stoa:AfterCombat(function() self:Ask(waiting[1]) end)
+		return
+	elseif #waiting > 1 then
+		for _, entry in ipairs(waiting) do entry.asked = true end
+		Stoa:AfterCombat(function() self:AskAll(waiting) end)
+		return
 	end
 	-- Settled: Stoa's look for the addons kept (Core/Looks.lua).
 	if Stoa.Looks and not welcoming then Stoa.Looks:Next() end

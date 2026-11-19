@@ -624,7 +624,7 @@ local function build()
 	page = "setup"
 	group = "Start"
 	button("welcome", "Welcome page", "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of STOA, and other addons.", "Open", function() Stoa.Welcome:Show() end, { cmd = "/stoa welcome", words = "wizard first time" })
-	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps Blizzard's layout with STOA's look. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
+	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps STOA's console, Halo and frames, and leaves the game's windows, bags, tooltips and nameplates as Blizzard draws them. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
 		{ "full", "Full" }, { "slim", "Slim" }, { "minimal", "Minimal" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Same as Designer" },
 	}, {
 		reload = true, cmd = "/stoa preset", words = "preset minimal",
@@ -697,6 +697,22 @@ local function build()
 	button("restore", "Put the game's settings back", "Puts back the game settings STOA changed (far camera, map fade, target nameplate size, combined bags, proc art), as they were before STOA. One you've changed yourself since stays as you set it.", "Put back", command("restore"), { cmd = "/stoa restore", words = "cvar ledger reset camera" })
 	group = "Other addons"
 	button("addons", "Other addons", "Choose again which of STOA's parts step aside for other addons you run, such as bags or nameplates.", "Choose again", command("addons"), { cmd = "/stoa addons", words = "conflicts elvui bagnon companion" })
+	-- One row for each part another addon is doing too (Core/Conflicts.lua),
+	-- so a choice made or missed at login can be found again.
+	local Conflicts = Stoa.Conflicts
+	for _, found in ipairs(Conflicts and Conflicts:Found() or {}) do
+		local rule = found.rule
+		if not rule.suite then
+			local them = Conflicts.names(found.loaded)
+			choice(nil, "addons_" .. rule.key, rule.job:gsub("^%l", string.upper), ("%s and STOA both look after %s. Keep theirs and STOA's part steps aside. Use STOA's turns %s off. Until you choose, STOA's part waits."):format(them, rule.job, them), "ask", {
+				{ "ask", "Not chosen" }, { "theirs", "Keep theirs" }, { "ours", "Use STOA's" },
+			}, {
+				id = "addons_" .. rule.key, reload = true, words = "conflicts other addons daylight " .. them:lower(),
+				get = function() return found.picked or (Conflicts:Saved(found) == "theirs" and "theirs" or "ask") end,
+				set = function(v) Conflicts:Pick(found, v) end,
+			})
+		end
+	end
 	button("looks", "STOA's look for other addons", "Questie's tracker, Bagnon's bags, Details' meters and RestedXP's guide in STOA's dress.", "Choose", command("looks"), { cmd = "/stoa looks", words = "questie bagnon details restedxp rxp guide skin" })
 	group = "Help"
 	toggle(of("Tips"), "enabled", "Tips", "When there are no small jobs, the console's Ready column shows a few words about something STOA does that's easy to miss; hover for the whole tip, click to open its setting, right-click once you've got it. The away screen shows them in turn. /stoa tips shows the ones you've marked again.", true, { words = "tips hints did you know help tutorial", change = function() Stoa.modules.Tips.current = nil; local c = Stoa.modules.Grimoire; if c and c.UpdateJobs then c:UpdateJobs() end end })

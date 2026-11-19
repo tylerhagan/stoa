@@ -441,7 +441,10 @@ function Halo:BuildTarget(frame)
 	end)
 	-- Any target, in or out of combat. A dead one stays, dimmed and saying
 	-- DEAD, so the plaque always matches what you have targeted.
-	RegisterStateDriver(target, "visibility", "[@target,exists] show; hide")
+	-- Another addon's unit frames were kept (Core/Conflicts.lua): theirs shows
+	-- the target, so the plaque stays away.
+	local theirs = Stoa.Conflicts and Stoa.Conflicts:SteppedAside("Target")
+	RegisterStateDriver(target, "visibility", theirs and "hide" or "[@target,exists] show; hide")
 	self.target = target
 	-- The medallion faces away from the Halo, balancing the card.
 	local plaque = UI.plaque(target, "RIGHT", { medallion = true })
@@ -1346,7 +1349,7 @@ function Halo:OnEnable()
 			xpcall(function() self:KeepTotems() end, Stoa.catch)
 		end)
 	end
-	if self.db.hideTargetFrame then
+	if self.db.hideTargetFrame and not (Stoa.Conflicts and Stoa.Conflicts:SteppedAside("Target")) then
 		Stoa:AfterCombat(function()
 			-- Blizzard's focus frame goes only when STOA shows the focus.
 			xpcall(hideBlizzard(self.db.focusFrame and { TargetFrame, FocusFrame } or { TargetFrame }), Stoa.catch)

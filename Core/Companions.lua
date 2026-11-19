@@ -51,11 +51,12 @@ local JOBS = {
 	quietErrors = "hiding the red error text",
 	tray = "gathering the minimap's addon icons",
 	questXP = "finished quests' experience on the bar",
+	away = "the away screen",
 }
 local JOB_ORDER = {
 	"fastLoot", "sellJunk", "repair", "lootFeed", "acceptQuests", "turnInQuests", "camera",
 	"windows", "chatCopy", "tooltipTarget", "gearUpgrade", "bagUpgrade", "rewardUpgrade", "invites", "keywordInvites", "duels",
-	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates", "sparkle", "questLoot", "quietErrors", "tray", "questXP",
+	"squareMinimap", "skipGossip", "releaseInPvP", "acceptRes", "dotPlates", "sparkle", "questLoot", "quietErrors", "tray", "questXP", "away",
 }
 
 -- Addons that only sparkle what's up close: while one is loaded, STOA's
@@ -139,6 +140,25 @@ local COMPANIONS = {
 			return mode ~= "off"
 		end,
 		note = "Tracks your DoTs; STOA shows their damage left and a kill skull on the target plaque, and on its nameplates if you choose; Settings, Combat, DoT marks on nameplates changes it.",
+	},
+	{
+		folder = "DaylightUI_QoL", name = "Daylight UI",
+		-- Daylight UI's quality-of-life module keeps its switches under its
+		-- "QoL" settings, read through DaylightUI:Get. Its camera setting is
+		-- a share of the game's distance: above 1 it has the far camera.
+		keys = {
+			fastLoot = "fastLoot", lootFeed = "lootFeed", acceptQuests = "questAccept",
+			turnInQuests = "questTurnIn", skipGossip = "skipGossip", camera = "cameraZoom",
+			questLoot = "lootSparkles", quietErrors = "quietErrors", away = "afkScreen",
+		},
+		get = function(key)
+			local dui = _G.DaylightUI
+			if type(dui) ~= "table" or type(dui.Get) ~= "function" then return false end
+			local ok, value = pcall(dui.Get, dui, "QoL", key)
+			if not ok then return false end
+			if type(value) == "number" then return value > 1 end
+			return value == true
+		end,
 	},
 	sparkler("Sparkles", "Sparkles"),
 	sparkler("AzerothForge_Goldspark", "AzerothForge Goldspark"),

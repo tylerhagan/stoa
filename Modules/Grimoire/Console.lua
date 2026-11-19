@@ -1805,7 +1805,7 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 	local tally = Stoa.modules.Tally
 	local glance = tally and tally.enabled and tally.page
 	local glanceShown = glance and glance:IsShown()
-	local chatRight = self.db.houseChat and (inset + 440) or nil
+	local chatRight = (self:HousesChat() or self:DocksChat()) and (inset + 440) or nil
 	local barsLeft, barsRight = centre - leftClear + CLEAR_MARGIN, centre + rightClear - CLEAR_MARGIN
 	if glanceShown then
 		local gl = inset + 484
