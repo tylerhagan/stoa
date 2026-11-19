@@ -690,6 +690,8 @@ end
 -- called, never copied; if any call is missing the chat just stands above
 -- the console.
 local DOCK_PAD = 18 -- Daylight's panel is this much larger than its chat size
+-- Daylight pads its panel itself, so it runs nearly edge to edge.
+local DOCK_BOTTOM, DOCK_TOP, DOCK_SIDE = 6, 8, 8
 local dockView, dockSized = nil, false
 
 local function wantsDock(db)
@@ -716,8 +718,8 @@ local function dockChat()
 		dockSized = true
 		dockView = dockView or api.For("STOA")
 		if type(dockView) == "table" and type(dockView.Override) == "function" then
-			local width = math.floor(Console:ChatWidth() / scale) - DOCK_PAD
-			local height = math.floor((Console:OpenHeight() - CHAT_BOTTOM - CHAT_TOP_PAD) / scale) - DOCK_PAD
+			local width = math.floor((Console:ChatWidth() + 2 * DOCK_SIDE) / scale) - DOCK_PAD
+			local height = math.floor((Console:OpenHeight() - DOCK_BOTTOM - DOCK_TOP) / scale) - DOCK_PAD
 			pcall(dockView.Override, "Chat", "matchInfo", false)
 			pcall(dockView.Override, "Chat", "width", width)
 			pcall(dockView.Override, "Chat", "height", height)
@@ -727,7 +729,7 @@ local function dockChat()
 	end
 	if not pcall(movers.Suspend, "chat", true) then return false end
 	holder:ClearAllPoints()
-	holder:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", Console:PageInset() / scale, CHAT_BOTTOM / scale)
+	holder:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset() - DOCK_SIDE) / scale, DOCK_BOTTOM / scale)
 	return true
 end
 
