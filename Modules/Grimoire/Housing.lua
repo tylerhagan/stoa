@@ -853,7 +853,25 @@ Stoa.commands.fit = function(rest)
 		Stoa:Print("Not in a fight. Try /stoa fit again after it.")
 		return
 	end
-	if strtrim(rest or ""):lower() == "undo" then
+	local word = strtrim(rest or ""):lower()
+	if word == "check" then
+		-- What Stoa asked for beside what EllesmereUI holds now.
+		local fit = Stoa.db.ellesmereFit
+		local function at(pos)
+			if type(pos) ~= "table" then return "none" end
+			return ("%s %s, %s"):format(tostring(pos.point or "TOPLEFT"), tostring(pos.x and math.floor(pos.x + 0.5)), tostring(pos.y and math.floor(pos.y + 0.5)))
+		end
+		local chat = ellProfile("EllesmereUIChat")
+		local meters = ellProfile("EllesmereUIDamageMeters")
+		local window = meters and type(meters.windows) == "table" and meters.windows[1]
+		Stoa:Print(("Fit: %s. Chat asked %s, holds %s (%s). Meter holds %s (%s). Chat kept theirs: %s, housed: %s."):format(
+			fit and "on" or "off", at(fit and fit.chatAt and { point = "BOTTOMLEFT", x = fit.chatAt.x, y = fit.chatAt.y }),
+			at(chat and chat.chatPosition), chat and "found" or "no settings",
+			at(type(window) == "table" and window.position), type(window) == "table" and "found" or "no window",
+			tostring(Stoa.Conflicts:SteppedAside("ChatLook") and true or false), tostring(Console.db.houseChat)))
+		return
+	end
+	if word == "undo" then
 		if Console:UnfitEllesmere() then
 			Stoa:Reload()
 		else
