@@ -173,7 +173,8 @@ local function styleOverlay(mover)
 	mover.overlay:SetBackdropBorderColor(Stoa:Color(chosen and "accent" or "muted"))
 	mover.text:SetTextColor(Stoa:Color(chosen and "accent" or "text"))
 	-- A marker as well as a colour, for anyone who can't tell them apart.
-	mover.text:SetText((chosen and "> " or "") .. mover.label:upper())
+	-- A note under the name, for a frame that isn't always there to see.
+	mover.text:SetText((chosen and "> " or "") .. mover.label:upper() .. (mover.note and ("\n" .. mover.note) or ""))
 end
 
 -- The overlay covers the frame it stands for. Its scale matches the frame's,
@@ -432,6 +433,7 @@ end
 
 -- key: a stable id for saving. frame: a frame Stoa owns, anchored to the
 -- screen or to something Stoa owns. label: its name on the overlay.
+-- options.note: a few words under the label while frames are unlocked.
 -- options.default: how to put the frame back when no spot is saved, for
 -- frames whose module places them itself; otherwise the anchors the frame has
 -- now are kept and used.
@@ -441,6 +443,7 @@ function Stoa:RegisterMover(key, frame, label, options)
 		frame = frame,
 		label = label or key,
 		default = options and options.default,
+		note = options and options.note,
 		points = remember(frame),
 	}
 	mover.overlay = makeOverlay(mover)

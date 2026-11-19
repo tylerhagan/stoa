@@ -11,6 +11,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Fixed: choosing STOA's damage meter over EllesmereUI's left no meter at all. EllesmereUI switches the game's own meter off and only puts it back while it runs; STOA now turns it back on at the next login after you pick STOA's.
 - `/stoa restore` and `/stoa editmode back` return to the Edit Mode layout you had before STOA's.
 - Lighter at rest: the class mark's timer only runs while a timed mark is counting down.
+- Moving frames: the Halo's box now says "shows in a fight", since the Halo is hidden out of combat and could look as if moving it made it vanish.
 
 ## 1.5.2
 
