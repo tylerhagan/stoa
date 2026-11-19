@@ -74,11 +74,13 @@ SHOTS = {
     "world": "In the world: the console along the bottom, with At a glance, Ready, Journey and Company.",
     "combat": "In combat: the console folds away and the Halo rises around your character.",
     "console": "The console up close.",
-    "party-healer": "Healing a group: party cards under the Halo and a watch card for the tank.",
-    "tooltip-compare": "Tooltips: a calm card with an upgrade line against what you wear.",
-    "training": "Training: what you can learn now and what comes next, with prices.",
+    "party-healer": "Healing a raid of ten: cards under the Halo, raid marks on their corners and a watch card for the tank.",
+    "character": "The character sheet: every item's name and level beside its slot.",
+    "spellbook": "The spellbook as one list, with what to train now and what comes next.",
+    "talents": "Talents on cards, with the planner beside them.",
+    "characters": "Your characters: gold, place, professions and item level in one window.",
+    "bags": "Bags in sections.",
     "settings": "Settings: every option on one searchable page, with a note on what each does.",
-    "mail": "The mailbox, with Take gold and Open All.",
 }
 
 
@@ -280,7 +282,7 @@ def home(readme, ver):
     cards = "".join(
         '<article class="state"><h3>%s</h3><p>%s</p></article>' % (html.escape(n), inline(t[:1].upper() + t[1:])) for n, t in states)
     nots_html = "".join('<li><strong>%s</strong> %s</li>' % (html.escape(n), inline(t)) for n, t in not_items)
-    gallery = "".join(shot(n) for n in ["tooltip-compare", "training", "settings", "mail"])
+    gallery = "".join(shot(n) for n in ["character", "spellbook", "talents", "characters", "bags", "settings"])
     return """
 <section class="hero">
   <div class="bar">
