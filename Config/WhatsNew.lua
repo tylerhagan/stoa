@@ -20,13 +20,18 @@ Stoa.WhatsNew = WhatsNew
 -- line's name.
 local NOTE = {
 	edition = "1.5.1",
-	title = "New in STOA 1.5.1",
+	title = "New in STOA 1.5",
 	lines = {
 		{ "Daylight UI", "STOA knows Daylight UI's parts and asks, part by part, which of the two looks after each: bags, nameplates, chat, tooltips, frames and more." },
 		{ "One page of questions", "When several addons share jobs with STOA, the questions come as one list, with theirs kept unless you pick STOA's." },
 		{ "Daylight's chat in the console", "Keep Daylight UI's chat and it sits in the console's chat place, with its tabs along the top edge." },
 		{ "Other chat addons", "Chat from another addon now stands above the console instead of behind it." },
 		{ "Changing your mind", "Settings > Setup > Other addons lists each shared job, so any answer can be changed later." },
+		{ "Raid target marks", "A skull, star or any other mark shows beside the name on the target plaque, and on the corner of party and raid cards." },
+		{ "Help on its way", "A dead group member's card says RES while someone raises them, and SUMMON while a summon waits on their answer." },
+		{ "Loot rolls", "The need, greed and pass cards wear STOA's dark card, with a thin timer along the foot." },
+		{ "Other languages", "Seals, shields, creature types, zone levels on the map and herb nodes now work on clients that aren't English." },
+		{ "Lighter in groups", "STOA listens only to the players it draws, so it does less work in a full raid." },
 	},
 	foot = "/stoa news shows this again.",
 }
