@@ -12,6 +12,8 @@
 -- the mouse while planning.
 local _, ns = ...
 local Stoa = ns.Stoa
+-- Hooks on the game's code are guarded (Core/Report.lua).
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Planner = Stoa:NewModule("Planner", { enabled = true, active = nil })
@@ -37,8 +39,6 @@ local function store()
 	StoaDB.talentPlans[key] = StoaDB.talentPlans[key] or {}
 	return StoaDB.talentPlans[key]
 end
-
-function Planner:Plans() return store() end
 
 function Planner:Active()
 	local plans = store()
@@ -349,7 +349,7 @@ function Planner:PaintMarks()
 	local plan = self:Active()
 	local upTo = (self.level or MAX_LEVEL) - FIRST_LEVEL + 1
 	local ranks, at, levels = tally(plan, math.max(0, upTo))
-	local nextIndex, nextPick = self:Next(talents, plan)
+	local _, nextPick = self:Next(talents, plan)
 	for _, mark in pairs(self.marks) do mark:Hide() end
 	for nodeID, spot in pairs(layout) do
 		local mark = self.marks[spot.button]

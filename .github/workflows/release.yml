@@ -40,6 +40,15 @@ jobs:
           fi
           cat notes.md
 
+      # A tag on a commit that doesn't load is stopped here, before any upload.
+      - name: Load test
+        run: |
+          pip install lupa
+          for class in PRIEST PALADIN DRUID MAGE WARRIOR ROGUE HUNTER WARLOCK SHAMAN; do
+            python3 Tools/sim/run.py "$class" > sim.txt || { cat sim.txt; exit 1; }
+            head -n 1 sim.txt
+          done
+
       - name: Build the zip
         run: Tools/package.sh "$GITHUB_SHA"
 

@@ -416,6 +416,7 @@ function Halo:LayoutTarget(curve)
 	end
 	self:UpdateTargetPower()
 	self:UpdateTargetPips()
+	self:UpdateTargetMark()
 end
 
 function Halo:BuildTarget(frame)
@@ -866,6 +867,20 @@ function Halo:UpdateUnitChip(chip)
 	chip.hp:SetStatusBarColor(Stoa:Color(foe and "hostile" or "health"))
 end
 
+-- The target's raid mark at the right end of its name line; the name
+-- gives it room while it shows.
+local TARGET_MARK = 16
+function Halo:UpdateTargetMark()
+	local target = self.target
+	if not (target and target.name) then return end
+	if not target.mark then
+		target.mark = UI.raidMark(target, TARGET_MARK)
+		target.mark:SetPoint("LEFT", target.name, "LEFT", TARGET_BAR_W - TARGET_MARK, 0)
+	end
+	local shown = target.mark:Update("target")
+	target.name:SetWidth(TARGET_BAR_W - (shown and TARGET_MARK + 6 or 0))
+end
+
 function Halo:ResetTargetName()
 	local fs = self.target and self.target.name
 	if not fs or not UnitExists("target") then return end
@@ -887,6 +902,7 @@ function Halo:UpdateTarget()
 	-- game skips a SetText with the same words.
 	C_Timer.After(0.1, function() self:ResetTargetName() end)
 	target.name:SetTextColor(UI.classColor("target"))
+	self:UpdateTargetMark()
 	UI.setUnitBar(target.hp, "target", "health")
 	UI.setHealthPercent(target.health, "target", nil, true)
 	self:UpdateTargetAmount()
@@ -911,7 +927,7 @@ function Halo:UpdateTarget()
 		target.plaque:SetLevel(levelText)
 	end
 	-- The game calls creatures without a type "Not specified": say nothing.
-	local unspecified = kind == "Not specified" or kind == (rawget(_G, "UNKNOWN") or "")
+	local unspecified = Stoa.creatureIs("target", "Not specified") or kind == (rawget(_G, "UNKNOWN") or "")
 	if plain(UnitIsPlayer("target")) then
 		-- A player has no creature type: their race and class instead.
 		local race, class = plain((UnitRace("target"))), plain((UnitClass("target")))
@@ -1203,11 +1219,15 @@ end
 -- Shows evenly spaced tick marks for a channel of this many ticks.
 function Halo:SetTicks(count)
 	local cast = self.cast
+	-- A width the fight hides can't be multiplied; the last one read stands in.
+	local width = Stoa:PlainNumber(cast:GetWidth())
+	if width and width > 0 then cast.plainWidth = width else width = cast.plainWidth end
+	if not width then count = nil end
 	for i, tick in ipairs(cast.ticks) do
 		local shown = count and i < count
 		if shown then
 			tick:ClearAllPoints()
-			tick:SetPoint("CENTER", cast, "LEFT", cast:GetWidth() * (count - i) / count, 0)
+			tick:SetPoint("CENTER", cast, "LEFT", width * (count - i) / count, 0)
 		end
 		tick:SetShown(shown and true or false)
 	end
@@ -1341,7 +1361,7 @@ function Halo:OnEnable()
 		self:UpdateSignature()
 		self:UpdateReminders()
 	end)
-	Stoa:On("UNIT_DISPLAYPOWER", function(unit)
+	Stoa:OnUnit("UNIT_DISPLAYPOWER", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdatePower() end
 		if unit == "target" then self:UpdateTargetPower() end
 	end)
@@ -1379,12 +1399,25 @@ function Halo:OnEnable()
 		end
 		-- A fresh shield on you (any absorb: Power Word: Shield, an Aegis,
 		-- a Ward, a Barrier) is the gauge's new top, even in a fight.
-		local ABSORB = { "Shield", "Barrier", "Ward", "Aegis" }
+		-- The classic ones are known by the game's own names for them, in
+		-- any language; in English the words catch the rest.
+		local ABSORB = Stoa.english and { "Shield", "Barrier", "Ward", "Aegis" } or {}
+		local shields
 		local function absorbing(aura)
 			local id = aura and aura.spellId
 			if not id or Stoa:IsSecret(id) then return false end
 			local name = Stoa.Spells and Stoa.Spells.name(id)
 			if type(name) ~= "string" then return false end
+			if not shields then
+				shields = {}
+				for _, spell in ipairs({
+					{ 17, "Power Word: Shield" }, { 11426, "Ice Barrier" }, { 1463, "Mana Shield" }, { 543, "Fire Ward" },
+					{ 6143, "Frost Ward" }, { 6229, "Shadow Ward" }, { 7812, "Sacrifice" },
+				}) do
+					shields[Stoa.Spells.localName(spell[1], spell[2])] = true
+				end
+			end
+			if shields[name] then return true end
 			for _, word in ipairs(ABSORB) do
 				if name:find(word, 1, true) then return true end
 			end
@@ -1427,15 +1460,14 @@ function Halo:OnEnable()
 		self:UpdateTarget()
 		self:UpdateTargetCast()
 	end)
+	Stoa:On("RAID_TARGET_UPDATE", function() self:UpdateTargetMark() end)
 	-- A creature not yet seen this session has no name until the game has
 	-- looked it up, a moment after targeting; fill it in when it arrives.
 	Stoa:OnUnit("UNIT_NAME_UPDATE", { "target" }, function(unit)
 		if unit == "target" then self:UpdateTarget() end
 	end)
 	Stoa:On("UNIT_THREAT_SITUATION_UPDATE", function() self:UpdateThreat() end)
-	Stoa:On("UNIT_THREAT_LIST_UPDATE", function(unit)
-		if unit == "target" then self:UpdateThreat() end
-	end)
+	Stoa:OnUnit("UNIT_THREAT_LIST_UPDATE", { "target" }, function() self:UpdateThreat() end)
 
 	local function onCast(channel)
 		return function(unit)
@@ -1458,12 +1490,12 @@ function Halo:OnEnable()
 		if busy(UnitCastingInfo) or busy(UnitChannelInfo) then return end
 		self:StopCast()
 	end
-	Stoa:On("UNIT_SPELLCAST_START", onCast(false))
-	Stoa:On("UNIT_SPELLCAST_DELAYED", onCast(false))
-	Stoa:On("UNIT_SPELLCAST_CHANNEL_START", onCast(true))
-	Stoa:On("UNIT_SPELLCAST_CHANNEL_UPDATE", onCast(true))
-	Stoa:On("UNIT_SPELLCAST_STOP", onStop)
-	Stoa:On("UNIT_SPELLCAST_FAILED", onStop)
-	Stoa:On("UNIT_SPELLCAST_INTERRUPTED", onStop)
-	Stoa:On("UNIT_SPELLCAST_CHANNEL_STOP", onStop)
+	Stoa:OnUnit("UNIT_SPELLCAST_START", { "player", "target" }, onCast(false))
+	Stoa:OnUnit("UNIT_SPELLCAST_DELAYED", { "player", "target" }, onCast(false))
+	Stoa:OnUnit("UNIT_SPELLCAST_CHANNEL_START", { "player", "target" }, onCast(true))
+	Stoa:OnUnit("UNIT_SPELLCAST_CHANNEL_UPDATE", { "player", "target" }, onCast(true))
+	Stoa:OnUnit("UNIT_SPELLCAST_STOP", { "player", "target" }, onStop)
+	Stoa:OnUnit("UNIT_SPELLCAST_FAILED", { "player", "target" }, onStop)
+	Stoa:OnUnit("UNIT_SPELLCAST_INTERRUPTED", { "player", "target" }, onStop)
+	Stoa:OnUnit("UNIT_SPELLCAST_CHANNEL_STOP", { "player", "target" }, onStop)
 end

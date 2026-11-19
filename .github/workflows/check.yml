@@ -1,0 +1,31 @@
+name: Check
+
+# Lints the Lua and loads the whole addon under the offline mock of the
+# game for every class, on each pull request and each push to main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lua-check
+          luacheck .
+
+      - name: Load test, every class
+        run: |
+          pip install lupa
+          for class in PRIEST PALADIN DRUID MAGE WARRIOR ROGUE HUNTER WARLOCK SHAMAN; do
+            python3 Tools/sim/run.py "$class" > sim.txt || { cat sim.txt; exit 1; }
+            head -n 1 sim.txt
+          done
+          # Once more as a client in another language.
+          STOA_SIM_LOCALE=deDE python3 Tools/sim/run.py PALADIN > sim.txt || { cat sim.txt; exit 1; }
+          head -n 1 sim.txt

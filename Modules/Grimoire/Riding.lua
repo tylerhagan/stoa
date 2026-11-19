@@ -12,6 +12,8 @@
 -- line already.
 local _, ns = ...
 local Stoa = ns.Stoa
+-- Hooks on the game's code are guarded (Core/Report.lua).
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 local Console = Stoa.modules.Grimoire
 
@@ -116,8 +118,8 @@ function Console:FillRide()
 	band.sub:SetText(onTaxi and "On a flight" or sub)
 
 	local id, title, yards = nextStop()
-	band.stop:SetShown(id ~= nil and not onTaxi)
-	band.mark:SetShown(id ~= nil and not onTaxi)
+	band.stop:SetShown(id ~= nil)
+	band.mark:SetShown(id ~= nil)
 	if not id then return end
 	-- The bar runs from where you were when this stop came up to the stop.
 	if band.stopID ~= id or yards > (band.stopFrom or 0) then band.stopID, band.stopFrom = id, math.max(yards, 1) end

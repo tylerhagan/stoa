@@ -190,9 +190,11 @@ function Console:BuildArt(frame)
 	local function tileLeather()
 		local width, height = leather:GetWidth(), leather:GetHeight()
 		if not width or width <= 0 then return end
-		-- Screen pixels per UI unit here; the painting's scale if unknown.
+		-- One texel of leather to one pixel of screen, so the grain is as
+		-- crisp as it was painted at any resolution or UI scale; the
+		-- painting's own scale if the screen can't be asked.
 		local perUnit = 1 / ART_SCALE
-		local _, screenHeight = GetPhysicalScreenSize and GetPhysicalScreenSize()
+		local screenHeight = GetPhysicalScreenSize and select(2, GetPhysicalScreenSize())
 		local scale = leather:GetEffectiveScale()
 		if screenHeight and screenHeight > 0 and scale and scale > 0 then
 			perUnit = scale * screenHeight / 768
@@ -201,6 +203,10 @@ function Console:BuildArt(frame)
 	end
 	tileLeather()
 	frame:HookScript("OnSizeChanged", tileLeather)
+	-- The scale isn't settled until the world is in, and can change after.
+	for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED" }) do
+		Stoa:On(event, tileLeather)
+	end
 
 	local edge = layer("Edge", -5)
 	edge:SetHeight(EDGE_H * ART_SCALE)
@@ -656,14 +662,25 @@ function Console:BuildManaPlay(mana, manaCap)
 	form:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -1)
 	form:SetPoint("TOPRIGHT", mana, "BOTTOMRIGHT", 0, -1)
 	form:Hide()
+	-- In a fight the game can hide the bar's width (the slim line's bar is
+	-- sized by the game's layout); the last width read in the open stands in.
+	local lastWidth
+	local function barWidth()
+		local width = Stoa:PlainNumber(mana:GetWidth())
+		if width and width > 0 then lastWidth = width end
+		return lastWidth
+	end
 	self.manaPlay = Stoa.Power.dress(mana, {
 		enabled = function(key) return db[key] end,
 		place = function(tex, f)
+			local width = barWidth()
+			if not width then return end
 			tex:ClearAllPoints()
-			tex:SetPoint("CENTER", mana, "LEFT", f * mana:GetWidth(), 0)
+			tex:SetPoint("CENTER", mana, "LEFT", f * width, 0)
 		end,
 		shade = function(tex, from, to)
-			local width = mana:GetWidth()
+			local width = barWidth()
+			if not width then return end
 			tex:ClearAllPoints()
 			tex:SetPoint("TOPLEFT", mana, "TOPLEFT", from * width, 0)
 			tex:SetPoint("BOTTOMRIGHT", mana, "BOTTOMLEFT", to * width, 0)
@@ -1547,6 +1564,8 @@ function Console:RenderNotes()
 end
 
 -- Folding -------------------------------------------------------------------
+-- How high the folded seal stands over the screen's foot, with a little air.
+local SEAL_CLEARANCE = 64
 -- The console is not a secure frame, so it can resize in combat.
 
 function Console:SetOpen(open, instant)
@@ -1563,6 +1582,12 @@ function Console:SetOpen(open, instant)
 	-- The slim seal is small already, so it shrinks less into the spine.
 	local sealScale = open and 1 or ((self.db.slim or riding) and 0.6 or 0.4)
 	if self.slimCard and not open then self.slimCard:Hide() end
+	-- Combat rows that reach down to the folded seal (a raid grid over
+	-- three rows) take its place: it fades out for the fight.
+	local combatBar = Stoa.modules.CombatBar
+	local foot = not open and combatBar and combatBar.enabled and combatBar.FootHeight and combatBar:FootHeight()
+	local crowded = foot and foot < SEAL_CLEARANCE or false
+	if open then crowded = self.sealCrowded else self.sealCrowded = crowded end
 
 	local function step(progress)
 		frame:SetHeight(from + (target - from) * progress)
@@ -1600,7 +1625,7 @@ function Console:SetOpen(open, instant)
 		self.seal:SetScale(scale + (sealScale - scale) * progress)
 		-- On the slim line the seal goes altogether in a fight; shrunk, it
 		-- only peeked over the folded line.
-		if self.db.slim then self.seal:SetAlpha(open and progress or 1 - progress) end
+		if self.db.slim or crowded then self.seal:SetAlpha(open and progress or 1 - progress) end
 		-- The shrunk seal is too small to read a shield on; the Halo has it.
 		if self.sealShield then self.sealShield:SetAlpha(open and progress or 1 - progress) end
 		if self.sealMark then self.sealMark:SetAlpha(open and progress or 1 - progress) end
@@ -1967,18 +1992,14 @@ function Console:OnEnable()
 	Stoa:On("STOA_REMINDERS_CHANGED", function() self:UpdateSeal() end)
 	Stoa:On("STOA_STATE_CHANGED", function() self:Refold() end)
 
-	Stoa:On("UNIT_PORTRAIT_UPDATE", function(unit)
-		if unit == "player" then self:UpdateSeal() end
-	end)
+	Stoa:OnUnit("UNIT_PORTRAIT_UPDATE", { "player" }, function() self:UpdateSeal() end)
 	if self.sealShield then
 		local function update(changed)
 			local was = self.sealShield:IsShown()
 			self.sealShield:Update("player", changed)
 			if was ~= self.sealShield:IsShown() then self:PlaceCrest() end
 		end
-		Stoa:On("UNIT_ABSORB_AMOUNT_CHANGED", function(unit)
-			if unit == "player" then update(true) end
-		end)
+		Stoa:OnUnit("UNIT_ABSORB_AMOUNT_CHANGED", { "player" }, function() update(true) end)
 		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
 			Stoa:On(event, function() update() end)
 		end
@@ -1991,7 +2012,7 @@ function Console:OnEnable()
 		if IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
 	end)
 
-	Stoa:On("UNIT_HEALTH", function(unit)
+	Stoa:OnUnit("UNIT_HEALTH", { "player", "party1", "party2", "party3", "party4" }, function(unit)
 		if unit == "player" then
 			setUnitBar(self.health, "player", "health")
 			self.healthText:SetText(UnitHealth("player"))
@@ -2035,7 +2056,7 @@ function Console:OnEnable()
 	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDaylit() end)
 	self:UpdateDaylight()
 	self:PaintDaylit()
-	C_Timer.NewTicker(60, function() self:UpdateDaylight() end)
+	Stoa:NewTicker(60, function() self:UpdateDaylight() end)
 	for _, event in ipairs({ "UPDATE_INVENTORY_DURABILITY", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED" }) do
 		Stoa:On(event, function() self:UpdateKit() self:UpdateJobs() end)
 	end

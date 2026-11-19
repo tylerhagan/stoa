@@ -31,7 +31,7 @@ local MARKS = {
 	PRIEST = { art = "Flame", kind = "charges", spell = 588, charges = 20, remind = "always" },
 }
 
-local gauges, listeners = {}, {}
+local gauges = {}
 local castAt = {} -- spell name -> when you last cast it
 local lastSeal -- { name, at }
 local seen = {} -- spell name -> last share seen, for a fight that hides charges
@@ -150,7 +150,7 @@ local function wire()
 		local name = spellName(spellID)
 		if not name then return end
 		castAt[name] = GetTime()
-		if name:sub(1, 8) == "Seal of " then lastSeal = { name = name, at = GetTime() } end
+		if Stoa.Spells.isSeal(name) then lastSeal = { name = name, at = GetTime() } end
 		-- A fresh cast refills the charges, whatever the fight hides.
 		if seen[name] ~= nil or Sign.inCombat() then seen[name] = 1 end
 		update()

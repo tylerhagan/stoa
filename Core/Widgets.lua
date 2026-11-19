@@ -1425,6 +1425,31 @@ function UI.itemButton(parent, name, size)
 	return button
 end
 
+-- A raid target mark (skull, cross, star and the rest): the game's own
+-- icon for whichever mark the unit wears, hidden when it wears none.
+-- mark:Update(unit) returns whether it shows.
+local RAID_MARKS = "Interface\\TargetingFrame\\UI-RaidTargetingIcons"
+function UI.raidMark(parent, size)
+	local mark = parent:CreateTexture(nil, "OVERLAY", nil, 7)
+	mark:SetTexture(RAID_MARKS)
+	mark:SetSize(size, size)
+	mark:Hide()
+	function mark:Update(unit)
+		local index = unit and UnitExists(unit) and GetRaidTargetIndex and GetRaidTargetIndex(unit)
+		-- Forever hides the mark's number from addons, so it can't be read
+		-- or compared; it is handed to the icon as it comes. Its type still
+		-- shows: a number is a mark, anything else is none.
+		if type(index) == "number" and self.SetSpriteSheetCell
+			and pcall(self.SetSpriteSheetCell, self, index, 4, 4) then
+			self:Show()
+			return true
+		end
+		self:Hide()
+		return false
+	end
+	return mark
+end
+
 function UI.unitCard(card, styleName)
 	-- The rulebook's card surface: panel fill and one hairline edge, as on
 	-- tooltips and plaques. A stronger border shows states (a dispel, low
@@ -1459,6 +1484,14 @@ function UI.unitCard(card, styleName)
 
 	card.pips = {}
 	for i = 1, MAX_PIPS do card.pips[i] = makePip(card) end
+
+	-- A raid target mark rides the top right corner, over the bar.
+	local corner = CreateFrame("Frame", nil, card)
+	corner:SetSize(1, 1)
+	corner:SetPoint("CENTER", card, "TOPRIGHT", -3, -3)
+	corner:SetFrameLevel(card:GetFrameLevel() + 6)
+	card.mark = UI.raidMark(corner, 14)
+	card.mark:SetPoint("CENTER")
 
 	UI.styleCard(card, styleName)
 	UI.applyTheme()
@@ -1740,8 +1773,8 @@ function UI.plaque(frame, coinSide, opts)
 	-- A quiet edge for everyone; elite gold, rare silver.
 	function plaque:SetRank(rank)
 		plaque.rank = rank
-		local r, g, b, a = Stoa:Color("text")
-		a = 0.16
+		local r, g, b = Stoa:Color("text")
+		local a = 0.16
 		if rank == "elite" then r, g, b = Stoa:Color("accent"); a = 0.9 end
 		if rank == "rare" then r, g, b = unpack(SILVER); a = 0.9 end
 		if edge then edge:SetVertexColor(r, g, b, a) end
@@ -2036,7 +2069,7 @@ end
 -- place, in its colour. Returns true when it did.
 local CELL_WORDS = {
 	MAGIC = "MAG", DISEASE = "DIS", CURSE = "CUR", POISON = "POI", DISPEL = "DSP",
-	LOW = "LOW", DEAD = "DEAD", OFFLINE = "OFF",
+	LOW = "LOW", DEAD = "DEAD", OFFLINE = "OFF", SUMMON = "SUM",
 	READY = "RDY", ["NOT READY"] = "NOT", WAITING = "...",
 }
 function UI.cellWord(card, word, token)

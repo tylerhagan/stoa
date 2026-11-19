@@ -331,7 +331,7 @@ function SelfBuffs:OnEnable()
 			self:Update()
 		end, Stoa.catch)
 	end)
-	Stoa:On("UNIT_AURA", function(unit) if unit == "player" then self:Soon() end end)
+	Stoa:OnUnit("UNIT_AURA", { "player" }, function() self:Soon() end)
 	for _, event in ipairs({ "STOA_SPELLS_CHANGED", "STOA_ROLE_CHANGED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD",
 		"PLAYER_UNGHOST", "PLAYER_ALIVE", "GROUP_ROSTER_UPDATE", "PLAYER_CONTROL_GAINED" }) do
 		Stoa:On(event, function() self:Soon() end)

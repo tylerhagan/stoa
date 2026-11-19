@@ -19,13 +19,14 @@ Stoa.WhatsNew = WhatsNew
 -- as "PRIEST"): each shows as a small tag in its class colour beside the
 -- line's name.
 local NOTE = {
-	edition = "1.4.5",
-	title = "New in STOA 1.4.5",
+	edition = "1.5.0",
+	title = "New in STOA 1.5",
 	lines = {
-		{ "Whisper card", "A whisper brings up a small card above the chat tabs: who it's from and the start of what they said. Click to answer, right-click to put it away. /stoa whisper shows a sample." },
-		{ "Forever's new dungeons", "The dungeon companion knows all nine new dungeons and their bosses, from Hall of Thanes to Shaper's Terrace, and ticks off optional bosses when you target their corpse." },
-		{ "Quest timers", "A timed quest counts down in a small card beside the quest list's heading, instead of a box over the list." },
-		{ "A tidier quest list", "Quests that would run over the console fade out, and the dungeon fight error about secret auras is gone." },
+		{ "Raid target marks", "A skull, star or any other mark shows beside the name on the target plaque, and on the corner of party and raid cards." },
+		{ "Help on its way", "A dead group member's card says RES while someone raises them, and SUMMON while a summon waits on their answer." },
+		{ "Loot rolls", "The need, greed and pass cards wear STOA's dark card, with a thin timer along the foot." },
+		{ "Other languages", "Seals, shields, creature types, zone levels on the map and herb nodes now work on clients that aren't English." },
+		{ "Lighter in groups", "STOA listens only to the players it draws, so it does less work in a full raid." },
 	},
 	foot = "Each can be switched off in the settings. /stoa news shows this again.",
 }

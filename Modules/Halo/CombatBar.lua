@@ -320,6 +320,16 @@ function Bar:Layout()
 	self:UpdateAll()
 end
 
+-- How far the lowest row's foot stands above the bottom of the screen, or
+-- nil when it can't be told. The console's folded seal steps aside for a
+-- stack that reaches down to it (a ten-player grid over three rows).
+function Bar:FootHeight()
+	local anchor = self.anchor
+	local top = anchor and Stoa:PlainNumber(anchor:GetTop())
+	if not (top and self.groupOffset) then return nil end
+	return top + self.groupOffset + 6 - TOP
+end
+
 -- Empty buttons vanish; ones waiting on a long cooldown sit dim. Alpha can
 -- change in combat where showing and hiding can't.
 function Bar.RefreshAlpha(button)

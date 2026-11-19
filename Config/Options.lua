@@ -386,7 +386,7 @@ local function build()
 	toggle(tooltip, "eachPrice", "Price of one in a stack", "Under the sell price of a stack, what one of them sells for.", true, { words = "sell price vendor each stack" })
 	toggle(tooltip, "owned", "Owned counts on items", "How many of an item you have in your bags and bank.", true, { words = "bank count" })
 	toggle(tooltip, "combatHide", "Hide unit tooltips in combat", "Hold Shift to see them anyway.", false, { id = "tooltipCombat" })
-	toggle(tooltip, "gathering", "Herb and ore skill on nodes", "A herb or ore node's tooltip shows the skill it needs against yours, with TOO LOW when you are short. English node names for now.", true, { words = "herbalism mining gather profession" })
+	toggle(tooltip, "gathering", "Herb and ore skill on nodes", "A herb or ore node's tooltip shows the skill it needs against yours, with TOO LOW when you are short. Herbs in every language; ore veins in English for now.", true, { words = "herbalism mining gather profession" })
 
 	-- Windows
 	page = "windows"

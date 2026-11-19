@@ -10,6 +10,8 @@
 -- (hooksecurefunc), so they're dressed as the book draws them.
 local _, ns = ...
 local Stoa = ns.Stoa
+-- Hooks on the game's code are guarded (Core/Report.lua).
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Spellbook = Stoa:NewModule("Spellbook", { layout = true, view = "list", talents = true })
@@ -932,7 +934,6 @@ function Spellbook.DressTrees(talents)
 			-- name sits at its top left and the points at its top right.
 			local width = cardWidth
 			local x0 = (tree.minX + tree.maxX) / 2 - left - width / 2
-			cx = left + x0 + width / 2
 			local name, text = header.Name, header.Text
 			if name and text then
 				name:ClearAllPoints()

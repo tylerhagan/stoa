@@ -4,6 +4,8 @@
 -- the /stoa words for it. Everything it shows comes from Config/Options.lua.
 local _, ns = ...
 local Stoa = ns.Stoa
+-- Hooks on the game's code are guarded (Core/Report.lua).
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 local Options = Stoa.Options
 

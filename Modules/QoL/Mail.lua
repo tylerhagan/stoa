@@ -5,6 +5,8 @@
 -- always left for you to open.
 local _, ns = ...
 local Stoa = ns.Stoa
+-- Hooks on the game's code are guarded (Core/Report.lua).
+local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 
 local Mail = Stoa:NewModule("Mail", {
