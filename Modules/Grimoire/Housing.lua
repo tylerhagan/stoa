@@ -692,7 +692,7 @@ end
 local DOCK_PAD = 18 -- Daylight's panel is this much larger than its chat size
 -- Daylight pads its panel itself, so it runs nearly edge to edge.
 local DOCK_BOTTOM, DOCK_TOP, DOCK_SIDE = 6, 8, 8
-local DOCK_TABS = 44 -- Daylight's tab row and the padding over it, clear of the border
+local DOCK_TABS = 50 -- Daylight's tab row and the padding over it, clear of the border
 local dockView, dockSized = nil, false
 
 local function wantsDock(db)
