@@ -6,14 +6,14 @@ local _, ns = ...
 local Stoa = ns.Stoa
 
 local SAMPLE = {
-	{ name = "Brunhok", class = "WARRIOR", health = 0.62, absorb = 0.18, pips = { { "SHLD", "shield" }, { "WS 11" }, { "RNW 9" } } },
-	{ name = "Thalindra", class = "PRIEST", health = 0.95, pips = { { "INNR FR" } } },
+	{ name = "Brunhok", class = "WARRIOR", mark = 8, health = 0.62, absorb = 0.18, pips = { { "SHLD", "shield" }, { "WS 11" }, { "RNW 9" } } },
+	{ name = "Thalindra", class = "PRIEST", mark = 1, health = 0.95, pips = { { "INNR FR" } } },
 	{ name = "Seren", class = "ROGUE", health = 0.71, dispel = "magic", pips = { { "MAGIC", "magic" } } },
 	{ name = "Velaris", class = "MAGE", health = 0.78, absorb = 0.1, target = true, pips = { { "WS 4" } } },
 	{ name = "Orsun", class = "HUNTER", health = 0.28, far = true },
-	{ name = "Kaelith", class = "WARLOCK", status = "DEAD", health = 0 },
+	{ name = "Kaelith", class = "WARLOCK", status = "DEAD", coming = "RES", health = 0 },
 	{ name = "Aldren", class = "PALADIN", status = "OFFLINE", health = 1 },
-	{ name = "Mirelle", class = "DRUID", health = 1 },
+	{ name = "Mirelle", class = "DRUID", coming = "SUMMON", health = 1 },
 	{ name = "Tovan", class = "SHAMAN", health = 0.84, pips = { { "DISEASE", "disease" } }, dispel = "disease" },
 	{ name = "Ysolde", class = "MAGE", health = 0.91 },
 	{ name = "Harrow", class = "WARRIOR", health = 1 },
@@ -55,17 +55,32 @@ local function fill(card, sample)
 	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
 
 	local pips = {}
+	-- Help on its way (a resurrection, a summon) takes the first word.
+	local coming = sample.coming
 	if sample.status then
-		pips[1] = { sample.status }
+		pips[1] = { coming or sample.status, coming and "accent" }
 	else
 		local quiet = Stoa.modules.Party:Quiet()
 		for _, pip in ipairs(sample.pips or {}) do
 			if not quiet or (sample.dispel and pip[2] == sample.dispel) then pips[#pips + 1] = pip end
 		end
 		if low and not quiet then table.insert(pips, 1, { "LOW", "danger" }) end
+		if coming then table.insert(pips, 1, { coming, "accent" }) end
 	end
 	UI.setPips(card, pips)
-	if sample.status then
+	-- A sample raid target mark on the card's corner.
+	local mark = card.mark
+	if mark then
+		mark:SetShown(sample.mark ~= nil)
+		if sample.mark and mark.SetSpriteSheetCell then
+			mark:SetSpriteSheetCell(sample.mark, 4, 4)
+			local size = math.max(9, math.min(14, (card:GetHeight() or 40) * 0.36))
+			mark:SetSize(size, size)
+		end
+	end
+	if coming then
+		UI.cellWord(card, coming, "accent")
+	elseif sample.status then
 		UI.cellWord(card, sample.status, "muted")
 	elseif sample.dispel then
 		UI.cellWord(card, sample.pips[1][1], sample.dispel)
