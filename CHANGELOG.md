@@ -6,7 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.5.2
 
-- EllesmereUI: STOA now recognises EllesmereUI's modules (action bars, bags, chat, nameplates, minimap, raid frames, unit frames, damage meters, quest tracker and Blizzard skin) and asks which of the two you want for each part, on the same page as for Daylight UI. Until you choose, STOA's part steps aside. Keeping EllesmereUI's unit frames keeps STOA's target plaque away. On EllesmereUI's first login its own setup page comes first; STOA asks at the login after it.
+- EllesmereUI: STOA now recognises EllesmereUI's modules (action bars, bags, chat, nameplates, minimap, raid frames, unit frames, damage meters, quest tracker and Blizzard skin) and asks which of the two you want for each part, on the same page as for Daylight UI. Until you choose, STOA's part steps aside. Keeping EllesmereUI's unit frames keeps STOA's target plaque away. EllesmereUI's own first-time pages (its addon picker and its look) come first; STOA asks once they're done.
 - What's new: the note carries the 1.5 lines beside 1.5.1's again.
 
 ## 1.5.1
