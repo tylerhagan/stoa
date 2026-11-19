@@ -756,8 +756,6 @@ end
 -- never its frames or code; if they move in a later EllesmereUI the fit
 -- simply does nothing.
 local ELL_SIDE = 34 -- EllesmereUI's icon column left of the chat lines
-local ELL_EDGE = 64 -- its panel edge and scroll rail right of them
-local ELL_MIN_HEIGHT = 124
 local ELL_EDIT = 30 -- its edit box under them
 local ELL_METER = { point = "TOPLEFT", relPoint = "TOPLEFT", x = 0, y = 0 } -- where Stoa keeps its own
 
@@ -791,20 +789,12 @@ end
 
 -- Where EllesmereUI's chat lines go on the console's left page: its tab row
 -- stands on the console's top edge, as Stoa's own tabs do.
-local function ellChatRect()
+local function ellChatSpot()
 	local chat = ChatFrame1
 	local scale = chat and chat:GetScale() or 1
 	if type(scale) ~= "number" or scale <= 0 then scale = 1 end
-	local x = Console:PageInset() + ELL_SIDE
-	local y = DOCK_BOTTOM + ELL_EDIT
-	local top = artOn() and ART_CHAT_GAP + 2 or DOCK_TOP
-	local w = Console:ChatWidth() - ELL_SIDE - ELL_EDGE
-	local h = Console:OpenHeight() - y - top
-	-- Edit Mode, which EllesmereUI sizes the chat through, refuses a chat
-	-- shorter than this, and then the width is not taken either.
-	h = math.max(h, ELL_MIN_HEIGHT * scale)
 	local function r(v) return math.floor(v / scale + 0.5) end
-	return r(x), r(y), r(w), r(h)
+	return r(Console:PageInset() + ELL_SIDE), r(DOCK_BOTTOM + ELL_EDIT)
 end
 
 -- True while EllesmereUI's saved chat spot is the one Stoa wrote.
@@ -835,9 +825,9 @@ function Console:FitEllesmere()
 		and ellProfile("EllesmereUIChat")
 	if chat then
 		if fit.chatBefore == nil then
-			fit.chatBefore = { position = shallow(chat.chatPosition), size = shallow(chat.chatSize) }
+			fit.chatBefore = { position = shallow(chat.chatPosition) }
 		end
-		local x, y = ellChatRect()
+		local x, y = ellChatSpot()
 		chat.chatPosition = { point = "BOTTOMLEFT", relPoint = "BOTTOMLEFT", x = x, y = y }
 		fit.chatAt = { x = x, y = y }
 		done[#done + 1] = "the chat"
@@ -861,7 +851,6 @@ function Console:UnfitEllesmere()
 	local chat = ellProfile("EllesmereUIChat")
 	if chat and fit.chatBefore then
 		chat.chatPosition = fit.chatBefore.position or nil
-		chat.chatSize = fit.chatBefore.size or nil
 	end
 	local meters = ellProfile("EllesmereUIDamageMeters")
 	local window = ellMeterWindow(meters)
@@ -876,31 +865,6 @@ Stoa.commands.fit = function(rest)
 		return
 	end
 	local word = strtrim(rest or ""):lower()
-	if word == "check" then
-		-- What Stoa asked for beside what EllesmereUI holds now.
-		local fit = Stoa.db.ellesmereFit
-		local function at(pos)
-			if type(pos) ~= "table" then return "none" end
-			return ("%s %s, %s"):format(tostring(pos.point or "TOPLEFT"), tostring(pos.x and math.floor(pos.x + 0.5)), tostring(pos.y and math.floor(pos.y + 0.5)))
-		end
-		local chat = ellProfile("EllesmereUIChat")
-		local meters = ellProfile("EllesmereUIDamageMeters")
-		local window = ellMeterWindow(meters)
-		Stoa:Print(("Fit: %s. Chat asked %s, holds %s (%s). Meter holds %s (%s). Chat kept theirs: %s, housed: %s."):format(
-			fit and "on" or "off", at(fit and fit.chatAt and { point = "BOTTOMLEFT", x = fit.chatAt.x, y = fit.chatAt.y }),
-			at(chat and chat.chatPosition), chat and "found" or "no settings",
-			at(type(window) == "table" and window.position), type(window) == "table" and "found" or "no window",
-			tostring(Stoa.Conflicts:SteppedAside("ChatLook") and true or false), tostring(Console.db.houseChat)))
-		local cf = ChatFrame1
-		local l, b = cf and cf:GetLeft(), cf and cf:GetBottom()
-		if type(l) == "number" and type(b) == "number" and not (issecretvalue and (issecretvalue(l) or issecretvalue(b))) then
-			Stoa:Print(("Chat sits at %.1f, %.1f; saved %s, %s; docked: %s."):format(l, b, tostring(chat and chat.chatPosition and chat.chatPosition.x), tostring(chat and chat.chatPosition and chat.chatPosition.y), tostring(ellDocked(Console.db))))
-			local size = chat and chat.chatSize
-			Stoa:Print(("Chat is %.0f x %.0f; saved size %s x %s; would ask %s x %s."):format(cf:GetWidth() or 0, cf:GetHeight() or 0,
-				tostring(type(size) == "table" and size.w), tostring(type(size) == "table" and size.h), tostring(select(3, ellChatRect())), tostring(select(4, ellChatRect()))))
-		end
-		return
-	end
 	if word == "undo" then
 		if Console:UnfitEllesmere() then
 			Stoa:Reload()
