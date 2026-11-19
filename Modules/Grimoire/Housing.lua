@@ -748,7 +748,7 @@ end
 -- /stoa fit undo puts the old ones back. Only its saved values are touched,
 -- never its frames or code; if they move in a later EllesmereUI the fit
 -- simply does nothing.
-local ELL_SIDE = 84 -- EllesmereUI's icon column and panel edge left of the chat lines
+local ELL_SIDE = 34 -- EllesmereUI's icon column left of the chat lines
 local ELL_EDIT = 30 -- its edit box under them
 local ELL_METER = { point = "TOPLEFT", relPoint = "TOPLEFT", x = 0, y = 0 } -- where Stoa keeps its own
 
@@ -923,7 +923,7 @@ local function clearChat()
 		local pos = own and own.chatPosition
 		local bottom = chat and chat:GetBottom()
 		if pos and type(bottom) == "number" and not (issecretvalue and issecretvalue(bottom))
-			and math.abs(bottom - pos.y) > 2 and not (InCombatLockdown() and chat.IsProtected and chat:IsProtected()) then
+			and math.abs(bottom - pos.y) > 24 and not (InCombatLockdown() and chat.IsProtected and chat:IsProtected()) then
 			chat:ClearAllPoints()
 			chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
 		end
