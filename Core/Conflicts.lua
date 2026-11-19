@@ -119,7 +119,8 @@ local RULES = {
 	{
 		-- Rows of cooldown icons. Stoa has no part to step aside: the Halo
 		-- shows cooldowns, so "Use STOA's" only switches the other addon off.
-		key = "cooldowns", job = "cooldown icon rows (STOA shows cooldowns on the Halo)", modules = {},
+		key = "cooldowns", job = "cooldown icons", modules = {},
+		body = "EllesmereUI Cooldown Manager shows rows of cooldown icons. STOA shows cooldowns on the Halo, so you may not want both.",
 		addons = { { "EllesmereUICooldownManager", "EllesmereUI Cooldown Manager" } },
 	},
 	{
@@ -381,9 +382,10 @@ function Conflicts:Ask(entry)
 	else
 		page.title:SetText("Two addons, one job")
 		page.body:SetText(("%s %s look after %s. Pick one so they don't get in each other's way."):format(names(everyone), single and "both" or "all", rule.job))
-		page.theirs.text:SetText(single and ("Keep " .. them) or "Keep theirs")
+		page.theirs.text:SetText(single and #them <= 22 and ("Keep " .. them) or "Keep theirs")
 		page.ours.text:SetText("Use STOA's")
-		page.note:SetText(("STOA's part waits until you choose. Using STOA's turns %s off and reloads; /stoa addons asks again."):format(them))
+		if rule.body then page.body:SetText(rule.body) end
+		page.note:SetText(((rule.body and "" or "STOA's part waits until you choose. ") .. "Using STOA's turns %s off and reloads; /stoa addons asks again."):format(them))
 	end
 	page.ours:SetReloads(true)
 	page.theirs:SetReloads(rule.suite)
