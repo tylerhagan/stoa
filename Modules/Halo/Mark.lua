@@ -114,11 +114,15 @@ local function missing(def)
 	return def.spell and Sign.knows(def.spell) or false
 end
 
+local driver
 local function update()
 	local def = mark()
 	local value, glide, empty
 	if def then value, glide = share(def) end
 	if def and not value and missing(def) then value, glide, empty = 0, false, true end
+	-- Only a timer that is running drains between events; the driver rests
+	-- otherwise, and the events below wake it.
+	if driver then driver:SetShown(def ~= nil and def.kind ~= "charges" and value ~= nil and not empty) end
 	for gauge, onShown in pairs(gauges) do
 		local was = gauge:IsShown()
 		if value then
@@ -133,9 +137,9 @@ local function update()
 	return value
 end
 
-local driver
 local function wire()
 	driver = CreateFrame("Frame")
+	driver:Hide()
 	local wait = 0
 	-- Timers drain between events, so they're set a few times a second.
 	driver:SetScript("OnUpdate", function(_, elapsed)

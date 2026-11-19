@@ -52,6 +52,19 @@ function GameSettings:Set(owner, name, value)
 	if now ~= value then set(name, value) end
 end
 
+-- Sets a game setting another addon left changed after it was switched
+-- off (Core/Conflicts.lua). It isn't Stoa's change, so nothing is noted and
+-- /stoa restore leaves it be.
+function GameSettings:Mend(name, value)
+	value = tostring(value)
+	if InCombatLockdown() then
+		Stoa:AfterCombat(function() self:Mend(name, value) end)
+		return
+	end
+	local now = get(name)
+	if now ~= nil and now ~= value then set(name, value) end
+end
+
 -- Puts name back as it was before Stoa, unless the player has changed it.
 function GameSettings:Restore(name)
 	local entry = ledger()[name]
@@ -93,6 +106,10 @@ Stoa.commands.restore = function()
 	local count = 0
 	for _ in pairs(ledger()) do count = count + 1 end
 	GameSettings:RestoreAll()
+	-- The Edit Mode layout from before Stoa's is a game setting too.
+	local layout = Stoa.modules.Layout
+	local name = layout and layout.Back and Stoa.char.layoutBefore and layout:Back()
+	if name then Stoa:Print(("Switched back to the Edit Mode layout you had before STOA's: %s."):format(name)) end
 	if count == 0 then
 		Stoa:Print("STOA hasn't changed any game settings.")
 	else

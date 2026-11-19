@@ -4,6 +4,12 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.5.3
+
+- Fixed: choosing STOA's damage meter over EllesmereUI's left no meter at all. EllesmereUI switches the game's own meter off and only puts it back while it runs; STOA now turns it back on at the next login after you pick STOA's.
+- `/stoa restore` and `/stoa editmode back` return to the Edit Mode layout you had before STOA's.
+- Lighter at rest: the class mark's timer only runs while a timed mark is counting down.
+
 ## 1.5.2
 
 - **Fit EllesmereUI to the console**: one click in Settings > Other addons (or `/stoa fit`) places EllesmereUI's chat on the console's left page and its damage meter top left, where STOA keeps its own. It writes only those two positions into EllesmereUI's settings and reloads; `/stoa fit undo` puts them back. The chat keeps its own size; drag its corner narrower if it covers At a glance. The page that asks which addon does which offers it as a row when EllesmereUI's chat is kept, so it happens in the same reload.
