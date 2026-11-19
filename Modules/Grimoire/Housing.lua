@@ -741,7 +741,9 @@ end
 
 -- EllesmereUI keeps its chat and its damage meter where its own saved
 -- settings say and puts them back if another addon moves them, and it has no
--- way for an addon to ask for a place. So Stoa fits them only when the
+-- way for an addon to ask for a place. Its chat's size is Edit Mode's and
+-- the player's own: Stoa leaves it, and the player drags it narrower if it
+-- covers At a glance. So Stoa fits them only when the
 -- player asks (/stoa fit, or the button in Settings): it writes the two
 -- positions into EllesmereUI's saved settings, keeps what was there before
 -- in Stoa.db.ellesmereFit, and reloads so EllesmereUI places them itself.
@@ -815,14 +817,6 @@ end
 
 ellDockedNow = ellDocked
 
--- EllesmereUI's chat starts right of where Stoa's own would (its icon
--- column comes first) and keeps Edit Mode's width, so while it is seated
--- At a glance starts that much further right.
-local ELL_GLANCE_SHIFT = 44
-function Console:GlanceShift()
-	return ellDocked(self.db) and ELL_GLANCE_SHIFT or 0
-end
-
 function Console:CanFitEllesmere()
 	return addonOn("EllesmereUIChat") or addonOn("EllesmereUIDamageMeters")
 end
@@ -838,9 +832,8 @@ function Console:FitEllesmere()
 		if fit.chatBefore == nil then
 			fit.chatBefore = { position = shallow(chat.chatPosition), size = shallow(chat.chatSize) }
 		end
-		local x, y, w, h = ellChatRect()
+		local x, y = ellChatRect()
 		chat.chatPosition = { point = "BOTTOMLEFT", relPoint = "BOTTOMLEFT", x = x, y = y }
-		chat.chatSize = { w = w, h = h }
 		fit.chatAt = { x = x, y = y }
 		done[#done + 1] = "the chat"
 	end

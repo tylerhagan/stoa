@@ -537,7 +537,7 @@ function Conflicts:AskAll(entries)
 		row.them:SetPoint("TOPLEFT", row.job, "BOTTOMLEFT", 0, -3)
 		row.them:SetPoint("RIGHT", row, "RIGHT", -250, 0)
 		row.them:SetWordWrap(false)
-		row.them:SetText("Its damage meter goes top left. /stoa fit undo puts both back.")
+		row.them:SetText("Meter goes top left. If the chat covers At a glance, drag its corner narrower.")
 		row.yes = UI.button(row, "Seat it", 110, function()
 			page.fitWanted = true
 			self:PaintList()

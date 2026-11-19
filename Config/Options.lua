@@ -699,7 +699,7 @@ local function build()
 	button("addons", "Other addons", "Choose again which of STOA's parts step aside for other addons you run, such as bags or nameplates.", "Choose again", command("addons"), { cmd = "/stoa addons", words = "conflicts elvui bagnon companion" })
 	local fitter = Stoa.modules.Grimoire
 	if fitter and fitter.CanFitEllesmere and fitter:CanFitEllesmere() then
-		button("fitEllesmere", "Fit EllesmereUI to the console", "Places EllesmereUI's chat on the console's left page and its damage meter top left, by writing those two positions into EllesmereUI's own settings, then reloads. STOA keeps the old positions.", "Fit and reload", command("fit"), { cmd = "/stoa fit", words = "ellesmere eui chat dock damage meter position" })
+		button("fitEllesmere", "Fit EllesmereUI to the console", "Places EllesmereUI's chat on the console's left page and its damage meter top left, by writing those two positions into EllesmereUI's own settings, then reloads. STOA keeps the old positions. The chat keeps its size: if it covers At a glance, drag its corner narrower.", "Fit and reload", command("fit"), { cmd = "/stoa fit", words = "ellesmere eui chat dock damage meter position" })
 		button("unfitEllesmere", "Undo the EllesmereUI fit", "Puts EllesmereUI's chat and damage meter back where they were before the fit, then reloads.", "Undo and reload", command("fit undo"), { cmd = "/stoa fit undo", words = "ellesmere eui chat dock damage meter undo" })
 	end
 	-- One row for each part another addon is doing too (Core/Conflicts.lua),
