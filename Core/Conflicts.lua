@@ -507,9 +507,9 @@ function Conflicts:AskAll(entries)
 		page.chatNote = UI.text(page, "sans", Stoa.typeSize.body, "muted", "LEFT")
 		page.chatNote:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
 		page.chatNote:SetWordWrap(true)
-		page.chatNote:SetText("Keeping EllesmereUI's chat? Afterwards, /stoa fit (or Settings > Other addons) seats it on the console's left page and moves its damage meter top left; /stoa fit undo puts both back. The chat keeps its own size, so drag its corner narrower if it covers At a glance.")
+		page.chatNote:SetText("Keeping EllesmereUI's chat? Afterwards, /stoa fit (or Settings > Other addons) seats it on the console's left page and moves its damage meter top left; /stoa fit undo puts both back.")
 	end
-	local noteRoom = chatNote and 52 or 0
+	local noteRoom = chatNote and 40 or 0
 	if page.chatNote then
 		page.chatNote:SetShown(chatNote)
 		page.chatNote:SetPoint("TOPLEFT", PAD, -ROWS_TOP - #entries * ROW_HEIGHT - 6)

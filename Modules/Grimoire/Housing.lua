@@ -749,6 +749,7 @@ end
 -- never its frames or code; if they move in a later EllesmereUI the fit
 -- simply does nothing.
 local ELL_SIDE = 34 -- EllesmereUI's icon column left of the chat lines
+local ELL_EDGE = 64 -- its panel edge and scroll rail right of them
 local ELL_EDIT = 30 -- its edit box under them
 local ELL_METER = { point = "TOPLEFT", relPoint = "TOPLEFT", x = 0, y = 0 } -- where Stoa keeps its own
 
@@ -789,7 +790,7 @@ local function ellChatRect()
 	local x = Console:PageInset() + ELL_SIDE
 	local y = DOCK_BOTTOM + ELL_EDIT
 	local top = artOn() and ART_CHAT_GAP + 2 or DOCK_TOP
-	local w = Console:ChatWidth() - ELL_SIDE
+	local w = Console:ChatWidth() - ELL_SIDE - ELL_EDGE
 	local h = Console:OpenHeight() - y - top
 	local function r(v) return math.floor(v / scale + 0.5) end
 	return r(x), r(y), r(w), r(h)
