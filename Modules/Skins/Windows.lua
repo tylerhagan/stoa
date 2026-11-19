@@ -48,7 +48,7 @@ end
 -- Blizzard's red panel buttons become dark rounded keys with light words;
 -- the edge warms to the accent under the mouse. Textures only, so this is
 -- fine on secure buttons too.
-local PANEL_PARTS = { "Left", "Middle", "Right", "LeftSeparator", "RightSeparator" }
+local PANEL_PARTS = { "Left", "Middle", "Center", "Right", "LeftSeparator", "RightSeparator" }
 
 local function isPanelButton(button)
 	-- The talent window's Primary and Secondary tabs become words there
