@@ -761,6 +761,14 @@ local function ellProfile(folder)
 	return type(own) == "table" and own or nil
 end
 
+-- The damage meter's first window: its settings sit one table down, under dm.
+local function ellMeterWindow(meters)
+	local dm = meters and type(meters.dm) == "table" and meters.dm
+	local windows = dm and type(dm.windows) == "table" and dm.windows
+	local window = windows and windows[1]
+	return type(window) == "table" and window or nil
+end
+
 local function shallow(t)
 	if type(t) ~= "table" then return false end
 	local c = {}
@@ -821,7 +829,7 @@ function Console:FitEllesmere()
 		done[#done + 1] = "the chat"
 	end
 	local meters = addonOn("EllesmereUIDamageMeters") and ellProfile("EllesmereUIDamageMeters")
-	local window = meters and type(meters.windows) == "table" and meters.windows[1]
+	local window = ellMeterWindow(meters)
 	if type(window) == "table" then
 		if fit.meterBefore == nil then fit.meterBefore = { position = shallow(window.position) } end
 		window.position = shallow(ELL_METER)
@@ -842,7 +850,7 @@ function Console:UnfitEllesmere()
 		chat.chatSize = fit.chatBefore.size or nil
 	end
 	local meters = ellProfile("EllesmereUIDamageMeters")
-	local window = meters and type(meters.windows) == "table" and meters.windows[1]
+	local window = ellMeterWindow(meters)
 	if type(window) == "table" and fit.meterBefore then window.position = fit.meterBefore.position or nil end
 	Stoa.db.ellesmereFit = nil
 	return true
@@ -863,7 +871,7 @@ Stoa.commands.fit = function(rest)
 		end
 		local chat = ellProfile("EllesmereUIChat")
 		local meters = ellProfile("EllesmereUIDamageMeters")
-		local window = meters and type(meters.windows) == "table" and meters.windows[1]
+		local window = ellMeterWindow(meters)
 		Stoa:Print(("Fit: %s. Chat asked %s, holds %s (%s). Meter holds %s (%s). Chat kept theirs: %s, housed: %s."):format(
 			fit and "on" or "off", at(fit and fit.chatAt and { point = "BOTTOMLEFT", x = fit.chatAt.x, y = fit.chatAt.y }),
 			at(chat and chat.chatPosition), chat and "found" or "no settings",
