@@ -699,6 +699,8 @@ function Console:House()
 			if artOn() then safely(buildTabs) end
 		elseif db.houseChat then
 			safely(liftChat)
+			-- The other addon and Edit Mode place the chat a moment after login.
+			C_Timer.After(2, function() safely(liftChat) end)
 		end
 		if db.hideBarArt then safely(hideBarArt) end
 		if db.houseMenu then
