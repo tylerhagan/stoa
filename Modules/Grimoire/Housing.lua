@@ -815,6 +815,14 @@ end
 
 ellDockedNow = ellDocked
 
+-- EllesmereUI's chat starts right of where Stoa's own would (its icon
+-- column comes first) and keeps Edit Mode's width, so while it is seated
+-- At a glance starts that much further right.
+local ELL_GLANCE_SHIFT = 44
+function Console:GlanceShift()
+	return ellDocked(self.db) and ELL_GLANCE_SHIFT or 0
+end
+
 function Console:CanFitEllesmere()
 	return addonOn("EllesmereUIChat") or addonOn("EllesmereUIDamageMeters")
 end

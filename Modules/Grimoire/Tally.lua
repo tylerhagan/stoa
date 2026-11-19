@@ -858,7 +858,7 @@ end
 function Tally:Build(console)
 	local inset, top = console:PageInset()
 	local page = CreateFrame("Button", nil, console.frame)
-	page:SetPoint("TOPLEFT", console.frame, "TOPLEFT", inset + CHAT_RIGHT, top)
+	page:SetPoint("TOPLEFT", console.frame, "TOPLEFT", inset + CHAT_RIGHT + (console.GlanceShift and console:GlanceShift() or 0), top)
 	page:SetSize(COLUMN_WIDTH * 2 + COLUMN_GAP, 110)
 	page:RegisterForClicks("RightButtonUp")
 	page:SetScript("OnClick", function(button) self:OpenPicker(button) end)
