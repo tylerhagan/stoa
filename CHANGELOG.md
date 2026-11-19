@@ -4,6 +4,17 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.5.0
+
+- Raid target marks: a skull, cross, star or any other mark shows at the right end of the name on the target plaque, and on the top right corner of party and raid cards for marked group members.
+- Group cards: a dead member's card says RES while someone is raising them, and a card says SUMMON while a summon waits on that player's answer.
+- Loot rolls: the need, greed and pass cards sit on a STOA card with the item's name in STOA's lettering and a thin accent timer.
+- Other languages: on a client that isn't English, STOA now finds paladin seals and Judgements, shields, Eclipse, Hot Streak, Demonic Sacrifice, undead and demon targets, zone level ranges on the map and herb nodes on tooltips by the game's own IDs instead of English names. Ore veins, the dungeon companion's lists and STOA's own words are English still.
+- Console: the leather grain is drawn one texture pixel to one screen pixel, so it stays crisp at any UI scale.
+- Lighter in groups: STOA listens only to the units it draws (you, your target, your party) instead of every unit in a raid, the loot feed and the Tally page rest while nothing is showing, and timer bars write their text once a second.
+- /stoa test shows sample raid marks and the RES and SUMMON words.
+- Housekeeping: an unused texture and leftover code removed, and every pull request is now linted and load-tested for all nine classes (and once as a German client) before it can merge.
+
 ## 1.4.5
 
 - Whisper card: a whisper brings up a small card just above the chat tabs with who it's from (in their class colour) and the start of what they said. Click to answer, right-click to put it away; it fades on its own and waits while the mouse is on it. More from the same person adds a count, and a second person makes it "Multiple people are whispering you". Settings > Comforts turns it off; /stoa whisper shows a sample.
