@@ -191,6 +191,26 @@ local function choices()
 	return Stoa.db.addons
 end
 
+-- An answer belongs to the addons it was given for (their folders, in
+-- Stoa.db.addonsFor), so another addon turning up for the same job later is
+-- asked about, not quietly kept.
+local function keptFor()
+	Stoa.db.addonsFor = Stoa.db.addonsFor or {}
+	return Stoa.db.addonsFor
+end
+
+local function keep(entry)
+	choices()[entry.rule.key] = "theirs"
+	local folders = {}
+	for _, addon in ipairs(entry.loaded) do folders[addon[1]] = true end
+	keptFor()[entry.rule.key] = folders
+end
+
+local function forget(entry)
+	choices()[entry.rule.key] = nil
+	keptFor()[entry.rule.key] = nil
+end
+
 -- "Bagnon", "Bagnon and AdiBags", "Bagnon, AdiBags and Sorted".
 local function names(found)
 	local list = {}
@@ -225,10 +245,10 @@ function Conflicts:Settle(entry, choice)
 	entry.asked = true
 	if choice == "ours" then
 		for _, addon in ipairs(entry.loaded) do turnOff(addon) end
-		choices()[entry.rule.key] = nil
+		forget(entry)
 		return true
 	end
-	choices()[entry.rule.key] = "theirs"
+	keep(entry)
 	return false
 end
 
@@ -241,7 +261,7 @@ function Conflicts:Pick(entry, choice)
 	for _, addon in ipairs(entry.loaded) do
 		if choice == "ours" then turnOff(addon) else turnOn(addon) end
 	end
-	choices()[entry.rule.key] = choice == "theirs" and "theirs" or nil
+	if choice == "theirs" then keep(entry) else forget(entry) end
 end
 
 -- Called once at login, before modules are enabled.
@@ -260,6 +280,22 @@ function Conflicts:Check()
 			if not settings or settings.enabled ~= false then running = true end
 		end
 		if #loaded > 0 and running then
+			-- An answer given for other addons doesn't cover a new one. One
+			-- from before answers were tied to addons is taken as given for
+			-- what's here now.
+			if not rule.suite and choices()[rule.key] == "theirs" then
+				local folders = keptFor()[rule.key]
+				if not folders then
+					keep({ rule = rule, loaded = loaded })
+				else
+					for _, addon in ipairs(loaded) do
+						if not folders[addon[1]] then
+							forget({ rule = rule })
+							break
+						end
+					end
+				end
+			end
 			found[#found + 1] = { rule = rule, loaded = loaded }
 			if not rule.suite then
 				for _, name in ipairs(rule.modules) do aside[name] = rule end
@@ -359,13 +395,13 @@ function Conflicts:Answer(choice, button)
 	local rule = entry.rule
 	if choice == "ours" then
 		for _, addon in ipairs(entry.loaded) do turnOff(addon) end
-		choices()[rule.key] = nil
+		forget(entry)
 		if not own then Stoa:Reload() end
 	elseif rule.suite then
 		disable("Stoa")
 		if not own then Stoa:Reload() end
 	else
-		choices()[rule.key] = "theirs"
+		keep(entry)
 		Stoa:Print(("Leaving %s to %s. /stoa addons to change."):format(rule.job, names(entry.loaded)))
 		self:Next()
 	end
@@ -475,9 +511,9 @@ function Conflicts:AnswerAll(button)
 	for _, entry in ipairs(entries) do
 		if entry.choice == "ours" then
 			for _, addon in ipairs(entry.loaded) do turnOff(addon) end
-			choices()[entry.rule.key] = nil
+			forget(entry)
 		else
-			choices()[entry.rule.key] = "theirs"
+			keep(entry)
 			kept[#kept + 1] = entry.rule.job
 		end
 	end
@@ -553,7 +589,7 @@ Stoa.commands.addons = function()
 	end
 	for _, entry in ipairs(found) do
 		Stoa:Print(("%s also %s after %s."):format(names(entry.loaded), #entry.loaded == 1 and "looks" or "look", entry.rule.job))
-		choices()[entry.rule.key] = nil
+		forget(entry)
 		entry.asked = nil
 	end
 	Conflicts:Next()
