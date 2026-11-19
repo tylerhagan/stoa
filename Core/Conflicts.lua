@@ -124,10 +124,9 @@ local RULES = {
 		addons = { { "EllesmereUICooldownManager", "EllesmereUI Cooldown Manager" } },
 	},
 	{
-		-- Icons for buffs you're missing. Stoa reminds on the console and
-		-- the Halo, with no part of its own to step aside.
-		key = "reminders", job = "buff reminders", modules = {},
-		body = "EllesmereUI AuraBuff Reminders shows an icon for each buff you're missing. STOA reminds you on the console and the Halo, so you may not want both.",
+		-- Icons for the buffs you're missing: Stoa's are the row left of
+		-- the Halo (Modules/Halo/SelfBuffs.lua).
+		key = "reminders", job = "buff reminders", modules = { "SelfBuffs" },
 		addons = { { "EllesmereUIAuraBuffReminders", "EllesmereUI AuraBuff Reminders" } },
 	},
 	{
