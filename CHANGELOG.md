@@ -13,7 +13,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Fixed: with another addon's chat kept, the console still re-sized and re-placed the chat window whenever its pages were laid out, which could undo the size you gave it.
 - Other addons: a "Keep theirs" answer now belongs to the addons it was given for. If a different addon turns up for the same job later (EllesmereUI's bags after Bagnon's, say), STOA asks again and no longer keeps the newcomer unasked.
 - Console: the notes page loses its "Notes" heading and its "Nothing to note" line. It stays blank until there is something to say.
-- What's new: the note carries the 1.5 lines beside 1.5.1's again.
+- What's new: the note carries the 1.5 lines beside 1.5.1's again, with two for EllesmereUI on top.
 
 ## 1.5.1
 

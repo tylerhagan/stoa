@@ -19,9 +19,11 @@ Stoa.WhatsNew = WhatsNew
 -- as "PRIEST"): each shows as a small tag in its class colour beside the
 -- line's name.
 local NOTE = {
-	edition = "1.5.1",
+	edition = "1.5.2",
 	title = "New in STOA 1.5",
 	lines = {
+		{ "EllesmereUI", "STOA knows EllesmereUI's parts too and asks, part by part, which of the two looks after each, cooldown icons and buff reminders included." },
+		{ "EllesmereUI on the console", "Keep EllesmereUI's chat and one click seats it on the console's left page, with its damage meter top left. /stoa fit undo puts them back." },
 		{ "Daylight UI", "STOA knows Daylight UI's parts and asks, part by part, which of the two looks after each: bags, nameplates, chat, tooltips, frames and more." },
 		{ "One page of questions", "When several addons share jobs with STOA, the questions come as one list, with theirs kept unless you pick STOA's." },
 		{ "Daylight's chat in the console", "Keep Daylight UI's chat and it sits in the console's chat place, with its tabs along the top edge." },
