@@ -756,7 +756,7 @@ end
 -- never its frames or code; if they move in a later EllesmereUI the fit
 -- simply does nothing.
 local ELL_SIDE = 34 -- EllesmereUI's icon column left of the chat lines
-local ELL_EDIT = 30 -- its edit box under them
+local ELL_EDIT = 42 -- its edit box under them
 local ELL_METER = { point = "TOPLEFT", relPoint = "TOPLEFT", x = 0, y = 0 } -- where Stoa keeps its own
 
 local function ellProfile(folder)
@@ -766,6 +766,16 @@ local function ellProfile(folder)
 	local addons = type(profile) == "table" and profile.addons
 	local own = type(addons) == "table" and addons[folder]
 	return type(own) == "table" and own or nil
+end
+
+-- The chat's settings sit one table down, under chat. `tidy` also drops the
+-- two keys Stoa 1.5.2's test builds wrote a level too high, where
+-- EllesmereUI never read them.
+local function ellChat(tidy)
+	local own = ellProfile("EllesmereUIChat")
+	if not own then return nil end
+	if tidy then own.chatPosition, own.chatSize = nil, nil end
+	return type(own.chat) == "table" and own.chat or nil
 end
 
 -- The damage meter's first window: its settings sit one table down, under dm.
@@ -802,7 +812,7 @@ local function ellDocked(db)
 	local fit = Stoa.db.ellesmereFit
 	if not (fit and fit.chatAt) or db.slim or Console.bare or not db.houseChat then return false end
 	if not addonOn("EllesmereUIChat") then return false end
-	local own = ellProfile("EllesmereUIChat")
+	local own = ellChat()
 	local pos = own and own.chatPosition
 	if type(pos) ~= "table" or type(pos.y) ~= "number" then return false end
 	-- Still on the console: the player may have nudged or resized it since,
@@ -822,7 +832,7 @@ function Console:FitEllesmere()
 	local fit = Stoa.db.ellesmereFit or {}
 	local done = {}
 	local chat = addonOn("EllesmereUIChat") and Stoa.Conflicts:SteppedAside("ChatLook") and self.db.houseChat
-		and ellProfile("EllesmereUIChat")
+		and ellChat(true)
 	if chat then
 		if fit.chatBefore == nil then
 			fit.chatBefore = { position = shallow(chat.chatPosition) }
@@ -848,7 +858,7 @@ end
 function Console:UnfitEllesmere()
 	local fit = Stoa.db.ellesmereFit
 	if not fit then return false end
-	local chat = ellProfile("EllesmereUIChat")
+	local chat = ellChat(true)
 	if chat and fit.chatBefore then
 		-- A spot that lay on the console (Stoa's Edit Mode layout rests the
 		-- chat there), or none at all, would leave the chat seated:
