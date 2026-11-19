@@ -117,6 +117,12 @@ local RULES = {
 		},
 	},
 	{
+		-- Rows of cooldown icons. Stoa has no part to step aside: the Halo
+		-- shows cooldowns, so "Use STOA's" only switches the other addon off.
+		key = "cooldowns", job = "cooldown icon rows (STOA shows cooldowns on the Halo)", modules = {},
+		addons = { { "EllesmereUICooldownManager", "EllesmereUI Cooldown Manager" } },
+	},
+	{
 		-- Unit frames that leave party and raid frames to another module.
 		key = "target", job = "the target frame", modules = { "Target" },
 		addons = { { "EllesmereUIUnitFrames", "EllesmereUI Unit Frames" } },
