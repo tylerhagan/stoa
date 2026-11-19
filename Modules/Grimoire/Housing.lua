@@ -803,9 +803,10 @@ local function ellDocked(db)
 	if not addonOn("EllesmereUIChat") then return false end
 	local own = ellProfile("EllesmereUIChat")
 	local pos = own and own.chatPosition
-	if type(pos) ~= "table" or type(pos.x) ~= "number" or type(pos.y) ~= "number" then return false end
-	-- EllesmereUI re-measures and re-saves the spot, so it drifts by fractions.
-	return math.abs(pos.x - fit.chatAt.x) < 3 and math.abs(pos.y - fit.chatAt.y) < 3
+	if type(pos) ~= "table" or type(pos.y) ~= "number" then return false end
+	-- Still on the console: the player may have nudged or resized it since,
+	-- which re-saves the spot, so only its height on the screen is asked.
+	return pos.y < Console:OpenHeight()
 end
 
 ellDockedNow = ellDocked
@@ -918,21 +919,10 @@ local function clearChat()
 	if ok and docked then return end
 	if daylightRoom() then return end
 	-- EllesmereUI's chat fitted on the page lies on the console on purpose.
-	if ellDocked(Console.db) then
-		-- The game's layout seats the chat first at login and EllesmereUI only
-		-- puts it back on its saved spot later (on hover), so Stoa seats it on
-		-- that same saved spot now. The spot is EllesmereUI's own, so its
-		-- guard has nothing to undo.
-		local chat, own = ChatFrame1, ellProfile("EllesmereUIChat")
-		local pos = own and own.chatPosition
-		local bottom = chat and chat:GetBottom()
-		if pos and type(bottom) == "number" and not (issecretvalue and issecretvalue(bottom))
-			and math.abs(bottom - pos.y) > 24 and not (InCombatLockdown() and chat.IsProtected and chat:IsProtected()) then
-			chat:ClearAllPoints()
-			chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-		end
-		return
-	end
+	-- EllesmereUI's chat fitted on the page lies on the console on purpose,
+	-- and EllesmereUI holds its spot and size with its own anchors: any
+	-- re-anchoring from here would drop the size.
+	if ellDocked(Console.db) then return end
 	liftChat()
 end
 
@@ -984,7 +974,6 @@ function Console:House()
 			safely(clearChat)
 			-- The other addon and Edit Mode place the chat a moment after login.
 			C_Timer.After(2, function() safely(clearChat) end)
-			C_Timer.After(5, function() safely(clearChat) end)
 		end
 		-- Daylight's other pieces keep clear of the console too.
 		safely(daylightRoom)
