@@ -357,18 +357,148 @@ function Conflicts:Answer(choice, button)
 	end
 end
 
--- Asks about each clash not settled before, one at a time. While the
--- welcome page is still to come or open, it asks those itself; only a
+-- Several clashes at once (a modular UI such as Daylight UI brings many):
+-- one page with a row for each, both choices on the row, and one button.
+local LIST_WIDTH, ROW_HEIGHT, ROWS_TOP = 560, 46, 132
+
+function Conflicts:BuildList()
+	local page = CreateFrame("Frame", "StoaAddonsList", UIParent)
+	page:SetSize(LIST_WIDTH, HEIGHT)
+	page:SetPoint("CENTER", 0, 60)
+	page:SetFrameStrata("DIALOG")
+	page:EnableMouse(true)
+	page:SetMovable(true)
+	page:RegisterForDrag("LeftButton")
+	page:SetScript("OnDragStart", page.StartMoving)
+	page:SetScript("OnDragStop", page.StopMovingOrSizing)
+	page:Hide()
+	UI.windowPanel(page, 0.97, { header = 64, footer = 58 })
+
+	local title = UI.text(page, "serif", Stoa.typeSize.title, "text", "LEFT")
+	title:SetPoint("TOPLEFT", PAD, -PAD + 4)
+	title:SetText("Other addons, shared jobs")
+
+	local body = UI.text(page, "sans", Stoa.typeSize.label, "text", "LEFT")
+	body:SetPoint("TOPLEFT", PAD, -82)
+	body:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+	body:SetWordWrap(true)
+	body:SetText("These addons look after parts of the screen STOA does too. Pick one for each, so they don't get in each other's way.")
+
+	local note = UI.text(page, "italic", Stoa.typeSize.body, "muted", "LEFT")
+	note:SetPoint("BOTTOMLEFT", PAD, PAD - 2)
+	note:SetPoint("RIGHT", page, "RIGHT", -PAD - 190, 0)
+	note:SetWordWrap(true)
+	note:SetText("Using STOA's turns the other addon's part off. /stoa addons asks again.")
+
+	page.done = UI.button(page, "Done", 170, function(button) self:AnswerAll(button) end, true)
+	page.done:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
+	page.rows = {}
+	self.list = page
+end
+
+-- Shows each row's choice, and whether the button will reload.
+function Conflicts:PaintList()
+	local page, reload = self.list, false
+	for i, entry in ipairs(self.listing or {}) do
+		local row = page.rows[i]
+		row.theirs:SetSelected(entry.choice ~= "ours")
+		row.ours:SetSelected(entry.choice == "ours")
+		if entry.choice == "ours" then reload = true end
+	end
+	page.done:SetReloads(reload)
+	page.done.text:SetText(reload and "Done, and reload" or "Done")
+end
+
+function Conflicts:AskAll(entries)
+	if not self.list then self:BuildList() end
+	local page = self.list
+	self.listing = entries
+	for i, entry in ipairs(entries) do
+		local row = page.rows[i]
+		if not row then
+			row = CreateFrame("Frame", nil, page)
+			row:SetHeight(ROW_HEIGHT)
+			row:SetPoint("TOPLEFT", PAD, -ROWS_TOP - (i - 1) * ROW_HEIGHT)
+			row:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+			row.job = UI.text(row, "sans", Stoa.typeSize.label, "text", "LEFT")
+			row.job:SetPoint("TOPLEFT", 0, -4)
+			row.them = UI.text(row, "sans", Stoa.typeSize.body, "muted", "LEFT")
+			row.them:SetPoint("TOPLEFT", row.job, "BOTTOMLEFT", 0, -3)
+			row.them:SetPoint("RIGHT", row, "RIGHT", -250, 0)
+			row.them:SetWordWrap(false)
+			row.ours = UI.button(row, "Use STOA's", 110, function()
+				self.listing[i].choice = "ours"
+				self:PaintList()
+			end)
+			row.ours:SetPoint("RIGHT", 0, 0)
+			row.theirs = UI.button(row, "Keep theirs", 110, function()
+				self.listing[i].choice = "theirs"
+				self:PaintList()
+			end)
+			row.theirs:SetPoint("RIGHT", row.ours, "LEFT", -8, 0)
+			page.rows[i] = row
+		end
+		entry.choice = entry.choice or "theirs"
+		row.job:SetText((entry.rule.job:gsub("^%l", string.upper)))
+		row.them:SetText(names(entry.loaded))
+		row:Show()
+	end
+	for i = #entries + 1, #page.rows do page.rows[i]:Hide() end
+	page:SetHeight(ROWS_TOP + #entries * ROW_HEIGHT + 58 + PAD)
+	self:PaintList()
+	page:Show()
+end
+
+function Conflicts:AnswerAll(button)
+	local entries = self.listing
+	if not entries then return end
+	self.listing = nil
+	local own = button and button.reloads
+	if not own then self.list:Hide() end
+	local kept = {}
+	for _, entry in ipairs(entries) do
+		if entry.choice == "ours" then
+			for _, addon in ipairs(entry.loaded) do turnOff(addon) end
+			choices()[entry.rule.key] = nil
+		else
+			choices()[entry.rule.key] = "theirs"
+			kept[#kept + 1] = entry.rule.job
+		end
+	end
+	if #kept > 0 and not own then
+		Stoa:Print(("Leaving %s to the other %s. /stoa addons to change."):format(
+			#kept < 2 and kept[1] or (table.concat(kept, ", ", 1, #kept - 1) .. " and " .. kept[#kept]),
+			#kept < 2 and "addon" or "addons"))
+	end
+	if not own then self:Next() end
+end
+
+-- Asks about each clash not settled before: a whole UI first and alone,
+-- one other alone on the small page, several together on the list. While
+-- the welcome page is still to come or open, it asks those itself; only a
 -- whole UI is asked about here.
 function Conflicts:Next()
 	local saved = choices()
 	local welcoming = Stoa.Welcome and Stoa.Welcome:Pending()
+	local waiting = {}
 	for _, entry in ipairs(found) do
 		if not entry.asked and saved[entry.rule.key] ~= "theirs" and (entry.rule.suite or not welcoming) then
-			entry.asked = true
-			Stoa:AfterCombat(function() self:Ask(entry) end)
-			return
+			if entry.rule.suite then
+				entry.asked = true
+				Stoa:AfterCombat(function() self:Ask(entry) end)
+				return
+			end
+			waiting[#waiting + 1] = entry
 		end
+	end
+	if #waiting == 1 then
+		waiting[1].asked = true
+		Stoa:AfterCombat(function() self:Ask(waiting[1]) end)
+		return
+	elseif #waiting > 1 then
+		for _, entry in ipairs(waiting) do entry.asked = true end
+		Stoa:AfterCombat(function() self:AskAll(waiting) end)
+		return
 	end
 	-- Settled: Stoa's look for the addons kept (Core/Looks.lua).
 	if Stoa.Looks and not welcoming then Stoa.Looks:Next() end
