@@ -639,6 +639,20 @@ local function housesChat(db)
 end
 Console.HousesChat = function(self) return housesChat(self.db) end
 
+-- Another chat addon was kept: the chat is theirs to dress, but Stoa's Edit
+-- Mode layout rests it inside the console, where it would lie across the
+-- pages. While it overlaps the console it is stood just above the edge;
+-- anywhere else it is left alone.
+local function liftChat()
+	local chat = ChatFrame1
+	if not chat or Console.bare then return end
+	local bottom, top = chat:GetBottom(), Console:OpenHeight()
+	if type(bottom) ~= "number" or (issecretvalue and issecretvalue(bottom)) or bottom >= top then return end
+	if InCombatLockdown() and chat.IsProtected and chat:IsProtected() then return end
+	chat:ClearAllPoints()
+	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), top + SLIM_CHAT_LIFT)
+end
+
 -- With the console switched off (the Minimal preset) there is no frame to
 -- house things in, but Blizzard's bar art, menu, bags and chat still need
 -- the same care: the gryphons and stone go, the menu and bags rest in the
@@ -683,6 +697,8 @@ function Console:House()
 			safely(placeChat)
 			safely(guardChat)
 			if artOn() then safely(buildTabs) end
+		elseif db.houseChat then
+			safely(liftChat)
 		end
 		if db.hideBarArt then safely(hideBarArt) end
 		if db.houseMenu then

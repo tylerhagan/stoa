@@ -8,7 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - Daylight UI: STOA now recognises Daylight UI's modules (bags, nameplates, chat, tooltips, action bars, unit frames, window skins, buffs, quest tracker and info panel) and asks which of the two you want for each part, as it does for Bagnon or Plater. Until you choose, STOA's part steps aside. /stoa addons asks again.
 - Other addons in Settings: Settings > Setup > Other addons lists each part another addon is doing too, with Keep theirs or Use STOA's, so a choice made or missed at login can be changed later.
-- Chat with another chat addon: when you keep another addon's chat (Daylight UI, Prat, Chattynator, Glass, Chatter), STOA no longer holds the chat in the console or draws its own tabs over it, and its chat comforts step aside too. The console's notes page takes that room.
+- Chat with another chat addon: when you keep another addon's chat (Daylight UI, Prat, Chattynator, Glass, Chatter), STOA no longer holds the chat in the console or draws its own tabs over it, and its chat comforts step aside too. The console's notes page takes that room. If the chat would lie across the console, STOA stands it just above the console's edge.
 - Classic feel: the preset now also hands the spellbook, talents and experience bar back to Blizzard, as it already did for windows, bags, the character sheet, tooltips and nameplates. Its note in Settings said the opposite of what it does and is corrected.
 
 ## 1.5.0
