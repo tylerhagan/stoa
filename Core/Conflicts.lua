@@ -359,7 +359,7 @@ end
 
 -- Several clashes at once (a modular UI such as Daylight UI brings many):
 -- one page with a row for each, both choices on the row, and one button.
-local LIST_WIDTH, ROW_HEIGHT, ROWS_TOP = 560, 46, 132
+local LIST_WIDTH, ROW_HEIGHT, ROWS_TOP = 640, 46, 132
 
 function Conflicts:BuildList()
 	local page = CreateFrame("Frame", "StoaAddonsList", UIParent)
@@ -422,6 +422,8 @@ function Conflicts:AskAll(entries)
 			row:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
 			row.job = UI.text(row, "sans", Stoa.typeSize.label, "text", "LEFT")
 			row.job:SetPoint("TOPLEFT", 0, -4)
+			row.job:SetPoint("RIGHT", row, "RIGHT", -250, 0)
+			row.job:SetWordWrap(false)
 			row.them = UI.text(row, "sans", Stoa.typeSize.body, "muted", "LEFT")
 			row.them:SetPoint("TOPLEFT", row.job, "BOTTOMLEFT", 0, -3)
 			row.them:SetPoint("RIGHT", row, "RIGHT", -250, 0)
