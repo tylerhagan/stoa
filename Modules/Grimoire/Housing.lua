@@ -653,6 +653,42 @@ local function liftChat()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), top + SLIM_CHAT_LIFT)
 end
 
+-- Daylight UI keeps "room along the bottom edge": its own data bar reports a
+-- height and every piece the player hasn't placed by hand (chat, meters,
+-- bars) starts above it. Stoa reports the console's height the same way, so
+-- Daylight's pieces stand on the console instead of under it. Its frames are
+-- never moved from here. True while Daylight is there to take the report.
+local roomWatched = false
+
+local function daylightRoom()
+	local dui = _G.DaylightUI
+	local movers = type(dui) == "table" and dui.Movers
+	if not (type(movers) == "table" and type(movers.SetBottomRoom) == "function") then return false end
+	if Console.bare then return true end
+	local want = Console:OpenHeight()
+	local function report()
+		if InCombatLockdown() then return end
+		local now = type(movers.BottomRoom) == "function" and movers.BottomRoom() or 0
+		if type(now) == "number" and now < want then pcall(movers.SetBottomRoom, want) end
+	end
+	report()
+	if not roomWatched and type(dui.On) == "function" then
+		roomWatched = true
+		-- Daylight's data bar reports its own height (or none) now and then.
+		pcall(dui.On, "BottomRoomChanged", function(px)
+			if type(px) == "number" and px < want then C_Timer.After(0, function() safely(report) end) end
+		end)
+	end
+	return true
+end
+
+-- Whoever else has the chat: Daylight places its own panel; any other
+-- addon's chat is the game's frame, lifted if it lies on the console.
+local function clearChat()
+	if daylightRoom() then return end
+	liftChat()
+end
+
 -- With the console switched off (the Minimal preset) there is no frame to
 -- house things in, but Blizzard's bar art, menu, bags and chat still need
 -- the same care: the gryphons and stone go, the menu and bags rest in the
@@ -698,10 +734,12 @@ function Console:House()
 			safely(guardChat)
 			if artOn() then safely(buildTabs) end
 		elseif db.houseChat then
-			safely(liftChat)
+			safely(clearChat)
 			-- The other addon and Edit Mode place the chat a moment after login.
-			C_Timer.After(2, function() safely(liftChat) end)
+			C_Timer.After(2, function() safely(clearChat) end)
 		end
+		-- Daylight's other pieces keep clear of the console too.
+		safely(daylightRoom)
 		if db.hideBarArt then safely(hideBarArt) end
 		if db.houseMenu then
 			safely(placeMenu)
