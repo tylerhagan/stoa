@@ -662,14 +662,25 @@ function Console:BuildManaPlay(mana, manaCap)
 	form:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -1)
 	form:SetPoint("TOPRIGHT", mana, "BOTTOMRIGHT", 0, -1)
 	form:Hide()
+	-- In a fight the game can hide the bar's width (the slim line's bar is
+	-- sized by the game's layout); the last width read in the open stands in.
+	local lastWidth
+	local function barWidth()
+		local width = Stoa:PlainNumber(mana:GetWidth())
+		if width and width > 0 then lastWidth = width end
+		return lastWidth
+	end
 	self.manaPlay = Stoa.Power.dress(mana, {
 		enabled = function(key) return db[key] end,
 		place = function(tex, f)
+			local width = barWidth()
+			if not width then return end
 			tex:ClearAllPoints()
-			tex:SetPoint("CENTER", mana, "LEFT", f * mana:GetWidth(), 0)
+			tex:SetPoint("CENTER", mana, "LEFT", f * width, 0)
 		end,
 		shade = function(tex, from, to)
-			local width = mana:GetWidth()
+			local width = barWidth()
+			if not width then return end
 			tex:ClearAllPoints()
 			tex:SetPoint("TOPLEFT", mana, "TOPLEFT", from * width, 0)
 			tex:SetPoint("BOTTOMRIGHT", mana, "BOTTOMLEFT", to * width, 0)

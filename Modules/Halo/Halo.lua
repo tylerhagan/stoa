@@ -1219,11 +1219,15 @@ end
 -- Shows evenly spaced tick marks for a channel of this many ticks.
 function Halo:SetTicks(count)
 	local cast = self.cast
+	-- A width the fight hides can't be multiplied; the last one read stands in.
+	local width = Stoa:PlainNumber(cast:GetWidth())
+	if width and width > 0 then cast.plainWidth = width else width = cast.plainWidth end
+	if not width then count = nil end
 	for i, tick in ipairs(cast.ticks) do
 		local shown = count and i < count
 		if shown then
 			tick:ClearAllPoints()
-			tick:SetPoint("CENTER", cast, "LEFT", cast:GetWidth() * (count - i) / count, 0)
+			tick:SetPoint("CENTER", cast, "LEFT", width * (count - i) / count, 0)
 		end
 		tick:SetShown(shown and true or false)
 	end
