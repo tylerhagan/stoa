@@ -35,12 +35,14 @@ local RULES = {
 			{ "ArkInventory", "ArkInventory" }, { "BetterBags", "BetterBags" },
 			{ "Combuctor", "Combuctor" }, { "LiteBag", "LiteBag" }, { "Inventorian", "Inventorian" },
 			{ "Sorted", "Sorted" }, { "DaylightUI_Bags", "Daylight UI Bags" },
+			{ "EllesmereUIBags", "EllesmereUI Bags" },
 		},
 	},
 	{
 		key = "plates", job = "nameplates", modules = { "Plates" },
 		addons = {
 			{ "DaylightUI_Nameplates", "Daylight UI Nameplates" },
+			{ "EllesmereUINameplates", "EllesmereUI Nameplates" },
 			{ "Plater", "Plater" }, { "TidyPlates_ThreatPlates", "Threat Plates" },
 			{ "TidyPlates", "TidyPlates" }, { "Kui_Nameplates", "KuiNameplates" },
 			{ "NeatPlates", "NeatPlates" }, { "Platynator", "Platynator" },
@@ -49,7 +51,7 @@ local RULES = {
 	{
 		key = "chat", job = "the chat", modules = { "ChatLook", "Chat" },
 		addons = {
-			{ "DaylightUI_Chat", "Daylight UI Chat" },
+			{ "DaylightUI_Chat", "Daylight UI Chat" }, { "EllesmereUIChat", "EllesmereUI Chat" },
 			{ "Prat-3.0", "Prat" }, { "Chattynator", "Chattynator" },
 			{ "Glass", "Glass" }, { "Chatter", "Chatter" },
 		},
@@ -60,11 +62,15 @@ local RULES = {
 	},
 	{
 		key = "bars", job = "action bars", modules = { "ActionBars" },
-		addons = { { "Bartender4", "Bartender" }, { "Dominos", "Dominos" }, { "DaylightUI_ActionBars", "Daylight UI Action Bars" } },
+		addons = {
+			{ "Bartender4", "Bartender" }, { "Dominos", "Dominos" },
+			{ "DaylightUI_ActionBars", "Daylight UI Action Bars" },
+			{ "EllesmereUIActionBars", "EllesmereUI Action Bars" },
+		},
 	},
 	{
 		key = "minimap", job = "the minimap", modules = { "Minimap" },
-		addons = { { "SexyMap", "SexyMap" }, { "BasicMinimap", "BasicMinimap" } },
+		addons = { { "SexyMap", "SexyMap" }, { "BasicMinimap", "BasicMinimap" }, { "EllesmereUIMinimap", "EllesmereUI Minimap" } },
 	},
 	{
 		key = "tray", job = "gathering the minimap's addon icons", modules = { "Tray" },
@@ -77,7 +83,7 @@ local RULES = {
 		key = "group", job = "party and raid frames", modules = { "Party", "Raid" },
 		addons = {
 			{ "VuhDo", "VuhDo" }, { "Grid2", "Grid2" }, { "Cell", "Cell" },
-			{ "HealBot", "HealBot" },
+			{ "HealBot", "HealBot" }, { "EllesmereUIRaidFrames", "EllesmereUI Raid Frames" },
 			-- These draw a target frame too, so Stoa's target plaque goes with them.
 			{ "ShadowedUnitFrames", "Shadowed Unit Frames", { "Target" } },
 			{ "DaylightUI_UnitFrames", "Daylight UI Unit Frames", { "Target" } },
@@ -93,7 +99,7 @@ local RULES = {
 	},
 	{
 		key = "meters", job = "damage and healing meters", modules = { "Meters" },
-		addons = { { "Details", "Details" }, { "Skada", "Skada" }, { "Recount", "Recount" } },
+		addons = { { "Details", "Details" }, { "Skada", "Skada" }, { "Recount", "Recount" }, { "EllesmereUIDamageMeters", "EllesmereUI Damage Meters" } },
 	},
 	{
 		key = "map", job = "the world map", modules = { "Map" },
@@ -101,11 +107,19 @@ local RULES = {
 	},
 	{
 		key = "windows", job = "the game's windows", modules = { "Windows", "MoreWindows", "Character", "Spellbook" },
-		addons = { { "DaylightUI_Skins", "Daylight UI Window Skins" } },
+		addons = { { "DaylightUI_Skins", "Daylight UI Window Skins" }, { "EllesmereUIBlizzardSkin", "EllesmereUI Blizzard Skin" } },
 	},
 	{
 		key = "top", job = "buffs and the quest list", modules = { "Top" },
-		addons = { { "DaylightUI_Buffs", "Daylight UI Buffs" }, { "DaylightUI_Quests", "Daylight UI Quest Tracker" } },
+		addons = {
+			{ "DaylightUI_Buffs", "Daylight UI Buffs" }, { "DaylightUI_Quests", "Daylight UI Quest Tracker" },
+			{ "EllesmereUIQuestTracker", "EllesmereUI Quest Tracker" },
+		},
+	},
+	{
+		-- Unit frames that leave party and raid frames to another module.
+		key = "target", job = "the target frame", modules = { "Target" },
+		addons = { { "EllesmereUIUnitFrames", "EllesmereUI Unit Frames" } },
 	},
 	{
 		key = "corner", job = "the minimap, experience bar and meters", modules = { "Minimap", "XPBar", "Meters" },

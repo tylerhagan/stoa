@@ -4,6 +4,11 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.5.2
+
+- EllesmereUI: STOA now recognises EllesmereUI's modules (action bars, bags, chat, nameplates, minimap, raid frames, unit frames, damage meters, quest tracker and Blizzard skin) and asks which of the two you want for each part, on the same page as for Daylight UI. Until you choose, STOA's part steps aside. Keeping EllesmereUI's unit frames keeps STOA's target plaque away.
+- What's new: the note carries the 1.5 lines beside 1.5.1's again.
+
 ## 1.5.1
 
 - Daylight UI: STOA now recognises Daylight UI's modules (bags, nameplates, chat, tooltips, action bars, unit frames, window skins, buffs, quest tracker and info panel) and asks which of the two you want for each part, as it does for Bagnon or Plater. Until you choose, STOA's part steps aside. /stoa addons asks again.
