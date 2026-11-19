@@ -47,7 +47,7 @@ local RULES = {
 		},
 	},
 	{
-		key = "chat", job = "the chat", modules = { "ChatLook" },
+		key = "chat", job = "the chat", modules = { "ChatLook", "Chat" },
 		addons = {
 			{ "DaylightUI_Chat", "Daylight UI Chat" },
 			{ "Prat-3.0", "Prat" }, { "Chattynator", "Chattynator" },
@@ -123,6 +123,14 @@ local function disable(folder)
 	end
 end
 
+local function enable(folder)
+	if C_AddOns and C_AddOns.EnableAddOn then
+		C_AddOns.EnableAddOn(folder)
+	elseif EnableAddOn then
+		EnableAddOn(folder)
+	end
+end
+
 local function choices()
 	Stoa.db.addons = Stoa.db.addons or {}
 	return Stoa.db.addons
@@ -167,6 +175,18 @@ function Conflicts:Settle(entry, choice)
 	end
 	choices()[entry.rule.key] = "theirs"
 	return false
+end
+
+-- From Settings: "theirs" keeps the other addon, "ours" turns it off (and
+-- "theirs" or "ask" turns it back on if this session turned it off), "ask"
+-- forgets the answer. All of it takes effect at the next reload.
+function Conflicts:Pick(entry, choice)
+	entry.asked = true
+	entry.picked = choice
+	for _, addon in ipairs(entry.loaded) do
+		if choice == "ours" then disable(addon[1]) else enable(addon[1]) end
+	end
+	choices()[entry.rule.key] = choice == "theirs" and "theirs" or nil
 end
 
 -- Called once at login, before modules are enabled.

@@ -632,6 +632,13 @@ local function safely(fn)
 	end)
 end
 
+-- Chat is housed only while no other chat addon was kept for the job
+-- (Core/Conflicts.lua): theirs draws its own frame and tabs.
+local function housesChat(db)
+	return db.houseChat and not (Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook"))
+end
+Console.HousesChat = function(self) return housesChat(self.db) end
+
 -- With the console switched off (the Minimal preset) there is no frame to
 -- house things in, but Blizzard's bar art, menu, bags and chat still need
 -- the same care: the gryphons and stone go, the menu and bags rest in the
@@ -640,7 +647,7 @@ function Console:OnOff()
 	self.bare = true
 	local db = self.db
 	local function apply()
-		if db.houseChat then
+		if housesChat(db) then
 			safely(placeChat)
 			safely(guardChat)
 		end
@@ -672,7 +679,7 @@ function Console:House()
 	local db = self.db
 
 	local function apply()
-		if db.houseChat then
+		if housesChat(db) then
 			safely(placeChat)
 			safely(guardChat)
 			if artOn() then safely(buildTabs) end
@@ -684,7 +691,7 @@ function Console:House()
 		end
 	end
 
-	if db.houseChat or db.slim then
+	if housesChat(db) or db.slim then
 		-- Notes now arrive in chat, so the notes page steps aside (the slim
 		-- line has no room for it either way).
 		self.leftPage:Hide()
@@ -709,7 +716,7 @@ function Console:House()
 		EventRegistry:RegisterCallback("EditMode.Exit", apply, self)
 	end
 
-	if db.houseChat and artOn() then
+	if housesChat(db) and artOn() then
 		-- Read-only hooks: Stoa's tabs follow the dock, nothing is changed.
 		for _, name in ipairs({ "FCFDock_UpdateTabs", "FCFDock_SelectWindow", "FCF_SetWindowName", "FCF_OpenNewWindow", "FCF_Close", "FCF_DockFrame", "FCF_UnDockFrame" }) do
 			if _G[name] then hooksecurefunc(name, safeRefresh) end
