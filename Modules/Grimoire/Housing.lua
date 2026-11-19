@@ -719,7 +719,9 @@ local function dockChat()
 		dockView = dockView or api.For("STOA")
 		if type(dockView) == "table" and type(dockView.Override) == "function" then
 			local width = math.floor((Console:ChatWidth() + 2 * DOCK_SIDE) / scale) - DOCK_PAD
-			local height = math.floor((Console:OpenHeight() - DOCK_BOTTOM - DOCK_TOP) / scale) - DOCK_PAD
+			-- With the art the gold border sits a little under the console's top.
+			local top = artOn() and ART_CHAT_GAP + 2 or DOCK_TOP
+			local height = math.floor((Console:OpenHeight() - DOCK_BOTTOM - top) / scale) - DOCK_PAD
 			pcall(dockView.Override, "Chat", "matchInfo", false)
 			pcall(dockView.Override, "Chat", "width", width)
 			pcall(dockView.Override, "Chat", "height", height)
