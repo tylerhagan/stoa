@@ -280,7 +280,7 @@ function Conflicts:Check()
 			if isLoaded(addon[1]) and (not addon.on or addon.on()) then loaded[#loaded + 1] = addon end
 		end
 		-- A part the player already switched off has nothing to fight over.
-		local running = rule.suite
+		local running = rule.suite or #(rule.modules or {}) == 0
 		for _, name in ipairs(rule.modules or {}) do
 			local settings = Stoa.db.modules[name]
 			if not settings or settings.enabled ~= false then running = true end

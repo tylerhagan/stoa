@@ -884,6 +884,9 @@ Stoa.commands.fit = function(rest)
 		local l, b = cf and cf:GetLeft(), cf and cf:GetBottom()
 		if type(l) == "number" and type(b) == "number" and not (issecretvalue and (issecretvalue(l) or issecretvalue(b))) then
 			Stoa:Print(("Chat sits at %.1f, %.1f; saved %s, %s; docked: %s."):format(l, b, tostring(chat and chat.chatPosition and chat.chatPosition.x), tostring(chat and chat.chatPosition and chat.chatPosition.y), tostring(ellDocked(Console.db))))
+			local size = chat and chat.chatSize
+			Stoa:Print(("Chat is %.0f x %.0f; saved size %s x %s; would ask %s x %s."):format(cf:GetWidth() or 0, cf:GetHeight() or 0,
+				tostring(type(size) == "table" and size.w), tostring(type(size) == "table" and size.h), tostring(select(3, ellChatRect())), tostring(select(4, ellChatRect()))))
 		end
 		return
 	end
