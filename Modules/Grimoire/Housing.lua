@@ -685,7 +685,7 @@ end
 -- Daylight UI's chat kept, and the chat wanted in the console: its panel is
 -- docked on the console's left page, where Stoa's own chat would stand.
 -- Daylight's mover for it is suspended (its saved spot stays, and comes back
--- when the two part), and its size and background are overridden through
+-- when the two part), and its size is overridden through
 -- Daylight's plugin API, which never saves them. Daylight's code is only
 -- called, never copied; if any call is missing the chat just stands above
 -- the console.
@@ -728,10 +728,8 @@ local function dockChat()
 			pcall(dockView.Override, "Chat", "matchInfo", false)
 			pcall(dockView.Override, "Chat", "width", width)
 			pcall(dockView.Override, "Chat", "height", height)
-			-- The console's ink is the background. The panel itself stays
-			-- shown, as Daylight's tabs live on it.
-			pcall(dockView.Override, "Chat", "panelAlphaOwn", true)
-			pcall(dockView.Override, "Chat", "panelAlpha", 0)
+			-- The panel keeps Daylight's own background: it fades in on
+			-- hover and backs the tab row where that stands over the world.
 		end
 	end
 	if not pcall(movers.Suspend, "chat", true) then return false end
