@@ -700,7 +700,8 @@ local function wantsDock(db)
 		and Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook")
 		and C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("DaylightUI_Chat") or false
 end
-Console.DocksChat = function(self) return wantsDock(self.db) end
+local ellDockedNow -- EllesmereUI's chat fitted on the page (set below)
+Console.DocksChat = function(self) return wantsDock(self.db) or (ellDockedNow and ellDockedNow(self.db)) or false end
 
 local function dockChat()
 	if not wantsDock(Console.db) then return false end
@@ -738,6 +739,140 @@ local function dockChat()
 	return true
 end
 
+-- EllesmereUI keeps its chat and its damage meter where its own saved
+-- settings say and puts them back if another addon moves them, and it has no
+-- way for an addon to ask for a place. So Stoa fits them only when the
+-- player asks (/stoa fit, or the button in Settings): it writes the two
+-- positions into EllesmereUI's saved settings, keeps what was there before
+-- in Stoa.db.ellesmereFit, and reloads so EllesmereUI places them itself.
+-- /stoa fit undo puts the old ones back. Only its saved values are touched,
+-- never its frames or code; if they move in a later EllesmereUI the fit
+-- simply does nothing.
+local ELL_SIDE = 34 -- EllesmereUI's icon column left of the chat lines
+local ELL_EDIT = 30 -- its edit box under them
+local ELL_METER = { point = "TOPLEFT", relPoint = "TOPLEFT", x = 0, y = 0 } -- where Stoa keeps its own
+
+local function ellProfile(folder)
+	local db = _G.EllesmereUIDB
+	if type(db) ~= "table" or type(db.profiles) ~= "table" then return nil end
+	local profile = db.profiles[db.activeProfile or "Default"]
+	local addons = type(profile) == "table" and profile.addons
+	local own = type(addons) == "table" and addons[folder]
+	return type(own) == "table" and own or nil
+end
+
+local function shallow(t)
+	if type(t) ~= "table" then return false end
+	local c = {}
+	for k, v in pairs(t) do c[k] = v end
+	return c
+end
+
+local function addonOn(name)
+	return C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded(name) or false
+end
+
+-- Where EllesmereUI's chat lines go on the console's left page: its tab row
+-- stands on the console's top edge, as Stoa's own tabs do.
+local function ellChatRect()
+	local chat = ChatFrame1
+	local scale = chat and chat:GetScale() or 1
+	if type(scale) ~= "number" or scale <= 0 then scale = 1 end
+	local x = Console:PageInset() + ELL_SIDE
+	local y = DOCK_BOTTOM + ELL_EDIT
+	local top = artOn() and ART_CHAT_GAP + 2 or DOCK_TOP
+	local w = Console:ChatWidth() - ELL_SIDE
+	local h = Console:OpenHeight() - y - top
+	local function r(v) return math.floor(v / scale + 0.5) end
+	return r(x), r(y), r(w), r(h)
+end
+
+-- True while EllesmereUI's saved chat spot is the one Stoa wrote.
+local function ellDocked(db)
+	local fit = Stoa.db.ellesmereFit
+	if not (fit and fit.chatAt) or db.slim or Console.bare or not db.houseChat then return false end
+	if not addonOn("EllesmereUIChat") then return false end
+	local own = ellProfile("EllesmereUIChat")
+	local pos = own and own.chatPosition
+	return type(pos) == "table" and pos.x == fit.chatAt.x and pos.y == fit.chatAt.y or false
+end
+
+ellDockedNow = ellDocked
+
+function Console:CanFitEllesmere()
+	return addonOn("EllesmereUIChat") or addonOn("EllesmereUIDamageMeters")
+end
+
+-- Writes the fit. Returns what was fitted as words, or nil and why not.
+function Console:FitEllesmere()
+	if self.bare or self.db.slim then return nil, "The fit needs the full console." end
+	local fit = Stoa.db.ellesmereFit or {}
+	local done = {}
+	local chat = addonOn("EllesmereUIChat") and Stoa.Conflicts:SteppedAside("ChatLook") and self.db.houseChat
+		and ellProfile("EllesmereUIChat")
+	if chat then
+		if fit.chatBefore == nil then
+			fit.chatBefore = { position = shallow(chat.chatPosition), size = shallow(chat.chatSize) }
+		end
+		local x, y, w, h = ellChatRect()
+		chat.chatPosition = { point = "BOTTOMLEFT", relPoint = "BOTTOMLEFT", x = x, y = y }
+		chat.chatSize = { w = w, h = h }
+		fit.chatAt = { x = x, y = y }
+		done[#done + 1] = "the chat"
+	end
+	local meters = addonOn("EllesmereUIDamageMeters") and ellProfile("EllesmereUIDamageMeters")
+	local window = meters and type(meters.windows) == "table" and meters.windows[1]
+	if type(window) == "table" then
+		if fit.meterBefore == nil then fit.meterBefore = { position = shallow(window.position) } end
+		window.position = shallow(ELL_METER)
+		done[#done + 1] = "the damage meter"
+	end
+	if #done == 0 then return nil, "STOA found nothing of EllesmereUI's to fit (its chat must be the one kept)." end
+	Stoa.db.ellesmereFit = fit
+	return table.concat(done, " and ")
+end
+
+-- Puts back what EllesmereUI had before the fit. True when something was.
+function Console:UnfitEllesmere()
+	local fit = Stoa.db.ellesmereFit
+	if not fit then return false end
+	local chat = ellProfile("EllesmereUIChat")
+	if chat and fit.chatBefore then
+		chat.chatPosition = fit.chatBefore.position or nil
+		chat.chatSize = fit.chatBefore.size or nil
+	end
+	local meters = ellProfile("EllesmereUIDamageMeters")
+	local window = meters and type(meters.windows) == "table" and meters.windows[1]
+	if type(window) == "table" and fit.meterBefore then window.position = fit.meterBefore.position or nil end
+	Stoa.db.ellesmereFit = nil
+	return true
+end
+
+Stoa.commands.fit = function(rest)
+	if InCombatLockdown() then
+		Stoa:Print("Not in a fight. Try /stoa fit again after it.")
+		return
+	end
+	if strtrim(rest or ""):lower() == "undo" then
+		if Console:UnfitEllesmere() then
+			Stoa:Reload()
+		else
+			Stoa:Print("STOA hasn't fitted anything of EllesmereUI's.")
+		end
+		return
+	end
+	local ok, what, why = pcall(Console.FitEllesmere, Console)
+	if not ok then
+		Stoa:Print("STOA couldn't read EllesmereUI's settings, so nothing was changed.")
+		return
+	end
+	if not what then
+		Stoa:Print(why or "Nothing to fit.")
+		return
+	end
+	Stoa:Reload()
+end
+
 -- Whoever else has the chat: Daylight's panel is docked or stands above the
 -- console; any other addon's chat is the game's frame, lifted if it lies on
 -- the console.
@@ -745,6 +880,8 @@ local function clearChat()
 	local ok, docked = pcall(dockChat)
 	if ok and docked then return end
 	if daylightRoom() then return end
+	-- EllesmereUI's chat fitted on the page lies on the console on purpose.
+	if ellDocked(Console.db) then return end
 	liftChat()
 end
 
@@ -806,7 +943,7 @@ function Console:House()
 		end
 	end
 
-	if housesChat(db) or db.slim or wantsDock(db) then
+	if housesChat(db) or db.slim or wantsDock(db) or ellDocked(db) then
 		-- Notes now arrive in chat, so the notes page steps aside (the slim
 		-- line has no room for it either way).
 		self.leftPage:Hide()
