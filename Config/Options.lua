@@ -697,8 +697,8 @@ local function build()
 	button("restore", "Put the game's settings back", "Puts back the game settings STOA changed (far camera, map fade, target nameplate size, combined bags, proc art), as they were before STOA. One you've changed yourself since stays as you set it.", "Put back", command("restore"), { cmd = "/stoa restore", words = "cvar ledger reset camera" })
 	group = "Other addons"
 	button("addons", "Other addons", "Choose again which of STOA's parts step aside for other addons you run, such as bags or nameplates.", "Choose again", command("addons"), { cmd = "/stoa addons", words = "conflicts elvui bagnon companion" })
-	local console = Stoa.modules.Grimoire
-	if console and console.CanFitEllesmere and console:CanFitEllesmere() then
+	local fitter = Stoa.modules.Grimoire
+	if fitter and fitter.CanFitEllesmere and fitter:CanFitEllesmere() then
 		button("fitEllesmere", "Fit EllesmereUI to the console", "Places EllesmereUI's chat on the console's left page and its damage meter top left, by writing those two positions into EllesmereUI's own settings, then reloads. STOA keeps the old positions.", "Fit and reload", command("fit"), { cmd = "/stoa fit", words = "ellesmere eui chat dock damage meter position" })
 		button("unfitEllesmere", "Undo the EllesmereUI fit", "Puts EllesmereUI's chat and damage meter back where they were before the fit, then reloads.", "Undo and reload", command("fit undo"), { cmd = "/stoa fit undo", words = "ellesmere eui chat dock damage meter undo" })
 	end
