@@ -682,9 +682,61 @@ local function daylightRoom()
 	return true
 end
 
--- Whoever else has the chat: Daylight places its own panel; any other
--- addon's chat is the game's frame, lifted if it lies on the console.
+-- Daylight UI's chat kept, and the chat wanted in the console: its panel is
+-- docked on the console's left page, where Stoa's own chat would stand.
+-- Daylight's mover for it is suspended (its saved spot stays, and comes back
+-- when the two part), and its size and background are overridden through
+-- Daylight's plugin API, which never saves them. Daylight's code is only
+-- called, never copied; if any call is missing the chat just stands above
+-- the console.
+local DOCK_PAD = 18 -- Daylight's panel is this much larger than its chat size
+local dockView, dockSized = nil, false
+
+local function wantsDock(db)
+	return db.houseChat and not db.slim and not Console.bare
+		and Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook")
+		and C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("DaylightUI_Chat") or false
+end
+Console.DocksChat = function(self) return wantsDock(self.db) end
+
+local function dockChat()
+	if not wantsDock(Console.db) then return false end
+	local dui = _G.DaylightUI
+	local api = type(dui) == "table" and dui.API
+	local movers = type(dui) == "table" and dui.Movers
+	if not (type(api) == "table" and type(api.For) == "function" and type(movers) == "table"
+		and type(movers.Suspend) == "function" and type(movers.Get) == "function") then return false end
+	local entry = movers.Get("chat")
+	local holder = type(entry) == "table" and entry.frame
+	if not (type(holder) == "table" and holder.SetPoint and holder.GetScale) then return false end
+	if InCombatLockdown() then return true end
+	local scale = holder:GetScale()
+	if type(scale) ~= "number" or scale <= 0 then scale = 1 end
+	if not dockSized then
+		dockSized = true
+		dockView = dockView or api.For("STOA")
+		if type(dockView) == "table" and type(dockView.Override) == "function" then
+			local width = math.floor(Console:ChatWidth() / scale) - DOCK_PAD
+			local height = math.floor((Console:OpenHeight() - CHAT_BOTTOM - CHAT_TOP_PAD) / scale) - DOCK_PAD
+			pcall(dockView.Override, "Chat", "matchInfo", false)
+			pcall(dockView.Override, "Chat", "width", width)
+			pcall(dockView.Override, "Chat", "height", height)
+			-- The console's ink is the background.
+			pcall(dockView.Override, "Chat", "panelShown", false)
+		end
+	end
+	if not pcall(movers.Suspend, "chat", true) then return false end
+	holder:ClearAllPoints()
+	holder:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", Console:PageInset() / scale, CHAT_BOTTOM / scale)
+	return true
+end
+
+-- Whoever else has the chat: Daylight's panel is docked or stands above the
+-- console; any other addon's chat is the game's frame, lifted if it lies on
+-- the console.
 local function clearChat()
+	local ok, docked = pcall(dockChat)
+	if ok and docked then return end
 	if daylightRoom() then return end
 	liftChat()
 end
@@ -747,7 +799,7 @@ function Console:House()
 		end
 	end
 
-	if housesChat(db) or db.slim then
+	if housesChat(db) or db.slim or wantsDock(db) then
 		-- Notes now arrive in chat, so the notes page steps aside (the slim
 		-- line has no room for it either way).
 		self.leftPage:Hide()
