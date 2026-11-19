@@ -77,7 +77,10 @@ local RULES = {
 		key = "group", job = "party and raid frames", modules = { "Party", "Raid" },
 		addons = {
 			{ "VuhDo", "VuhDo" }, { "Grid2", "Grid2" }, { "Cell", "Cell" },
-			{ "HealBot", "HealBot" }, { "ShadowedUnitFrames", "Shadowed Unit Frames" }, { "DaylightUI_UnitFrames", "Daylight UI Unit Frames" },
+			{ "HealBot", "HealBot" },
+			-- These draw a target frame too, so Stoa's target plaque goes with them.
+			{ "ShadowedUnitFrames", "Shadowed Unit Frames", { "Target" } },
+			{ "DaylightUI_UnitFrames", "Daylight UI Unit Frames", { "Target" } },
 		},
 	},
 	{
@@ -208,6 +211,10 @@ function Conflicts:Check()
 			found[#found + 1] = { rule = rule, loaded = loaded }
 			if not rule.suite then
 				for _, name in ipairs(rule.modules) do aside[name] = rule end
+				-- An addon that does more than the rule's job names the rest.
+				for _, addon in ipairs(loaded) do
+					for _, name in ipairs(addon[3] or {}) do aside[name] = rule end
+				end
 			end
 		end
 	end
