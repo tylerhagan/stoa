@@ -124,6 +124,13 @@ local RULES = {
 		addons = { { "EllesmereUICooldownManager", "EllesmereUI Cooldown Manager" } },
 	},
 	{
+		-- Icons for buffs you're missing. Stoa reminds on the console and
+		-- the Halo, with no part of its own to step aside.
+		key = "reminders", job = "buff reminders", modules = {},
+		body = "EllesmereUI AuraBuff Reminders shows an icon for each buff you're missing. STOA reminds you on the console and the Halo, so you may not want both.",
+		addons = { { "EllesmereUIAuraBuffReminders", "EllesmereUI AuraBuff Reminders" } },
+	},
+	{
 		-- Unit frames that leave party and raid frames to another module.
 		key = "target", job = "the target frame", modules = { "Target" },
 		addons = { { "EllesmereUIUnitFrames", "EllesmereUI Unit Frames" } },
