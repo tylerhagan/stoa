@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.5.3
 
+- **A free right side**: Settings > Console > "Leave the console's right side free" hides the Ready, Journey and Company pages together, so the leather right of the action bars is yours for another window, such as a damage meter from another addon. Off unless you turn it on.
 - Fixed: choosing STOA's damage meter over EllesmereUI's left no meter at all. EllesmereUI switches the game's own meter off and only puts it back while it runs; STOA now turns it back on at the next login after you pick STOA's.
 - `/stoa restore` and `/stoa editmode back` return to the Edit Mode layout you had before STOA's.
 - Lighter at rest: the class mark's timer only runs while a timed mark is counting down.
