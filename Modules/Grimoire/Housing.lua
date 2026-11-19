@@ -723,8 +723,10 @@ local function dockChat()
 			pcall(dockView.Override, "Chat", "matchInfo", false)
 			pcall(dockView.Override, "Chat", "width", width)
 			pcall(dockView.Override, "Chat", "height", height)
-			-- The console's ink is the background.
-			pcall(dockView.Override, "Chat", "panelShown", false)
+			-- The console's ink is the background. The panel itself stays
+			-- shown, as Daylight's tabs live on it.
+			pcall(dockView.Override, "Chat", "panelAlphaOwn", true)
+			pcall(dockView.Override, "Chat", "panelAlpha", 0)
 		end
 	end
 	if not pcall(movers.Suspend, "chat", true) then return false end

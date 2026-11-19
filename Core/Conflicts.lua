@@ -113,6 +113,34 @@ local RULES = {
 	},
 }
 
+-- Daylight UI's character window is part of its core, switched by its own
+-- setting.
+local function daylight(scope, path, value)
+	local dui = _G.DaylightUI
+	if type(dui) ~= "table" or type(dui.Get) ~= "function" or type(dui.Set) ~= "function" then return nil end
+	if value == nil then
+		local ok, now = pcall(dui.Get, dui, scope, path)
+		if ok then return now end
+		return nil
+	end
+	pcall(dui.Set, dui, scope, path, value)
+end
+
+RULES[#RULES + 1] = {
+	key = "sheet", job = "the character window", modules = { "Character" },
+	addons = { {
+		"DaylightUI", "Daylight UI's character window",
+		on = function()
+			local dui = _G.DaylightUI
+			if type(dui) ~= "table" or type(dui.GetModule) ~= "function" then return false end
+			local ok, module = pcall(dui.GetModule, dui, "Character")
+			return ok and module ~= nil and daylight("Character", "enabled") ~= false
+		end,
+		off = function() daylight("Character", "enabled", false) end,
+		back = function() daylight("Character", "enabled", true) end,
+	} },
+}
+
 local function isLoaded(folder)
 	if C_AddOns and C_AddOns.IsAddOnLoaded then return C_AddOns.IsAddOnLoaded(folder) end
 	return IsAddOnLoaded and IsAddOnLoaded(folder)
@@ -132,6 +160,16 @@ local function enable(folder)
 	elseif EnableAddOn then
 		EnableAddOn(folder)
 	end
+end
+
+-- A part of a larger addon (an entry with on, off and back) is switched in
+-- that addon's own settings instead of turning the whole addon off.
+local function turnOff(addon)
+	if addon.off then addon.off() else disable(addon[1]) end
+end
+
+local function turnOn(addon)
+	if addon.back then addon.back() else enable(addon[1]) end
 end
 
 local function choices()
@@ -172,7 +210,7 @@ end
 function Conflicts:Settle(entry, choice)
 	entry.asked = true
 	if choice == "ours" then
-		for _, addon in ipairs(entry.loaded) do disable(addon[1]) end
+		for _, addon in ipairs(entry.loaded) do turnOff(addon) end
 		choices()[entry.rule.key] = nil
 		return true
 	end
@@ -187,7 +225,7 @@ function Conflicts:Pick(entry, choice)
 	entry.asked = true
 	entry.picked = choice
 	for _, addon in ipairs(entry.loaded) do
-		if choice == "ours" then disable(addon[1]) else enable(addon[1]) end
+		if choice == "ours" then turnOff(addon) else turnOn(addon) end
 	end
 	choices()[entry.rule.key] = choice == "theirs" and "theirs" or nil
 end
@@ -199,7 +237,7 @@ function Conflicts:Check()
 	for _, rule in ipairs(RULES) do
 		local loaded = {}
 		for _, addon in ipairs(rule.addons) do
-			if isLoaded(addon[1]) then loaded[#loaded + 1] = addon end
+			if isLoaded(addon[1]) and (not addon.on or addon.on()) then loaded[#loaded + 1] = addon end
 		end
 		-- A part the player already switched off has nothing to fight over.
 		local running = rule.suite
@@ -306,7 +344,7 @@ function Conflicts:Answer(choice, button)
 	if not own then self.page:Hide() end
 	local rule = entry.rule
 	if choice == "ours" then
-		for _, addon in ipairs(entry.loaded) do disable(addon[1]) end
+		for _, addon in ipairs(entry.loaded) do turnOff(addon) end
 		choices()[rule.key] = nil
 		if not own then Stoa:Reload() end
 	elseif rule.suite then
