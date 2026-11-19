@@ -700,16 +700,12 @@ function Console:BuildNotes(frame, space)
 	page:SetSize(420, 110)
 	self.leftPage = page
 
-	local heading = caption(page, "Notes")
-	heading:SetPoint("TOPLEFT")
-	local rule = line(page)
-	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
-	rule:SetPoint("RIGHT", page, "RIGHT")
-
+	-- No heading and no "nothing" line: the page is blank until there is a
+	-- note, and a note reads as one without a label.
 	self.notes = {}
 	for i = 1, MAX_NOTES do
 		local fs = text(page, "italic", Stoa.typeSize.label, "text")
-		fs:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6 - (i - 1) * rowGap)
+		fs:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -(i - 1) * rowGap)
 		fs:SetPoint("RIGHT", page, "RIGHT")
 		fs:SetWordWrap(false)
 		self.notes[i] = fs
@@ -1557,7 +1553,7 @@ function Console:RenderNotes()
 			fs:SetText(note.text)
 			fs:SetAlpha(i == 1 and 1 or 0.7)
 		else
-			fs:SetText(i == 1 and not note and "Nothing to note." or "")
+			fs:SetText("")
 			fs:SetAlpha(0.5)
 		end
 	end

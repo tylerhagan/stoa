@@ -4,6 +4,17 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.5.2
+
+- **Fit EllesmereUI to the console**: one click in Settings > Other addons (or `/stoa fit`) places EllesmereUI's chat on the console's left page and its damage meter top left, where STOA keeps its own. It writes only those two positions into EllesmereUI's settings and reloads; `/stoa fit undo` puts them back. The chat keeps its own size; drag its corner narrower if it covers At a glance. The page that asks which addon does which offers it as a row when EllesmereUI's chat is kept, so it happens in the same reload.
+- EllesmereUI: STOA now recognises EllesmereUI's modules (action bars, bags, chat, nameplates, minimap, raid frames, unit frames, damage meters, quest tracker and Blizzard skin) and asks which of the two you want for each part, on the same page as for Daylight UI. Until you choose, STOA's part steps aside. Keeping EllesmereUI's unit frames keeps STOA's target plaque away. EllesmereUI's own first-time pages (its addon picker and its look) come first; STOA asks once they're done.
+- EllesmereUI's Cooldown Manager gets a row on the same page: keep its icon rows, or switch it off and leave cooldowns to the Halo.
+- EllesmereUI's AuraBuff Reminders is asked about too: keep its missing-buff icons and STOA's own row left of the Halo steps aside, or use STOA's and it is switched off.
+- Fixed: with another addon's chat kept, the console still re-sized and re-placed the chat window whenever its pages were laid out, which could undo the size you gave it.
+- Other addons: a "Keep theirs" answer now belongs to the addons it was given for. If a different addon turns up for the same job later (EllesmereUI's bags after Bagnon's, say), STOA asks again and no longer keeps the newcomer unasked.
+- Console: the notes page loses its "Notes" heading and its "Nothing to note" line. It stays blank until there is something to say.
+- What's new: the note carries the 1.5 lines beside 1.5.1's again, with two for EllesmereUI on top.
+
 ## 1.5.1
 
 - Daylight UI: STOA now recognises Daylight UI's modules (bags, nameplates, chat, tooltips, action bars, unit frames, window skins, buffs, quest tracker and info panel) and asks which of the two you want for each part, as it does for Bagnon or Plater. Until you choose, STOA's part steps aside. /stoa addons asks again.

@@ -35,12 +35,14 @@ local RULES = {
 			{ "ArkInventory", "ArkInventory" }, { "BetterBags", "BetterBags" },
 			{ "Combuctor", "Combuctor" }, { "LiteBag", "LiteBag" }, { "Inventorian", "Inventorian" },
 			{ "Sorted", "Sorted" }, { "DaylightUI_Bags", "Daylight UI Bags" },
+			{ "EllesmereUIBags", "EllesmereUI Bags" },
 		},
 	},
 	{
 		key = "plates", job = "nameplates", modules = { "Plates" },
 		addons = {
 			{ "DaylightUI_Nameplates", "Daylight UI Nameplates" },
+			{ "EllesmereUINameplates", "EllesmereUI Nameplates" },
 			{ "Plater", "Plater" }, { "TidyPlates_ThreatPlates", "Threat Plates" },
 			{ "TidyPlates", "TidyPlates" }, { "Kui_Nameplates", "KuiNameplates" },
 			{ "NeatPlates", "NeatPlates" }, { "Platynator", "Platynator" },
@@ -49,7 +51,7 @@ local RULES = {
 	{
 		key = "chat", job = "the chat", modules = { "ChatLook", "Chat" },
 		addons = {
-			{ "DaylightUI_Chat", "Daylight UI Chat" },
+			{ "DaylightUI_Chat", "Daylight UI Chat" }, { "EllesmereUIChat", "EllesmereUI Chat" },
 			{ "Prat-3.0", "Prat" }, { "Chattynator", "Chattynator" },
 			{ "Glass", "Glass" }, { "Chatter", "Chatter" },
 		},
@@ -60,11 +62,15 @@ local RULES = {
 	},
 	{
 		key = "bars", job = "action bars", modules = { "ActionBars" },
-		addons = { { "Bartender4", "Bartender" }, { "Dominos", "Dominos" }, { "DaylightUI_ActionBars", "Daylight UI Action Bars" } },
+		addons = {
+			{ "Bartender4", "Bartender" }, { "Dominos", "Dominos" },
+			{ "DaylightUI_ActionBars", "Daylight UI Action Bars" },
+			{ "EllesmereUIActionBars", "EllesmereUI Action Bars" },
+		},
 	},
 	{
 		key = "minimap", job = "the minimap", modules = { "Minimap" },
-		addons = { { "SexyMap", "SexyMap" }, { "BasicMinimap", "BasicMinimap" } },
+		addons = { { "SexyMap", "SexyMap" }, { "BasicMinimap", "BasicMinimap" }, { "EllesmereUIMinimap", "EllesmereUI Minimap" } },
 	},
 	{
 		key = "tray", job = "gathering the minimap's addon icons", modules = { "Tray" },
@@ -77,7 +83,7 @@ local RULES = {
 		key = "group", job = "party and raid frames", modules = { "Party", "Raid" },
 		addons = {
 			{ "VuhDo", "VuhDo" }, { "Grid2", "Grid2" }, { "Cell", "Cell" },
-			{ "HealBot", "HealBot" },
+			{ "HealBot", "HealBot" }, { "EllesmereUIRaidFrames", "EllesmereUI Raid Frames" },
 			-- These draw a target frame too, so Stoa's target plaque goes with them.
 			{ "ShadowedUnitFrames", "Shadowed Unit Frames", { "Target" } },
 			{ "DaylightUI_UnitFrames", "Daylight UI Unit Frames", { "Target" } },
@@ -93,7 +99,7 @@ local RULES = {
 	},
 	{
 		key = "meters", job = "damage and healing meters", modules = { "Meters" },
-		addons = { { "Details", "Details" }, { "Skada", "Skada" }, { "Recount", "Recount" } },
+		addons = { { "Details", "Details" }, { "Skada", "Skada" }, { "Recount", "Recount" }, { "EllesmereUIDamageMeters", "EllesmereUI Damage Meters" } },
 	},
 	{
 		key = "map", job = "the world map", modules = { "Map" },
@@ -101,11 +107,32 @@ local RULES = {
 	},
 	{
 		key = "windows", job = "the game's windows", modules = { "Windows", "MoreWindows", "Character", "Spellbook" },
-		addons = { { "DaylightUI_Skins", "Daylight UI Window Skins" } },
+		addons = { { "DaylightUI_Skins", "Daylight UI Window Skins" }, { "EllesmereUIBlizzardSkin", "EllesmereUI Blizzard Skin" } },
 	},
 	{
 		key = "top", job = "buffs and the quest list", modules = { "Top" },
-		addons = { { "DaylightUI_Buffs", "Daylight UI Buffs" }, { "DaylightUI_Quests", "Daylight UI Quest Tracker" } },
+		addons = {
+			{ "DaylightUI_Buffs", "Daylight UI Buffs" }, { "DaylightUI_Quests", "Daylight UI Quest Tracker" },
+			{ "EllesmereUIQuestTracker", "EllesmereUI Quest Tracker" },
+		},
+	},
+	{
+		-- Rows of cooldown icons. Stoa has no part to step aside: the Halo
+		-- shows cooldowns, so "Use STOA's" only switches the other addon off.
+		key = "cooldowns", job = "cooldown icons", modules = {},
+		body = "EllesmereUI Cooldown Manager shows rows of cooldown icons. STOA shows cooldowns on the Halo, so you may not want both.",
+		addons = { { "EllesmereUICooldownManager", "EllesmereUI Cooldown Manager" } },
+	},
+	{
+		-- Icons for the buffs you're missing: Stoa's are the row left of
+		-- the Halo (Modules/Halo/SelfBuffs.lua).
+		key = "reminders", job = "buff reminders", modules = { "SelfBuffs" },
+		addons = { { "EllesmereUIAuraBuffReminders", "EllesmereUI AuraBuff Reminders" } },
+	},
+	{
+		-- Unit frames that leave party and raid frames to another module.
+		key = "target", job = "the target frame", modules = { "Target" },
+		addons = { { "EllesmereUIUnitFrames", "EllesmereUI Unit Frames" } },
 	},
 	{
 		key = "corner", job = "the minimap, experience bar and meters", modules = { "Minimap", "XPBar", "Meters" },
@@ -177,6 +204,26 @@ local function choices()
 	return Stoa.db.addons
 end
 
+-- An answer belongs to the addons it was given for (their folders, in
+-- Stoa.db.addonsFor), so another addon turning up for the same job later is
+-- asked about, not quietly kept.
+local function keptFor()
+	Stoa.db.addonsFor = Stoa.db.addonsFor or {}
+	return Stoa.db.addonsFor
+end
+
+local function keep(entry)
+	choices()[entry.rule.key] = "theirs"
+	local folders = {}
+	for _, addon in ipairs(entry.loaded) do folders[addon[1]] = true end
+	keptFor()[entry.rule.key] = folders
+end
+
+local function forget(entry)
+	choices()[entry.rule.key] = nil
+	keptFor()[entry.rule.key] = nil
+end
+
 -- "Bagnon", "Bagnon and AdiBags", "Bagnon, AdiBags and Sorted".
 local function names(found)
 	local list = {}
@@ -211,10 +258,10 @@ function Conflicts:Settle(entry, choice)
 	entry.asked = true
 	if choice == "ours" then
 		for _, addon in ipairs(entry.loaded) do turnOff(addon) end
-		choices()[entry.rule.key] = nil
+		forget(entry)
 		return true
 	end
-	choices()[entry.rule.key] = "theirs"
+	keep(entry)
 	return false
 end
 
@@ -227,7 +274,7 @@ function Conflicts:Pick(entry, choice)
 	for _, addon in ipairs(entry.loaded) do
 		if choice == "ours" then turnOff(addon) else turnOn(addon) end
 	end
-	choices()[entry.rule.key] = choice == "theirs" and "theirs" or nil
+	if choice == "theirs" then keep(entry) else forget(entry) end
 end
 
 -- Called once at login, before modules are enabled.
@@ -240,12 +287,28 @@ function Conflicts:Check()
 			if isLoaded(addon[1]) and (not addon.on or addon.on()) then loaded[#loaded + 1] = addon end
 		end
 		-- A part the player already switched off has nothing to fight over.
-		local running = rule.suite
+		local running = rule.suite or #(rule.modules or {}) == 0
 		for _, name in ipairs(rule.modules or {}) do
 			local settings = Stoa.db.modules[name]
 			if not settings or settings.enabled ~= false then running = true end
 		end
 		if #loaded > 0 and running then
+			-- An answer given for other addons doesn't cover a new one. One
+			-- from before answers were tied to addons is taken as given for
+			-- what's here now.
+			if not rule.suite and choices()[rule.key] == "theirs" then
+				local folders = keptFor()[rule.key]
+				if not folders then
+					keep({ rule = rule, loaded = loaded })
+				else
+					for _, addon in ipairs(loaded) do
+						if not folders[addon[1]] then
+							forget({ rule = rule })
+							break
+						end
+					end
+				end
+			end
 			found[#found + 1] = { rule = rule, loaded = loaded }
 			if not rule.suite then
 				for _, name in ipairs(rule.modules) do aside[name] = rule end
@@ -325,9 +388,10 @@ function Conflicts:Ask(entry)
 	else
 		page.title:SetText("Two addons, one job")
 		page.body:SetText(("%s %s look after %s. Pick one so they don't get in each other's way."):format(names(everyone), single and "both" or "all", rule.job))
-		page.theirs.text:SetText(single and ("Keep " .. them) or "Keep theirs")
+		page.theirs.text:SetText(single and #them <= 22 and ("Keep " .. them) or "Keep theirs")
 		page.ours.text:SetText("Use STOA's")
-		page.note:SetText(("STOA's part waits until you choose. Using STOA's turns %s off and reloads; /stoa addons asks again."):format(them))
+		if rule.body then page.body:SetText(rule.body) end
+		page.note:SetText(((rule.body and "" or "STOA's part waits until you choose. ") .. "Using STOA's turns %s off and reloads; /stoa addons asks again."):format(them))
 	end
 	page.ours:SetReloads(true)
 	page.theirs:SetReloads(rule.suite)
@@ -345,13 +409,13 @@ function Conflicts:Answer(choice, button)
 	local rule = entry.rule
 	if choice == "ours" then
 		for _, addon in ipairs(entry.loaded) do turnOff(addon) end
-		choices()[rule.key] = nil
+		forget(entry)
 		if not own then Stoa:Reload() end
 	elseif rule.suite then
 		disable("Stoa")
 		if not own then Stoa:Reload() end
 	else
-		choices()[rule.key] = "theirs"
+		keep(entry)
 		Stoa:Print(("Leaving %s to %s. /stoa addons to change."):format(rule.job, names(entry.loaded)))
 		self:Next()
 	end
@@ -405,6 +469,16 @@ function Conflicts:PaintList()
 		row.ours:SetSelected(entry.choice == "ours")
 		if entry.choice == "ours" then reload = true end
 	end
+	-- The fit row shows while EllesmereUI's chat is the one kept.
+	local fitRow = page.fitRow
+	local fits = page.fitOffered and page.fitOffered.choice ~= "ours" or false
+	if fitRow then
+		fitRow:SetShown(fits)
+		fitRow.yes:SetSelected(page.fitWanted)
+		fitRow.no:SetSelected(not page.fitWanted)
+	end
+	page.fitNow = fits and page.fitWanted or false
+	if page.fitNow then reload = true end
 	page.done:SetReloads(reload)
 	page.done.text:SetText(reload and "Done, and reload" or "Done")
 end
@@ -446,7 +520,49 @@ function Conflicts:AskAll(entries)
 		row:Show()
 	end
 	for i = #entries + 1, #page.rows do page.rows[i]:Hide() end
-	page:SetHeight(ROWS_TOP + #entries * ROW_HEIGHT + 58 + PAD)
+	-- Keeping EllesmereUI's chat: one more row offers to seat it on the
+	-- console in the same reload (Console:FitEllesmere, Housing.lua).
+	page.fitOffered = false
+	for _, entry in ipairs(entries) do
+		for _, addon in ipairs(entry.loaded) do
+			if addon[1] == "EllesmereUIChat" then page.fitOffered = entry end
+		end
+	end
+	local console = Stoa.modules.Grimoire
+	if not (console and console.FitEllesmere and not console.bare and not (console.db and console.db.slim)) then page.fitOffered = false end
+	if page.fitOffered and not page.fitRow then
+		local row = CreateFrame("Frame", nil, page)
+		row:SetHeight(ROW_HEIGHT)
+		row:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+		row.job = UI.text(row, "sans", Stoa.typeSize.label, "text", "LEFT")
+		row.job:SetPoint("TOPLEFT", 0, -4)
+		row.job:SetPoint("RIGHT", row, "RIGHT", -250, 0)
+		row.job:SetWordWrap(false)
+		row.job:SetText("EllesmereUI's chat on the console")
+		row.them = UI.text(row, "sans", Stoa.typeSize.body, "muted", "LEFT")
+		row.them:SetPoint("TOPLEFT", row.job, "BOTTOMLEFT", 0, -3)
+		row.them:SetPoint("RIGHT", row, "RIGHT", -250, 0)
+		row.them:SetWordWrap(false)
+		row.them:SetText("Meter goes top left. If the chat covers At a glance, drag its corner narrower.")
+		row.yes = UI.button(row, "Seat it", 110, function()
+			page.fitWanted = true
+			self:PaintList()
+		end)
+		row.yes:SetPoint("RIGHT", 0, 0)
+		row.no = UI.button(row, "Leave it", 110, function()
+			page.fitWanted = false
+			self:PaintList()
+		end)
+		row.no:SetPoint("RIGHT", row.yes, "LEFT", -8, 0)
+		page.fitRow = row
+		page.fitWanted = true
+	end
+	if page.fitRow then
+		page.fitRow:ClearAllPoints()
+		page.fitRow:SetPoint("TOPLEFT", PAD, -ROWS_TOP - #entries * ROW_HEIGHT)
+		page.fitRow:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+	end
+	page:SetHeight(ROWS_TOP + (#entries + (page.fitOffered and 1 or 0)) * ROW_HEIGHT + 58 + PAD)
 	self:PaintList()
 	page:Show()
 end
@@ -461,11 +577,15 @@ function Conflicts:AnswerAll(button)
 	for _, entry in ipairs(entries) do
 		if entry.choice == "ours" then
 			for _, addon in ipairs(entry.loaded) do turnOff(addon) end
-			choices()[entry.rule.key] = nil
+			forget(entry)
 		else
-			choices()[entry.rule.key] = "theirs"
+			keep(entry)
 			kept[#kept + 1] = entry.rule.job
 		end
+	end
+	if self.list.fitNow then
+		local console = Stoa.modules.Grimoire
+		if console and console.FitEllesmere then pcall(console.FitEllesmere, console) end
 	end
 	if #kept > 0 and not own then
 		Stoa:Print(("Leaving %s to the other %s. /stoa addons to change."):format(
@@ -506,9 +626,29 @@ function Conflicts:Next()
 	if Stoa.Looks and not welcoming then Stoa.Looks:Next() end
 end
 
+-- EllesmereUI opens with its own first-time pages: one where the player
+-- picks which of its addons stay on, then, a reload later, one for its look.
+-- Stoa's questions wait until both are done, so the pages never stack and
+-- Stoa asks about the addons actually kept. Until then Stoa's parts stay
+-- aside, as for any unanswered question.
+local function theirSetupPending()
+	local db = _G.EllesmereUIDB
+	return type(db) == "table" and (not db.firstInstallPopupShown or db.styleChoicePending) and true or false
+end
+
+-- Looks again every few seconds for a page closed without a reload, for
+-- five minutes; after that the questions wait for the next login.
+local function askWhenClear(tries)
+	if not theirSetupPending() then
+		Conflicts:Next()
+	elseif tries > 0 then
+		C_Timer.After(3, function() askWhenClear(tries - 1) end)
+	end
+end
+
 Stoa:On("STOA_READY", function()
 	if #found == 0 then return end
-	C_Timer.After(4, function() Conflicts:Next() end)
+	C_Timer.After(4, function() askWhenClear(100) end)
 end)
 
 Stoa.commands.addons = function()
@@ -519,7 +659,7 @@ Stoa.commands.addons = function()
 	end
 	for _, entry in ipairs(found) do
 		Stoa:Print(("%s also %s after %s."):format(names(entry.loaded), #entry.loaded == 1 and "looks" or "look", entry.rule.job))
-		choices()[entry.rule.key] = nil
+		forget(entry)
 		entry.asked = nil
 	end
 	Conflicts:Next()
