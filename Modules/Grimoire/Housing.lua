@@ -850,7 +850,22 @@ function Console:UnfitEllesmere()
 	if not fit then return false end
 	local chat = ellProfile("EllesmereUIChat")
 	if chat and fit.chatBefore then
-		chat.chatPosition = fit.chatBefore.position or nil
+		-- A spot that lay on the console (Stoa's Edit Mode layout rests the
+		-- chat there), or none at all, would leave the chat seated:
+		-- EllesmereUI takes where the chat stands as its spot. It goes back
+		-- to standing on the console's edge instead.
+		local before = fit.chatBefore.position
+		local scale = ChatFrame1 and ChatFrame1:GetScale() or 1
+		if type(scale) ~= "number" or scale <= 0 then scale = 1 end
+		local edge = self:OpenHeight() / scale
+		local low = type(before) ~= "table" or type(before.y) ~= "number"
+			or ((before.point or ""):find("BOTTOM") and before.y < edge)
+		if low then
+			local x = ellChatSpot()
+			before = { point = "BOTTOMLEFT", relPoint = "BOTTOMLEFT", x = x,
+				y = math.floor(edge + (SLIM_CHAT_LIFT + ELL_EDIT) / scale + 0.5) }
+		end
+		chat.chatPosition = before
 	end
 	local meters = ellProfile("EllesmereUIDamageMeters")
 	local window = ellMeterWindow(meters)
