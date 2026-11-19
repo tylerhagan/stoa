@@ -4,6 +4,10 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.5.1
+
+- Classic feel: the preset now also hands the spellbook, talents and experience bar back to Blizzard, as it already did for windows, bags, the character sheet, tooltips and nameplates. Its note in Settings said the opposite of what it does and is corrected.
+
 ## 1.5.0
 
 - Raid target marks: a skull, cross, star or any other mark shows at the right end of the name on the target plaque, and on the top right corner of party and raid cards for marked group members.

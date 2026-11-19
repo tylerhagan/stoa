@@ -624,7 +624,7 @@ local function build()
 	page = "setup"
 	group = "Start"
 	button("welcome", "Welcome page", "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of STOA, and other addons.", "Open", function() Stoa.Welcome:Show() end, { cmd = "/stoa welcome", words = "wizard first time" })
-	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps Blizzard's layout with STOA's look. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
+	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps STOA's console, Halo and frames, and leaves the game's windows, bags, tooltips and nameplates as Blizzard draws them. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
 		{ "full", "Full" }, { "slim", "Slim" }, { "minimal", "Minimal" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Same as Designer" },
 	}, {
 		reload = true, cmd = "/stoa preset", words = "preset minimal",
