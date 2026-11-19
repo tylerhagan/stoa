@@ -1564,6 +1564,8 @@ function Console:RenderNotes()
 end
 
 -- Folding -------------------------------------------------------------------
+-- How high the folded seal stands over the screen's foot, with a little air.
+local SEAL_CLEARANCE = 64
 -- The console is not a secure frame, so it can resize in combat.
 
 function Console:SetOpen(open, instant)
@@ -1580,6 +1582,12 @@ function Console:SetOpen(open, instant)
 	-- The slim seal is small already, so it shrinks less into the spine.
 	local sealScale = open and 1 or ((self.db.slim or riding) and 0.6 or 0.4)
 	if self.slimCard and not open then self.slimCard:Hide() end
+	-- Combat rows that reach down to the folded seal (a raid grid over
+	-- three rows) take its place: it fades out for the fight.
+	local combatBar = Stoa.modules.CombatBar
+	local foot = not open and combatBar and combatBar.enabled and combatBar.FootHeight and combatBar:FootHeight()
+	local crowded = foot and foot < SEAL_CLEARANCE or false
+	if open then crowded = self.sealCrowded else self.sealCrowded = crowded end
 
 	local function step(progress)
 		frame:SetHeight(from + (target - from) * progress)
@@ -1617,7 +1625,7 @@ function Console:SetOpen(open, instant)
 		self.seal:SetScale(scale + (sealScale - scale) * progress)
 		-- On the slim line the seal goes altogether in a fight; shrunk, it
 		-- only peeked over the folded line.
-		if self.db.slim then self.seal:SetAlpha(open and progress or 1 - progress) end
+		if self.db.slim or crowded then self.seal:SetAlpha(open and progress or 1 - progress) end
 		-- The shrunk seal is too small to read a shield on; the Halo has it.
 		if self.sealShield then self.sealShield:SetAlpha(open and progress or 1 - progress) end
 		if self.sealMark then self.sealMark:SetAlpha(open and progress or 1 - progress) end
