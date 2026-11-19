@@ -520,9 +520,21 @@ function Conflicts:Next()
 	if Stoa.Looks and not welcoming then Stoa.Looks:Next() end
 end
 
+-- EllesmereUI opens with its own first-time page, where the player picks
+-- which of its addons stay on, and then reloads. Stoa's questions wait for
+-- the login after that, so they ask about the addons actually kept. Until
+-- then Stoa's parts stay aside, as for any unanswered question.
+local function theirSetupPending()
+	local db = _G.EllesmereUIDB
+	return type(db) == "table" and not db.firstInstallPopupShown
+end
+
 Stoa:On("STOA_READY", function()
 	if #found == 0 then return end
-	C_Timer.After(4, function() Conflicts:Next() end)
+	C_Timer.After(4, function()
+		if theirSetupPending() then return end
+		Conflicts:Next()
+	end)
 end)
 
 Stoa.commands.addons = function()
