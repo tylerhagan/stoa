@@ -802,7 +802,9 @@ local function ellDocked(db)
 	if not addonOn("EllesmereUIChat") then return false end
 	local own = ellProfile("EllesmereUIChat")
 	local pos = own and own.chatPosition
-	return type(pos) == "table" and pos.x == fit.chatAt.x and pos.y == fit.chatAt.y or false
+	if type(pos) ~= "table" or type(pos.x) ~= "number" or type(pos.y) ~= "number" then return false end
+	-- EllesmereUI re-measures and re-saves the spot, so it drifts by fractions.
+	return math.abs(pos.x - fit.chatAt.x) < 3 and math.abs(pos.y - fit.chatAt.y) < 3
 end
 
 ellDockedNow = ellDocked
@@ -877,6 +879,11 @@ Stoa.commands.fit = function(rest)
 			at(chat and chat.chatPosition), chat and "found" or "no settings",
 			at(type(window) == "table" and window.position), type(window) == "table" and "found" or "no window",
 			tostring(Stoa.Conflicts:SteppedAside("ChatLook") and true or false), tostring(Console.db.houseChat)))
+		local cf = ChatFrame1
+		local l, b = cf and cf:GetLeft(), cf and cf:GetBottom()
+		if type(l) == "number" and type(b) == "number" and not (issecretvalue and (issecretvalue(l) or issecretvalue(b))) then
+			Stoa:Print(("Chat sits at %.1f, %.1f; saved %s, %s; docked: %s."):format(l, b, tostring(chat and chat.chatPosition and chat.chatPosition.x), tostring(chat and chat.chatPosition and chat.chatPosition.y), tostring(ellDocked(Console.db))))
+		end
 		return
 	end
 	if word == "undo" then
