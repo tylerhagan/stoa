@@ -34,12 +34,13 @@ local RULES = {
 			{ "Bagnon", "Bagnon" }, { "Baganator", "Baganator" }, { "AdiBags", "AdiBags" },
 			{ "ArkInventory", "ArkInventory" }, { "BetterBags", "BetterBags" },
 			{ "Combuctor", "Combuctor" }, { "LiteBag", "LiteBag" }, { "Inventorian", "Inventorian" },
-			{ "Sorted", "Sorted" },
+			{ "Sorted", "Sorted" }, { "DaylightUI_Bags", "Daylight UI Bags" },
 		},
 	},
 	{
 		key = "plates", job = "nameplates", modules = { "Plates" },
 		addons = {
+			{ "DaylightUI_Nameplates", "Daylight UI Nameplates" },
 			{ "Plater", "Plater" }, { "TidyPlates_ThreatPlates", "Threat Plates" },
 			{ "TidyPlates", "TidyPlates" }, { "Kui_Nameplates", "KuiNameplates" },
 			{ "NeatPlates", "NeatPlates" }, { "Platynator", "Platynator" },
@@ -48,17 +49,18 @@ local RULES = {
 	{
 		key = "chat", job = "the chat", modules = { "ChatLook" },
 		addons = {
+			{ "DaylightUI_Chat", "Daylight UI Chat" },
 			{ "Prat-3.0", "Prat" }, { "Chattynator", "Chattynator" },
 			{ "Glass", "Glass" }, { "Chatter", "Chatter" },
 		},
 	},
 	{
 		key = "tooltip", job = "tooltips", modules = { "Tooltip" },
-		addons = { { "TipTac", "TipTac" }, { "TinyTooltip", "TinyTooltip" }, { "TipTop", "TipTop" } },
+		addons = { { "TipTac", "TipTac" }, { "TinyTooltip", "TinyTooltip" }, { "TipTop", "TipTop" }, { "DaylightUI_Tooltip", "Daylight UI Tooltip" } },
 	},
 	{
 		key = "bars", job = "action bars", modules = { "ActionBars" },
-		addons = { { "Bartender4", "Bartender" }, { "Dominos", "Dominos" } },
+		addons = { { "Bartender4", "Bartender" }, { "Dominos", "Dominos" }, { "DaylightUI_ActionBars", "Daylight UI Action Bars" } },
 	},
 	{
 		key = "minimap", job = "the minimap", modules = { "Minimap" },
@@ -75,7 +77,7 @@ local RULES = {
 		key = "group", job = "party and raid frames", modules = { "Party", "Raid" },
 		addons = {
 			{ "VuhDo", "VuhDo" }, { "Grid2", "Grid2" }, { "Cell", "Cell" },
-			{ "HealBot", "HealBot" }, { "ShadowedUnitFrames", "Shadowed Unit Frames" },
+			{ "HealBot", "HealBot" }, { "ShadowedUnitFrames", "Shadowed Unit Frames" }, { "DaylightUI_UnitFrames", "Daylight UI Unit Frames" },
 		},
 	},
 	{
@@ -93,6 +95,18 @@ local RULES = {
 	{
 		key = "map", job = "the world map", modules = { "Map" },
 		addons = { { "Mapster", "Mapster" } },
+	},
+	{
+		key = "windows", job = "the game's windows", modules = { "Windows", "MoreWindows", "Character", "Spellbook" },
+		addons = { { "DaylightUI_Skins", "Daylight UI Window Skins" } },
+	},
+	{
+		key = "top", job = "buffs and the quest list", modules = { "Top" },
+		addons = { { "DaylightUI_Buffs", "Daylight UI Buffs" }, { "DaylightUI_Quests", "Daylight UI Quest Tracker" } },
+	},
+	{
+		key = "corner", job = "the minimap, experience bar and meters", modules = { "Minimap", "XPBar", "Meters" },
+		addons = { { "DaylightUI_InfoPanel", "Daylight UI Info Panel" } },
 	},
 }
 

@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.5.1
 
+- Daylight UI: STOA now recognises Daylight UI's modules (bags, nameplates, chat, tooltips, action bars, unit frames, window skins, buffs, quest tracker and info panel) and asks which of the two you want for each part, as it does for Bagnon or Plater. Until you choose, STOA's part steps aside. /stoa addons asks again.
 - Classic feel: the preset now also hands the spellbook, talents and experience bar back to Blizzard, as it already did for windows, bags, the character sheet, tooltips and nameplates. Its note in Settings said the opposite of what it does and is corrected.
 
 ## 1.5.0
