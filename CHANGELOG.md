@@ -13,6 +13,9 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Console: the leather grain is drawn one texture pixel to one screen pixel, so it stays crisp at any UI scale.
 - Lighter in groups: STOA listens only to the units it draws (you, your target, your party) instead of every unit in a raid, the loot feed and the Tally page rest while nothing is showing, and timer bars write their text once a second.
 - /stoa test shows sample raid marks and the RES and SUMMON words.
+- Combat rows: with three rows of bars under a ten-player grid, the folded console's seal fades out of the way instead of sitting under them.
+- Travel line: your followed quest shows on a flight too.
+- Fixes: no more "arithmetic on a secret number" error from the mana bar in a Slim fight; the AddOn List's bottom buttons lose their red centres.
 - Housekeeping: an unused texture and leftover code removed, and every pull request is now linted and load-tested for all nine classes (and once as a German client) before it can merge.
 
 ## 1.4.5
