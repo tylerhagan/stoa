@@ -750,6 +750,7 @@ end
 -- simply does nothing.
 local ELL_SIDE = 34 -- EllesmereUI's icon column left of the chat lines
 local ELL_EDGE = 64 -- its panel edge and scroll rail right of them
+local ELL_MIN_HEIGHT = 124
 local ELL_EDIT = 30 -- its edit box under them
 local ELL_METER = { point = "TOPLEFT", relPoint = "TOPLEFT", x = 0, y = 0 } -- where Stoa keeps its own
 
@@ -792,6 +793,9 @@ local function ellChatRect()
 	local top = artOn() and ART_CHAT_GAP + 2 or DOCK_TOP
 	local w = Console:ChatWidth() - ELL_SIDE - ELL_EDGE
 	local h = Console:OpenHeight() - y - top
+	-- Edit Mode, which EllesmereUI sizes the chat through, refuses a chat
+	-- shorter than this, and then the width is not taken either.
+	h = math.max(h, ELL_MIN_HEIGHT * scale)
 	local function r(v) return math.floor(v / scale + 0.5) end
 	return r(x), r(y), r(w), r(h)
 end

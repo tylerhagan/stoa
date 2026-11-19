@@ -463,6 +463,16 @@ function Conflicts:PaintList()
 		row.ours:SetSelected(entry.choice == "ours")
 		if entry.choice == "ours" then reload = true end
 	end
+	-- The fit row shows while EllesmereUI's chat is the one kept.
+	local fitRow = page.fitRow
+	local fits = page.fitOffered and page.fitOffered.choice ~= "ours" or false
+	if fitRow then
+		fitRow:SetShown(fits)
+		fitRow.yes:SetSelected(page.fitWanted)
+		fitRow.no:SetSelected(not page.fitWanted)
+	end
+	page.fitNow = fits and page.fitWanted or false
+	if page.fitNow then reload = true end
 	page.done:SetReloads(reload)
 	page.done.text:SetText(reload and "Done, and reload" or "Done")
 end
@@ -504,25 +514,49 @@ function Conflicts:AskAll(entries)
 		row:Show()
 	end
 	for i = #entries + 1, #page.rows do page.rows[i]:Hide() end
-	-- EllesmereUI's chat can be seated on the console by hand afterwards.
-	local chatNote = false
+	-- Keeping EllesmereUI's chat: one more row offers to seat it on the
+	-- console in the same reload (Console:FitEllesmere, Housing.lua).
+	page.fitOffered = false
 	for _, entry in ipairs(entries) do
 		for _, addon in ipairs(entry.loaded) do
-			if addon[1] == "EllesmereUIChat" then chatNote = true end
+			if addon[1] == "EllesmereUIChat" then page.fitOffered = entry end
 		end
 	end
-	if chatNote and not page.chatNote then
-		page.chatNote = UI.text(page, "sans", Stoa.typeSize.body, "muted", "LEFT")
-		page.chatNote:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
-		page.chatNote:SetWordWrap(true)
-		page.chatNote:SetText("Keeping EllesmereUI's chat? Afterwards, /stoa fit (or Settings > Other addons) seats it on the console's left page and moves its damage meter top left; /stoa fit undo puts both back.")
+	local console = Stoa.modules.Grimoire
+	if not (console and console.FitEllesmere and not console.bare and not (console.db and console.db.slim)) then page.fitOffered = false end
+	if page.fitOffered and not page.fitRow then
+		local row = CreateFrame("Frame", nil, page)
+		row:SetHeight(ROW_HEIGHT)
+		row:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+		row.job = UI.text(row, "sans", Stoa.typeSize.label, "text", "LEFT")
+		row.job:SetPoint("TOPLEFT", 0, -4)
+		row.job:SetPoint("RIGHT", row, "RIGHT", -250, 0)
+		row.job:SetWordWrap(false)
+		row.job:SetText("EllesmereUI's chat on the console")
+		row.them = UI.text(row, "sans", Stoa.typeSize.body, "muted", "LEFT")
+		row.them:SetPoint("TOPLEFT", row.job, "BOTTOMLEFT", 0, -3)
+		row.them:SetPoint("RIGHT", row, "RIGHT", -250, 0)
+		row.them:SetWordWrap(false)
+		row.them:SetText("Its damage meter goes top left. /stoa fit undo puts both back.")
+		row.yes = UI.button(row, "Seat it", 110, function()
+			page.fitWanted = true
+			self:PaintList()
+		end)
+		row.yes:SetPoint("RIGHT", 0, 0)
+		row.no = UI.button(row, "Leave it", 110, function()
+			page.fitWanted = false
+			self:PaintList()
+		end)
+		row.no:SetPoint("RIGHT", row.yes, "LEFT", -8, 0)
+		page.fitRow = row
+		page.fitWanted = true
 	end
-	local noteRoom = chatNote and 40 or 0
-	if page.chatNote then
-		page.chatNote:SetShown(chatNote)
-		page.chatNote:SetPoint("TOPLEFT", PAD, -ROWS_TOP - #entries * ROW_HEIGHT - 6)
+	if page.fitRow then
+		page.fitRow:ClearAllPoints()
+		page.fitRow:SetPoint("TOPLEFT", PAD, -ROWS_TOP - #entries * ROW_HEIGHT)
+		page.fitRow:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
 	end
-	page:SetHeight(ROWS_TOP + #entries * ROW_HEIGHT + noteRoom + 58 + PAD)
+	page:SetHeight(ROWS_TOP + (#entries + (page.fitOffered and 1 or 0)) * ROW_HEIGHT + 58 + PAD)
 	self:PaintList()
 	page:Show()
 end
@@ -542,6 +576,10 @@ function Conflicts:AnswerAll(button)
 			keep(entry)
 			kept[#kept + 1] = entry.rule.job
 		end
+	end
+	if self.list.fitNow then
+		local console = Stoa.modules.Grimoire
+		if console and console.FitEllesmere then pcall(console.FitEllesmere, console) end
 	end
 	if #kept > 0 and not own then
 		Stoa:Print(("Leaving %s to the other %s. /stoa addons to change."):format(
