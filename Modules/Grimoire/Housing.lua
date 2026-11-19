@@ -91,6 +91,7 @@ local function replaceChat()
 	queued = false
 	local chat = ChatFrame1
 	if not chat then return end
+	if Console.HousesChat and not Console:HousesChat() then return end
 	if InCombatLockdown() and chat.IsProtected and chat:IsProtected() then
 		Stoa:AfterCombat(function() xpcall(placeChat, Stoa.catch) end)
 		return
@@ -98,7 +99,11 @@ local function replaceChat()
 	xpcall(placeChat, Stoa.catch)
 end
 
-function Console:ReplaceChat() replaceChat() end
+-- Only a chat Stoa houses is Stoa's to place: one another addon keeps
+-- (or one the player left out of the console) is never sized or moved here.
+function Console:ReplaceChat()
+	if self.HousesChat and self:HousesChat() then replaceChat() end
+end
 
 -- At most a few re-placings a second, in case Blizzard answers each one with
 -- another move.
