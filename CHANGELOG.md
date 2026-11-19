@@ -8,6 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - EllesmereUI: STOA now recognises EllesmereUI's modules (action bars, bags, chat, nameplates, minimap, raid frames, unit frames, damage meters, quest tracker and Blizzard skin) and asks which of the two you want for each part, on the same page as for Daylight UI. Until you choose, STOA's part steps aside. Keeping EllesmereUI's unit frames keeps STOA's target plaque away. EllesmereUI's own first-time pages (its addon picker and its look) come first; STOA asks once they're done.
 - Other addons: a "Keep theirs" answer now belongs to the addons it was given for. If a different addon turns up for the same job later (EllesmereUI's bags after Bagnon's, say), STOA asks again and no longer keeps the newcomer unasked.
+- Console: the notes page loses its "Notes" heading and its "Nothing to note" line. It stays blank until there is something to say.
 - What's new: the note carries the 1.5 lines beside 1.5.1's again.
 
 ## 1.5.1
