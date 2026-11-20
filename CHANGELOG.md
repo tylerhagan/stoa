@@ -6,7 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.5.3
 
-- **Parts**: settings open on a new Parts page with one switch for each piece of STOA (console, Halo, party cards, nameplates, bags and the rest), each saying in a line what you get and what comes back when it's off. The ready-made sets sit at the top as starting points.
+- **Quick start**: settings open on a new "Build your STOA" page: pick a starting set, then switch each piece of STOA on or off (console, Halo, party cards, nameplates, bags and the rest). Each says in a line what you get, what comes back when it's off, and which page holds its finer settings.
 - **Simpler settings**: every settings page opens on its few everyday settings, with the rest one click away under More. Search still finds everything. An opened More stays open.
 - **Only what applies to you**: pet settings show for hunters and warlocks, mana settings for classes with mana, form mana for druids, and DoT marks only with DoesItDie loaded.
 - **What I've changed**: a new settings page lists every switch and choice that isn't as STOA comes. Right-click a setting, there or on any page, to put it back.

@@ -24,7 +24,7 @@ local Options = { list = {}, byId = {}, start = {} }
 Stoa.Options = Options
 
 Options.PAGES = {
-	{ "parts", "Parts", "What STOA is made of. Switch off any part you don't want and the game's own comes back. The other pages fine-tune each part." },
+	{ "parts", "Build your STOA", "Start here. Pick a starting set, then switch on only the parts you want: anything you switch off goes back to the game's own. This page is the quick start; each part's finer settings are on its own page in the list on the left.", "Quick start" },
 	{ "look", "Look", "Theme, colour and the few painted pieces. These change everything else, so they come first." },
 	{ "console", "Console", "The leather console along the bottom of the screen and what it holds." },
 	{ "combat", "Combat", "What happens when a fight starts: the Halo, the combat bar and what they show." },
@@ -44,15 +44,15 @@ local function setOf(...)
 	return out
 end
 
--- The Parts page: the main switch of each piece of Stoa, gathered from the
+-- The quick start page: the main switch of each piece of Stoa, gathered from the
 -- pages below under a plain name, with what you get and what Off leaves.
 -- { setting id, group, name, what it is }
 local PARTS = {
-	{ "preset", "Start from a set", "How much STOA", "Six ready-made sets of the parts below. Pick the closest, then switch parts on or off. Full is everything. Slim makes the console one line. Minimal has no console. Quiet folds more away. Classic feel keeps the game's own windows, bags, tooltips and nameplates. Same as Designer is how STOA's designer plays." },
-	{ "consoleShape", "Out of a fight", "Console", "The leather panel along the bottom of the screen that holds chat, your action bars and the Ready, Journey and Company pages. Slim is one thin line with chat and bars standing above it. None takes the console away." },
-	{ "houseChat", "Out of a fight", "Chat on the console", "Chat sits on the console's left page. Off leaves the chat window where the game puts it." },
-	{ "glanceOn", "Out of a fight", "At a glance", "Up to eight numbers you choose, such as gold, gear and stats, beside the chat on the console. Off takes them away." },
-	{ "actionBars", "Out of a fight", "Action buttons", "Rounded buttons with a fine edge and dim sockets for empty slots. Off keeps the game's square buttons." },
+	{ "preset", "Step 1: pick a starting set", "How much STOA", "Six ready-made sets of the parts below. Pick the closest, then switch parts on or off. Full is everything. Slim makes the console one line. Minimal has no console. Quiet folds more away. Classic feel keeps the game's own windows, bags, tooltips and nameplates. Same as Designer is how STOA's designer plays." },
+	{ "consoleShape", "Step 2: choose your parts, out of a fight", "Console", "The leather panel along the bottom of the screen that holds chat, your action bars and the Ready, Journey and Company pages. Slim is one thin line with chat and bars standing above it. None takes the console away." },
+	{ "houseChat", "Step 2: choose your parts, out of a fight", "Chat on the console", "Chat sits on the console's left page. Off leaves the chat window where the game puts it." },
+	{ "glanceOn", "Step 2: choose your parts, out of a fight", "At a glance", "Up to eight numbers you choose, such as gold, gear and stats, beside the chat on the console. Off takes them away." },
+	{ "actionBars", "Step 2: choose your parts, out of a fight", "Action buttons", "Rounded buttons with a fine edge and dim sockets for empty slots. Off keeps the game's square buttons." },
 	{ "combatConsole", "In a fight", "The Halo", "The ring around your character in a fight, with your health, power, casts and cooldowns where your eyes already are. Fold to the Halo puts the console away while you fight. Console and Halo keeps both. Console only turns the Halo off, for players who use other unit frames." },
 	{ "combatBar", "In a fight", "Combat bar", "A compact row of your main bar's spells under the Halo in a fight, with their keys. Off leaves your usual action bars in place." },
 	{ "partyOn", "In a fight", "Party cards", "Your party as STOA's cards: large beside the Halo when you heal, compact on the left otherwise. Off brings back the game's party frames." },
@@ -853,8 +853,13 @@ local function build()
 	for _, part in ipairs(PARTS) do
 		local base = Options.byId[part[1]]
 		if base then
+			-- Each says where the rest of its settings are.
+			local where = ""
+			for _, info in ipairs(Options.PAGES) do
+				if info[1] == base.page then where = (" Its finer settings are on the %s page."):format(info[2]) end
+			end
 			Options.partList[#Options.partList + 1] = setmetatable({
-				id = "part_" .. base.id, startId = base.id, page = "parts", group = part[2], name = part[3], desc = part[4],
+				id = "part_" .. base.id, startId = base.id, page = "parts", group = part[2], name = part[3], desc = part[4] .. where,
 				more = false, quiet = false,
 			}, { __index = base })
 		end

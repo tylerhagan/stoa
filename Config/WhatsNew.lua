@@ -26,7 +26,7 @@ local NOTES = {
 		edition = "1.5.3",
 		title = "New in STOA 1.5.3",
 		lines = {
-			{ "Parts", "Settings open on a Parts page: one switch for each piece of STOA, so you can run only what you want. Each says what comes back when it's off." },
+			{ "Build your STOA", "Settings open on a quick start page: pick a starting set, then switch each piece of STOA on or off, so you run only what you want. The other pages hold the finer settings." },
 			{ "Simpler settings", "Each settings page opens on a few everyday settings, with the rest under More. Settings for other classes are gone from view, and search still finds everything." },
 			{ "What I've changed", "A new settings page lists everything that isn't as STOA comes. Right-click any setting to put it back." },
 			{ "A free right side", "Settings > Console > \"Leave the console's right side free\" hides Ready, Journey and Company, so another addon's window, such as a damage meter, can sit there." },
