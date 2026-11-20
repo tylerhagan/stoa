@@ -585,5 +585,25 @@ Stoa.commands.plate = function()
 		local o = NamePlateSetupOptions or {}
 		return ("classic=%s barHeight=%s style=%s size=%s simplified=%s"):format(tostring(o.useClassicHealthBar), tostring(o.healthBarHeight), tostring(GetCVar("nameplateStyle")), tostring(GetCVar("nameplateSize")), tostring(GetCVar("nameplateSimplifiedTypes")))
 	end)
+	-- Everything drawn on the bar that is showing, with its colour.
+	local function list(owner, tag)
+		for _, region in ipairs({ owner:GetRegions() }) do
+			if region:IsVisible() and region.GetVertexColor and region:GetAlpha() > 0 then
+				say(tag, function()
+					local w, h = region:GetSize()
+					local r, g, b, a = region:GetVertexColor()
+					local layer, sub = region:GetDrawLayer()
+					return ("%dx%d %s/%s rgb=%.1f,%.1f,%.1f,%.1f a=%.2f tex=%s atlas=%s key=%s"):format(w, h, tostring(layer), tostring(sub), r, g, b, a, region:GetAlpha(),
+						tostring(region.GetTexture and region:GetTexture()), tostring(region.GetAtlas and region:GetAtlas()), tostring(region:GetDebugName()):match("[^%.]*$"))
+				end)
+			end
+		end
+	end
+	list(bar, "on bar")
+	for i, child in ipairs({ bar:GetChildren() }) do
+		if child:IsVisible() then list(child, "child " .. i) end
+	end
+	list(frame.HealthBarsContainer, "container")
+	list(frame, "frame")
 	for _, line in ipairs(lines) do Stoa:Print(line) end
 end
