@@ -19,6 +19,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Lighter at rest: the class mark's timer only runs while a timed mark is counting down.
 - Moving frames: the bar's hint has its own lines instead of running into the title.
 - Moving frames: the Halo's box now says "shows in a fight", since the Halo is hidden out of combat and could look as if moving it made it vanish.
+- **Nameplates**: a plate the game lays out again (a reused plate, a changed nameplate option) keeps STOA's plain bar inside its rounded track, where the game's own bar art used to come back and square it off.
 
 ## 1.5.2
 

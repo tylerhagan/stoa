@@ -406,13 +406,22 @@ local function dressCast(cast)
 	UI.pillEdge(cast, PAD):Set(0, 0, 0, 0.9)
 end
 
+-- The game puts its own bar art back whenever it lays a plate out again (a
+-- reused plate, a changed option): its sliced art overhangs the bar and
+-- squares off the rounded track, so the plain fill goes back each time.
+local function plainFill(bar)
+	bar:SetStatusBarTexture(UI.WHITE)
+	local fill = bar.GetStatusBarTexture and bar:GetStatusBarTexture()
+	if fill and fill.ClearTextureSlice then fill:ClearTextureSlice() end
+end
+
 local function dress(frame)
 	if frame.stoaDressed then return end
 	frame.stoaDressed = true
 
 	local bar = frame.healthBar
 	if bar then
-		bar:SetStatusBarTexture(UI.WHITE)
+		plainFill(bar)
 		if bar.bgTexture then bar.bgTexture:SetAlpha(0) end
 		if bar.selectedBorder then bar.selectedBorder:SetAlpha(0) end
 		-- The fill runs square inside a rounded dark track a little larger
@@ -437,6 +446,12 @@ local function dress(frame)
 	if frame.ApplyFrameOptions then
 		hooksecurefunc(frame, "ApplyFrameOptions", function(own)
 			refont(own)
+			guarded(applyStyle, own)
+		end)
+	end
+	if frame.UpdateAnchors then
+		hooksecurefunc(frame, "UpdateAnchors", function(own)
+			if own.healthBar then guarded(plainFill, own.healthBar) end
 			guarded(applyStyle, own)
 		end)
 	end
