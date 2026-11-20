@@ -555,3 +555,35 @@ function Plates:OnEnable()
 		if unit then guarded(Plates.Added, Plates, unit) end
 	end
 end
+
+-- /stoa plate: what your target's nameplate is made of, for a bug report.
+Stoa.commands.plate = function()
+	local plate = C_NamePlate.GetNamePlateForUnit("target")
+	local frame = plate and plate.UnitFrame
+	if not frame then return Stoa:Print("Target something with a nameplate first.") end
+	local bar = frame.healthBar
+	local lines = {}
+	local function say(label, fn)
+		local ok, text = pcall(fn)
+		lines[#lines + 1] = label .. ": " .. tostring(ok and text or ("? " .. tostring(text)))
+	end
+	local function tex(t)
+		if not t then return "none" end
+		local w, h = t:GetSize()
+		local layer, sub = t:GetDrawLayer()
+		return ("%s shown=%s visible=%s alpha=%.2f %dx%d %s/%s tex=%s atlas=%s"):format(t:GetObjectType(), tostring(t:IsShown()), tostring(t:IsVisible()),
+			t:GetAlpha(), w, h, tostring(layer), tostring(sub), tostring(t:GetTexture()), tostring(t.GetAtlas and t:GetAtlas()))
+	end
+	say("style", function() return tostring(Plates.db.style) .. " marker=" .. tostring(Plates.db.marker) .. " dressed=" .. tostring(frame.stoaDressed) end)
+	say("frame", function() return ("%dx%d scale=%.2f eff=%.2f clips=%s plateClips=%s"):format(frame:GetWidth(), frame:GetHeight(), frame:GetScale(), frame:GetEffectiveScale(), tostring(frame:DoesClipChildren()), tostring(plate:DoesClipChildren())) end)
+	say("bar", function() return ("%dx%d level=%d strata=%s clips=%s parentClips=%s same=%s"):format(bar:GetWidth(), bar:GetHeight(), bar:GetFrameLevel(), bar:GetFrameStrata(), tostring(bar:DoesClipChildren()), tostring(bar:GetParent():DoesClipChildren()), tostring(bar == frame.HealthBarsContainer.healthBar)) end)
+	say("fill", function() return tex(bar:GetStatusBarTexture()) end)
+	say("track", function() return tex(frame.stoaPillFill) end)
+	say("edge", function() return tex(frame.stoaTargetEdge and frame.stoaTargetEdge.edges and frame.stoaTargetEdge.edges[1]) end)
+	say("game bg", function() return tex(bar.bgTexture) end)
+	say("game", function()
+		local o = NamePlateSetupOptions or {}
+		return ("classic=%s barHeight=%s style=%s size=%s simplified=%s"):format(tostring(o.useClassicHealthBar), tostring(o.healthBarHeight), tostring(GetCVar("nameplateStyle")), tostring(GetCVar("nameplateSize")), tostring(GetCVar("nameplateSimplifiedTypes")))
+	end)
+	for _, line in ipairs(lines) do Stoa:Print(line) end
+end
