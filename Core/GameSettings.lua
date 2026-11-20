@@ -92,8 +92,12 @@ end
 -- At login: settings whose part of Stoa is off go back.
 function GameSettings:Tidy()
 	for name, entry in pairs(ledger()) do
-		if entry.owner and Stoa.modules[entry.owner] and not Stoa:IsModuleEnabled(entry.owner) then
+		local module = entry.owner and Stoa.modules[entry.owner]
+		if module and not Stoa:IsModuleEnabled(entry.owner) then
 			self:Restore(name)
+			-- The bags set theirs once per choice: forgetting that here
+			-- has them set it again when they are switched back on.
+			if name == "combinedBags" and module.db then module.db.appliedMode = nil end
 		end
 	end
 end
