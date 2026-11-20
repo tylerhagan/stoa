@@ -12,6 +12,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Fixed: bags could come back as separate bags after STOA's bags were switched off for another bag addon and later on again. STOA now sets its one-bag choice again when its bags return.
 - `/stoa restore` and `/stoa editmode back` return to the Edit Mode layout you had before STOA's.
 - Lighter at rest: the class mark's timer only runs while a timed mark is counting down.
+- Moving frames: the bar's hint has its own lines instead of running into the title.
 - Moving frames: the Halo's box now says "shows in a fight", since the Halo is hidden out of combat and could look as if moving it made it vanish.
 
 ## 1.5.2

@@ -591,7 +591,7 @@ end
 local function buildBar()
 	local UI = Stoa.UI
 	bar = CreateFrame("Frame", "StoaMoverBar", UIParent)
-	bar:SetSize(BAR_WIDTH, 78)
+	bar:SetSize(BAR_WIDTH, 128)
 	UI.riseOnShow(bar)
 	bar:SetPoint("TOP", UIParent, "TOP", 0, -90)
 	bar:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -607,6 +607,7 @@ local function buildBar()
 	local status = UI.text(bar, "italic", Stoa.typeSize.caption, "muted", "LEFT")
 	status:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
 	status:SetPoint("RIGHT", bar, "RIGHT", -14, 0)
+	status:SetWordWrap(false)
 	bar.status = status
 
 	local lock = UI.button(bar, "Lock", 80, function() Stoa:ToggleMovers() end)
@@ -644,9 +645,10 @@ local function buildBar()
 	bar.gridButton = gridButton
 
 	local hint = UI.text(bar, "sans", Stoa.typeSize.caption, "muted", "LEFT")
-	hint:SetPoint("BOTTOMLEFT", 14, 16)
+	-- Its own lines across the bar, between the status and the buttons.
+	hint:SetPoint("TOPLEFT", status, "BOTTOMLEFT", 0, -6)
+	hint:SetPoint("RIGHT", bar, "RIGHT", -14, 0)
 	hint:SetText("Drag a frame; it snaps to edges and other frames, Shift drops it free. Arrows nudge, right-click resets.")
-	hint:SetWidth(BAR_WIDTH - 14 - 80 - 8 - 170 - 8 - 70 - 30)
 	hint:SetWordWrap(true)
 	bar:Hide()
 	UI.applyTheme()
