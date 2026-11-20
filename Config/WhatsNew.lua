@@ -23,6 +23,15 @@ Stoa.WhatsNew = WhatsNew
 local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
+		edition = "1.5.3",
+		title = "New in STOA 1.5.3",
+		lines = {
+			{ "A free right side", "Settings > Console > \"Leave the console's right side free\" hides Ready, Journey and Company, so another addon's window, such as a damage meter, can sit there." },
+			{ "Earlier notes", "Earlier and Later below page through the last five of these notes." },
+			{ "Fixes beside other addons", "The game's damage meter comes back after you pick STOA's over EllesmereUI's, and your bags stay as one bag after another bag addon is switched off." },
+		},
+	},
+	{
 		edition = "1.5.2",
 		title = "New in STOA 1.5.2",
 		lines = {
@@ -60,17 +69,6 @@ local NOTES = {
 			{ "Forever's new dungeons", "The dungeon companion knows all nine new dungeons and their bosses, from Hall of Thanes to Shaper's Terrace, and ticks off optional bosses when you target their corpse." },
 			{ "Quest timers", "A timed quest counts down in a small card beside the quest list's heading, instead of a box over the list." },
 			{ "A tidier quest list", "Quests that would run over the console fade out, and the dungeon fight error about secret auras is gone." },
-		},
-	},
-	{
-		edition = "1.4.0",
-		title = "New in STOA 1.4",
-		lines = {
-			{ "Riding", "On a mount or a flight the console folds to a slim travel line: your speed, the zone and how far your quest is, with chat as a short fading feed and the bars out of the way. It also gets you off your mount to cast and at the flight master. /stoa ride previews it." },
-			{ "Tips", "When there's nothing to do before heading out, the Ready line shows a short tip about something STOA does that's easy to miss. Hover to read it, click to open its setting, right-click once you've got it." },
-			{ "A matching tank watch", "The watch frame wears the target's plaque: portrait medallion, rounded health bar with percent and amount, shield and power line." },
-			{ "Tidier windows", "The trainer's skill bar has its own full-width row, the spellbook list gains an All ranks word, and the character window keeps its shape when opened in a fight." },
-			{ "Smaller things", "Players' race and class on the target plaque, the dungeon companion finds Forever's dungeons and their quests, rested in plain blue on the experience bar, and the console's gold no longer turns silver after a flight." },
 		},
 	},
 }
