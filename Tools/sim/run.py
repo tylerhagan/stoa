@@ -617,6 +617,28 @@ do
 		O.set(O.byId.platesOn, false)
 		assert(O.pending() == 1, "one change waits")
 		O.set(O.byId.platesOn, true)
+		-- More opens and shuts; each page keeps a few everyday settings; a
+		-- change is listed on What I've changed and a right-click puts it back.
+		W:Show("combat")
+		local shown, more = O.onPage("combat")
+		assert(#shown > 0 and #more > 0, "combat page folds")
+		W.fold:GetScript("OnClick")(W.fold)
+		assert(Stoa.db.settingsMore.combat, "More opened")
+		W.fold:GetScript("OnClick")(W.fold)
+		assert(not Stoa.db.settingsMore.combat, "More shut")
+		for _, page in ipairs(O.PAGES) do
+			if page[1] ~= "changed" then
+				local everyday = O.onPage(page[1])
+				assert(#everyday >= 3 and #everyday <= 9, page[1] .. " everyday settings: " .. #everyday)
+			end
+		end
+		local before = #O.changed()
+		O.set(O.byId.fastLoot, false)
+		assert(#O.changed() == before + 1, "a change is listed")
+		W:Show("changed")
+		local changedRow = W.rowFor(O.byId.fastLoot)
+		changedRow:GetScript("OnMouseUp")(changedRow, "RightButton")
+		assert(#O.changed() == before, "right-click puts it back")
 		-- The theme list: open it, step down by key, choose with Enter.
 		W:Show("look")
 		local was = Stoa.db.theme

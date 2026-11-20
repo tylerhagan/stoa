@@ -194,7 +194,9 @@ function Halo:Build()
 	self:BuildCast(frame)
 
 	UI.applyTheme()
-	Stoa:RegisterMover("halo", frame, "Halo")
+	-- Out of a fight the Halo is hidden, so its box says so: otherwise it
+	-- looks as if moving it made it vanish.
+	Stoa:RegisterMover("halo", frame, "Halo", { note = "shows in a fight" })
 
 	-- Everything here floats over the world, so its words are made legible
 	-- over snow and bright sky.

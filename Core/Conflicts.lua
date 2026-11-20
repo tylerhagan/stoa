@@ -99,7 +99,7 @@ local RULES = {
 	},
 	{
 		key = "meters", job = "damage and healing meters", modules = { "Meters" },
-		addons = { { "Details", "Details" }, { "Skada", "Skada" }, { "Recount", "Recount" }, { "EllesmereUIDamageMeters", "EllesmereUI Damage Meters" } },
+		addons = { { "Details", "Details" }, { "Skada", "Skada" }, { "Recount", "Recount" }, { "EllesmereUIDamageMeters", "EllesmereUI Damage Meters", mend = { damageMeterEnabled = "1" } } },
 	},
 	{
 		key = "map", job = "the world map", modules = { "Map" },
@@ -191,8 +191,16 @@ end
 
 -- A part of a larger addon (an entry with on, off and back) is switched in
 -- that addon's own settings instead of turning the whole addon off.
+-- `mend` on an addon: game settings it changes and only puts back while it
+-- runs (EllesmereUI's meter switches the game's own meter off, the one Stoa
+-- dresses). Choosing Stoa's part notes them, and the next login without
+-- that addon sets them (Conflicts:Check).
 local function turnOff(addon)
 	if addon.off then addon.off() else disable(addon[1]) end
+	if addon.mend then
+		Stoa.db.mend = Stoa.db.mend or {}
+		Stoa.db.mend[addon[1]] = addon.mend
+	end
 end
 
 local function turnOn(addon)
@@ -281,6 +289,12 @@ end
 function Conflicts:Check()
 	wipe(aside)
 	wipe(found)
+	for folder, settings in pairs(Stoa.db.mend or {}) do
+		if not isLoaded(folder) and type(settings) == "table" then
+			for name, value in pairs(settings) do Stoa.GameSettings:Mend(name, value) end
+		end
+	end
+	Stoa.db.mend = nil
 	for _, rule in ipairs(RULES) do
 		local loaded = {}
 		for _, addon in ipairs(rule.addons) do

@@ -127,6 +127,49 @@ function Layout:OnStoa(kind)
 	return false
 end
 
+-- The layout that was active before Stoa first switched away from it, kept
+-- per character so /stoa editmode back (and /stoa restore) can return to it.
+-- A preset is kept by its place, a saved layout by its name.
+function Layout:Remember(info)
+	local active = info.activeLayout
+	if not active or Stoa.char.layoutBefore then return end
+	if active <= presets() then
+		Stoa.char.layoutBefore = { preset = active }
+		return
+	end
+	local saved = info.layouts[active - presets()]
+	local name = saved and saved.layoutName
+	if type(name) ~= "string" then return end
+	for _, k in pairs(KINDS) do
+		if k.name == name then return end
+	end
+	Stoa.char.layoutBefore = { name = name }
+end
+
+-- Switches back to that layout, if it still exists. Returns its name.
+function Layout:Back()
+	local before = Stoa.char.layoutBefore
+	if not before or not (C_EditMode and C_EditMode.GetLayouts and C_EditMode.SetActiveLayout) then return nil end
+	if InCombatLockdown() then
+		Stoa:AfterCombat(function() self:Back() end)
+		return before.name or "the game's preset"
+	end
+	local info = C_EditMode.GetLayouts()
+	if not (info and info.layouts) then return nil end
+	local target = before.preset
+	if before.name then
+		local index = find(info, before.name)
+		target = index and presets() + index
+	end
+	if not target then return nil end
+	if info.activeLayout ~= target then
+		C_EditMode.SetActiveLayout(target)
+		self:Bars()
+	end
+	Stoa.char.layoutBefore = nil
+	return before.name or "the game's preset"
+end
+
 -- Adds Stoa's layout (or the designer's) if it isn't saved yet, or
 -- refreshes one saved from an older string, and switches to it.
 function Layout:Apply(quiet, kind)
@@ -145,6 +188,7 @@ function Layout:Apply(quiet, kind)
 	if not (info and info.layouts) then return end
 	local index = find(info, NAME)
 	local refresh = index and self:Stale(kind)
+	self:Remember(info)
 	if not index or refresh then
 		local ok, layout = pcall(C_EditMode.ConvertStringToLayoutInfo, Stoa[k.text])
 		if not (ok and layout) then
@@ -275,6 +319,13 @@ Stoa.commands.editmode = function(rest)
 		Stoa:Print(("Screen %d UI units wide (compact below %d). Wants %s; active layout: %s; switching %s."):format(
 			math.floor(UIParent:GetWidth() or 0), COMPACT_BELOW, kindOf(Layout:Wanted()).name,
 			active and active.layoutName or "a game preset", Layout.db.compact ~= false and "on" or "off"))
+	elseif word == "back" then
+		local name = Layout:Back()
+		if name then
+			Stoa:Print(("Switched back to the Edit Mode layout you had before STOA's: %s."):format(name))
+		else
+			Stoa:Print("STOA has no earlier Edit Mode layout to go back to.")
+		end
 	elseif word == "auto" then
 		Layout.db.compact = true
 		Layout:Apply(false, Layout:Wanted())

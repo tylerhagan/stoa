@@ -1812,7 +1812,7 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 		spots[2] = { chatRight, barsLeft }
 	end
 	local pageWidth = Stoa:PlainNumber(self.rightPage:GetWidth()) or 0
-	spots[3] = { barsRight, width - inset - pageWidth }
+	if not self.db.freeRight then spots[3] = { barsRight, width - inset - pageWidth } end
 	local on = self.db.dividers ~= false
 	for i, div in ipairs(dividers) do
 		local spot = spots[i]
@@ -1849,6 +1849,10 @@ function Console:FitPages()
 		{ capped and "ready" or "journey" },
 	}
 	local chosen, gap = {}, COLUMN_GAP
+	-- The player keeps the right side for something of their own (a meter
+	-- from another addon, say): no columns, on the full console only.
+	local free = self.db.freeRight and not self.slimCard
+	if free then orders = {} end
 	for _, order in ipairs(orders) do
 		for _, g in ipairs(PAGE_GAPS) do
 			if #order * COLUMN_WIDTH + (#order - 1) * g <= room then

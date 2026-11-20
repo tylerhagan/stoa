@@ -173,7 +173,8 @@ local function styleOverlay(mover)
 	mover.overlay:SetBackdropBorderColor(Stoa:Color(chosen and "accent" or "muted"))
 	mover.text:SetTextColor(Stoa:Color(chosen and "accent" or "text"))
 	-- A marker as well as a colour, for anyone who can't tell them apart.
-	mover.text:SetText((chosen and "> " or "") .. mover.label:upper())
+	-- A note under the name, for a frame that isn't always there to see.
+	mover.text:SetText((chosen and "> " or "") .. mover.label:upper() .. (mover.note and ("\n" .. mover.note) or ""))
 end
 
 -- The overlay covers the frame it stands for. Its scale matches the frame's,
@@ -432,6 +433,7 @@ end
 
 -- key: a stable id for saving. frame: a frame Stoa owns, anchored to the
 -- screen or to something Stoa owns. label: its name on the overlay.
+-- options.note: a few words under the label while frames are unlocked.
 -- options.default: how to put the frame back when no spot is saved, for
 -- frames whose module places them itself; otherwise the anchors the frame has
 -- now are kept and used.
@@ -441,6 +443,7 @@ function Stoa:RegisterMover(key, frame, label, options)
 		frame = frame,
 		label = label or key,
 		default = options and options.default,
+		note = options and options.note,
 		points = remember(frame),
 	}
 	mover.overlay = makeOverlay(mover)
@@ -588,7 +591,7 @@ end
 local function buildBar()
 	local UI = Stoa.UI
 	bar = CreateFrame("Frame", "StoaMoverBar", UIParent)
-	bar:SetSize(BAR_WIDTH, 78)
+	bar:SetSize(BAR_WIDTH, 128)
 	UI.riseOnShow(bar)
 	bar:SetPoint("TOP", UIParent, "TOP", 0, -90)
 	bar:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -604,6 +607,7 @@ local function buildBar()
 	local status = UI.text(bar, "italic", Stoa.typeSize.caption, "muted", "LEFT")
 	status:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
 	status:SetPoint("RIGHT", bar, "RIGHT", -14, 0)
+	status:SetWordWrap(false)
 	bar.status = status
 
 	local lock = UI.button(bar, "Lock", 80, function() Stoa:ToggleMovers() end)
@@ -641,9 +645,10 @@ local function buildBar()
 	bar.gridButton = gridButton
 
 	local hint = UI.text(bar, "sans", Stoa.typeSize.caption, "muted", "LEFT")
-	hint:SetPoint("BOTTOMLEFT", 14, 16)
+	-- Its own lines across the bar, between the status and the buttons.
+	hint:SetPoint("TOPLEFT", status, "BOTTOMLEFT", 0, -6)
+	hint:SetPoint("RIGHT", bar, "RIGHT", -14, 0)
 	hint:SetText("Drag a frame; it snaps to edges and other frames, Shift drops it free. Arrows nudge, right-click resets.")
-	hint:SetWidth(BAR_WIDTH - 14 - 80 - 8 - 170 - 8 - 70 - 30)
 	hint:SetWordWrap(true)
 	bar:Hide()
 	UI.applyTheme()

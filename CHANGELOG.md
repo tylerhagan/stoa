@@ -4,6 +4,21 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
+## 1.5.3
+
+- **Simpler settings**: every settings page opens on its few everyday settings, with the rest one click away under More. Search still finds everything. An opened More stays open.
+- **Only what applies to you**: pet settings show for hunters and warlocks, mana settings for classes with mana, form mana for druids, and DoT marks only with DoesItDie loaded.
+- **What I've changed**: a new settings page lists every switch and choice that isn't as STOA comes. Right-click a setting, there or on any page, to put it back.
+- Fewer switches: 23 settings that followed another, or that nobody needs to turn off, left the pages. Search still finds them and none of your choices changed. The console's mana marks follow the Halo's switches, "Restyle Blizzard windows" covers every window, three chat switches became "STOA's chat look", duel and drunk lines became "Hide chat noise", and duels are one choice: Never, Strangers or Everyone.
+- **A free right side**: Settings > Console > "Leave the console's right side free" hides the Ready, Journey and Company pages together, so the leather right of the action bars is yours for another window, such as a damage meter from another addon. Off unless you turn it on.
+- **Earlier notes**: the what's-new window keeps the last five notes. Earlier and Later in its foot page through them, and each release has a short note of its own again.
+- Fixed: choosing STOA's damage meter over EllesmereUI's left no meter at all. EllesmereUI switches the game's own meter off and only puts it back while it runs; STOA now turns it back on at the next login after you pick STOA's.
+- Fixed: bags could come back as separate bags after STOA's bags were switched off for another bag addon and later on again. STOA now sets its one-bag choice again when its bags return.
+- `/stoa restore` and `/stoa editmode back` return to the Edit Mode layout you had before STOA's.
+- Lighter at rest: the class mark's timer only runs while a timed mark is counting down.
+- Moving frames: the bar's hint has its own lines instead of running into the title.
+- Moving frames: the Halo's box now says "shows in a fight", since the Halo is hidden out of combat and could look as if moving it made it vanish.
+
 ## 1.5.2
 
 - **Fit EllesmereUI to the console**: one click in Settings > Other addons (or `/stoa fit`) places EllesmereUI's chat on the console's left page and its damage meter top left, where STOA keeps its own. It writes only those two positions into EllesmereUI's settings and reloads; `/stoa fit undo` puts them back. The chat keeps its own size; drag its corner narrower if it covers At a glance. The page that asks which addon does which offers it as a row when EllesmereUI's chat is kept, so it happens in the same reload.
