@@ -1,5 +1,6 @@
 -- Stoa: every setting, described once. The settings window (Config/Window.lua)
--- draws its pages, search and notes from this list.
+-- draws its pages, search and notes from this list. A page: id, name, what
+-- it holds, and a shorter name for the list of pages when the name is long.
 --
 -- A setting: page, group, id, name, desc, kind, and how to read and write it.
 -- Kinds: toggle, choice (a row of choices, or a list when there are many),
@@ -33,7 +34,7 @@ Options.PAGES = {
 	{ "journey", "Levelling & loot", "Help along the way: pace, quests, trainers, rewards and loot." },
 	{ "comforts", "Comforts", "Small things STOA does for you. Hold Shift to stop any of them in the moment." },
 	{ "setup", "Setup", "Your setup as a whole: start again, keep a copy, put the game back, report a problem." },
-	{ "changed", "What I've changed", "Every setting that isn't as STOA comes. Right-click one to put it back, here or on any page." },
+	{ "changed", "What I've changed", "Every setting that isn't as STOA comes. Right-click one to put it back, here or on any page.", "Changed" },
 }
 
 local function setOf(...)
