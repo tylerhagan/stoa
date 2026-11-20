@@ -20,7 +20,7 @@ local CONTENT = WIDTH - NAV - DETAIL - PAD * 4
 local INLINE = 210 -- the widest control that sits beside a setting's name
 local ROW_GAP = 6
 
-local current = "look"
+local current = "parts"
 local query
 local rows = {}
 
@@ -714,6 +714,8 @@ function Window:Draw(keep)
 	else
 		if current == "changed" then
 			list = Options.changed()
+		elseif current == "parts" then
+			list = Options.parts()
 		else
 			list, more = Options.onPage(current)
 		end
@@ -1002,7 +1004,7 @@ function Window:Build()
 		button.text:SetText(info[4] or info[2])
 		button.count = UI.text(button, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 		button.count:SetPoint("RIGHT", -10, 0)
-		button.count:SetText(#Options.onPage(info[1]))
+		button.count:SetText(info[1] == "parts" and #Options.parts() or #Options.onPage(info[1]))
 		button:SetScript("OnClick", function()
 			current = info[1]
 			if query then search:SetText("") search:ClearFocus() end
@@ -1109,6 +1111,8 @@ function Window:Defaults()
 		list = Options.search(query) or {}
 	elseif current == "changed" then
 		list = Options.changed()
+	elseif current == "parts" then
+		list = Options.parts()
 	else
 		-- More's settings too, opened or not.
 		local shown, more = Options.onPage(current)

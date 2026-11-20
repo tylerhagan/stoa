@@ -627,11 +627,24 @@ do
 		W.fold:GetScript("OnClick")(W.fold)
 		assert(not Stoa.db.settingsMore.combat, "More shut")
 		for _, page in ipairs(O.PAGES) do
-			if page[1] ~= "changed" then
+			if page[1] ~= "changed" and page[1] ~= "parts" then
 				local everyday = O.onPage(page[1])
 				assert(#everyday >= 3 and #everyday <= 9, page[1] .. " everyday settings: " .. #everyday)
 			end
 		end
+		-- Parts: each stands for a setting on another page and moves it.
+		W:Show("parts")
+		assert(#O.parts() >= 15, "parts listed: " .. #O.parts())
+		for _, part in ipairs(O.parts()) do
+			W:Describe(part)
+			if part.kind == "toggle" then
+				local was = O.value(part)
+				O.set(part, not was)
+				assert(O.value(O.byId[part.startId]) == not was, part.id .. " moves its setting")
+				O.set(part, was)
+			end
+		end
+		assert(O.pending() == 0, "parts put back leave nothing waiting")
 		local before = #O.changed()
 		O.set(O.byId.fastLoot, false)
 		assert(#O.changed() == before + 1, "a change is listed")

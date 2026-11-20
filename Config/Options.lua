@@ -24,6 +24,7 @@ local Options = { list = {}, byId = {}, start = {} }
 Stoa.Options = Options
 
 Options.PAGES = {
+	{ "parts", "Parts", "What STOA is made of. Switch off any part you don't want and the game's own comes back. The other pages fine-tune each part." },
 	{ "look", "Look", "Theme, colour and the few painted pieces. These change everything else, so they come first." },
 	{ "console", "Console", "The leather console along the bottom of the screen and what it holds." },
 	{ "combat", "Combat", "What happens when a fight starts: the Halo, the combat bar and what they show." },
@@ -42,6 +43,30 @@ local function setOf(...)
 	for _, name in ipairs({ ... }) do out[name] = true end
 	return out
 end
+
+-- The Parts page: the main switch of each piece of Stoa, gathered from the
+-- pages below under a plain name, with what you get and what Off leaves.
+-- { setting id, group, name, what it is }
+local PARTS = {
+	{ "preset", "Start from a set", "How much STOA", "Six ready-made sets of the parts below. Pick the closest, then switch parts on or off. Full is everything. Slim makes the console one line. Minimal has no console. Quiet folds more away. Classic feel keeps the game's own windows, bags, tooltips and nameplates. Same as Designer is how STOA's designer plays." },
+	{ "consoleShape", "Out of a fight", "Console", "The leather panel along the bottom of the screen that holds chat, your action bars and the Ready, Journey and Company pages. Slim is one thin line with chat and bars standing above it. None takes the console away." },
+	{ "houseChat", "Out of a fight", "Chat on the console", "Chat sits on the console's left page. Off leaves the chat window where the game puts it." },
+	{ "glanceOn", "Out of a fight", "At a glance", "Up to eight numbers you choose, such as gold, gear and stats, beside the chat on the console. Off takes them away." },
+	{ "actionBars", "Out of a fight", "Action buttons", "Rounded buttons with a fine edge and dim sockets for empty slots. Off keeps the game's square buttons." },
+	{ "combatConsole", "In a fight", "The Halo", "The ring around your character in a fight, with your health, power, casts and cooldowns where your eyes already are. Fold to the Halo puts the console away while you fight. Console and Halo keeps both. Console only turns the Halo off, for players who use other unit frames." },
+	{ "combatBar", "In a fight", "Combat bar", "A compact row of your main bar's spells under the Halo in a fight, with their keys. Off leaves your usual action bars in place." },
+	{ "partyOn", "In a fight", "Party cards", "Your party as STOA's cards: large beside the Halo when you heal, compact on the left otherwise. Off brings back the game's party frames." },
+	{ "raidOn", "In a fight", "Raid frames", "Your raid as a grid of compact cards, one column per group. Off brings back the game's raid frames." },
+	{ "platesOn", "Over the world", "Nameplates", "Flat health bars over enemies, coloured by what you can do to them. Off keeps the game's nameplates." },
+	{ "tooltipOn", "Over the world", "Tooltips", "Tooltips as cards with extra lines: who a unit targets, your threat, a player's item level, how many of an item you own. Off keeps the game's tooltips." },
+	{ "minimap", "Over the world", "Minimap", "The minimap with an edge in your theme's colour and the zone name above it. Off keeps the game's minimap." },
+	{ "top", "Over the world", "Buffs and quest list", "Your buffs as cropped icons with quiet timers, and the quest list in STOA's type. Off keeps the game's." },
+	{ "windowsOn", "Windows and bags", "Windows", "The quest, merchant, trainer, spellbook, talents, mail and other game windows on dark panels with light text. Off keeps them as the game draws them." },
+	{ "bags", "Windows and bags", "Bags", "Rounded slots with a coloured edge by quality, item level on gear and a Sort button. Off keeps the game's bags." },
+	{ "character", "Windows and bags", "Character sheet", "Item level and quality on every slot, with gear that needs repair marked. Off keeps the game's character sheet." },
+	{ "meters", "Windows and bags", "Damage meter", "The game's damage and healing meter as plain words and faint bars with no panel. Off keeps the game's look." },
+	{ "xpbar", "Windows and bags", "Experience bar", "The experience and reputation bar as a thin flat bar. Off keeps the game's bar." },
+}
 
 local EVERYDAY = setOf(
 	"Theme", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
@@ -112,7 +137,7 @@ end
 -- Settings read when the UI loads: changed since login means a reload.
 function Options.waiting(entry)
 	if not entry.reload then return false end
-	local was, now = Options.start[entry.id], entry.state and entry.state() or value(entry)
+	local was, now = Options.start[entry.startId or entry.id], entry.state and entry.state() or value(entry)
 	if entry.reloadWhen then return entry.reloadWhen(was, now) end
 	return was ~= now
 end
@@ -822,8 +847,23 @@ local function build()
 	button("check", "Launch check", "Checks every spell, game function and frame STOA relies on, after a game update. Results in chat.", "Run", command("check"), { cmd = "/stoa check", words = "update broken" })
 	button("safe", "Safe mode", "Turns off every skin that reaches into Blizzard's frames and reloads. Turn them back on here afterwards.", "Turn on", function() Stoa.commands.safe() end, { confirm = true, cmd = "/stoa safe", words = "broken errors disable" })
 
+	-- Each part stands for a setting above: the same switch under its plain
+	-- name. They aren't in the list, so search and the counts see one of each.
+	Options.partList = {}
+	for _, part in ipairs(PARTS) do
+		local base = Options.byId[part[1]]
+		if base then
+			Options.partList[#Options.partList + 1] = setmetatable({
+				id = "part_" .. base.id, startId = base.id, page = "parts", group = part[2], name = part[3], desc = part[4],
+				more = false, quiet = false,
+			}, { __index = base })
+		end
+	end
+
 	Options.snapshot()
 end
+
+function Options.parts() return Options.partList or {} end
 
 -- What the reload-only settings held as the UI loaded.
 function Options.snapshot()
