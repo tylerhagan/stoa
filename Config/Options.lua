@@ -9,6 +9,13 @@
 -- settings), scope (where it is kept, when not account-wide), cmd (the
 -- /stoa words that do the same), words (other words search should find),
 -- needs (an addon it needs).
+--
+-- Each page opens on its few everyday settings (EVERYDAY, or everyday = true)
+-- with the rest one click away under More. A setting in QUIET follows another
+-- or is always as it comes: it is off the pages, and still found by search and
+-- listed on What I've changed if it was ever set otherwise. A setting for
+-- other classes (classes) or for an addon that isn't loaded (addonGlobal) is
+-- left out altogether.
 local _, ns = ...
 local Stoa = ns.Stoa
 
@@ -26,7 +33,51 @@ Options.PAGES = {
 	{ "journey", "Levelling & loot", "Help along the way: pace, quests, trainers, rewards and loot." },
 	{ "comforts", "Comforts", "Small things STOA does for you. Hold Shift to stop any of them in the moment." },
 	{ "setup", "Setup", "Your setup as a whole: start again, keep a copy, put the game back, report a problem." },
+	{ "changed", "What I've changed", "Every setting that isn't as STOA comes. Right-click one to put it back, here or on any page." },
 }
+
+local function setOf(...)
+	local out = {}
+	for _, name in ipairs({ ... }) do out[name] = true end
+	return out
+end
+
+local EVERYDAY = setOf(
+	"Theme", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
+	"Leather console", "Hold chat in the console", "Travel line while riding", "At a glance, beside the chat", "Lines at a glance",
+	"In combat", "Target of target", "Focus", "Combat bar under the Halo", "Combat rows", "Proc art beside the Halo",
+	"Show STOA party cards", "Show STOA raid frames", "Show sample frames", "Click-casting", "Click bindings", "Threat meter",
+	"Restyle nameplates", "Nameplate style", "Damage numbers", "Tooltip cards", "Tooltip position",
+	"Restyle Blizzard windows", "Restyle bags", "Bag layout", "Restyle the top of the screen", "Move STOA's frames",
+	"Style the minimap", "Minimap shape", "Gather addon icons", "Times on chat lines",
+	"Experience pace", "New spells at your trainer", "Mark the best quest reward", "Quest item buttons", "Your buffs at hand", "Emergency item",
+	"Faster loot", "Whisper card", "Accept quests", "Hand in quests", "Sell grey junk", "Repair gear", "Away screen", "Dungeon companion",
+	"Welcome page", "How much STOA", "Backup", "Characters", "Bind keys", "Other addons", "Report a problem"
+)
+
+local QUIET = setOf(
+	"Smooth health and power", "Hide action bar art",
+	"Five-second rule on the console", "Cast cost on the console", "Form mana on the console",
+	"Turn the game's own proc art off", "Check it",
+	"Hide Blizzard's party frames", "Hide Blizzard's raid frames", "Threat meter only in combat", "Stop logging when you leave",
+	"Restyle more windows",
+	"More space between chat lines", "Chat buttons in a column", "Quiet typing box",
+	"Ranks", "Sparkle on what's up close", "Hide other people's duel results", "Hide drunken chatter",
+	"Say what came out", "Gallery", "Launch check"
+)
+
+local MANA = setOf("PRIEST", "MAGE", "WARLOCK", "DRUID", "SHAMAN", "PALADIN", "HUNTER")
+local PETS = setOf("HUNTER", "WARLOCK")
+
+-- False for a setting that can't do anything on this character.
+local function applies(entry)
+	if entry.classes then
+		local _, class = UnitClass("player")
+		if class and not entry.classes[class] then return false end
+	end
+	if entry.addonGlobal and rawget(_G, entry.addonGlobal) == nil then return false end
+	return true
+end
 
 local function module(name)
 	local found = Stoa.modules[name]
@@ -75,8 +126,11 @@ end
 
 local page, group
 local function add(entry)
+	if not applies(entry) then return entry end
 	entry.page, entry.group = entry.page or page, entry.group or group
 	entry.id = entry.id or entry.key
+	entry.quiet = QUIET[entry.name] or nil
+	entry.more = not (entry.everyday or EVERYDAY[entry.name]) or nil
 	if Options.byId[entry.id] then entry.id = entry.id .. #Options.list end
 	Options.list[#Options.list + 1] = entry
 	Options.byId[entry.id] = entry
@@ -264,12 +318,20 @@ local function build()
 		if h then h.Refresh() end
 		if c then c.Refresh() end
 	end
-	toggle(halo, "manaRule", "Five-second rule and regen ticks", "A small spark runs along your mana on the Halo while spirit regeneration is paused after you spend mana, then pulses on each regeneration tick. Mana users only.", true, { id = "haloManaRule", words = "5sr spirit regen", change = manaPlay })
-	toggle(halo, "castCost", "Show what a cast will cost", "While you cast, the mana the spell will spend is shaded on the Halo's mana arc.", true, { id = "haloCastCost", words = "mana cost", change = manaPlay })
-	toggle(halo, "formMana", "Mana while shapeshifted", "Druids in cat or bear form see their mana as a slim bar under the Halo's power number.", true, { id = "haloFormMana", words = "druid cat bear", change = manaPlay })
-	toggle(console, "manaRule", "Five-second rule on the console", "The same spark on the console's mana bar.", true, { id = "consoleManaRule", change = manaPlay })
-	toggle(console, "castCost", "Cast cost on the console", "The same shade on the console's mana bar.", true, { id = "consoleCastCost", change = manaPlay })
-	toggle(console, "formMana", "Form mana on the console", "A druid's mana under the console's bar while shapeshifted.", true, { id = "consoleFormMana", change = manaPlay })
+	-- The console's mana bar follows the Halo's switches.
+	local function manaBoth(key)
+		return function(_, v)
+			local c = console()
+			if c then c[key] = v end
+			manaPlay()
+		end
+	end
+	toggle(halo, "manaRule", "Five-second rule and regen ticks", "A small spark runs along your mana on the Halo and the console while spirit regeneration is paused after you spend mana, then pulses on each regeneration tick. Mana users only.", true, { id = "haloManaRule", classes = MANA, words = "5sr spirit regen", change = manaBoth("manaRule") })
+	toggle(halo, "castCost", "Show what a cast will cost", "While you cast, the mana the spell will spend is shaded on the Halo's mana arc and the console's mana bar.", true, { id = "haloCastCost", classes = MANA, words = "mana cost", change = manaBoth("castCost") })
+	toggle(halo, "formMana", "Mana while shapeshifted", "Druids in cat or bear form see their mana as a slim bar under the Halo's power number, and under the console's bar.", true, { id = "haloFormMana", classes = setOf("DRUID"), words = "druid cat bear", change = manaBoth("formMana") })
+	toggle(console, "manaRule", "Five-second rule on the console", "The same spark on the console's mana bar.", true, { id = "consoleManaRule", classes = MANA, change = manaPlay })
+	toggle(console, "castCost", "Cast cost on the console", "The same shade on the console's mana bar.", true, { id = "consoleCastCost", classes = MANA, change = manaPlay })
+	toggle(console, "formMana", "Form mana on the console", "A druid's mana under the console's bar while shapeshifted.", true, { id = "consoleFormMana", classes = setOf("DRUID"), change = manaPlay })
 	group = "Procs"
 	local procs = of("Procs")
 	local function takeOver() Stoa.modules.Procs:TakeOver(procs().takeOver and procs().art) end
@@ -287,25 +349,25 @@ local function build()
 	toggle(of("Manager"), "showBlizzard", "Keep the Cooldown Manager's rows on screen", "Off keeps the game's rows running but see-through, so the Halo is the one place cooldowns show.", false, { id = "cdmShow", change = refresh("Manager", "Quiet") })
 	actions("cdmProbe", "Check it", "Lists the spells the Cooldown Manager tracks, and what STOA can read of each, in chat.", { { "What it tracks", command("cdm") } }, { cmd = "/stoa cdm" })
 	group = "DoT kill marks"
-	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in dark stripes, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", words = "dot damage execute", change = refresh("Lethal", "Update") })
+	toggle(of("Lethal"), "marker", "DoT damage on the target bar", "The end of the target plaque's health bar shows, in dark stripes, how much your DoTs will still take off.", true, { id = "lethalMarker", needs = "Needs the DoesItDie addon", addonGlobal = "DoesItDie", words = "dot damage execute", change = refresh("Lethal", "Update") })
 	choice(nil, "dotPlates", "DoT marks on nameplates", "Who marks each enemy's nameplate with the damage your DoTs still have to deal. STOA draws a dark striped stretch on the health bar and a small skull once they will kill. Does It Die draws its own marker. Choosing here sets Does It Die's \"Show on nameplates\" for you, so the two never both draw.", "stoa", {
 		{ "stoa", "STOA" }, { "theirs", "Does It Die" }, { "off", "Neither" },
 	}, {
-		id = "lethalPlates", needs = "Needs the DoesItDie addon", words = "dot damage nameplate execute doesitdie",
+		id = "lethalPlates", needs = "Needs the DoesItDie addon", addonGlobal = "DoesItDie", words = "dot damage nameplate execute doesitdie",
 		get = function() local m = Stoa.modules.Lethal; return m and m.db and m:PlateOwner() or "stoa" end,
 		set = function(v) local m = Stoa.modules.Lethal; if m and m.db then m:SetPlateOwner(v) end end,
 	})
-	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", change = refresh("Lethal", "Update") })
+	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", addonGlobal = "DoesItDie", change = refresh("Lethal", "Update") })
 	group = "Shadow priest"
-	toggle(of("Shadow"), "followSequence", "Follow a cast sequence macro", "With a /castsequence macro on your bars, the next-press outline follows it: the macro lights up, and so does the spell button its next step will cast. Off goes back to STOA's own order (DoTs, Mind Blast, Death, Mind Flay).", true, { id = "shadowSequence", words = "castsequence macro rotation priority", change = refresh("Shadow", "UpdateNext") })
+	toggle(of("Shadow"), "followSequence", "Follow a cast sequence macro", "With a /castsequence macro on your bars, the next-press outline follows it: the macro lights up, and so does the spell button its next step will cast. Off goes back to STOA's own order (DoTs, Mind Blast, Death, Mind Flay).", true, { id = "shadowSequence", classes = setOf("PRIEST"), words = "castsequence macro rotation priority", change = refresh("Shadow", "UpdateNext") })
 	group = "Your pet"
 	local pet = of("Pet")
 	local petRefresh = function() if Stoa.Pet and Stoa.Pet.enabled then Stoa.Pet:UpdateAll() end end
-	toggle(pet, "plaque", "Pet plaque", "In a fight, a plaque like the target's at the Halo's upper left: your pet's mood, health, power, stance and what it's attacking. Under the tank watch when you heal.", true, { id = "petPlaque", reload = true, words = "hunter warlock demon minion" })
-	toggle(pet, "arc", "Pet health on the Halo", "A thin arc inside your own health with the pet's.", true, { id = "petArc", reload = true, words = "hunter warlock" })
-	toggle(pet, "row", "Pet row under the combat bar", "Your pet's buttons, smaller, under the combat bar in a fight. Right-click one to switch its autocast. Out of a fight the game's pet bar stays where it is, in STOA's dress.", true, { id = "petRow", reload = true, words = "pet bar autocast stance" })
-	toggle(pet, "coin", "Pet coin on the medallion", "Out of a fight, a small coin off the medallion with your pet's health as a ring and its mood under it. Click it to feed it food from your bags when it isn't happy; right-click targets it.", true, { id = "petCoin", reload = true, words = "feed happiness hunter" })
-	toggle(pet, "words", "Pet reminders", "CALL PET when it isn't out, PET DEAD when it needs reviving, FEED when it's unhappy, PET LOW and PET PASSIVE in a fight, GROWL ON in a group when you aren't the tank.", true, { id = "petWords", words = "growl feed revive call", change = petRefresh })
+	toggle(pet, "plaque", "Pet plaque", "In a fight, a plaque like the target's at the Halo's upper left: your pet's mood, health, power, stance and what it's attacking. Under the tank watch when you heal.", true, { id = "petPlaque", classes = PETS, reload = true, words = "hunter warlock demon minion" })
+	toggle(pet, "arc", "Pet health on the Halo", "A thin arc inside your own health with the pet's.", true, { id = "petArc", classes = PETS, reload = true, words = "hunter warlock" })
+	toggle(pet, "row", "Pet row under the combat bar", "Your pet's buttons, smaller, under the combat bar in a fight. Right-click one to switch its autocast. Out of a fight the game's pet bar stays where it is, in STOA's dress.", true, { id = "petRow", classes = PETS, reload = true, words = "pet bar autocast stance" })
+	toggle(pet, "coin", "Pet coin on the medallion", "Out of a fight, a small coin off the medallion with your pet's health as a ring and its mood under it. Click it to feed it food from your bags when it isn't happy; right-click targets it.", true, { id = "petCoin", classes = PETS, reload = true, words = "feed happiness hunter" })
+	toggle(pet, "words", "Pet reminders", "CALL PET when it isn't out, PET DEAD when it needs reviving, FEED when it's unhappy, PET LOW and PET PASSIVE in a fight, GROWL ON in a group when you aren't the tank.", true, { id = "petWords", classes = PETS, words = "growl feed revive call", change = petRefresh })
 	toggle(pet, "partyPets", "Pets under party cards", "When you heal in a party, a slim cell under each owner's card with the pet's health. Your click-casting works on it.", true, { id = "petParty", reload = true, words = "healer partypet" })
 
 	-- Group
@@ -392,7 +454,10 @@ local function build()
 	-- Windows
 	page = "windows"
 	group = "Dress"
-	toggle(of("Windows"), "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer and bag windows on STOA's dark panels with light text.", true, { id = "windowsOn", reload = true, words = "skin blizzard frames" })
+	toggle(of("Windows"), "enabled", "Restyle Blizzard windows", "Quest, gossip, merchant, trainer, spellbook, talents, mail, auction house, group finder, friends and guild windows on STOA's dark panels with light text.", true, {
+		id = "windowsOn", reload = true, words = "skin blizzard frames spellbook talents mail auction friends guild",
+		change = function(_, v) local m = module("MoreWindows"); if m then m.enabled = v end end,
+	})
 	toggle(of("MoreWindows"), "enabled", "Restyle more windows", "Spellbook, talents, world map border, mail, auction house, group finder, friends and guild on the same dark panels.", true, { id = "moreWindows", reload = true, words = "skin blizzard frames" })
 	toggle(of("Bags"), "enabled", "Restyle bags", "Rounded slots, a coloured edge by quality plus a corner mark for epic and above, item level on gear, free slots, your money in letters and a Sort button.", true, { id = "bags", reload = true, words = "inventory" })
 	choice(of("Bags"), "bagMode", "Bag layout", "One combined bag, or a window for each bag. You can still switch from the bag's own menu.", "combined", {
@@ -465,6 +530,17 @@ local function build()
 	toggle(of("Timers"), "mirror", "Breath and fatigue in STOA's bar", "Breath, fatigue and feign death timers in the same slim bar, worded, in place of Blizzard's.", true, { words = "underwater" })
 	group = "Chat"
 	local look = of("ChatLook")
+	toggle(nil, "chatLook", "STOA's chat look", "More space between lines, the chat's buttons in one quiet column down its left side, and the typing box as a dark strip under the messages. Search finds the three on their own.", true, {
+		id = "chatLook", reload = true, words = "chat spacing buttons column typing edit box",
+		get = function() local c = look(); return c and c.air and c.rail and c.input and true or false end,
+		set = function(v)
+			local c = look()
+			if not c then return end
+			c.air, c.rail, c.input = v, v, v
+			local m = Stoa.modules.ChatLook
+			if m and m.Air then m:Air() end
+		end,
+	})
 	toggle(look, "times", "Times on chat lines", "Each line starts with a quiet time and a thin rule, so messages line up in a column. Skipped when the game's own timestamps are on.", true, { words = "timestamps clock" })
 	toggle(look, "air", "More space between chat lines", "A little air between lines, so a busy chat reads in rows rather than a block.", true, { words = "spacing", change = refresh("ChatLook", "Air") })
 	toggle(look, "rail", "Chat buttons in a column", "Friends, channels, voice and the chat menu in one quiet column down the chat's left side.", true, { reload = true })
@@ -524,9 +600,28 @@ local function build()
 	toggle(comforts, "turnInQuests", "Hand in quests", "Hands in finished quests. A quest with a choice of reward always waits for you. Hold Shift to stop.", false)
 	toggle(comforts, "skipCinematics", "Skip cinematics", "Cancels cinematics and movies as they start. Hold Shift to watch.", false, { words = "movies cutscenes" })
 	toggle(comforts, "quietErrors", "Quiet errors in combat", "Hides the red \"Not enough mana\" and \"Out of range\" text while you fight; it comes back after.", false, { words = "red text" })
+	toggle(nil, "chatNoise", "Hide chat noise", "Other people's duel results and lines about them getting drunk stay out of chat, unless they name you. Search finds the two on their own.", true, {
+		id = "chatNoise", words = "duel drunk tipsy spam filter",
+		get = function() local c = comforts(); return c and c.quietDuels and c.quietDrunk and true or false end,
+		set = function(v) local c = comforts(); if c then c.quietDuels, c.quietDrunk = v, v end end,
+	})
 	toggle(comforts, "quietDuels", "Hide other people's duel results", "Lines like \"X has defeated Y in a duel\" stay out of chat, unless they name you.", true)
 	toggle(comforts, "quietDrunk", "Hide drunken chatter", "Lines about other people getting tipsy or drunk stay out of chat.", true)
-	toggle(comforts, "declineDuels", "Decline duels", "Turns down duel requests as they come. Hold Shift to see one.", false)
+	choice(nil, "duels", "Decline duels", "Turns down duel requests as they come: from nobody, from anyone you don't know (friends and guildmates still get through), or from everyone. Hold Shift to see one.", "strangers", {
+		{ "never", "Never" }, { "strangers", "Strangers" }, { "all", "Everyone" },
+	}, {
+		id = "duels", words = "duel decline stranger",
+		get = function()
+			local c, p = comforts(), module("Social")
+			if c and c.declineDuels then return "all" end
+			return p and p.declineStrangerDuels and "strangers" or "never"
+		end,
+		set = function(v)
+			local c, p = comforts(), module("Social")
+			if c then c.declineDuels = v == "all" end
+			if p then p.declineStrangerDuels = v ~= "never" end
+		end,
+	})
 	toggle(comforts, "releaseInPvP", "Release in battlegrounds", "Releases your spirit when you die in a battleground, unless you have a soulstone. Hold Shift to stay.", false, { words = "pvp" })
 	toggle(comforts, "acceptRes", "Accept resurrections", "Takes a resurrection as soon as it's offered, unless whoever cast it is still fighting. Hold Shift to wait.", false, { words = "rez resurrect" })
 	group = "Merchants"
@@ -593,7 +688,6 @@ local function build()
 	local social = of("Social")
 	toggle(social, "acceptFriendInvites", "Accept friend and guild invites", "A party invite from a friend, Battle.net friend or guildmate is taken as it comes, and noted in chat.", true, { words = "party group" })
 	toggle(social, "declineStrangerInvites", "Decline stranger invites", "A party invite from anyone you don't know is turned down quietly, and noted in chat.", false)
-	toggle(social, "declineStrangerDuels", "Decline stranger duels", "A duel from anyone you don't know is turned down quietly. Friends and guildmates still get through (Decline duels, under Comforts, turns down everyone).", true)
 	toggle(social, "declineStrangerGuildInvites", "Decline stranger guild invites", "A guild invite from anyone you don't know is turned down quietly, and noted in chat.", true)
 	group = "Auto-invite"
 	local invite = of("AutoInvite")
@@ -713,7 +807,7 @@ local function build()
 			choice(nil, "addons_" .. rule.key, rule.job:gsub("^%l", string.upper), ("%s and STOA both look after %s. Keep theirs and STOA's part steps aside. Use STOA's turns %s off. Until you choose, STOA's part waits."):format(them, rule.job, them), "ask", {
 				{ "ask", "Not chosen" }, { "theirs", "Keep theirs" }, { "ours", "Use STOA's" },
 			}, {
-				id = "addons_" .. rule.key, reload = true, words = "conflicts other addons daylight " .. them:lower(),
+				id = "addons_" .. rule.key, everyday = true, reload = true, words = "conflicts other addons daylight " .. them:lower(),
 				get = function() return found.picked or (Conflicts:Saved(found) == "theirs" and "theirs" or "ask") end,
 				set = function(v) Conflicts:Pick(found, v) end,
 			})
@@ -769,10 +863,29 @@ function Options.search(query)
 	return found
 end
 
+-- A page's settings: the everyday ones, and those under More.
 function Options.onPage(id)
+	local out, more = {}, {}
+	for _, entry in ipairs(Options.list) do
+		if entry.page == id and not entry.quiet then
+			local list = entry.more and more or out
+			list[#list + 1] = entry
+		end
+	end
+	return out, more
+end
+
+-- True for a switch or choice that isn't as Stoa comes and can be put back.
+function Options.isChanged(entry)
+	if (entry.kind ~= "toggle" and entry.kind ~= "choice") or entry.default == nil or entry.set then return false end
+	if not (entry.tbl and entry.tbl()) then return false end
+	return value(entry) ~= entry.default
+end
+
+function Options.changed()
 	local out = {}
 	for _, entry in ipairs(Options.list) do
-		if entry.page == id then out[#out + 1] = entry end
+		if Options.isChanged(entry) then out[#out + 1] = entry end
 	end
 	return out
 end

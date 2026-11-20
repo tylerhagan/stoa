@@ -325,6 +325,12 @@ local function rowBase(entry)
 	row.flags:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -3)
 	row.flags:SetText(flagsOf(entry))
 	hover(row, entry)
+	-- Right-click puts a changed switch or choice back as STOA comes.
+	row:SetScript("OnMouseUp", function(_, button)
+		if button ~= "RightButton" or not Options.isChanged(entry) then return end
+		Options.set(entry, entry.default)
+		Window:Say(entry.name .. " put back.")
+	end)
 	return row
 end
 
@@ -699,17 +705,22 @@ function Window:Draw(keep)
 	local was = keep and self.scroll:GetVerticalScroll() or 0
 	headerCount = 0
 	for _, row in pairs(rows) do row:Hide() end
-	local list, title, intro
+	local list, more, title, intro
 	if query then
 		list = Options.search(query) or {}
 		title = #list == 0 and "Nothing found" or ("%d found"):format(#list)
 		intro = #list == 0 and ("No setting mentions \"%s\". Try a plainer word, such as bags, chat or camera."):format(query)
 			or ("Settings that mention \"%s\", from every page."):format(query)
 	else
-		list = Options.onPage(current)
+		if current == "changed" then
+			list = Options.changed()
+		else
+			list, more = Options.onPage(current)
+		end
 		for _, page in ipairs(Options.PAGES) do
 			if page[1] == current then title, intro = page[2], page[3] end
 		end
+		if current == "changed" and #list == 0 then intro = "Nothing yet: every switch and choice is as STOA comes." end
 	end
 	if not keep then self.scroll:SetVerticalScroll(0) end
 	-- A new page (or a new search) eases in; redraws in place don't.
@@ -723,20 +734,50 @@ function Window:Draw(keep)
 	self.intro:SetText(intro or "")
 	local y = -(tonumber(self.intro:GetStringHeight()) or 16) - 54
 	local lastGroup
-	for _, entry in ipairs(list) do
-		local groupName = query and (self:PageName(entry.page) .. ": " .. entry.group) or entry.group
-		if groupName ~= lastGroup then
-			lastGroup = groupName
-			y = groupHeader(groupName, y - 8)
+	local mixed = query or current == "changed"
+	local function place(entries)
+		for _, entry in ipairs(entries) do
+			local groupName = mixed and (self:PageName(entry.page) .. ": " .. entry.group) or entry.group
+			if groupName ~= lastGroup then
+				lastGroup = groupName
+				y = groupHeader(groupName, y - 8)
+			end
+			local row = Window.rowFor(entry)
+			row:ClearAllPoints()
+			row:SetPoint("TOPLEFT", 0, y)
+			local h = row:Layout(CONTENT)
+			row:SetSize(CONTENT, h)
+			if row.control and row.control.Refresh then row.control:Refresh() end
+			row:Show()
+			y = y - h - ROW_GAP
 		end
-		local row = Window.rowFor(entry)
-		row:ClearAllPoints()
-		row:SetPoint("TOPLEFT", 0, y)
-		local h = row:Layout(CONTENT)
-		row:SetSize(CONTENT, h)
-		if row.control and row.control.Refresh then row.control:Refresh() end
-		row:Show()
-		y = y - h - ROW_GAP
+	end
+	place(list)
+	-- The rest of the page waits under More; an opened page stays open.
+	local fold = self.fold
+	if more and #more > 0 then
+		Stoa.db.settingsMore = Stoa.db.settingsMore or {}
+		local open = Stoa.db.settingsMore
+		if not fold then
+			fold = UI.button(self.child, "", CONTENT, function()
+				open = Stoa.db.settingsMore
+				open[current] = not open[current] or nil
+				self:Draw(true)
+			end)
+			self.fold = fold
+		end
+		y = y - 10
+		fold:ClearAllPoints()
+		fold:SetPoint("TOPLEFT", 0, y)
+		fold.text:SetText(open[current] and "Show fewer" or (#more == 1 and "More: 1 setting" or ("More: %d settings"):format(#more)))
+		fold:Show()
+		y = y - 26 - ROW_GAP
+		if open[current] then
+			lastGroup = nil
+			place(more)
+		end
+	elseif fold then
+		fold:Hide()
 	end
 	for i = headerCount + 1, #headers do headers[i]:Hide() end
 	self.child:SetHeight(-y + 20)
@@ -788,6 +829,7 @@ function Window:Nav()
 		colour(button.text, chosen and "accent" or (button:IsMouseOver() and "text" or "muted"))
 		colour(button.mark, "accent")
 		colour(button.count, "muted", 0.7)
+		if button.id == "changed" then button.count:SetText(#Options.changed()) end
 		button.mark:SetShown(chosen)
 		if chosen and not button.wasChosen then
 			button.wasChosen = true
@@ -846,6 +888,7 @@ function Window:Describe(entry, extra)
 	elseif entry.kind == "choice" and entry.default ~= nil then
 		notes[#notes + 1] = "Usually " .. labelOf(entry, entry.default) .. "."
 	end
+	if Options.isChanged(entry) then notes[#notes + 1] = "Changed. Right-click puts it back." end
 	if entry.reload then
 		notes[#notes + 1] = Options.waiting(entry) and "Changed: reload to see it." or "Takes effect after a reload."
 	end
@@ -1061,11 +1104,21 @@ end
 
 -- Puts this page's toggles and choices back to how Stoa comes.
 function Window:Defaults()
-	local list = query and (Options.search(query) or {}) or Options.onPage(current)
+	local list
+	if query then
+		list = Options.search(query) or {}
+	elseif current == "changed" then
+		list = Options.changed()
+	else
+		-- More's settings too, opened or not.
+		local shown, more = Options.onPage(current)
+		list = {}
+		for _, entry in ipairs(shown) do list[#list + 1] = entry end
+		for _, entry in ipairs(more) do list[#list + 1] = entry end
+	end
 	local n = 0
 	for _, entry in ipairs(list) do
-		if (entry.kind == "toggle" or entry.kind == "choice") and entry.default ~= nil and not entry.set
-			and Options.value(entry) ~= entry.default then
+		if Options.isChanged(entry) then
 			Options.set(entry, entry.default)
 			n = n + 1
 		end
