@@ -38,7 +38,7 @@ end
 
 -- The dark plate a buff's time sits on, under its icon.
 local PLATE_H = 14
-local PLATE_ALPHA = 0.35
+local PLATE_ALPHA = 0.25
 
 local function auraDuration(button)
 	local mine = button.stoaDuration
