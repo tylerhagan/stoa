@@ -19,6 +19,10 @@ local Console = Stoa:NewModule("Grimoire", {
 	hideBarArt = true,
 	houseMenu = true,
 	art = true,
+	-- What the console is made of: "leather" (the art above) or "matte",
+	-- a moulded black shell with a fine grain ("smooth", "fine", "rough").
+	material = "leather",
+	grain = "fine",
 	-- Quiet mana play on the mana bar, as on the Halo.
 	manaRule = true,
 	castCost = true,
@@ -71,7 +75,11 @@ local setUnitBar, classColor = UI.setUnitBar, UI.classColor
 
 -- The slim console is always plain: the leather is cut for the full height.
 function Console:Art()
-	return self.db.art and not self.db.slim
+	return self.db.art and not self.db.slim and not self:Matte()
+end
+
+function Console:Matte()
+	return self.db.material == "matte"
 end
 
 function Console:Build()
@@ -136,6 +144,8 @@ function Console:Build()
 		arch:Hide()
 		self.archParts = self:BuildArt(frame)
 		self.flatParts = { bg, leftEdge, rightEdge, inner }
+	elseif self:Matte() then
+		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch)
 	end
 
 	self:BuildSeal(frame)
@@ -160,6 +170,82 @@ end
 function Console:OpenHeight()
 	if self.db.slim then return SLIM_HEIGHT end
 	return self:Art() and ART_HEIGHT or self.db.height
+end
+
+-- The matte console: the drawn panel made near solid, a grain over it one
+-- texel to the pixel, a little light along the top and quiet edges, as one
+-- moulded piece of black hardware. Uses the plain console's layout.
+local GRAIN_SIZE = 128
+local GRAIN_ALPHA = { smooth = 0.05, fine = 0.11, rough = 0.2 }
+
+function Console:BuildMatte(frame, bg, edges, inner, arch)
+	local slim = self.db.slim
+	UI.unpaint(bg)
+	paint(bg, "panel", 0.98)
+	UI.unpaint(arch)
+	paint(arch, "panel", 0.98)
+	inner:Hide()
+	for _, edge in ipairs(edges) do
+		UI.unpaint(edge)
+		paint(edge, "hairline", 0.12)
+	end
+
+	local light = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
+	light:SetPoint("TOPLEFT")
+	light:SetPoint("TOPRIGHT")
+	light:SetHeight(slim and 20 or 56)
+	light:SetColorTexture(1, 1, 1, 1)
+	UI.setGradient(light, { "VERTICAL", 0, 1 }, 1, 1, 1, 0.05)
+
+	local grains = {}
+	local function grain(sublevel)
+		local tex = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel)
+		tex:SetTexture(UI.MEDIA .. "Textures\\MatteGrain", "REPEAT", "REPEAT")
+		grains[#grains + 1] = tex
+		return tex
+	end
+	local body = grain(-4)
+	body:SetAllPoints()
+	if not slim then
+		-- The arch's own grain: the half of its circle above the top edge.
+		local cap = grain(-4)
+		cap:SetSize(ARCH_SIZE, ARCH_SIZE / 2)
+		cap:SetPoint("BOTTOM", frame, "TOP")
+		local round = frame:CreateMaskTexture()
+		round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		round:SetSize(ARCH_SIZE, ARCH_SIZE)
+		round:SetPoint("CENTER", frame, "TOP")
+		cap:AddMaskTexture(round)
+		table.insert(self.archParts, cap)
+	end
+	self.grains = grains
+
+	local function tile()
+		local perUnit = 1
+		local screenHeight = GetPhysicalScreenSize and select(2, GetPhysicalScreenSize())
+		local scale = frame:GetEffectiveScale()
+		if screenHeight and screenHeight > 0 and scale and scale > 0 then
+			perUnit = scale * screenHeight / 768
+		end
+		for _, tex in ipairs(grains) do
+			local width, height = tex:GetWidth(), tex:GetHeight()
+			if width and width > 0 then
+				tex:SetTexCoord(0, width * perUnit / GRAIN_SIZE, 0, height * perUnit / GRAIN_SIZE)
+			end
+		end
+	end
+	tile()
+	frame:HookScript("OnSizeChanged", tile)
+	for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED" }) do
+		Stoa:On(event, tile)
+	end
+	self:PaintMatte()
+end
+
+-- The grain's strength (the Grain setting).
+function Console:PaintMatte()
+	local alpha = GRAIN_ALPHA[self.db.grain] or GRAIN_ALPHA.fine
+	for _, tex in ipairs(self.grains or {}) do tex:SetVertexColor(1, 1, 1, alpha) end
 end
 
 -- Lays the leather along the console: the tile repeating edge to edge
@@ -1790,28 +1876,32 @@ end
 function Console:PaintDividers()
 	if not self.dividers then return end
 	local r, g, b = Stoa:Color("accent")
+	-- Matte: a moulded seam, a dark line with a faint lit edge and no diamond.
+	local matte = self:Matte()
+	local lineAlpha, creaseAlpha = 0.4, 0.5
+	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, 0.07, 0.85 end
 	for _, div in ipairs(self.dividers) do
 		div.upper:SetColorTexture(1, 1, 1, 1)
 		div.lower:SetColorTexture(1, 1, 1, 1)
 		-- Clear at the ends, strongest at the diamond.
 		if CreateColor and div.upper.SetGradient then
-			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, 0.4)
+			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, lineAlpha)
 			pcall(div.upper.SetGradient, div.upper, "VERTICAL", solid, clear)
 			pcall(div.lower.SetGradient, div.lower, "VERTICAL", clear, solid)
 		else
-			div.upper:SetColorTexture(r, g, b, 0.3)
-			div.lower:SetColorTexture(r, g, b, 0.3)
+			div.upper:SetColorTexture(r, g, b, lineAlpha * 0.75)
+			div.lower:SetColorTexture(r, g, b, lineAlpha * 0.75)
 		end
-		div.mark:SetColorTexture(r, g, b, 0.7)
-		div.seat:SetColorTexture(0, 0, 0, 0.55)
+		div.mark:SetColorTexture(r, g, b, matte and 0 or 0.7)
+		div.seat:SetColorTexture(0, 0, 0, matte and 0 or 0.55)
 		for _, crease in ipairs({ div.creaseUp, div.creaseDown }) do
 			crease:SetColorTexture(1, 1, 1, 1)
 			if CreateColor and crease.SetGradient then
-				local clear, dark = CreateColor(0, 0, 0, 0), CreateColor(0, 0, 0, 0.5)
+				local clear, dark = CreateColor(0, 0, 0, 0), CreateColor(0, 0, 0, creaseAlpha)
 				local top, bottom = crease == div.creaseUp and dark or clear, crease == div.creaseUp and clear or dark
 				pcall(crease.SetGradient, crease, "VERTICAL", top, bottom)
 			else
-				crease:SetColorTexture(0, 0, 0, 0.35)
+				crease:SetColorTexture(0, 0, 0, creaseAlpha * 0.7)
 			end
 		end
 	end

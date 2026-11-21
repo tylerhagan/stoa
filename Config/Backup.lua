@@ -28,7 +28,7 @@ local LOOK = {
 	{ false, "smoothBars", "boolean" }, { false, "combatConsole", "string" }, { false, "calm", "string" },
 	{ "Minimap", "shape", "string" }, { "Plates", "style", "string" }, { "Plates", "marker", "string" },
 	{ "CombatBar", "rows", "string" }, { "CombatBar", "healerRows", "string" },
-	{ "Grimoire", "art", "boolean" }, { "Grimoire", "houseChat", "boolean" }, { "Grimoire", "houseMenu", "boolean" },
+	{ "Grimoire", "art", "boolean" }, { "Grimoire", "material", "string" }, { "Grimoire", "grain", "string" }, { "Grimoire", "houseChat", "boolean" }, { "Grimoire", "houseMenu", "boolean" },
 	{ "Party", "clickGrid", "string" },
 }
 

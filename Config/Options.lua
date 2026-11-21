@@ -261,7 +261,7 @@ local function build()
 	for _, name in ipairs(Stoa.themeOrder) do
 		themes[#themes + 1] = { name, name == "Class" and "Your class" or name, swatch = name }
 	end
-	choice(db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Each class has its own, and Your class follows whoever you log in.", "Bone", themes, {
+	choice(db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Matte is black hardware with white print. Each class has its own, and Your class follows whoever you log in.", "Bone", themes, {
 		list = true, words = "colour color palette class skin",
 		change = function(_, v) Stoa:SetTheme(v) end,
 	})
@@ -289,6 +289,8 @@ local function build()
 	page = "console"
 	group = "The console"
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
+	choice(console, "material", "Console material", "Leather is the tooled leather and brass. Matte black is one moulded piece of black hardware with a fine grain and dark seams, on the plain console's shape; it's far lighter on memory. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather" })
+	choice(console, "grain", "Matte grain", "How rough the matte console's surface is.", "fine", { { "smooth", "Smooth" }, { "fine", "Fine" }, { "rough", "Rough" } }, { words = "matte texture rough smooth", change = function() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "freeRight", "Leave the console's right side free", "Hides the Ready, Journey and Company pages together, leaving bare leather right of the action bars for a window of your own, such as another addon's damage meter. The full console only.", false, { words = "ready journey company hide empty space meter right pages", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	toggle(console, "dividers", "Lines between the console's sections", "A faint gold line with a small diamond between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })

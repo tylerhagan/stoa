@@ -73,6 +73,10 @@ for f in files:
 # saved account would), so those builds are exercised too.
 if os.environ.get("STOA_SIM_SETUP") == "slim":
     lua.execute("StoaDB = { modules = { Grimoire = { slim = true } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "matte":
+    lua.execute("StoaDB = { theme = 'Matte', modules = { Grimoire = { material = 'matte' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "matteslim":
+    lua.execute("StoaDB = { theme = 'Matte', modules = { Grimoire = { material = 'matte', slim = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "minimal":
     lua.execute("StoaDB = { modules = { Grimoire = { enabled = false }, Halo = { restArcs = true, restFade = true }, Party = { restFade = true } } }")
 
@@ -1626,10 +1630,11 @@ do
 		if not (plaque.medallion and plaque.SetLevel) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: no medallion" end
 		plaque:SetLevel("15")
 		if not plaque.badge:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: level badge hidden" end
-		if (halo.targetResting and true or false) ~= (plaque.docked and true or false) then
+		if (halo.targetResting and halo.targetDocks and true or false) ~= (plaque.docked and true or false) then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: docked doesn't follow resting"
 		end
-		if not plaque.bare then
+		-- The plaque docks on the leather console only.
+		if not plaque.bare and halo.targetDocks then
 			plaque:SetDocked(true, 302)
 			if not (plaque.dock and plaque.dock.join:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: join missing when docked" end
 			halo:LayoutTarget(302)
