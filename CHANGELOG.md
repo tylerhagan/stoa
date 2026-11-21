@@ -11,6 +11,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Chat on the console: when the console folds for a fight or a ride, a dark plate stands in for the leather behind the chat, so it stays readable over bright ground. On a ride or a flight the plate hides with the chat and comes back while you type.
 - Fixed: after some fights the chat could stay at the game's own size, which left the buttons beside it standing above the chat until a reload.
 - Fixed: the Dressing Room's item list lost its dark ground the second time the window opened.
+- Fixed: gear with stats your role doesn't use (strength on a priest) was called an upgrade when its item level was higher. It now reads "Nothing for Ranged DPS, below your neck".
 - `/stoa report` has a Chat line with the chat's size and place.
 - Releases now go to Wago Addons as well as CurseForge.
 
