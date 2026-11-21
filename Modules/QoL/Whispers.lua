@@ -59,6 +59,12 @@ function Whispers:Build()
 		self.until_ = GetTime() + 4
 		GameTooltip:Hide()
 	end)
+	-- A third line when you've written a note about whoever is whispering.
+	local note = UI.text(card, "sans", Stoa.typeSize.caption, "text", "LEFT")
+	note:SetPoint("TOPLEFT", said, "BOTTOMLEFT", 0, -4)
+	note:SetPoint("RIGHT", card, "RIGHT", -12, 0)
+	note:SetWordWrap(false)
+	card.note = note
 	card:Hide()
 	UI.riseOnShow(card)
 	card.who, card.said = who, said
@@ -114,6 +120,10 @@ function Whispers:Heard(text, author, guid, bnet)
 		if not pcall(card.said.SetText, card.said, text or "") then card.said:SetText("") end
 	end
 	self.last = name
+	local noted = #self.order == 1 and not bnet and Stoa.Notes and Stoa.Notes:WhisperLine(author) or nil
+	card.note:SetText(noted or "")
+	card.note:SetShown(noted ~= nil)
+	card:SetHeight(noted and HEIGHT + 16 or HEIGHT)
 
 	self:Place()
 	self.until_ = GetTime() + STAY

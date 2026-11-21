@@ -1283,6 +1283,81 @@ do
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Riding: " .. e end
 	end
 end
+-- Player notes: writing one from the card, reading it back by name and by
+-- unit, the People list and its filters, the whisper line, the join line.
+do
+	local notes = Stoa.Notes
+	if notes and Stoa:IsModuleEnabled("Notes") then
+		local ok, e = xpcall(function()
+			local real = { UnitIsPlayer, UnitFullName, UnitExists, IsInGroup, Stoa.GroupUnits, Stoa.Print }
+			StoaDB.people = nil
+			local key, short = notes:Key("Brakka-Stonespine")
+			assert(key == "Brakka-Stonespine" and short == "Brakka", "key reads " .. tostring(key))
+			local home = notes:Key("Olwenn")
+			assert(home and home:find("^Olwenn%-"), "a home name got no realm: " .. tostring(home))
+			notes:Open(key, short, { class = "WARRIOR", className = "Warrior", level = 34 })
+			local card = notes.card
+			assert(card:IsShown() and card.kind == "note", "the card didn't open on a plain note")
+			assert(not card.remove:IsShown(), "a new note offers Remove")
+			notes:PickKind("bad")
+			card.box:SetText("  Rolled need on the caster staff  ")
+			notes:Save()
+			assert(not card:IsShown(), "saving left the card up")
+			local entry = notes:Get(key)
+			assert(entry and entry.kind == "bad" and entry.text == "Rolled need on the caster staff" and entry.class == "WARRIOR", "the note wasn't kept as written")
+			assert(notes:Icon("bad", 10):find("GlyphDiamondOpen", 1, true), "the bad mark isn't the hollow diamond")
+			-- An empty plain note puts the note away; an empty Good stays.
+			notes:Set(home, "Olwenn", "good", "")
+			assert(notes:Get(home) and notes:Get(home).text == nil, "a wordless Good wasn't kept")
+			notes:Open(home, "Olwenn")
+			assert(card.remove:IsShown(), "an old note has no Remove")
+			notes:PickKind("note")
+			notes:Save()
+			assert(not notes:Get(home), "an empty plain note stayed")
+			notes:Set(home, "Olwenn", "good", "Great healer")
+			notes:Get(key).when = time() - 86400 * 12
+			-- By unit.
+			UnitExists = function(u) return u == "party1" or u == "player" or real[3](u) end
+			UnitIsPlayer = function(u) return u == "party1" or u == "player" end
+			UnitFullName = function(u) if u == "party1" then return "Brakka", "Stonespine" end return "Taer", nil end
+			assert(notes:UnitKey("party1") == key, "the unit's key reads " .. tostring(notes:UnitKey("party1")))
+			assert(notes:WhisperLine("Brakka-Stonespine"):find("Rolled need", 1, true), "the whisper line is missing")
+			assert(notes:WhisperLine("Nobody") == nil, "a stranger got a whisper line")
+			-- The join line: once per group, none for the quiet first look.
+			local said = {}
+			Stoa.Print = function(_, text) said[#said + 1] = text end
+			IsInGroup = function() return true end
+			Stoa.GroupUnits = function() return { "player", "party1" } end
+			notes:CheckGroup()
+			notes:CheckGroup()
+			assert(#said == 1 and said[1]:find("Brakka: Rolled need", 1, true), "the join line was said " .. #said .. " times")
+			IsInGroup = function() return false end
+			notes:CheckGroup()
+			IsInGroup = function() return true end
+			notes:CheckGroup(true)
+			assert(#said == 1, "the quiet look spoke")
+			-- The People tab.
+			Stoa.Alts:OpenPeople()
+			local pane = notes.pane
+			assert(pane and pane:IsVisible(), "the People tab didn't open")
+			assert(notes.shown == 2, "the list shows " .. tostring(notes.shown))
+			assert(pane.rows[1].key == home, "the newest note isn't first")
+			notes.filter = "bad"
+			notes:FillPane()
+			assert(notes.shown == 1 and pane.rows[1].key == key, "the Bad filter shows " .. tostring(notes.shown))
+			notes.filter, notes.query = "all", "healer"
+			notes:FillPane()
+			assert(notes.shown == 1 and pane.rows[1].key == home, "the search shows " .. tostring(notes.shown))
+			notes.query = nil
+			notes:Remove(key)
+			assert(notes.shown == 1, "removing didn't redraw the list")
+			Stoa.Alts.page:Hide()
+			StoaDB.people = nil
+			UnitIsPlayer, UnitFullName, UnitExists, IsInGroup, Stoa.GroupUnits, Stoa.Print = unpack(real)
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Notes: " .. e end
+	end
+end
 -- The talent planner: marks over the trees, the row rule, the order, sharing.
 do
 	local planner = Stoa.modules.Planner

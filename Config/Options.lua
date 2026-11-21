@@ -739,6 +739,10 @@ local function build()
 	toggle(invite, "strangersToo", "Invite strangers too", "Anyone who whispers a word, not just friends and guildmates.", false)
 	toggle(invite, "convertToRaid", "Make a raid when full", "When the fifth person joins and more are waiting, the party is turned into a raid so the rest can come in.", true)
 	toggle(invite, "guildChat", "Words work in guild chat", "A guildmate saying just the word in guild chat gets an invite.", false)
+	local notes = of("Notes")
+	toggle(notes, "enabled", "Player notes", "Write a line about someone you played with, good or bad: right-click them and choose STOA note, or type /stoa note and their name. The note comes back on their tooltip, their party card and their whispers, and every character of yours shares it. Off, the notes are kept but not shown.", true, { id = "notesOn", cmd = "/stoa note", words = "player note remember people blacklist ninja friend reputation", reload = true })
+	toggle(notes, "joinLine", "Say when someone noted joins", "One chat line, only you see it, when a player you've written a note about joins your group.", true, { words = "player note group party join warn" })
+	button("people", "People", "Everyone you've written a note about, to search, edit or remove.", "Open", function() Stoa.Notes:ShowPeople() end, { cmd = "/stoa people", words = "player notes list people" })
 	button("company", "Company", "Friends and guildmates who are online: click to whisper, Shift-click to invite.", "Open", function() Stoa.modules.Roster:Toggle() end, { cmd = "/stoa friends", words = "friends roster guild" })
 
 	-- Setup

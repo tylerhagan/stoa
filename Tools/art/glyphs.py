@@ -66,3 +66,10 @@ img[..., :3] = 255
 img[..., 3] = np.round(np.clip(cover, 0, 1) * 255).astype(np.uint8)
 Image.fromarray(img, "RGBA").save(f"{OUT}/GlyphBox.tga")
 save("Tick", stroke(x, y, (0.3, 0.52), (0.44, 0.66), 0.06) | stroke(x, y, (0.44, 0.66), (0.72, 0.36), 0.06), 32, 32)
+# Player notes: a filled diamond (good), a hollow one (bad) and a small one
+# (just a note). Three shapes, so the kind never rests on colour alone.
+x, y = grid(32, 32)
+d = np.abs(x - 0.5) + np.abs(y - 0.5)
+save("Diamond", d <= 0.36, 32, 32)
+save("DiamondOpen", (d <= 0.38) & (d >= 0.24), 32, 32)
+save("DiamondSmall", d <= 0.2, 32, 32)
