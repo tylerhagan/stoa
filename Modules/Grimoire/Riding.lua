@@ -188,6 +188,9 @@ function Console:ClearChat(clear)
 			end
 		end
 	end
+	-- The dark plate behind the folded chat goes with the words, so an empty
+	-- box doesn't hang over the view; typing brings both back.
+	if self.chatShade then self.chatShade:GetParent():SetShown(not clear) end
 	if self.feed then self.feed:SetShown(clear) end
 end
 
