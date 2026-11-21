@@ -219,6 +219,11 @@ function Report:Text()
 		local ok, text = pcall(Stoa.Check.Text, Stoa.Check)
 		if ok then add(text) add("") end
 	end
+	local console = Stoa.modules and Stoa.modules.Grimoire
+	if console and console.ChatState then
+		local ok, text = pcall(console.ChatState, console)
+		if ok then add("Chat: ", text, InCombatLockdown() and " (in combat)" or "") add("") end
+	end
 	if #blocked > 0 then
 		add("Blocked actions this session (the game's \"Interface action failed because of an AddOn\"):")
 		for _, entry in ipairs(blocked) do

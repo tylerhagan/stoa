@@ -8,7 +8,9 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - Buff and debuff timers at the top of the screen are a shade brighter and sit on a small dark plate under each icon, so they stay readable over sand, snow and bright sky.
 - The Halo's cast bar and its label sit on a soft dark haze, so the gold line shows over bright ground too. Over dark ground the haze can't be seen.
-- Chat on the console: when the console folds for a fight or a ride, a dark plate stands in for the leather behind the chat, so it stays readable over bright ground.
+- Chat on the console: when the console folds for a fight or a ride, a dark plate stands in for the leather behind the chat, so it stays readable over bright ground. On a ride or a flight the plate hides with the chat and comes back while you type.
+- Fixed: after some fights the chat could stay at the game's own size, which left the buttons beside it standing above the chat until a reload.
+- `/stoa report` has a Chat line with the chat's size and place.
 - Releases now go to Wago Addons as well as CurseForge.
 
 ## 1.6.0
