@@ -722,6 +722,8 @@ end
 -- there: a gold heading and the number large beside it, over a hairline.
 -- It belongs to the stats list (its child), so it shows only with it.
 local ILVL_H = 44
+-- In line with the list's own headings and labels below it.
+local ILVL_LEFT = 21
 local function levelBlock()
 	local pane = CharacterStatsPaneScrollBox
 	if not pane or blocked(pane) then return nil end
@@ -731,7 +733,7 @@ local function levelBlock()
 	block:SetPoint("BOTTOMLEFT", pane, "TOPLEFT", 0, 0)
 	block:SetPoint("BOTTOMRIGHT", pane.ScrollBox or pane, "TOPRIGHT", 0, 0)
 	local heading = UI.text(block, "sans", Stoa.typeSize.caption, "accent", "LEFT")
-	heading:SetPoint("LEFT", 11, 0)
+	heading:SetPoint("LEFT", ILVL_LEFT, 0)
 	heading:SetText(rawget(_G, "STAT_AVERAGE_ITEM_LEVEL") or "Item Level")
 	block.number = UI.text(block, "serif", Stoa.typeSize.title, "text", "RIGHT")
 	block.number:SetPoint("RIGHT", -10, 0)
@@ -739,7 +741,7 @@ local function levelBlock()
 	block.worn:SetPoint("RIGHT", block.number, "LEFT", -10, 0)
 	local rule = block:CreateTexture(nil, "ARTWORK")
 	rule:SetHeight(1)
-	rule:SetPoint("BOTTOMLEFT", 11, 0)
+	rule:SetPoint("BOTTOMLEFT", ILVL_LEFT, 0)
 	rule:SetPoint("BOTTOMRIGHT", -10, 0)
 	rule:SetColorTexture(1, 1, 1, 0.08)
 	pane.stoaLevel = block
