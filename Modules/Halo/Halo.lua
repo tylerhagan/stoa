@@ -202,7 +202,7 @@ function Halo:Build()
 	-- over snow and bright sky.
 	local function shade(region)
 		for _, child in ipairs({ region:GetRegions() }) do
-			if child.IsObjectType and child:IsObjectType("FontString") then UI.legible(child) end
+			if child.IsObjectType and child:IsObjectType("FontString") and not child.stoaPlain then UI.legible(child) end
 		end
 	end
 	for _, region in ipairs({ frame, self.target, self.cast }) do shade(region) end
@@ -635,15 +635,21 @@ function Halo:BuildCast(frame)
 	local cast = UI.bar(UIParent, 200, 3, "accent")
 	cast:SetFrameStrata("LOW")
 	cast:SetPoint("TOP", frame, "BOTTOM", 0, -40)
-	-- A dark bed a pixel wider than the bar: unseen over dark ground, and
-	-- what keeps a thin gold line readable over sand, snow and bright sky.
-	local bed = cast:CreateTexture(nil, "BACKGROUND", nil, -1)
-	bed:SetPoint("TOPLEFT", cast, "TOPLEFT", -1, 1)
-	bed:SetPoint("BOTTOMRIGHT", cast, "BOTTOMRIGHT", 1, -1)
-	bed:SetColorTexture(0, 0, 0, 0.6)
-	cast.bed = bed
+	-- A soft dark haze behind the line and its label, feathered to nothing
+	-- at the edges: unseen over dark ground, and what keeps a thin gold
+	-- line readable over sand, snow and bright sky without a hard outline.
+	local haze = cast:CreateTexture(nil, "BACKGROUND", nil, -1)
+	haze:SetTexture(UI.MEDIA .. "Textures\\SparkleGlow")
+	haze:SetVertexColor(0, 0, 0, 0.55)
+	haze:SetSize(300, 64)
+	haze:SetPoint("CENTER", cast, "CENTER", 0, 9)
+	cast.haze = haze
 	local spell = UI.text(cast, "italic", Stoa.typeSize.label, "text", "CENTER")
 	spell:SetPoint("BOTTOM", cast, "TOP", 0, 4)
+	-- The haze carries it, so a shadow alone and no outline.
+	spell.stoaPlain = true
+	spell:SetShadowColor(0, 0, 0, 0.9)
+	spell:SetShadowOffset(1, -1)
 	cast.spell = spell
 	-- Tick marks for channels whose ticks matter. The bar drains towards
 	-- the left, so each tick lands where the fill edge will be; the last
