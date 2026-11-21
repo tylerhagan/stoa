@@ -54,6 +54,9 @@ local HEADER_ROOM = (HEADER_TOP - 10) + (LINE_GAP - 2)
 local FADE_ALPHA = 0.22
 -- Cards with more than a name are at least this wide.
 local MIN_WIDTH = 210
+-- What an emptied line still takes, and the extra foot under STOA's lines.
+local DROPPED_H = 5.5
+local LOWER_PAD = 6
 
 local INSPECT_WAIT = 1.5
 local LEVELS_KEPT = 200
@@ -307,6 +310,7 @@ function Tooltip:Identity(tip, unit)
 		if type(words) == "string" and not Stoa:IsSecret(words) and drop[words] and not (quest and quest[i]) then
 			below:SetText("")
 			below:Hide()
+			tip.stoaDropped = (tip.stoaDropped or 0) + 1
 		end
 	end
 	return fs
@@ -329,7 +333,9 @@ local function lower(tip)
 	local r, g, b = Stoa:Color("text")
 	rule:SetColorTexture(r, g, b, 0.14)
 	rule:ClearAllPoints()
-	rule:SetPoint("LEFT", spacer, "LEFT", 0, 0)
+	-- An emptied line still takes a few pixels above the blank one, so the
+	-- rule rises by half of that to sit midway between the two blocks.
+	rule:SetPoint("LEFT", spacer, "LEFT", 0, (tip.stoaDropped or 0) * DROPPED_H / 2)
 	rule:SetWidth(MIN_WIDTH - 20)
 	rule:Show()
 end
@@ -734,7 +740,7 @@ local function clear(tip)
 		tip.stoaMoved = nil
 	end
 	tip.stoaQuest = nil
-	tip.stoaLower, tip.stoaWide = nil, nil
+	tip.stoaLower, tip.stoaWide, tip.stoaDropped = nil, nil, nil
 	if tip.stoaRule then tip.stoaRule:Hide() end
 	if tip.stoaGear then tip.stoaGear:Hide() end
 	if tip.stoaQuestBox then tip.stoaQuestBox.fill:Hide() end
@@ -827,7 +833,7 @@ local function settle(tip)
 	if not (tip.SetPadding and tip.GetPadding) then return end
 	-- A one-line card (a minimap blip, a name) only needs the name's drop.
 	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
-	local room = ((second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)) + questRoom
+	local room = ((second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)) + questRoom + (tip.stoaLower and LOWER_PAD or 0)
 	tip.stoaRoom = room
 	-- Cards with more than a name keep a minimum width, so a short card
 	-- (a level and a word or two) doesn't look squeezed.
