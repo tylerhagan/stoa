@@ -64,6 +64,9 @@ local TARGETS = {
 	-- them are a known cause of blocked-action errors (Edit Mode, logout).
 	-- The map canvas, pins and quest panel are never touched.
 	{ name = "WorldMapFrame", mode = "map" },
+	-- The flight map is built like the world map: a border frame over a
+	-- canvas. Its parchment, flight points and routes stay the game's.
+	{ name = "FlightMapFrame", mode = "map" },
 }
 
 local hide = Stoa.frames.hide

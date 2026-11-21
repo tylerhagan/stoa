@@ -4,8 +4,17 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
 
-## 1.5.3
+## 1.6.0
 
+- **Player notes**: write a line about someone you played with, so you remember the good groups and the bad ones. Right-click a player (target, party card, a name in chat) and choose "STOA note", or type `/stoa note Name` (`/stoa note` alone takes your target). Pick Good, Bad or Just a note, type one line, press Enter.
+- The note comes back where it matters: on the player's tooltip, as a small diamond on the corner of their party card, under their whisper on the whisper card, at the start of what they say in the world's channels, say, yell and whispers (not guild, party or raid chat), and as one chat line only you see when they join your group. A filled diamond is good, a hollow one bad, a small one a plain note, so the kind never rests on colour.
+- **People**: a new tab in the Characters window (`/stoa people`) lists everyone you've noted, newest first, with Good, Bad and Notes filters and a search over names and notes. Click a row to edit, right-click to remove.
+- Notes are shared by every character on the account. Settings > Comforts has the switch, and one each for the chat mark and the group line.
+- **Tooltips, who it is on one line**: a player's tooltip reads "33 Gnome Mage" with the class in its colour, in place of three grey lines; "(Player)" and your own faction are gone, and the other faction joins the line in red. Mobs, NPCs and pets read the same way ("20 Humanoid", then how hard they are), a guild or an NPC's title sits quiet in angle brackets under the name, and STOA's own lines (your note, target, casting, threat) start under a thin rule.
+- Tooltips: a player's item level sits at the right of that line behind a small sword mark and no longer takes a row, so the tooltip doesn't grow when the number arrives.
+- Character sheet: your item level heads the stats column, large, under its own gold heading, where players expect to find it. It no longer sits in the header beside your level.
+- Target plaque: docked on the console, a long top line (level, rank and creature type) no longer runs under HOSTILE. The level is shown as a number alone, as on tooltips.
+- The flight map wears STOA's header, close button and edge. The map and its flight points are the game's.
 - **Quick start**: settings open on a new "Build your STOA" page: pick a starting set, then switch each piece of STOA on or off (console, Halo, party cards, nameplates, bags and the rest). Each says in a line what you get, what comes back when it's off, and which page holds its finer settings.
 - **Simpler settings**: every settings page opens on its few everyday settings, with the rest one click away under More. Search still finds everything. An opened More stays open.
 - **Only what applies to you**: pet settings show for hunters and warlocks, mana settings for classes with mana, form mana for druids, and DoT marks only with DoesItDie loaded.

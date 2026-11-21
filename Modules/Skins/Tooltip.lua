@@ -10,14 +10,16 @@
 --     inside, bosses a heavier doubled gold, and their header warms with
 --     that colour fading across it. Items above common fade their quality
 --     colour across the header the same way;
---   * names in the serif, the rest in the sans, the level line quiet and
---     the guild in the accent;
+--   * names in the serif, the rest in the sans; who it is on one quiet
+--     line ("33 Gnome Mage", the class in its colour; "20 Humanoid" for
+--     the rest), a guild or an NPC's title quiet in angle brackets above
+--     it, and STOA's own lines under a hairline;
 --   * for units, the lines that change what you do next: how hard an enemy
 --     is as a word (TRIVIAL, EASY, EVEN, HARD, DEADLY, with ELITE, RARE or
 --     BOSS), since the game's level colours fail for colour blindness;
 --     whom it targets (YOU in the warning colour), what it's casting, your
---     threat; and for players their item level (read with an inspect, out
---     of combat);
+--     threat; and for players their item level behind a sword mark at the
+--     right of the identity line (read with an inspect, out of combat);
 --   * for gear, one line against what you wear in that slot ("+6 over your
 --     chest"), and for any item how many you have in your bags and bank;
 --   * for herb and ore nodes, the skill they need against yours.
@@ -50,6 +52,11 @@ local LINE_GAP = 18
 -- What the two add over the game's own spacing (10 above, 2 between).
 local HEADER_ROOM = (HEADER_TOP - 10) + (LINE_GAP - 2)
 local FADE_ALPHA = 0.22
+-- Cards with more than a name are at least this wide.
+local MIN_WIDTH = 210
+-- What an emptied line still takes, and the extra foot under STOA's lines.
+local DROPPED_H = 5.5
+local LOWER_PAD = 6
 
 local INSPECT_WAIT = 1.5
 local LEVELS_KEPT = 200
@@ -212,17 +219,159 @@ local function titleCase(word)
 	return (word:lower():gsub("^%l", string.upper):gsub(" (%l)", function(c) return " " .. c:upper() end))
 end
 
-function Tooltip:SayDifficulty(tip, word, token)
-	local prefix = LEVEL and LEVEL ~= "" and LEVEL or "Level"
-	for i = 2, tip:NumLines() do
-		local fs = line(tip, i)
-		local text = fs and fs:GetText()
-		if type(text) == "string" and not Stoa:IsSecret(text) and text:find(prefix, 1, true) == 1 then
-			fs:SetText(text .. Stoa.UI.WIDE_SEP .. tokenHex(token) .. titleCase(word) .. "|r")
-			return
+function Tooltip:SayDifficulty(tip, word, token, fs)
+	if not fs then
+		local prefix = LEVEL and LEVEL ~= "" and LEVEL or "Level"
+		for i = 2, tip:NumLines() do
+			local found = line(tip, i)
+			local text = found and found:GetText()
+			if type(text) == "string" and not Stoa:IsSecret(text) and text:find(prefix, 1, true) == 1 then
+				fs = found
+				break
+			end
 		end
 	end
+	local text = fs and fs:GetText()
+	if type(text) == "string" and not Stoa:IsSecret(text) then
+		fs:SetText(text .. Stoa.UI.WIDE_SEP .. tokenHex(token) .. titleCase(word) .. "|r")
+		return
+	end
 	tip:AddLine(word, Stoa:Color(token))
+end
+
+-- Who it is, on one line: "33 Gnome Mage" with the class in its colour for
+-- a player, "20 Humanoid" for anything else, in place of the game's level
+-- line. A player's class line and faction line go (the other faction joins
+-- the line in the warning colour), and whatever sits between the name and
+-- this line (a guild, an NPC's title) goes quiet in angle brackets. Only
+-- lines the game already drew are reworded. Returns the line, or nil when
+-- the game's line can't be read (another language's wording, a secret
+-- value) and is left as it was.
+local GLYPH = UI.MEDIA .. "Textures\\Glyph"
+
+function Tooltip:Identity(tip, unit)
+	local prefix = LEVEL and LEVEL ~= "" and LEVEL or "Level"
+	local index, fs
+	for i = 2, tip:NumLines() do
+		local found = line(tip, i)
+		local text = found and found:GetText()
+		if type(text) == "string" and not Stoa:IsSecret(text) and text:find(prefix, 1, true) == 1 then
+			index, fs = i, found
+			break
+		end
+	end
+	if not fs then return nil end
+	local level = known(UnitEffectiveLevel and UnitEffectiveLevel(unit) or UnitLevel(unit))
+	if type(level) ~= "number" then return nil end
+	local muted = tokenHex("muted")
+	local text = muted .. (level > 0 and tostring(level) or "??")
+	local drop = {}
+	if known(UnitIsPlayer(unit)) then
+		local race = known((UnitRace(unit)))
+		local className, class = UnitClass(unit)
+		className, class = known(className), known(class)
+		if type(race) ~= "string" or type(className) ~= "string" then return nil end
+		local colour = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+		local hex = colour and Stoa:Hex(colour.r, colour.g, colour.b) or tokenHex("text")
+		text = text .. " " .. race .. "|r " .. hex .. className .. "|r"
+		local theirs, theirWord = UnitFactionGroup(unit)
+		theirs, theirWord = known(theirs), known(theirWord)
+		local mine = known((UnitFactionGroup("player")))
+		if theirs and mine and theirs ~= mine and type(theirWord) == "string" then
+			text = text .. UI.WIDE_SEP .. tokenHex("danger") .. theirWord .. "|r"
+		end
+		drop[className] = true
+		if type(theirWord) == "string" then drop[theirWord] = true end
+		if FACTION_ALLIANCE then drop[FACTION_ALLIANCE] = true end
+		if FACTION_HORDE then drop[FACTION_HORDE] = true end
+	else
+		local kind = known(UnitCreatureType(unit))
+		if type(kind) ~= "string" or kind == "" then return nil end
+		text = text .. " " .. kind .. "|r"
+		-- Rank is said with the difficulty for an enemy; a friend's is said here.
+		local rank = CLASSIFICATIONS[known(UnitClassification(unit)) or ""]
+		if rank and not known(UnitCanAttack("player", unit)) then
+			text = text .. UI.WIDE_SEP .. tokenHex("text") .. titleCase(rank) .. "|r"
+		end
+	end
+	fs:SetText(text)
+	local quest = tip.stoaQuest
+	for i = 2, index - 1 do
+		local above = line(tip, i)
+		local words = above and above:GetText()
+		if type(words) == "string" and not Stoa:IsSecret(words) and words ~= "" and not (quest and quest[i]) then
+			if words:sub(1, 1) ~= "<" then above:SetText("<" .. words .. ">") end
+			above:SetTextColor(Stoa:Color("muted"))
+		end
+	end
+	for i = index + 1, tip:NumLines() do
+		local below = line(tip, i)
+		local words = below and below:GetText()
+		if type(words) == "string" and not Stoa:IsSecret(words) and drop[words] and not (quest and quest[i]) then
+			below:SetText("")
+			below:Hide()
+			tip.stoaDropped = (tip.stoaDropped or 0) + 1
+		end
+	end
+	return fs
+end
+
+-- STOA's own lines start under a hairline: a blank line with a rule across
+-- its middle, added once and only when there is something to put under it.
+local function lower(tip)
+	if tip.stoaLower then return end
+	tip.stoaLower = true
+	tip:AddLine(" ")
+	local spacer = line(tip, tip:NumLines())
+	if not spacer then return end
+	local rule = tip.stoaRule
+	if not rule then
+		rule = tip:CreateTexture(nil, "ARTWORK")
+		rule:SetHeight(1)
+		tip.stoaRule = rule
+	end
+	local r, g, b = Stoa:Color("text")
+	rule:SetColorTexture(r, g, b, 0.14)
+	rule:ClearAllPoints()
+	-- An emptied line still takes a few pixels above the blank one, so the
+	-- rule rises by half of that to sit midway between the two blocks.
+	rule:SetPoint("LEFT", spacer, "LEFT", 0, (tip.stoaDropped or 0) * DROPPED_H / 2)
+	rule:SetWidth(MIN_WIDTH - 20)
+	rule:Show()
+end
+
+-- A player's item level rides the right end of the identity line behind a
+-- small sword mark, so it takes no row and the card doesn't grow when the
+-- number arrives.
+function Tooltip:GearMark(tip, fs, level)
+	local mark = tip.stoaGear
+	if not mark then
+		mark = tip:CreateFontString(nil, "ARTWORK")
+		mark:SetFontObject(GameTooltipText)
+		tip.stoaGear = mark
+	end
+	local r, g, b = Stoa:Color("muted")
+	mark:SetText(("|T%sSword:13:13:0:0:32:32:0:32:0:32:%d:%d:%d|t %d"):format(GLYPH, r * 255, g * 255, b * 255, level))
+	mark:SetTextColor(Stoa:Color("text"))
+	mark.line = fs
+	-- The game won't always measure a line (an enemy player's reads back
+	-- secret), so the room it needs is then reckoned from its letters.
+	local need = fs:GetStringWidth()
+	local own = mark:GetStringWidth()
+	if Stoa:IsSecret(need) or type(need) ~= "number" then
+		local text = fs:GetText()
+		local letters = 24
+		if type(text) == "string" and not Stoa:IsSecret(text) then
+			letters = #(text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "  "))
+		end
+		need = letters * 7.5
+	end
+	if Stoa:IsSecret(own) or type(own) ~= "number" then own = 34 end
+	tip.stoaWide = need + own + 36
+	mark:ClearAllPoints()
+	mark:SetPoint("RIGHT", fs, "LEFT", math.max(MIN_WIDTH, tip.stoaWide) - 20, 0)
+	mark:Show()
+	return true
 end
 
 function Tooltip:DressUnit(tip)
@@ -248,17 +397,37 @@ function Tooltip:DressUnit(tip)
 			end
 		end
 	end
-	if not self.db.unitDetails then return end
+	local who = self:Identity(tip, unit)
 
-	if known(UnitIsDeadOrGhost(unit)) then
-		tip:AddLine("DEAD", Stoa:Color("muted"))
-	elseif known(UnitCanAttack("player", unit)) then
-		local word, token = self:Difficulty(unit)
-		if word then self:SayDifficulty(tip, word, token) end
+	local attackable = known(UnitCanAttack("player", unit))
+	if self.db.unitDetails then
+		if known(UnitIsDeadOrGhost(unit)) then
+			self:SayDifficulty(tip, "DEAD", "muted", who)
+		elseif attackable then
+			local word, token = self:Difficulty(unit)
+			if word then self:SayDifficulty(tip, word, token, who) end
+		end
+	end
+
+	-- Your own note about them leads STOA's lines.
+	local notes = Stoa.Notes
+	if notes and notes.TipLines then
+		local first, second = notes:TipLines(unit)
+		if first then
+			lower(tip)
+			local nr, ng, nb = Stoa:Color("text")
+			tip:AddLine(first, nr, ng, nb, true)
+			if second then tip:AddLine(second, Stoa:Color("muted")) end
+		end
+	end
+	if not self.db.unitDetails then
+		tip:Show()
+		return
 	end
 
 	local target = unit .. "target"
 	if known(UnitExists(target)) and not Stoa:SharedBy("tooltipTarget") then
+		lower(tip)
 		if known(UnitIsUnit(target, "player")) then
 			addPair(tip, "TARGET", "YOU", Stoa:Color("danger"))
 		else
@@ -270,13 +439,17 @@ function Tooltip:DressUnit(tip)
 	-- A secret name can still be shown, just not tested.
 	local casting = UnitCastingInfo(unit)
 	if not Stoa:IsSecret(casting) and not casting then casting = UnitChannelInfo(unit) end
-	if Stoa:IsSecret(casting) or casting then addPair(tip, "CASTING", casting, Stoa:Color("accent")) end
+	if Stoa:IsSecret(casting) or casting then
+		lower(tip)
+		addPair(tip, "CASTING", casting, Stoa:Color("accent"))
+	end
 
-	if known(UnitCanAttack("player", unit)) and known(UnitAffectingCombat(unit)) and UnitDetailedThreatSituation then
+	if attackable and known(UnitAffectingCombat(unit)) and UnitDetailedThreatSituation then
 		local _, status, scaled = UnitDetailedThreatSituation("player", unit)
 		scaled, status = known(scaled), known(status)
 		if scaled then
 			local token = status and status >= 2 and "danger" or "text"
+			lower(tip)
 			addPair(tip, "THREAT", ("%d%%"):format(math.floor(scaled + 0.5)), Stoa:Color(token))
 		end
 	end
@@ -285,7 +458,10 @@ function Tooltip:DressUnit(tip)
 		local guid = known(UnitGUID(unit))
 		if guid and self.db.itemLevel then
 			local level = self:ItemLevel(unit, guid)
-			if level then addPair(tip, "ITEM LEVEL", tostring(level), Stoa:Color("text")) end
+			if level and not (who and self:GearMark(tip, who, level)) then
+				lower(tip)
+				addPair(tip, "ITEM LEVEL", tostring(level), Stoa:Color("text"))
+			end
 		end
 	end
 	tip:Show()
@@ -564,6 +740,9 @@ local function clear(tip)
 		tip.stoaMoved = nil
 	end
 	tip.stoaQuest = nil
+	tip.stoaLower, tip.stoaWide, tip.stoaDropped = nil, nil, nil
+	if tip.stoaRule then tip.stoaRule:Hide() end
+	if tip.stoaGear then tip.stoaGear:Hide() end
 	if tip.stoaQuestBox then tip.stoaQuestBox.fill:Hide() end
 	tip.stoaEdge:Clear()
 	for _, outline in ipairs(tip.stoaRank or {}) do outline:Clear() end
@@ -593,7 +772,6 @@ end
 -- The game sizes the card for its own spacing (the name 10 from the top,
 -- lines 2 apart); the header's extra room is added at the foot so the last
 -- line doesn't run over the edge.
-local MIN_WIDTH = 210
 
 -- Room around the quest box: its lines stay level with the rest of the
 -- card, and the box keeps a gap from the lines above and below it.
@@ -655,12 +833,22 @@ local function settle(tip)
 	if not (tip.SetPadding and tip.GetPadding) then return end
 	-- A one-line card (a minimap blip, a name) only needs the name's drop.
 	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
-	local room = ((second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)) + questRoom
+	local room = ((second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)) + questRoom + (tip.stoaLower and LOWER_PAD or 0)
 	tip.stoaRoom = room
 	-- Cards with more than a name keep a minimum width, so a short card
 	-- (a level and a word or two) doesn't look squeezed.
 	local wide = second and second:IsShown()
-	if tip.SetMinimumWidth then tip:SetMinimumWidth(wide and MIN_WIDTH or 0) end
+	if tip.SetMinimumWidth then tip:SetMinimumWidth(wide and math.max(MIN_WIDTH, tip.stoaWide or 0) or 0) end
+	-- The rule and the gear mark reach to the card's right margin.
+	local width = tip:GetWidth()
+	if not Stoa:IsSecret(width) and type(width) == "number" and width > 40 then
+		local rule, mark = tip.stoaRule, tip.stoaGear
+		if rule and rule:IsShown() then rule:SetWidth(width - 20) end
+		if mark and mark:IsShown() and mark.line then
+			mark:ClearAllPoints()
+			mark:SetPoint("RIGHT", mark.line, "LEFT", width - 20, 0)
+		end
+	end
 	local right, bottom, left, top = tip:GetPadding()
 	if Stoa:IsSecret(right) or Stoa:IsSecret(bottom) or Stoa:IsSecret(left) or Stoa:IsSecret(top) then return end
 	bottom = bottom or 0
@@ -823,6 +1011,7 @@ end
 function Tooltip:OnEnable()
 	if not (TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType) then return end
 	xpcall(fonts, Stoa.catch)
+	self.addsNotes = true
 	for _, name in ipairs(TIPS) do
 		local tip = _G[name]
 		if tip and not (tip.IsForbidden and tip:IsForbidden()) then xpcall(edge, Stoa.catch, tip) end

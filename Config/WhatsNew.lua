@@ -23,9 +23,13 @@ Stoa.WhatsNew = WhatsNew
 local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
-		edition = "1.5.3",
-		title = "New in STOA 1.5.3",
+		edition = "1.6.0",
+		title = "New in STOA 1.6",
 		lines = {
+			{ "Player notes", "Remember who was good to play with and who wasn't. Right-click a player and choose STOA note, or type /stoa note and their name: pick Good or Bad, write one line, press Enter." },
+			{ "Where notes come back", "On the player's tooltip, as a diamond on their party card, under their whisper, beside what they say in General, Trade and other public chat, and as one quiet chat line when they join your group." },
+			{ "People", "A new tab in the Characters window lists everyone you've noted, to search, edit or remove. /stoa people opens it. Every character of yours shares the notes." },
+			{ "Tidier tooltips", "Who someone is now fits one line, like 33 Gnome Mage with the class in its colour. Item level sits beside it behind a sword mark, and your own lines start under a thin rule." },
 			{ "Build your STOA", "Settings open on a quick start page: pick a starting set, then switch each piece of STOA on or off, so you run only what you want. The other pages hold the finer settings." },
 			{ "Simpler settings", "Each settings page opens on a few everyday settings, with the rest under More. Settings for other classes are gone from view, and search still finds everything." },
 			{ "What I've changed", "A new settings page lists everything that isn't as STOA comes. Right-click any setting to put it back." },
@@ -61,16 +65,6 @@ local NOTES = {
 			{ "Loot rolls", "The need, greed and pass cards wear STOA's dark card, with a thin timer along the foot." },
 			{ "Other languages", "Seals, shields, creature types, zone levels on the map and herb nodes now work on clients that aren't English." },
 			{ "Lighter in groups", "STOA listens only to the players it draws, so it does less work in a full raid." },
-		},
-	},
-	{
-		edition = "1.4.5",
-		title = "New in STOA 1.4.5",
-		lines = {
-			{ "Whisper card", "A whisper brings up a small card above the chat tabs: who it's from and the start of what they said. Click to answer, right-click to put it away. /stoa whisper shows a sample." },
-			{ "Forever's new dungeons", "The dungeon companion knows all nine new dungeons and their bosses, from Hall of Thanes to Shaper's Terrace, and ticks off optional bosses when you target their corpse." },
-			{ "Quest timers", "A timed quest counts down in a small card beside the quest list's heading, instead of a box over the list." },
-			{ "A tidier quest list", "Quests that would run over the console fade out, and the dungeon fight error about secret auras is gone." },
 		},
 	},
 }

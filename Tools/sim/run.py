@@ -899,6 +899,97 @@ do
 		C_Item.GetItemInfo = realInfo
 	end
 end
+-- The unit tooltip's identity line: a player reads "33 Gnome Mage" with the
+-- class and faction lines gone, a guild in brackets, a mob "20 Humanoid"
+-- with its difficulty, the item level beside the line and not under it.
+do
+	local tooltip = Stoa.modules.Tooltip
+	if tooltip and tooltip.Identity and Stoa:IsModuleEnabled("Tooltip") then
+		local ok, e = xpcall(function()
+			local function card(texts)
+				local tip = CreateFrame("Frame", "StoaSimTip")
+				local lines, pairsAdded = {}, {}
+				local function add(text)
+					local i = #lines + 1
+					local fs = _G["StoaSimTipTextLeft" .. i] or tip:CreateFontString()
+					_G["StoaSimTipTextLeft" .. i] = fs
+					local held, shown = text, true
+					fs.SetText = function(_, v) held = v end
+					fs.GetText = function() return held end
+					fs.Hide = function() shown = false end
+					fs.IsShown = function() return shown end
+					lines[i] = fs
+				end
+				for _, text in ipairs(texts) do add(text) end
+				tip.NumLines = function() return #lines end
+				tip.AddLine = function(_, text) add(text) end
+				tip.AddDoubleLine = function(_, left, right) add(left) pairsAdded[left] = right end
+				tip.GetUnit = function() return "x", "mouseover" end
+				tip.Show = function() end
+				return tip, lines, pairsAdded
+			end
+			local real = { UnitIsPlayer, UnitLevel, UnitEffectiveLevel, UnitRace, UnitClass, UnitFactionGroup, UnitCreatureType,
+				UnitCanAttack, UnitExists, UnitGUID, UnitClassification, GetGuildInfo, UnitIsUnit, UnitIsDeadOrGhost }
+			local player, level, faction, attack = true, 33, "Alliance", false
+			UnitIsPlayer = function() return player end
+			UnitLevel = function() return level end
+			UnitEffectiveLevel = UnitLevel
+			UnitRace = function() return "Gnome", "Gnome" end
+			UnitClass = function() return "Mage", "MAGE" end
+			UnitFactionGroup = function(u) if u == "player" then return "Alliance", "Alliance" end return faction, faction end
+			UnitCreatureType = function() return "Humanoid" end
+			UnitCanAttack = function() return attack end
+			UnitExists = function() return false end
+			UnitGUID = function() return "Player-1-0001" end
+			UnitClassification = function() return "normal" end
+			UnitIsUnit = function() return false end
+			UnitIsDeadOrGhost = function() return false end
+			GetGuildInfo = function() return "Stonespine Company" end
+			tooltip.ItemLevel = function() return 25 end
+
+			local tip, lines, added = card({ "Terraof Daice", "Stonespine Company", "Level 33 Gnome (Player)", "Mage", "Alliance" })
+			tooltip:DressUnit(tip)
+			local id = lines[3]:GetText()
+			assert(id:find("33 Gnome", 1, true) and id:find("Mage", 1, true) and not id:find("Player", 1, true) and not id:find("Level", 1, true), "a player's line reads " .. id)
+			assert(lines[2]:GetText() == "<Stonespine Company>", "the guild reads " .. tostring(lines[2]:GetText()))
+			assert(not lines[4]:IsShown() and not lines[5]:IsShown(), "the class and faction lines stayed")
+			assert(not added["ITEM LEVEL"], "the item level still has its own row")
+			assert(tip.stoaGear and tip.stoaGear:GetText():find("GlyphSword", 1, true) and tip.stoaGear:GetText():find("25", 1, true), "no gear mark beside the line")
+			assert(not tip.stoaLower, "a rule was drawn with nothing under it")
+
+			-- An enemy player: the other faction and how hard they are join the line.
+			faction, attack, level = "Horde", true, 36
+			UnitExists = function(u) return u == "mouseovertarget" end
+			UnitIsUnit = function(a, b) return a == "mouseovertarget" and b == "player" end
+			tip, lines, added = card({ "Vexil", "Level 36 Undead (Player)", "Rogue", "Horde" })
+			tooltip:DressUnit(tip)
+			id = lines[2]:GetText()
+			assert(id:find("Horde", 1, true) and (id:find("Hard", 1, true) or id:find("Even", 1, true) or id:find("Deadly", 1, true)), "an enemy player's line reads " .. id)
+			assert(added["TARGET"] == "YOU" and tip.stoaLower, "the target pair or its rule is missing")
+
+			-- A mob: creature type, then the difficulty word.
+			player, level = false, 20
+			UnitExists = function() return false end
+			GetGuildInfo = function() return nil end
+			tip, lines = card({ "Defias Thug", "Level 20 Humanoid" })
+			tooltip:DressUnit(tip)
+			id = lines[2]:GetText()
+			assert(id:find("20 Humanoid", 1, true) and not id:find("Level", 1, true), "a mob's line reads " .. id)
+			-- A friendly NPC with a title; wording STOA can't read is left alone.
+			attack, level = false, 30
+			tip, lines = card({ "Innkeeper Farley", "Innkeeper", "Level 30 Humanoid" })
+			tooltip:DressUnit(tip)
+			assert(lines[2]:GetText() == "<Innkeeper>" and lines[3]:GetText():find("30 Humanoid", 1, true), "an NPC's lines read " .. tostring(lines[2]:GetText()))
+			tip, lines = card({ "Etwas", "Stufe 30 Humanoid" })
+			tooltip:DressUnit(tip)
+			assert(lines[2]:GetText() == "Stufe 30 Humanoid", "an unread level line was changed")
+			UnitIsPlayer, UnitLevel, UnitEffectiveLevel, UnitRace, UnitClass, UnitFactionGroup, UnitCreatureType,
+				UnitCanAttack, UnitExists, UnitGUID, UnitClassification, GetGuildInfo, UnitIsUnit, UnitIsDeadOrGhost = unpack(real)
+			tooltip.ItemLevel = nil
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Tooltip identity: " .. e end
+	end
+end
 -- The spellbook: the book loads later (Blizzard_PlayerSpells); a mock of
 -- it gets dressed, an item takes STOA's type and the To train word shows.
 do
@@ -1281,6 +1372,88 @@ do
 			console:SetOpen(true, true)
 		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Riding: " .. e end
+	end
+end
+-- Player notes: writing one from the card, reading it back by name and by
+-- unit, the People list and its filters, the whisper line, the join line.
+do
+	local notes = Stoa.Notes
+	if notes and Stoa:IsModuleEnabled("Notes") then
+		local ok, e = xpcall(function()
+			local real = { UnitIsPlayer, UnitFullName, UnitExists, IsInGroup, Stoa.GroupUnits, Stoa.Print }
+			StoaDB.people = nil
+			local key, short = notes:Key("Brakka-Stonespine")
+			assert(key == "Brakka-Stonespine" and short == "Brakka", "key reads " .. tostring(key))
+			local home = notes:Key("Olwenn")
+			assert(home and home:find("^Olwenn%-"), "a home name got no realm: " .. tostring(home))
+			notes:Open(key, short, { class = "WARRIOR", className = "Warrior", level = 34 })
+			local card = notes.card
+			assert(card:IsShown() and card.kind == "note", "the card didn't open on a plain note")
+			assert(not card.remove:IsShown(), "a new note offers Remove")
+			notes:PickKind("bad")
+			card.box:SetText("  Rolled need on the caster staff  ")
+			notes:Save()
+			assert(not card:IsShown(), "saving left the card up")
+			local entry = notes:Get(key)
+			assert(entry and entry.kind == "bad" and entry.text == "Rolled need on the caster staff" and entry.class == "WARRIOR", "the note wasn't kept as written")
+			assert(notes:Icon("bad", 10):find("GlyphDiamondOpen", 1, true), "the bad mark isn't the hollow diamond")
+			-- An empty plain note puts the note away; an empty Good stays.
+			notes:Set(home, "Olwenn", "good", "")
+			assert(notes:Get(home) and notes:Get(home).text == nil, "a wordless Good wasn't kept")
+			notes:Open(home, "Olwenn")
+			assert(card.remove:IsShown(), "an old note has no Remove")
+			notes:PickKind("note")
+			notes:Save()
+			assert(not notes:Get(home), "an empty plain note stayed")
+			notes:Set(home, "Olwenn", "good", "Great healer")
+			notes:Get(key).when = time() - 86400 * 12
+			-- By unit.
+			UnitExists = function(u) return u == "party1" or u == "player" or real[3](u) end
+			UnitIsPlayer = function(u) return u == "party1" or u == "player" end
+			UnitFullName = function(u) if u == "party1" then return "Brakka", "Stonespine" end return "Taer", nil end
+			assert(notes:UnitKey("party1") == key, "the unit's key reads " .. tostring(notes:UnitKey("party1")))
+			assert(notes:WhisperLine("Brakka-Stonespine"):find("Rolled need", 1, true), "the whisper line is missing")
+			assert(notes:WhisperLine("Nobody") == nil, "a stranger got a whisper line")
+			-- The chat mark: on a noted player's line only, and not when off.
+			local _, marked, who = notes.ChatFilter(nil, "CHAT_MSG_SAY", "anyone for Deadmines?", "Brakka-Stonespine", "x")
+			assert(marked and marked:find("GlyphDiamondOpen", 1, true) and marked:find("anyone for Deadmines?", 1, true) and who == "Brakka-Stonespine", "a noted player's chat line got no mark")
+			assert(select("#", notes.ChatFilter(nil, "CHAT_MSG_SAY", "hello", "Nobody")) == 1, "a stranger's chat line was changed")
+			notes.db.chatMark = false
+			assert(select("#", notes.ChatFilter(nil, "CHAT_MSG_SAY", "hello", "Brakka-Stonespine")) == 1, "the chat mark showed while switched off")
+			notes.db.chatMark = true
+			-- The join line: once per group, none for the quiet first look.
+			local said = {}
+			Stoa.Print = function(_, text) said[#said + 1] = text end
+			IsInGroup = function() return true end
+			Stoa.GroupUnits = function() return { "player", "party1" } end
+			notes:CheckGroup()
+			notes:CheckGroup()
+			assert(#said == 1 and said[1]:find("Brakka: Rolled need", 1, true), "the join line was said " .. #said .. " times")
+			IsInGroup = function() return false end
+			notes:CheckGroup()
+			IsInGroup = function() return true end
+			notes:CheckGroup(true)
+			assert(#said == 1, "the quiet look spoke")
+			-- The People tab.
+			Stoa.Alts:OpenPeople()
+			local pane = notes.pane
+			assert(pane and pane:IsVisible(), "the People tab didn't open")
+			assert(notes.shown == 2, "the list shows " .. tostring(notes.shown))
+			assert(pane.rows[1].key == home, "the newest note isn't first")
+			notes.filter = "bad"
+			notes:FillPane()
+			assert(notes.shown == 1 and pane.rows[1].key == key, "the Bad filter shows " .. tostring(notes.shown))
+			notes.filter, notes.query = "all", "healer"
+			notes:FillPane()
+			assert(notes.shown == 1 and pane.rows[1].key == home, "the search shows " .. tostring(notes.shown))
+			notes.query = nil
+			notes:Remove(key)
+			assert(notes.shown == 1, "removing didn't redraw the list")
+			Stoa.Alts.page:Hide()
+			StoaDB.people = nil
+			UnitIsPlayer, UnitFullName, UnitExists, IsInGroup, Stoa.GroupUnits, Stoa.Print = unpack(real)
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Notes: " .. e end
 	end
 end
 -- The talent planner: marks over the trees, the row rule, the order, sharing.

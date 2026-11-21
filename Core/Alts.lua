@@ -600,6 +600,25 @@ function Alts:Build()
 	self.tabs.search:SetPoint("LEFT", self.tabs.list, "RIGHT", 18, 0)
 	closeButton(page, function() page:Hide() end)
 
+	-- People: the players you've written a note about (Modules/QoL/Notes.lua).
+	local notes = Stoa.Notes
+	if notes and Stoa:IsModuleEnabled("Notes") then
+		self.tabs.people = tabWord(page, "People", function() Alts:ShowTab("people") end)
+		self.tabs.people:SetPoint("LEFT", self.tabs.search, "RIGHT", 18, 0)
+		local people = CreateFrame("Frame", nil, page)
+		people:SetPoint("TOPLEFT", PAD, -HEADER - 12)
+		people:SetPoint("BOTTOMRIGHT", -PAD, FOOTER + 6)
+		people:SetSize(WIDTH - PAD * 2, HEIGHT - HEADER - FOOTER - 18)
+		people:Hide()
+		people.onCount = function(shown, all)
+			if self.tab ~= "people" then return end
+			self.count:SetText(all == 0 and "" or (shown == all and (all == 1 and "1 person noted" or (all .. " people noted")) or (shown .. " of " .. all .. " showing")))
+			self.total:SetText(all == 0 and "" or "Click to edit  ·  Right-click to remove")
+		end
+		self.peoplePane = people
+		xpcall(notes.BuildPane, Stoa.catch, notes, people)
+	end
+
 	-- The list: totals, column heads, rows.
 	local list = CreateFrame("Frame", nil, page)
 	list:SetPoint("TOPLEFT", PAD, -HEADER - 14)
@@ -659,12 +678,17 @@ function Alts:Build()
 end
 
 function Alts:ShowTab(which)
+	if which == "people" and not self.peoplePane then which = "list" end
 	self.tab = which
-	self.tabs.list:SetSelected(which == "list")
-	self.tabs.search:SetSelected(which == "search")
+	for id, tab in pairs(self.tabs) do tab:SetSelected(id == which) end
 	self.listPane:SetShown(which == "list")
 	self.searchPane:SetShown(which == "search")
-	if which == "search" then
+	if self.peoplePane then self.peoplePane:SetShown(which == "people") end
+	if which == "people" then
+		self:Pick(nil)
+		self.box:ClearFocus()
+		Stoa.Notes:FillPane()
+	elseif which == "search" then
 		self:Pick(nil)
 		self.box:SetFocus()
 		self:Search()
@@ -1182,6 +1206,13 @@ function Alts:OpenSearch(query)
 	self.box:SetText(query or "")
 	self:ShowTab("search")
 	self.box:SetCursorPosition(#(query or ""))
+end
+
+-- Opens the window on its People tab.
+function Alts:OpenPeople()
+	if not self.page then self:Build() end
+	self.tab = "people"
+	if self.page:IsShown() then self:ShowTab("people") else self.page:Show() end
 end
 
 -- A key for it in the game's Key Bindings, under AddOns > STOA (Bindings.xml).
