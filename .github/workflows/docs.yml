@@ -1,10 +1,15 @@
 name: Docs
 
-# Fails when README.md or CHANGELOG.md changed without rebuilding the docs site.
+# Keeps the docs site in step with README.md and CHANGELOG.md. On main the
+# pages are rebuilt and committed when they are out of date; on a pull
+# request a stale site is only noted, never a failure.
 on:
   pull_request:
   push:
     branches: [main]
+
+permissions:
+  contents: write
 
 jobs:
   docs:
@@ -12,4 +17,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip install pillow
-      - run: python3 Tools/docs/build.py --check
+
+      - name: Note stale pages
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 Tools/docs/build.py --check \
+            || echo "::notice::Docs pages are out of date; they are rebuilt on main after the merge."
+
+      - name: Rebuild and commit
+        if: github.event_name == 'push'
+        run: |
+          python3 Tools/docs/build.py
+          if [ -z "$(git status --porcelain docs)" ]; then
+            echo "Docs are up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git commit -m "Rebuild docs"
+          git push
