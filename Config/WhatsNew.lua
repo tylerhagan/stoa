@@ -29,12 +29,6 @@ local NOTES = {
 			{ "Player notes", "Remember who was good to play with and who wasn't. Right-click a player and choose STOA note, or type /stoa note and their name: pick Good or Bad, write one line, press Enter." },
 			{ "Where notes come back", "On the player's tooltip, as a diamond on their party card, under their whisper, and as one quiet chat line when they join your group." },
 			{ "People", "A new tab in the Characters window lists everyone you've noted, to search, edit or remove. /stoa people opens it. Every character of yours shares the notes." },
-		},
-	},
-	{
-		edition = "1.5.3",
-		title = "New in STOA 1.5.3",
-		lines = {
 			{ "Build your STOA", "Settings open on a quick start page: pick a starting set, then switch each piece of STOA on or off, so you run only what you want. The other pages hold the finer settings." },
 			{ "Simpler settings", "Each settings page opens on a few everyday settings, with the rest under More. Settings for other classes are gone from view, and search still finds everything." },
 			{ "What I've changed", "A new settings page lists everything that isn't as STOA comes. Right-click any setting to put it back." },
