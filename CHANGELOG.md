@@ -20,6 +20,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Moving frames: the bar's hint has its own lines instead of running into the title.
 - Moving frames: the Halo's box now says "shows in a fight", since the Halo is hidden out of combat and could look as if moving it made it vanish.
 - **Nameplates**: every plate now has the same bar, with rounded ends inside its dark track. A plate seen for the first time used to get a flat square bar that filled the track edge to edge, until the game next laid it out.
+- Fixed: levelling up in a fight could leave the game's menu and bag rows standing at the bottom of the screen until the fight ended. They now go straight back to the console when the game allows it.
 
 ## 1.5.2
 
