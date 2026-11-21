@@ -348,10 +348,20 @@ function Tooltip:GearMark(tip, fs, level)
 	mark:SetText(("|T%sChest:12:12:0:0:32:32:0:32:0:32:%d:%d:%d|t %d"):format(GLYPH, r * 255, g * 255, b * 255, level))
 	mark:SetTextColor(Stoa:Color("text"))
 	mark.line = fs
+	-- The game won't always measure a line (an enemy player's reads back
+	-- secret), so the room it needs is then reckoned from its letters.
 	local need = fs:GetStringWidth()
 	local own = mark:GetStringWidth()
-	if Stoa:IsSecret(need) or Stoa:IsSecret(own) then return false end
-	tip.stoaWide = (need or 0) + (own or 0) + 36
+	if Stoa:IsSecret(need) or type(need) ~= "number" then
+		local text = fs:GetText()
+		local letters = 24
+		if type(text) == "string" and not Stoa:IsSecret(text) then
+			letters = #(text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "  "))
+		end
+		need = letters * 7.5
+	end
+	if Stoa:IsSecret(own) or type(own) ~= "number" then own = 34 end
+	tip.stoaWide = need + own + 36
 	mark:ClearAllPoints()
 	mark:SetPoint("RIGHT", fs, "LEFT", math.max(MIN_WIDTH, tip.stoaWide) - 20, 0)
 	mark:Show()
