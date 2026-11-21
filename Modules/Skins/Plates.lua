@@ -406,26 +406,19 @@ local function dressCast(cast)
 	UI.pillEdge(cast, PAD):Set(0, 0, 0, 0.9)
 end
 
--- The game puts its own bar art back whenever it lays a plate out again (a
--- reused plate, a changed option): its sliced art overhangs the bar and
--- squares off the rounded track, so the plain fill goes back each time.
-local function plainFill(bar)
-	bar:SetStatusBarTexture(UI.WHITE)
-	local fill = bar.GetStatusBarTexture and bar:GetStatusBarTexture()
-	if fill and fill.ClearTextureSlice then fill:ClearTextureSlice() end
-end
-
 local function dress(frame)
 	if frame.stoaDressed then return end
 	frame.stoaDressed = true
 
 	local bar = frame.healthBar
 	if bar then
-		plainFill(bar)
+		-- The fill keeps the game's own bar art (rounded ends, a soft shade),
+		-- which sits a little inside the track. The game puts that art back
+		-- each time it lays a plate out, so a plain fill here would only last
+		-- until then and leave plates looking two ways.
 		if bar.bgTexture then bar.bgTexture:SetAlpha(0) end
 		if bar.selectedBorder then bar.selectedBorder:SetAlpha(0) end
-		-- The fill runs square inside a rounded dark track a little larger
-		-- than the bar, so the corners read rounded without masking it.
+		-- A rounded dark track a little larger than the bar sits behind it.
 		frame.stoaPillFill = UI.tint(UI.pillFill(bar, PAD), "panel", 0.85)
 		local edge = UI.pillEdge(bar, PAD)
 		edge:Set(0, 0, 0, 0.9)
@@ -450,10 +443,7 @@ local function dress(frame)
 		end)
 	end
 	if frame.UpdateAnchors then
-		hooksecurefunc(frame, "UpdateAnchors", function(own)
-			if own.healthBar then guarded(plainFill, own.healthBar) end
-			guarded(applyStyle, own)
-		end)
+		hooksecurefunc(frame, "UpdateAnchors", function(own) guarded(applyStyle, own) end)
 	end
 	refont(frame)
 end
@@ -554,56 +544,4 @@ function Plates:OnEnable()
 		local unit = plate.UnitFrame and plate.UnitFrame.unit
 		if unit then guarded(Plates.Added, Plates, unit) end
 	end
-end
-
--- /stoa plate: what your target's nameplate is made of, for a bug report.
-Stoa.commands.plate = function()
-	local plate = C_NamePlate.GetNamePlateForUnit("target")
-	local frame = plate and plate.UnitFrame
-	if not frame then return Stoa:Print("Target something with a nameplate first.") end
-	local bar = frame.healthBar
-	local lines = {}
-	local function say(label, fn)
-		local ok, text = pcall(fn)
-		lines[#lines + 1] = label .. ": " .. tostring(ok and text or ("? " .. tostring(text)))
-	end
-	local function tex(t)
-		if not t then return "none" end
-		local w, h = t:GetSize()
-		local layer, sub = t:GetDrawLayer()
-		return ("%s shown=%s visible=%s alpha=%.2f %dx%d %s/%s tex=%s atlas=%s"):format(t:GetObjectType(), tostring(t:IsShown()), tostring(t:IsVisible()),
-			t:GetAlpha(), w, h, tostring(layer), tostring(sub), tostring(t:GetTexture()), tostring(t.GetAtlas and t:GetAtlas()))
-	end
-	say("style", function() return tostring(Plates.db.style) .. " marker=" .. tostring(Plates.db.marker) .. " dressed=" .. tostring(frame.stoaDressed) end)
-	say("frame", function() return ("%dx%d scale=%.2f eff=%.2f clips=%s plateClips=%s"):format(frame:GetWidth(), frame:GetHeight(), frame:GetScale(), frame:GetEffectiveScale(), tostring(frame:DoesClipChildren()), tostring(plate:DoesClipChildren())) end)
-	say("bar", function() return ("%dx%d level=%d strata=%s clips=%s parentClips=%s same=%s"):format(bar:GetWidth(), bar:GetHeight(), bar:GetFrameLevel(), bar:GetFrameStrata(), tostring(bar:DoesClipChildren()), tostring(bar:GetParent():DoesClipChildren()), tostring(bar == frame.HealthBarsContainer.healthBar)) end)
-	say("fill", function() return tex(bar:GetStatusBarTexture()) end)
-	say("track", function() return tex(frame.stoaPillFill) end)
-	say("edge", function() return tex(frame.stoaTargetEdge and frame.stoaTargetEdge.edges and frame.stoaTargetEdge.edges[1]) end)
-	say("game bg", function() return tex(bar.bgTexture) end)
-	say("game", function()
-		local o = NamePlateSetupOptions or {}
-		return ("classic=%s barHeight=%s style=%s size=%s simplified=%s"):format(tostring(o.useClassicHealthBar), tostring(o.healthBarHeight), tostring(GetCVar("nameplateStyle")), tostring(GetCVar("nameplateSize")), tostring(GetCVar("nameplateSimplifiedTypes")))
-	end)
-	-- Everything drawn on the bar that is showing, with its colour.
-	local function list(owner, tag)
-		for _, region in ipairs({ owner:GetRegions() }) do
-			if region:IsVisible() and region.GetVertexColor and region:GetAlpha() > 0 then
-				say(tag, function()
-					local w, h = region:GetSize()
-					local r, g, b, a = region:GetVertexColor()
-					local layer, sub = region:GetDrawLayer()
-					return ("%dx%d %s/%s rgb=%.1f,%.1f,%.1f,%.1f a=%.2f tex=%s atlas=%s key=%s"):format(w, h, tostring(layer), tostring(sub), r, g, b, a, region:GetAlpha(),
-						tostring(region.GetTexture and region:GetTexture()), tostring(region.GetAtlas and region:GetAtlas()), tostring(region:GetDebugName()):match("[^%.]*$"))
-				end)
-			end
-		end
-	end
-	list(bar, "on bar")
-	for i, child in ipairs({ bar:GetChildren() }) do
-		if child:IsVisible() then list(child, "child " .. i) end
-	end
-	list(frame.HealthBarsContainer, "container")
-	list(frame, "frame")
-	for _, line in ipairs(lines) do Stoa:Print(line) end
 end
