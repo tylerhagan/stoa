@@ -2,7 +2,12 @@
 
 Each release has a `## <version>` heading matching the `## Version:` line in `Stoa.toc`. The release workflow uses that section as the release notes, so a tag without one fails.
 
-Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set.
+Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
+
+## 1.6.1
+
+- Buff and debuff timers at the top of the screen have a fine outline and a shadow and are a shade brighter, so they stay readable over sand, snow and bright sky.
+- Releases now go to Wago Addons as well as CurseForge.
 
 ## 1.6.0
 

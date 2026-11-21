@@ -46,7 +46,7 @@ local function auraDuration(button)
 	mine:SetText(theirs:GetText())
 	local left = button.timeLeft
 	local short = left and not Stoa:IsSecret(left) and BUFF_DURATION_WARNING_TIME and left < BUFF_DURATION_WARNING_TIME
-	mine:SetTextColor(Stoa:Color(short and "accent" or "muted"))
+	mine:SetTextColor(Stoa:Color(short and "accent" or "text"))
 end
 
 -- List style: the buff's name to the left of its icon and the time before
@@ -113,8 +113,11 @@ local function dressAura(button)
 	if button.Duration then
 		button.Duration:SetAlpha(0)
 		local mine = frame:CreateFontString(nil, "OVERLAY")
-		Stoa:SetFont(mine, "sans", Stoa.typeSize.caption)
 		mine:SetPoint("TOP", button.Icon, "BOTTOM", 0, -3)
+		-- Over the world with nothing behind it: an outline and a shadow
+		-- keep it readable on snow, sand and bright sky.
+		Stoa:SetFont(mine, "sans", Stoa.typeSize.caption, "OUTLINE")
+		UI.legible(mine)
 		mine:Hide()
 		button.stoaDuration = mine
 	end
