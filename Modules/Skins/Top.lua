@@ -36,13 +36,17 @@ end
 
 -- Buffs ----------------------------------------------------------------------
 
+-- The dark plate a buff's time sits on, under its icon.
+local PLATE_H = 14
+local PLATE_ALPHA = 0.45
+
 local function auraDuration(button)
 	local mine = button.stoaDuration
 	if not mine then return end
 	local theirs = button.Duration
 	local shown = theirs and theirs:IsShown()
 	mine:SetShown(shown or false)
-	if mine.haze then mine.haze:SetShown(shown or false) end
+	if mine.plate then mine.plate:SetShown((shown and not mine.inList) or false) end
 	if not shown then return end
 	mine:SetText(theirs:GetText())
 	local left = button.timeLeft
@@ -64,6 +68,11 @@ local function auraName(button)
 			button.stoaDuration:SetPoint("RIGHT", name, "LEFT", -8, 0)
 		else
 			button.stoaDuration:SetPoint("TOP", button.Icon, "BOTTOM", 0, -3)
+		end
+		-- The plate hangs under the icon, so it only suits the time there.
+		button.stoaDuration.inList = list and true or false
+		if button.stoaDuration.plate then
+			button.stoaDuration.plate:SetShown(not list and button.stoaDuration:IsShown())
 		end
 	end
 	if not list then return end
@@ -115,19 +124,19 @@ local function dressAura(button)
 		button.Duration:SetAlpha(0)
 		local mine = frame:CreateFontString(nil, "OVERLAY")
 		mine:SetPoint("TOP", button.Icon, "BOTTOM", 0, -3)
-		-- Over the world with nothing behind it: a soft dark haze, feathered
-		-- to nothing, and a drop shadow keep it readable on snow, sand and
-		-- bright sky without a hard outline.
+		-- Over the world with nothing behind it, so the time sits on a
+		-- flat dark plate hung from the icon, the same width as the icon and
+		-- its edge: readable on snow, sand and bright sky with no outline.
 		Stoa:SetFont(mine, "sans", Stoa.typeSize.caption)
 		mine:SetShadowColor(0, 0, 0, 0.9)
 		mine:SetShadowOffset(1, -1)
-		local haze = frame:CreateTexture(nil, "ARTWORK")
-		haze:SetTexture(UI.MEDIA .. "Textures\\SparkleGlow")
-		haze:SetVertexColor(0, 0, 0, 0.6)
-		haze:SetSize(52, 26)
-		haze:SetPoint("CENTER", mine, "CENTER", 0, 0)
-		haze:Hide()
-		mine.haze = haze
+		local plate = frame:CreateTexture(nil, "BACKGROUND")
+		plate:SetColorTexture(0, 0, 0, PLATE_ALPHA)
+		plate:SetPoint("TOPLEFT", button.Icon, "BOTTOMLEFT", -1, -1)
+		plate:SetPoint("TOPRIGHT", button.Icon, "BOTTOMRIGHT", 1, -1)
+		plate:SetHeight(PLATE_H)
+		plate:Hide()
+		mine.plate = plate
 		mine:Hide()
 		button.stoaDuration = mine
 	end
