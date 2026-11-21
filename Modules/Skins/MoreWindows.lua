@@ -71,10 +71,11 @@ local TARGETS = {
 
 local hide = Stoa.frames.hide
 
-local function hideOwnArt(frame)
+-- `keep`: textures Stoa drew on this frame itself, which stay.
+local function hideOwnArt(frame, keep)
 	if not (frame and frame.GetRegions) then return end
 	for _, region in ipairs({ frame:GetRegions() }) do
-		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
+		if region.IsObjectType and region:IsObjectType("Texture") and not (keep and keep[region]) then region:SetAlpha(0) end
 	end
 	hide(frame.NineSlice)
 	hide(frame.Bg)
@@ -229,10 +230,17 @@ end
 -- panel of its own in.
 local function dressSidePanel(panel)
 	if not panel or forbidden(panel) then return end
-	hideOwnArt(panel)
-	if panel.stoaSidePanel then return end
-	panel.stoaSidePanel = true
+	-- This runs on every show; Stoa's own ground is a texture of the panel
+	-- too, so it is told apart or the second show would clear it.
+	hideOwnArt(panel, panel.stoaSideArt)
+	if panel.stoaSideArt then return end
+	local before, mine = {}, {}
+	for _, region in ipairs({ panel:GetRegions() }) do before[region] = true end
 	UI.windowPanel(panel, nil, {})
+	for _, region in ipairs({ panel:GetRegions() }) do
+		if not before[region] then mine[region] = true end
+	end
+	panel.stoaSideArt = mine
 end
 
 function dressInner(target, frame)
