@@ -36,17 +36,22 @@ end
 
 -- Buffs ----------------------------------------------------------------------
 
+-- The dark plate a buff's time sits on, under its icon.
+local PLATE_H = 14
+local PLATE_ALPHA = 0.25
+
 local function auraDuration(button)
 	local mine = button.stoaDuration
 	if not mine then return end
 	local theirs = button.Duration
 	local shown = theirs and theirs:IsShown()
 	mine:SetShown(shown or false)
+	if mine.plate then mine.plate:SetShown((shown and not mine.inList) or false) end
 	if not shown then return end
 	mine:SetText(theirs:GetText())
 	local left = button.timeLeft
 	local short = left and not Stoa:IsSecret(left) and BUFF_DURATION_WARNING_TIME and left < BUFF_DURATION_WARNING_TIME
-	mine:SetTextColor(Stoa:Color(short and "accent" or "muted"))
+	mine:SetTextColor(Stoa:Color(short and "accent" or "text"))
 end
 
 -- List style: the buff's name to the left of its icon and the time before
@@ -63,6 +68,11 @@ local function auraName(button)
 			button.stoaDuration:SetPoint("RIGHT", name, "LEFT", -8, 0)
 		else
 			button.stoaDuration:SetPoint("TOP", button.Icon, "BOTTOM", 0, -3)
+		end
+		-- The plate hangs under the icon, so it only suits the time there.
+		button.stoaDuration.inList = list and true or false
+		if button.stoaDuration.plate then
+			button.stoaDuration.plate:SetShown(not list and button.stoaDuration:IsShown())
 		end
 	end
 	if not list then return end
@@ -113,8 +123,20 @@ local function dressAura(button)
 	if button.Duration then
 		button.Duration:SetAlpha(0)
 		local mine = frame:CreateFontString(nil, "OVERLAY")
-		Stoa:SetFont(mine, "sans", Stoa.typeSize.caption)
 		mine:SetPoint("TOP", button.Icon, "BOTTOM", 0, -3)
+		-- Over the world with nothing behind it, so the time sits on a
+		-- flat dark plate hung from the icon, the same width as the icon and
+		-- its edge: readable on snow, sand and bright sky with no outline.
+		Stoa:SetFont(mine, "sans", Stoa.typeSize.caption)
+		mine:SetShadowColor(0, 0, 0, 0.9)
+		mine:SetShadowOffset(1, -1)
+		local plate = frame:CreateTexture(nil, "BACKGROUND")
+		plate:SetColorTexture(0, 0, 0, PLATE_ALPHA)
+		plate:SetPoint("TOPLEFT", button.Icon, "BOTTOMLEFT", -1, -1)
+		plate:SetPoint("TOPRIGHT", button.Icon, "BOTTOMRIGHT", 1, -1)
+		plate:SetHeight(PLATE_H)
+		plate:Hide()
+		mine.plate = plate
 		mine:Hide()
 		button.stoaDuration = mine
 	end

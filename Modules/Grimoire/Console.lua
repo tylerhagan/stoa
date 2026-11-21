@@ -1564,6 +1564,32 @@ end
 local SEAL_CLEARANCE = 64
 -- The console is not a secure frame, so it can resize in combat.
 
+-- Folded, the chat the console houses loses the leather behind it and
+-- floats over the world. A flat dark plate stands in for the leather, so
+-- its words stay readable over sand, snow and bright sky.
+local CHAT_SHADE = 0.25
+
+function Console:ChatShade()
+	local housed = ChatFrame1 and self.HousesChat and self:HousesChat()
+	local shade = self.chatShade
+	if not housed then
+		if shade then shade:SetAlpha(0) end
+		return nil
+	end
+	if not shade then
+		local holder = CreateFrame("Frame", nil, UIParent)
+		holder:SetFrameStrata("BACKGROUND")
+		holder:SetPoint("TOPLEFT", ChatFrame1, "TOPLEFT", -8, 6)
+		holder:SetPoint("BOTTOMRIGHT", ChatFrame1, "BOTTOMRIGHT", 8, -6)
+		shade = holder:CreateTexture(nil, "BACKGROUND")
+		shade:SetAllPoints()
+		shade:SetColorTexture(0, 0, 0, 1)
+		shade:SetAlpha(0)
+		self.chatShade = shade
+	end
+	return shade
+end
+
 function Console:SetOpen(open, instant)
 	-- Riding (Riding.lua): folded look, but a band tall enough for the
 	-- travel line, and the seal halfway between open and folded.
@@ -1585,8 +1611,11 @@ function Console:SetOpen(open, instant)
 	local crowded = foot and foot < SEAL_CLEARANCE or false
 	if open then crowded = self.sealCrowded else self.sealCrowded = crowded end
 
+	local chatShade = self:ChatShade()
+
 	local function step(progress)
 		frame:SetHeight(from + (target - from) * progress)
+		if chatShade then chatShade:SetAlpha((open and 1 - progress or progress) * CHAT_SHADE) end
 		self.leftPage:SetAlpha(open and progress or 1 - progress)
 		self.rightPage:SetAlpha(open and progress or 1 - progress)
 		for _, page in ipairs(self.extraPages or {}) do

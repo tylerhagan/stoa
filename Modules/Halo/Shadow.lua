@@ -439,7 +439,7 @@ function Shadow:Probe()
 		findAura("target", "embrace") and "yes" or "no"))
 	local info = C_Spell.GetSpellCooldown(SPELLS.blast)
 	say(("Mind Blast cooldown: start %s, length %s."):format(describe(info and info.startTime), describe(info and info.duration)))
-	say(("Target hostile %s, health %s."):format(describe(UnitCanAttack("player", "target")), describe(UnitHealth("target"))))
+	say(("Target hostile %s, health %s, most health %s."):format(describe(UnitCanAttack("player", "target")), describe(UnitHealth("target")), describe(UnitHealthMax("target"))))
 	local any = 0
 	for i = 1, 40 do
 		local okAny, each = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, "HARMFUL")
