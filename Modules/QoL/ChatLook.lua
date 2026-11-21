@@ -177,6 +177,9 @@ function ChatLook:OnEnable()
 		if _G[name] then hooksecurefunc(name, apply) end
 	end
 	Stoa:On("PLAYER_ENTERING_WORLD", apply)
+	-- Blizzard can put the buttons back during a fight by a path not hooked
+	-- above; the column is set again once the fight's own tidying is done.
+	Stoa:On("PLAYER_REGEN_ENABLED", function() C_Timer.After(0.5, apply) end)
 	Stoa:On("EDIT_MODE_LAYOUTS_UPDATED", apply)
 	Stoa:On("STOA_THEME_CHANGED", apply)
 	apply()

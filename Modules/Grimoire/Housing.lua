@@ -114,9 +114,35 @@ local function chatMoved()
 	local now = GetTime()
 	if now - windowStart > 1 then windowStart, windowCount = now, 0 end
 	windowCount = windowCount + 1
-	if windowCount > 5 then return end
 	queued = true
-	C_Timer.After(0, replaceChat)
+	-- Past the limit the move still gets its answer, a second later: dropped
+	-- outright, the chat stayed at Blizzard's size until a reload.
+	C_Timer.After(windowCount > 5 and 1 or 0, replaceChat)
+end
+
+-- For /stoa report: where the chat stands against where Stoa puts it.
+function Console:ChatState()
+	local chat = ChatFrame1
+	if not chat then return "no chat window" end
+	if not (self.HousesChat and self:HousesChat()) then return "not housed by the console" end
+	local function n(value)
+		if type(value) ~= "number" or (issecretvalue and issecretvalue(value)) then return "?" end
+		return tostring(math.floor(value + 0.5))
+	end
+	local text = "chat " .. n(chat:GetWidth()) .. "x" .. n(chat:GetHeight()) .. " at " .. n(chat:GetLeft()) .. "," .. n(chat:GetBottom())
+		.. ", console " .. n(self.frame and self.frame:GetHeight()) .. " of " .. n(self:OpenHeight())
+	local rail = _G.StoaChatRail
+	if rail then
+		text = text .. ", rail top " .. n(rail:GetTop()) .. " (chat top " .. n(chat:GetTop()) .. ")"
+		for _, name in ipairs({ "QuickJoinToastButton", "ChatFrameChannelButton", "ChatFrameMenuButton" }) do
+			local button = _G[name]
+			if button and button.GetTop then
+				local parent = button:GetParent()
+				text = text .. ", " .. name .. " top " .. n(button:GetTop()) .. (parent == rail and "" or " (not on the rail)")
+			end
+		end
+	end
+	return text
 end
 
 local function guardChat()
