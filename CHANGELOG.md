@@ -7,7 +7,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 1.6.1
 
 - Buff and debuff timers at the top of the screen are a shade brighter and sit on a small dark plate under each icon, so they stay readable over sand, snow and bright sky.
-- The Halo's cast bar and its label sit on the same kind of dark plate, so the gold line shows over bright ground too.
+- The Halo's cast bar and its label sit on a soft dark haze, so the gold line shows over bright ground too. Over dark ground the haze can't be seen.
 - Chat on the console: when the console folds for a fight or a ride, a dark plate stands in for the leather behind the chat, so it stays readable over bright ground.
 - Releases now go to Wago Addons as well as CurseForge.
 
