@@ -186,11 +186,18 @@ function Character:Refresh()
 		if not overall or overall <= 0 then
 			overall, equipped = wornAverage(), nil
 		end
-		if overall and overall > 0 then
+		-- In STOA's layout the number heads the stats column; in Blizzard's
+		-- it stays beside the level line in the header.
+		local pane = CharacterStatsPaneScrollBox
+		local block = pane and pane.stoaLevel
+		local differs = overall and equipped and math.floor(equipped + 0.5) ~= math.floor(overall + 0.5)
+		if block then
+			block.number:SetText(overall and overall > 0 and tostring(math.floor(overall + 0.5)) or "")
+			block.worn:SetText(differs and ("worn " .. math.floor(equipped + 0.5)) or "")
+			averageText(CharacterFrame):SetText("")
+		elseif overall and overall > 0 then
 			local text = "Item level " .. math.floor(overall + 0.5)
-			if equipped and math.floor(equipped + 0.5) ~= math.floor(overall + 0.5) then
-				text = text .. Stoa.UI.WIDE_SEP .. "worn " .. math.floor(equipped + 0.5)
-			end
+			if differs then text = text .. Stoa.UI.WIDE_SEP .. "worn " .. math.floor(equipped + 0.5) end
 			averageText(CharacterFrame):SetText(Stoa.UI.DOT .. "  " .. text)
 		else
 			averageText(CharacterFrame):SetText("")
@@ -692,7 +699,7 @@ end
 -- STOA's taller header, so their titles ran into the tab words. They start
 -- under the header instead.
 local DETAIL_PAGES = { "SkillsFrame", "ReputationFrame", "PVPRankFrame", "TokenFrame", "CurrencyFrame" }
-local function seatPane(pane, frame)
+local function seatPane(pane, frame, drop)
 	if pane.stoaSeated or not pane.GetNumPoints then return end
 	local points, top = {}, nil
 	for i = 1, pane:GetNumPoints() do
@@ -708,7 +715,35 @@ local function seatPane(pane, frame)
 	pane.stoaSeated = true
 	pane:ClearAllPoints()
 	for _, p in ipairs(points) do pane:SetPoint(p[1], p[2], p[3], p[4], p[5]) end
-	pane:SetPoint("TOPLEFT", frame.stoaHeader, "BOTTOMLEFT", LEFT_W + top, -12)
+	pane:SetPoint("TOPLEFT", frame.stoaHeader, "BOTTOMLEFT", LEFT_W + top, -12 - (drop or 0))
+end
+
+-- Your item level heads the stats column, as players expect to find it
+-- there: a gold heading and the number large beside it, over a hairline.
+-- It belongs to the stats list (its child), so it shows only with it.
+local ILVL_H = 44
+local function levelBlock()
+	local pane = CharacterStatsPaneScrollBox
+	if not pane or blocked(pane) then return nil end
+	if pane.stoaLevel then return pane.stoaLevel end
+	local block = CreateFrame("Frame", nil, pane)
+	block:SetHeight(ILVL_H)
+	block:SetPoint("BOTTOMLEFT", pane, "TOPLEFT", 0, 0)
+	block:SetPoint("BOTTOMRIGHT", pane.ScrollBox or pane, "TOPRIGHT", 0, 0)
+	local heading = UI.text(block, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+	heading:SetPoint("LEFT", 11, 0)
+	heading:SetText(rawget(_G, "STAT_AVERAGE_ITEM_LEVEL") or "Item Level")
+	block.number = UI.text(block, "serif", Stoa.typeSize.title, "text", "RIGHT")
+	block.number:SetPoint("RIGHT", -10, 0)
+	block.worn = UI.text(block, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	block.worn:SetPoint("RIGHT", block.number, "LEFT", -10, 0)
+	local rule = block:CreateTexture(nil, "ARTWORK")
+	rule:SetHeight(1)
+	rule:SetPoint("BOTTOMLEFT", 11, 0)
+	rule:SetPoint("BOTTOMRIGHT", -10, 0)
+	rule:SetColorTexture(1, 1, 1, 0.08)
+	pane.stoaLevel = block
+	return block
 end
 
 -- The stats column's own pages (stats, titles, sets) hung under Blizzard's
@@ -718,7 +753,9 @@ local function seatStatPanes(frame)
 	if PaperDollFrame then
 		for _, key in ipairs({ "TitleManagerPane", "EquipmentManagerPane" }) do list[#list + 1] = PaperDollFrame[key] end
 	end
-	for _, pane in pairs(list) do seatPane(pane, frame) end
+	for _, pane in pairs(list) do
+		seatPane(pane, frame, pane == CharacterStatsPaneScrollBox and levelBlock() and ILVL_H or 0)
+	end
 end
 
 local function seatDetailPanes(frame)
@@ -779,6 +816,7 @@ function Character:LayOut(early)
 		dressStats()
 		sidebarWords(footer())
 		seatStatPanes(frame)
+		self:Refresh()
 		-- The toggle for the stats column stays only while it's folded, so
 		-- the column can always be brought back.
 		local toggle = frame.RightPaneToggleButton
