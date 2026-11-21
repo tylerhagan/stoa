@@ -1567,7 +1567,7 @@ local SEAL_CLEARANCE = 64
 -- Folded, the chat the console houses loses the leather behind it and
 -- floats over the world. A flat dark plate stands in for the leather, so
 -- its words stay readable over sand, snow and bright sky.
-local CHAT_SHADE = 0.35
+local CHAT_SHADE = 0.25
 
 function Console:ChatShade()
 	local housed = ChatFrame1 and self.HousesChat and self:HousesChat()
