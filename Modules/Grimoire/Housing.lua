@@ -558,6 +558,17 @@ end
 local pendingPlace
 local placeWindow, placeCount = 0, 0
 
+-- Whether the rows can be moved right now: always out of a fight, and in
+-- one only while the game doesn't guard them.
+local function menuFree()
+	if not InCombatLockdown() then return true end
+	local menu, bags = menuFrames()
+	for _, frame in ipairs({ menu, bags }) do
+		if frame and frame.IsProtected and frame:IsProtected() then return false end
+	end
+	return true
+end
+
 local function keepMenu()
 	local function again()
 		if menuPlacing or pendingPlace then return end
@@ -568,7 +579,13 @@ local function keepMenu()
 		pendingPlace = true
 		C_Timer.After(0, function()
 			pendingPlace = false
-			Stoa:AfterCombat(function() xpcall(placeMenu, Stoa.catch) end)
+			-- In a fight the rows go straight back when the game allows it
+			-- (it moves them on a level-up, say), and after it otherwise.
+			if menuFree() then
+				xpcall(placeMenu, Stoa.catch)
+			else
+				Stoa:AfterCombat(function() xpcall(placeMenu, Stoa.catch) end)
+			end
 		end)
 	end
 	local menu, bags = menuFrames()

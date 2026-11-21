@@ -412,11 +412,13 @@ local function dress(frame)
 
 	local bar = frame.healthBar
 	if bar then
-		bar:SetStatusBarTexture(UI.WHITE)
+		-- The fill keeps the game's own bar art (rounded ends, a soft shade),
+		-- which sits a little inside the track. The game puts that art back
+		-- each time it lays a plate out, so a plain fill here would only last
+		-- until then and leave plates looking two ways.
 		if bar.bgTexture then bar.bgTexture:SetAlpha(0) end
 		if bar.selectedBorder then bar.selectedBorder:SetAlpha(0) end
-		-- The fill runs square inside a rounded dark track a little larger
-		-- than the bar, so the corners read rounded without masking it.
+		-- A rounded dark track a little larger than the bar sits behind it.
 		frame.stoaPillFill = UI.tint(UI.pillFill(bar, PAD), "panel", 0.85)
 		local edge = UI.pillEdge(bar, PAD)
 		edge:Set(0, 0, 0, 0.9)
@@ -439,6 +441,9 @@ local function dress(frame)
 			refont(own)
 			guarded(applyStyle, own)
 		end)
+	end
+	if frame.UpdateAnchors then
+		hooksecurefunc(frame, "UpdateAnchors", function(own) guarded(applyStyle, own) end)
 	end
 	refont(frame)
 end

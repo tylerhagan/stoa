@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.5.3
 
+- **Quick start**: settings open on a new "Build your STOA" page: pick a starting set, then switch each piece of STOA on or off (console, Halo, party cards, nameplates, bags and the rest). Each says in a line what you get, what comes back when it's off, and which page holds its finer settings.
 - **Simpler settings**: every settings page opens on its few everyday settings, with the rest one click away under More. Search still finds everything. An opened More stays open.
 - **Only what applies to you**: pet settings show for hunters and warlocks, mana settings for classes with mana, form mana for druids, and DoT marks only with DoesItDie loaded.
 - **What I've changed**: a new settings page lists every switch and choice that isn't as STOA comes. Right-click a setting, there or on any page, to put it back.
@@ -18,6 +19,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Lighter at rest: the class mark's timer only runs while a timed mark is counting down.
 - Moving frames: the bar's hint has its own lines instead of running into the title.
 - Moving frames: the Halo's box now says "shows in a fight", since the Halo is hidden out of combat and could look as if moving it made it vanish.
+- **Nameplates**: every plate now has the same bar, with rounded ends inside its dark track. A plate seen for the first time used to get a flat square bar that filled the track edge to edge, until the game next laid it out.
+- Fixed: levelling up in a fight could leave the game's menu and bag rows standing at the bottom of the screen until the fight ended. They now go straight back to the console when the game allows it.
 
 ## 1.5.2
 
