@@ -635,6 +635,13 @@ function Halo:BuildCast(frame)
 	local cast = UI.bar(UIParent, 200, 3, "accent")
 	cast:SetFrameStrata("LOW")
 	cast:SetPoint("TOP", frame, "BOTTOM", 0, -40)
+	-- A dark bed a pixel wider than the bar: unseen over dark ground, and
+	-- what keeps a thin gold line readable over sand, snow and bright sky.
+	local bed = cast:CreateTexture(nil, "BACKGROUND", nil, -1)
+	bed:SetPoint("TOPLEFT", cast, "TOPLEFT", -1, 1)
+	bed:SetPoint("BOTTOMRIGHT", cast, "BOTTOMRIGHT", 1, -1)
+	bed:SetColorTexture(0, 0, 0, 0.6)
+	cast.bed = bed
 	local spell = UI.text(cast, "italic", Stoa.typeSize.label, "text", "CENTER")
 	spell:SetPoint("BOTTOM", cast, "TOP", 0, 4)
 	cast.spell = spell
