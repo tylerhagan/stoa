@@ -899,6 +899,97 @@ do
 		C_Item.GetItemInfo = realInfo
 	end
 end
+-- The unit tooltip's identity line: a player reads "33 Gnome Mage" with the
+-- class and faction lines gone, a guild in brackets, a mob "20 Humanoid"
+-- with its difficulty, the item level beside the line and not under it.
+do
+	local tooltip = Stoa.modules.Tooltip
+	if tooltip and tooltip.Identity and Stoa:IsModuleEnabled("Tooltip") then
+		local ok, e = xpcall(function()
+			local function card(texts)
+				local tip = CreateFrame("Frame", "StoaSimTip")
+				local lines, pairsAdded = {}, {}
+				local function add(text)
+					local i = #lines + 1
+					local fs = _G["StoaSimTipTextLeft" .. i] or tip:CreateFontString()
+					_G["StoaSimTipTextLeft" .. i] = fs
+					local held, shown = text, true
+					fs.SetText = function(_, v) held = v end
+					fs.GetText = function() return held end
+					fs.Hide = function() shown = false end
+					fs.IsShown = function() return shown end
+					lines[i] = fs
+				end
+				for _, text in ipairs(texts) do add(text) end
+				tip.NumLines = function() return #lines end
+				tip.AddLine = function(_, text) add(text) end
+				tip.AddDoubleLine = function(_, left, right) add(left) pairsAdded[left] = right end
+				tip.GetUnit = function() return "x", "mouseover" end
+				tip.Show = function() end
+				return tip, lines, pairsAdded
+			end
+			local real = { UnitIsPlayer, UnitLevel, UnitEffectiveLevel, UnitRace, UnitClass, UnitFactionGroup, UnitCreatureType,
+				UnitCanAttack, UnitExists, UnitGUID, UnitClassification, GetGuildInfo, UnitIsUnit, UnitIsDeadOrGhost }
+			local player, level, faction, attack = true, 33, "Alliance", false
+			UnitIsPlayer = function() return player end
+			UnitLevel = function() return level end
+			UnitEffectiveLevel = UnitLevel
+			UnitRace = function() return "Gnome", "Gnome" end
+			UnitClass = function() return "Mage", "MAGE" end
+			UnitFactionGroup = function(u) if u == "player" then return "Alliance", "Alliance" end return faction, faction end
+			UnitCreatureType = function() return "Humanoid" end
+			UnitCanAttack = function() return attack end
+			UnitExists = function() return false end
+			UnitGUID = function() return "Player-1-0001" end
+			UnitClassification = function() return "normal" end
+			UnitIsUnit = function() return false end
+			UnitIsDeadOrGhost = function() return false end
+			GetGuildInfo = function() return "Stonespine Company" end
+			tooltip.ItemLevel = function() return 25 end
+
+			local tip, lines, added = card({ "Terraof Daice", "Stonespine Company", "Level 33 Gnome (Player)", "Mage", "Alliance" })
+			tooltip:DressUnit(tip)
+			local id = lines[3]:GetText()
+			assert(id:find("33 Gnome", 1, true) and id:find("Mage", 1, true) and not id:find("Player", 1, true) and not id:find("Level", 1, true), "a player's line reads " .. id)
+			assert(lines[2]:GetText() == "<Stonespine Company>", "the guild reads " .. tostring(lines[2]:GetText()))
+			assert(not lines[4]:IsShown() and not lines[5]:IsShown(), "the class and faction lines stayed")
+			assert(not added["ITEM LEVEL"], "the item level still has its own row")
+			assert(tip.stoaGear and tip.stoaGear:GetText():find("GlyphChest", 1, true) and tip.stoaGear:GetText():find("25", 1, true), "no gear mark beside the line")
+			assert(not tip.stoaLower, "a rule was drawn with nothing under it")
+
+			-- An enemy player: the other faction and how hard they are join the line.
+			faction, attack, level = "Horde", true, 36
+			UnitExists = function(u) return u == "mouseovertarget" end
+			UnitIsUnit = function(a, b) return a == "mouseovertarget" and b == "player" end
+			tip, lines, added = card({ "Vexil", "Level 36 Undead (Player)", "Rogue", "Horde" })
+			tooltip:DressUnit(tip)
+			id = lines[2]:GetText()
+			assert(id:find("Horde", 1, true) and (id:find("Hard", 1, true) or id:find("Even", 1, true) or id:find("Deadly", 1, true)), "an enemy player's line reads " .. id)
+			assert(added["TARGET"] == "YOU" and tip.stoaLower, "the target pair or its rule is missing")
+
+			-- A mob: creature type, then the difficulty word.
+			player, level = false, 20
+			UnitExists = function() return false end
+			GetGuildInfo = function() return nil end
+			tip, lines = card({ "Defias Thug", "Level 20 Humanoid" })
+			tooltip:DressUnit(tip)
+			id = lines[2]:GetText()
+			assert(id:find("20 Humanoid", 1, true) and not id:find("Level", 1, true), "a mob's line reads " .. id)
+			-- A friendly NPC with a title; wording STOA can't read is left alone.
+			attack, level = false, 30
+			tip, lines = card({ "Innkeeper Farley", "Innkeeper", "Level 30 Humanoid" })
+			tooltip:DressUnit(tip)
+			assert(lines[2]:GetText() == "<Innkeeper>" and lines[3]:GetText():find("30 Humanoid", 1, true), "an NPC's lines read " .. tostring(lines[2]:GetText()))
+			tip, lines = card({ "Etwas", "Stufe 30 Humanoid" })
+			tooltip:DressUnit(tip)
+			assert(lines[2]:GetText() == "Stufe 30 Humanoid", "an unread level line was changed")
+			UnitIsPlayer, UnitLevel, UnitEffectiveLevel, UnitRace, UnitClass, UnitFactionGroup, UnitCreatureType,
+				UnitCanAttack, UnitExists, UnitGUID, UnitClassification, GetGuildInfo, UnitIsUnit, UnitIsDeadOrGhost = unpack(real)
+			tooltip.ItemLevel = nil
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Tooltip identity: " .. e end
+	end
+end
 -- The spellbook: the book loads later (Blizzard_PlayerSpells); a mock of
 -- it gets dressed, an item takes STOA's type and the To train word shows.
 do

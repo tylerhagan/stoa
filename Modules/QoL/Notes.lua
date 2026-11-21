@@ -318,18 +318,28 @@ end
 
 -- Where a note shows again --------------------------------------------------------
 
+-- The two lines a tooltip shows for a noted player: the note, then where and when.
+function Notes:TipLines(unit)
+	if not on() or not next(store()) then return nil end
+	local entry = self:Get(self:UnitKey(unit))
+	if not entry then return nil end
+	return self:Icon(entry.kind, 10) .. "  " .. words(entry), whereWhen(entry)
+end
+
 function Notes:HookTooltip()
 	if not (TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType) then return end
 	TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, Stoa:Guard(function(tip)
 		if tip ~= GameTooltip or (tip.IsForbidden and tip:IsForbidden()) then return end
-		if not on() or not next(store()) then return end
+		-- STOA's own tooltip places the note itself, at the head of its lines.
+		local own = Stoa.modules.Tooltip
+		if own and own.addsNotes and tip.stoaEdge then return end
 		local ok, _, unit = pcall(tip.GetUnit, tip)
 		if not ok then return end
-		local entry = self:Get(self:UnitKey(unit))
-		if not entry then return end
+		local first, second = self:TipLines(unit)
+		if not first then return end
 		local r, g, b = Stoa:Color("text")
-		tip:AddLine(self:Icon(entry.kind, 10) .. "  " .. words(entry), r, g, b, true)
-		tip:AddLine(whereWhen(entry), Stoa:Color("muted"))
+		tip:AddLine(first, r, g, b, true)
+		tip:AddLine(second, Stoa:Color("muted"))
 		tip:Show()
 	end, "Notes"))
 end
