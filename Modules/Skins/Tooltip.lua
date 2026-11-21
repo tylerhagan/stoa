@@ -399,8 +399,8 @@ function Tooltip:DressUnit(tip)
 		local first, second = notes:TipLines(unit)
 		if first then
 			lower(tip)
-			local r, g, b = Stoa:Color("text")
-			tip:AddLine(first, r, g, b, true)
+			local nr, ng, nb = Stoa:Color("text")
+			tip:AddLine(first, nr, ng, nb, true)
 			if second then tip:AddLine(second, Stoa:Color("muted")) end
 		end
 	end
