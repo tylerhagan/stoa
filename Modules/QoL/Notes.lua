@@ -387,13 +387,11 @@ end
 
 -- The mark on a noted player's chat lines: their diamond at the start of
 -- what they say. One lookup per line, and none while no one is noted.
+-- Only where you meet people you may not place: the world's channels
+-- (General, Trade, looking for group), say, yell and whispers to you. Guild,
+-- party and raid chat stay plain, since you know who is talking there.
 -- Stands down when another addon has the chat.
-local CHAT_EVENTS = {
-	"CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER",
-	"CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER", "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER",
-	"CHAT_MSG_RAID_WARNING", "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER",
-	"CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM", "CHAT_MSG_CHANNEL",
-}
+local CHAT_EVENTS = { "CHAT_MSG_CHANNEL", "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_WHISPER" }
 
 function Notes.ChatFilter(_, _, message, author, ...)
 	local people = StoaDB.people
