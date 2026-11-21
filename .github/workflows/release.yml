@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -92,3 +93,41 @@ jobs:
             -F "metadata=<metadata.json" \
             -F "file=@dist/Stoa-$VERSION.zip" \
             "$api/projects/$project_id/upload-file"
+
+      # Uploads the same zip to Wago Addons (project id read from the TOC).
+      # Needs the repository secret WAGO_API_TOKEN. The game patch comes from
+      # the TOC's Interface number (16001 is 1.60.1) and the flavour is the
+      # one Wago lists that patch under; the repository variables
+      # WAGO_GAME_PATCH and WAGO_GAME_FLAVOR name them outright if needed.
+      # Runs last, and always after a CurseForge problem, so neither site
+      # blocks the other.
+      - name: Upload to Wago Addons
+        if: ${{ !cancelled() && env.WAGO_API_TOKEN != '' && env.VERSION != '' && hashFiles('dist/*.zip') != '' }}
+        env:
+          WAGO_GAME_PATCH: ${{ vars.WAGO_GAME_PATCH }}
+          WAGO_GAME_FLAVOR: ${{ vars.WAGO_GAME_FLAVOR }}
+        run: |
+          project_id="$(sed -n 's/^## X-Wago-ID:[[:space:]]*//p' Stoa.toc | tr -d '\r' | head -n 1)"
+          api="https://addons.wago.io/api"
+          patch="$WAGO_GAME_PATCH"
+          if [ -z "$patch" ]; then
+            interface="$(sed -n 's/^## Interface:[[:space:]]*//p' Stoa.toc | tr -d '\r' | head -n 1)"
+            patch="$(( interface / 10000 )).$(( interface / 100 % 100 )).$(( interface % 100 ))"
+          fi
+          flavor="$WAGO_GAME_FLAVOR"
+          if [ -z "$flavor" ]; then
+            curl -fsS -H "Accept: application/json" "$api/data/game" > wago-game.json
+            flavor="$(jq -r --arg p "$patch" '[.patches // {} | to_entries[] | select((.value | type) == "array" and (.value | index($p))) | .key] | first // empty' wago-game.json)"
+          fi
+          if [ -z "$flavor" ]; then
+            echo "::error::Wago lists no game flavour with patch $patch. Set the repository variables WAGO_GAME_FLAVOR and WAGO_GAME_PATCH. Wago's list:"
+            jq -c '.patches // .' wago-game.json
+            exit 1
+          fi
+          echo "Wago game flavour: $flavor, patch: $patch"
+          jq -n --rawfile notes notes.md --arg label "$VERSION" --arg key "supported_${flavor}_patches" --arg p "$patch" \
+            '{label: $label, stability: "stable", changelog: $notes, ($key): [$p]}' > wago.json
+          curl -fsS -H "Authorization: Bearer $WAGO_API_TOKEN" -H "Accept: application/json" \
+            -F "metadata=<wago.json" \
+            -F "file=@dist/Stoa-$VERSION.zip" \
+            "$api/projects/$project_id/version"

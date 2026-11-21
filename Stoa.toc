@@ -11,6 +11,7 @@
 ## AddonCompartmentFuncOnLeave: Stoa_OnCompartmentLeave
 ## X-Game: Forever
 ## X-Curse-Project-ID: 1772375
+## X-Wago-ID: v63QlkGb
 
 Core\Init.lua
 Core\Report.lua
