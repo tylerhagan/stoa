@@ -73,10 +73,12 @@ d = np.abs(x - 0.5) + np.abs(y - 0.5)
 save("Diamond", d <= 0.36, 32, 32)
 save("DiamondOpen", (d <= 0.38) & (d >= 0.24), 32, 32)
 save("DiamondSmall", d <= 0.2, 32, 32)
-# Gear: a tunic in outline, beside a player's item level on tooltips.
-pts = [(0.31, 0.12), (0.1, 0.27), (0.19, 0.45), (0.29, 0.4), (0.29, 0.88), (0.71, 0.88), (0.71, 0.4),
-       (0.81, 0.45), (0.9, 0.27), (0.69, 0.12), (0.6, 0.21), (0.5, 0.24), (0.4, 0.21)]
-chest = np.zeros_like(x, dtype=bool)
-for i, p in enumerate(pts):
-    chest |= stroke(x, y, p, pts[(i + 1) % len(pts)], 0.045)
-save("Chest", chest, 32, 32)
+# Gear: a breastplate, filled so it holds at text size, beside a player's
+# item level on tooltips. Wide shoulders, a neck notch and a drawn-in waist.
+from PIL import ImageDraw
+
+pts = [(0.40, 0.14), (0.50, 0.27), (0.60, 0.14), (0.71, 0.14), (0.90, 0.24), (0.91, 0.44), (0.74, 0.41),
+       (0.69, 0.63), (0.75, 0.88), (0.25, 0.88), (0.31, 0.63), (0.26, 0.41), (0.09, 0.44), (0.10, 0.24), (0.29, 0.14)]
+big = Image.new("L", (32 * SCALE, 32 * SCALE), 0)
+ImageDraw.Draw(big).polygon([(px * 32 * SCALE, py * 32 * SCALE) for px, py in pts], fill=255)
+save("Chest", np.asarray(big) > 127, 32, 32)
