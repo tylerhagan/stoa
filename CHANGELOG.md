@@ -6,7 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.6.1
 
-- Buff and debuff timers at the top of the screen have a fine outline and a shadow and are a shade brighter, so they stay readable over sand, snow and bright sky.
+- Buff and debuff timers at the top of the screen are a shade brighter and sit on a soft dark haze, so they stay readable over sand, snow and bright sky.
 - The Halo's cast bar and its label sit on a soft dark haze, so the gold line shows over bright ground too. Over dark ground the haze can't be seen.
 - Releases now go to Wago Addons as well as CurseForge.
 

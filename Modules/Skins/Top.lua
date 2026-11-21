@@ -42,6 +42,7 @@ local function auraDuration(button)
 	local theirs = button.Duration
 	local shown = theirs and theirs:IsShown()
 	mine:SetShown(shown or false)
+	if mine.haze then mine.haze:SetShown(shown or false) end
 	if not shown then return end
 	mine:SetText(theirs:GetText())
 	local left = button.timeLeft
@@ -114,10 +115,19 @@ local function dressAura(button)
 		button.Duration:SetAlpha(0)
 		local mine = frame:CreateFontString(nil, "OVERLAY")
 		mine:SetPoint("TOP", button.Icon, "BOTTOM", 0, -3)
-		-- Over the world with nothing behind it: an outline and a shadow
-		-- keep it readable on snow, sand and bright sky.
-		Stoa:SetFont(mine, "sans", Stoa.typeSize.caption, "OUTLINE")
-		UI.legible(mine)
+		-- Over the world with nothing behind it: a soft dark haze, feathered
+		-- to nothing, and a drop shadow keep it readable on snow, sand and
+		-- bright sky without a hard outline.
+		Stoa:SetFont(mine, "sans", Stoa.typeSize.caption)
+		mine:SetShadowColor(0, 0, 0, 0.9)
+		mine:SetShadowOffset(1, -1)
+		local haze = frame:CreateTexture(nil, "ARTWORK")
+		haze:SetTexture(UI.MEDIA .. "Textures\\SparkleGlow")
+		haze:SetVertexColor(0, 0, 0, 0.6)
+		haze:SetSize(52, 26)
+		haze:SetPoint("CENTER", mine, "CENTER", 0, 0)
+		haze:Hide()
+		mine.haze = haze
 		mine:Hide()
 		button.stoaDuration = mine
 	end
