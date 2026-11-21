@@ -18,7 +18,7 @@
 --     is as a word (TRIVIAL, EASY, EVEN, HARD, DEADLY, with ELITE, RARE or
 --     BOSS), since the game's level colours fail for colour blindness;
 --     whom it targets (YOU in the warning colour), what it's casting, your
---     threat; and for players their item level behind a chest mark at the
+--     threat; and for players their item level behind a sword mark at the
 --     right of the identity line (read with an inspect, out of combat);
 --   * for gear, one line against what you wear in that slot ("+6 over your
 --     chest"), and for any item how many you have in your bags and bank;
@@ -341,7 +341,7 @@ local function lower(tip)
 end
 
 -- A player's item level rides the right end of the identity line behind a
--- small chest mark, so it takes no row and the card doesn't grow when the
+-- small sword mark, so it takes no row and the card doesn't grow when the
 -- number arrives.
 function Tooltip:GearMark(tip, fs, level)
 	local mark = tip.stoaGear
@@ -351,7 +351,7 @@ function Tooltip:GearMark(tip, fs, level)
 		tip.stoaGear = mark
 	end
 	local r, g, b = Stoa:Color("muted")
-	mark:SetText(("|T%sChest:12:12:0:0:32:32:0:32:0:32:%d:%d:%d|t %d"):format(GLYPH, r * 255, g * 255, b * 255, level))
+	mark:SetText(("|T%sSword:13:13:0:0:32:32:0:32:0:32:%d:%d:%d|t %d"):format(GLYPH, r * 255, g * 255, b * 255, level))
 	mark:SetTextColor(Stoa:Color("text"))
 	mark.line = fs
 	-- The game won't always measure a line (an enemy player's reads back

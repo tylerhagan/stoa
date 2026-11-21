@@ -73,12 +73,15 @@ d = np.abs(x - 0.5) + np.abs(y - 0.5)
 save("Diamond", d <= 0.36, 32, 32)
 save("DiamondOpen", (d <= 0.38) & (d >= 0.24), 32, 32)
 save("DiamondSmall", d <= 0.2, 32, 32)
-# Gear: a breastplate, filled so it holds at text size, beside a player's
-# item level on tooltips. Wide shoulders, a neck notch and a drawn-in waist.
+# Gear: a sword on the diagonal, beside a player's item level on tooltips.
+# Drawn heavy (a broad blade, a wide guard) so it holds at text size.
 from PIL import ImageDraw
 
-pts = [(0.40, 0.14), (0.50, 0.27), (0.60, 0.14), (0.71, 0.14), (0.90, 0.24), (0.91, 0.44), (0.74, 0.41),
-       (0.69, 0.63), (0.75, 0.88), (0.25, 0.88), (0.31, 0.63), (0.26, 0.41), (0.09, 0.44), (0.10, 0.24), (0.29, 0.14)]
-big = Image.new("L", (32 * SCALE, 32 * SCALE), 0)
-ImageDraw.Draw(big).polygon([(px * 32 * SCALE, py * 32 * SCALE) for px, py in pts], fill=255)
-save("Chest", np.asarray(big) > 127, 32, 32)
+N = 32 * SCALE
+big = Image.new("L", (N, N), 0)
+draw = ImageDraw.Draw(big)
+draw.polygon([(0.88 * N, 0.08 * N), (0.90 * N, 0.24 * N), (0.46 * N, 0.68 * N), (0.32 * N, 0.54 * N), (0.76 * N, 0.10 * N)], fill=255)
+draw.line([(0.20 * N, 0.42 * N), (0.58 * N, 0.80 * N)], fill=255, width=int(0.13 * N))
+draw.line([(0.36 * N, 0.64 * N), (0.19 * N, 0.81 * N)], fill=255, width=int(0.12 * N))
+draw.ellipse([(0.07 * N, 0.75 * N), (0.25 * N, 0.93 * N)], fill=255)
+save("Sword", np.asarray(big) > 127, 32, 32)

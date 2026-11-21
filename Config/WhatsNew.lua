@@ -29,7 +29,7 @@ local NOTES = {
 			{ "Player notes", "Remember who was good to play with and who wasn't. Right-click a player and choose STOA note, or type /stoa note and their name: pick Good or Bad, write one line, press Enter." },
 			{ "Where notes come back", "On the player's tooltip, as a diamond on their party card, under their whisper, beside what they say in General, Trade and other public chat, and as one quiet chat line when they join your group." },
 			{ "People", "A new tab in the Characters window lists everyone you've noted, to search, edit or remove. /stoa people opens it. Every character of yours shares the notes." },
-			{ "Tidier tooltips", "Who someone is now fits one line, like 33 Gnome Mage with the class in its colour. Item level sits beside it behind a chest mark, and your own lines start under a thin rule." },
+			{ "Tidier tooltips", "Who someone is now fits one line, like 33 Gnome Mage with the class in its colour. Item level sits beside it behind a sword mark, and your own lines start under a thin rule." },
 			{ "Build your STOA", "Settings open on a quick start page: pick a starting set, then switch each piece of STOA on or off, so you run only what you want. The other pages hold the finer settings." },
 			{ "Simpler settings", "Each settings page opens on a few everyday settings, with the rest under More. Settings for other classes are gone from view, and search still finds everything." },
 			{ "What I've changed", "A new settings page lists everything that isn't as STOA comes. Right-click any setting to put it back." },

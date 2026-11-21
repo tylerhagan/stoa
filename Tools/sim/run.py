@@ -954,7 +954,7 @@ do
 			assert(lines[2]:GetText() == "<Stonespine Company>", "the guild reads " .. tostring(lines[2]:GetText()))
 			assert(not lines[4]:IsShown() and not lines[5]:IsShown(), "the class and faction lines stayed")
 			assert(not added["ITEM LEVEL"], "the item level still has its own row")
-			assert(tip.stoaGear and tip.stoaGear:GetText():find("GlyphChest", 1, true) and tip.stoaGear:GetText():find("25", 1, true), "no gear mark beside the line")
+			assert(tip.stoaGear and tip.stoaGear:GetText():find("GlyphSword", 1, true) and tip.stoaGear:GetText():find("25", 1, true), "no gear mark beside the line")
 			assert(not tip.stoaLower, "a rule was drawn with nothing under it")
 
 			-- An enemy player: the other faction and how hard they are join the line.
