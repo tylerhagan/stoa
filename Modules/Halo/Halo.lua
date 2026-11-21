@@ -405,6 +405,7 @@ function Halo:LayoutTarget(curve)
 		local left = self.targetTextLeft
 		target.caption:SetPoint("TOPLEFT", left, -9)
 		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", left + TARGET_BAR_W, -9)
+		target.caption:SetPoint("RIGHT", target.cue, "LEFT", -8, 0)
 		target.name:SetPoint("TOPLEFT", left, -22)
 		target.name:SetWidth(TARGET_BAR_W)
 		target.hp:SetPoint("TOPLEFT", left, -40)
@@ -412,6 +413,7 @@ function Halo:LayoutTarget(curve)
 		target:SetSize(TARGET_WIDTH, TARGET_HEIGHT)
 		target.caption:SetPoint("TOPLEFT", TARGET_PAD, -12)
 		target.cue:SetPoint("TOPRIGHT", -TARGET_COIN_SPACE, -12)
+		target.caption:SetPoint("RIGHT", target.cue, "LEFT", -8, 0)
 		target.name:SetPoint("TOPLEFT", TARGET_PAD, -26)
 		target.name:SetWidth(TARGET_BAR_W)
 		target.hp:SetPoint("TOPLEFT", TARGET_PAD, -48)
@@ -465,6 +467,10 @@ function Halo:BuildTarget(frame)
 
 	local caption = UI.caption(target, "")
 	caption:SetPoint("TOPLEFT", TARGET_PAD, -12)
+	-- The caption stops short of the cue word: a long one (level, rank and
+	-- creature type on a docked plaque) is cut, never run under HOSTILE.
+	caption:SetJustifyH("LEFT")
+	caption:SetWordWrap(false)
 	-- Hostile targets get a word as well as a colour.
 	local cue = UI.caption(target, "")
 	cue:SetPoint("TOPRIGHT", -TARGET_COIN_SPACE, -12)
@@ -927,7 +933,9 @@ function Halo:UpdateTarget()
 	-- Docked there's no portrait, so the level leads the caption.
 	if target.plaque.docked then
 		target.plaque:SetLevel(nil)
-		if levelText then table.insert(words, 1, (rawget(_G, "LEVEL") or "Level"):upper() .. " " .. levelText) end
+		-- Just the number, as on tooltips: the word cost the room the
+		-- creature type needs.
+		if levelText then table.insert(words, 1, levelText) end
 	else
 		target.plaque:SetLevel(levelText)
 	end
