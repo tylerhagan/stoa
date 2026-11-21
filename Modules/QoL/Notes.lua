@@ -1,7 +1,8 @@
 -- Stoa QoL: player notes. A line about someone you played with, good or
 -- bad, written from their right-click menu (or /stoa note Name) and shown
 -- again where it matters: on their tooltip, on their party card, on the
--- whisper card, and as one chat line when they join your group. Every
+-- whisper card, as a diamond on their chat lines, and as one chat line when
+-- they join your group. Every
 -- character on the account shares the notes. Nothing runs until a noted
 -- player turns up: the notes are one saved table, looked up by name.
 local _, ns = ...
@@ -11,6 +12,7 @@ local UI = Stoa.UI
 local Notes = Stoa:NewModule("Notes", {
 	enabled = true,
 	joinLine = true,
+	chatMark = true,
 })
 Stoa.Notes = Notes
 
@@ -373,6 +375,34 @@ function Notes:WhisperLine(author)
 	return self:Icon(entry.kind, 9) .. "  " .. words(entry)
 end
 
+-- The mark on a noted player's chat lines: their diamond at the start of
+-- what they say. One lookup per line, and none while no one is noted.
+-- Stands down when another addon has the chat.
+local CHAT_EVENTS = {
+	"CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER",
+	"CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER", "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER",
+	"CHAT_MSG_RAID_WARNING", "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER",
+	"CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM", "CHAT_MSG_CHANNEL",
+}
+
+function Notes.ChatFilter(_, _, message, author, ...)
+	local people = StoaDB.people
+	if not people or not next(people) or not Notes.db.chatMark or not on() then return false end
+	if type(message) ~= "string" or type(author) ~= "string" then return false end
+	if Stoa:IsSecret(message) or Stoa:IsSecret(author) then return false end
+	local entry = people[(Notes:Key(author))]
+	if not entry then return false end
+	return false, Notes:Icon(entry.kind, 10) .. " " .. message, author, ...
+end
+
+function Notes:HookChat()
+	local taken = Stoa.Conflicts and Stoa.Conflicts.SteppedAside
+	if taken and (Stoa.Conflicts:SteppedAside("Chat") or Stoa.Conflicts:SteppedAside("ChatLook")) then return end
+	local add = (ChatFrameUtil and ChatFrameUtil.AddMessageEventFilter) or ChatFrame_AddMessageEventFilter
+	if not add then return end
+	for _, event in ipairs(CHAT_EVENTS) do add(event, Notes.ChatFilter) end
+end
+
 -- Says once, to you alone, when someone noted is in your group.
 function Notes:CheckGroup(quiet)
 	if not IsInGroup() then
@@ -577,6 +607,7 @@ end
 function Notes:OnEnable()
 	self:HookMenus()
 	self:HookTooltip()
+	xpcall(self.HookChat, Stoa.catch, self)
 	local function roster()
 		C_Timer.After(0.5, function()
 			xpcall(self.CheckGroup, Stoa.catch, self)

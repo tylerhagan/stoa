@@ -7,9 +7,9 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 1.6.0
 
 - **Player notes**: write a line about someone you played with, so you remember the good groups and the bad ones. Right-click a player (target, party card, a name in chat) and choose "STOA note", or type `/stoa note Name` (`/stoa note` alone takes your target). Pick Good, Bad or Just a note, type one line, press Enter.
-- The note comes back where it matters: on the player's tooltip, as a small diamond on the corner of their party card, under their whisper on the whisper card, and as one chat line only you see when they join your group. A filled diamond is good, a hollow one bad, a small one a plain note, so the kind never rests on colour.
+- The note comes back where it matters: on the player's tooltip, as a small diamond on the corner of their party card, under their whisper on the whisper card, at the start of what they say in chat, and as one chat line only you see when they join your group. A filled diamond is good, a hollow one bad, a small one a plain note, so the kind never rests on colour.
 - **People**: a new tab in the Characters window (`/stoa people`) lists everyone you've noted, newest first, with Good, Bad and Notes filters and a search over names and notes. Click a row to edit, right-click to remove.
-- Notes are shared by every character on the account. Settings > Comforts has the switch, and one for the group line.
+- Notes are shared by every character on the account. Settings > Comforts has the switch, and one each for the chat mark and the group line.
 - **Quick start**: settings open on a new "Build your STOA" page: pick a starting set, then switch each piece of STOA on or off (console, Halo, party cards, nameplates, bags and the rest). Each says in a line what you get, what comes back when it's off, and which page holds its finer settings.
 - **Simpler settings**: every settings page opens on its few everyday settings, with the rest one click away under More. Search still finds everything. An opened More stays open.
 - **Only what applies to you**: pet settings show for hunters and warlocks, mana settings for classes with mana, form mana for druids, and DoT marks only with DoesItDie loaded.

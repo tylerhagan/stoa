@@ -1323,6 +1323,13 @@ do
 			assert(notes:UnitKey("party1") == key, "the unit's key reads " .. tostring(notes:UnitKey("party1")))
 			assert(notes:WhisperLine("Brakka-Stonespine"):find("Rolled need", 1, true), "the whisper line is missing")
 			assert(notes:WhisperLine("Nobody") == nil, "a stranger got a whisper line")
+			-- The chat mark: on a noted player's line only, and not when off.
+			local _, marked, who = notes.ChatFilter(nil, "CHAT_MSG_SAY", "anyone for Deadmines?", "Brakka-Stonespine", "x")
+			assert(marked and marked:find("GlyphDiamondOpen", 1, true) and marked:find("anyone for Deadmines?", 1, true) and who == "Brakka-Stonespine", "a noted player's chat line got no mark")
+			assert(select("#", notes.ChatFilter(nil, "CHAT_MSG_SAY", "hello", "Nobody")) == 1, "a stranger's chat line was changed")
+			notes.db.chatMark = false
+			assert(select("#", notes.ChatFilter(nil, "CHAT_MSG_SAY", "hello", "Brakka-Stonespine")) == 1, "the chat mark showed while switched off")
+			notes.db.chatMark = true
 			-- The join line: once per group, none for the quiet first look.
 			local said = {}
 			Stoa.Print = function(_, text) said[#said + 1] = text end
