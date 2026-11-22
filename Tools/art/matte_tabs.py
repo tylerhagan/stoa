@@ -6,8 +6,8 @@ Writes ChatTabMatteOpen[Lines].tga and ChatTabMatteClosed[Lines].tga, laid
 out like the leather tabs (chat_tabs.py; Modules/Grimoire/Housing.lua
 TAB_ART) so the same code places them: 128x128, the key's sides at 32 and
 96 and the console's top edge at row 70. The keys stand side by side with
-no gap, so each is square-sided with a dark seam down each side. Closed is
-a key standing up: lit along its top, dark along its foot. Open is the
+no gap, so each is square-sided with a soft seam down each side. Closed is
+a key standing up: light falling off its top, shade at its foot, no lines. Open is the
 key pressed in (the selected window, or one under a click): lower, darker,
 shadowed under its top lip. The base carries its own tones; Lines is the
 lamp lit over a pressed key, white with alpha, tinted by the accent.
@@ -55,9 +55,11 @@ above = y < FOOT
 d = key(26)
 body = (d <= 0) & above
 tone = np.full((n, n), 38.0) + grain
-tone = np.where(body & (y < 26 + 3.5), 66.0, tone)             # lit top
-tone = np.where(body & (y > FOOT - 3.5), 18.0, tone)           # dark foot
-tone = np.where(body & (d > -SEAM) & (y >= 26 + 3.5), 14.0, tone)  # side seams
+# No lines: light falls off the top, shade gathers at the foot and in the
+# seams between keys.
+tone = tone + 20.0 * np.clip(1 - (y - 26) / 7.0, 0, 1) ** 2
+tone = tone - 16.0 * np.clip(1 - (FOOT - y) / 7.0, 0, 1) ** 2
+tone = tone - 14.0 * np.clip(1 + d / (SEAM * 2), 0, 1) * (y >= 26 + CORNER)
 alpha = down(body * 1.0)
 rgb = np.divide(down(tone * body), alpha, out=np.zeros((SIZE, SIZE)), where=alpha > 0)
 save("Closed", np.stack([rgb, rgb + 1, rgb + 3], axis=2), alpha)

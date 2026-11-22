@@ -51,7 +51,22 @@ black = np.where(m, 0.62 + np.clip(up, 0, 1) * np.clip((r - (CHANNEL - 3)) / 3, 
 # The lip down to the portrait: dark above, catching light below.
 m = ring(PORTRAIT - 1, LIP)
 black = np.where(m, 0.9 - np.clip(-up, 0, 1) * 0.25, black)
-white = np.where(m & (r >= LIP - 1.2), np.clip(-up, 0, 1) * 0.14, white)
+white = np.where(m, np.clip(-up, 0, 1) * 0.07 * np.clip((r - (LIP - 3.5)) / 3.5, 0, 1), white)
+
+
+# The rings are moulded, not cut: their steps are eased into each other,
+# which leaves shading and no lines. The portrait's own edge stays crisp.
+def ease(a, shown=0.9):
+    k = shown * n / SHOWN
+    span = np.arange(-int(3 * k), int(3 * k) + 1)
+    kernel = np.exp(-(span / k) ** 2 / 2)
+    kernel /= kernel.sum()
+    for axis in (0, 1):
+        a = np.apply_along_axis(np.convolve, axis, a, kernel, "same")
+    return np.where(r >= PORTRAIT - 1, a, 0.0)
+
+
+white, black = ease(white), ease(black)
 
 # One layer: black under white.
 alpha = black + white - black * white
