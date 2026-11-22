@@ -49,7 +49,7 @@ local BEZEL_SCALE = 128 / 76
 -- Matte: health and mana sit down in the shell either side of the bezel,
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
 -- centre and RESOURCE_DROP under its rim, each bar in a thin slot.
-local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 84, -32
+local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 94, -32
 -- The resting target docks on the rim just past the arch (Halo:PlaceTarget).
 Console.MATTE_DOCK_X = MATTE_ARCH / 2 + 4
 local SEAL_SIZE = 76
