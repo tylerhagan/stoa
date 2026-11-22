@@ -1333,9 +1333,20 @@ function Halo:TargetAlpha(dead)
 		dead = UnitIsDead("target")
 		if Stoa:IsSecret(dead) then dead = false end
 	end
-	local alpha = dead and 0.6 or 1
 	-- Docked it is part of the console, which doesn't fade.
 	local docked = self.target and self.target.plaque.docked
+	-- Matte: the docked block is one piece with the tab beside the
+	-- medallion, so a dead target dims its words and bar, not the block.
+	local solid = docked and UI.matte()
+	local alpha = dead and not solid and 0.6 or 1
+	if self.target and self.target.hp then
+		local words = dead and solid and 0.45 or 1
+		for _, part in ipairs({ self.target.caption, self.target.cue, self.target.name, self.target.hp }) do
+			part:SetAlpha(words)
+		end
+	end
+	local console = Stoa.modules.Grimoire
+	if console and console.UpdateTargetCone then console:UpdateTargetCone(dead) end
 	if self.db.restFade and not docked and Stoa:GetState() ~= Stoa.STATE_COMBAT
 		and not (self.target and self.target:IsMouseOver()) then
 		alpha = alpha * REST_FADE

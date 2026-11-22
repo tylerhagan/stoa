@@ -246,11 +246,17 @@ function Console:BuildTargetCone(frame)
 	update()
 end
 
-function Console:UpdateTargetCone()
+-- `dead` (from the Halo, which knows) greys the portrait out.
+function Console:UpdateTargetCone(dead)
 	local cone = self.cone
 	if not cone then return end
 	local has = UnitExists("target") and true or false
-	if has then SetPortraitTexture(cone.portrait, "target") end
+	if has and dead == nil then SetPortraitTexture(cone.portrait, "target") end
+	if dead ~= nil then cone.dead = dead and true or false end
+	if not has then cone.dead = false end
+	cone.portrait:SetDesaturated(cone.dead or false)
+	cone.portrait:SetAlpha(cone.dead and 0.5 or 1)
+	cone.rim:SetAlpha(cone.dead and 0.4 or 1)
 	cone.portrait:SetShown(has)
 	cone.rim:SetShown(has)
 end
