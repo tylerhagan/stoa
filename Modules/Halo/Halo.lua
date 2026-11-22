@@ -488,7 +488,7 @@ function Halo:BuildTarget(frame)
 		if not plaque:PlayDock() then return end
 		if not target.dockWords then
 			target.dockWords = {}
-			for _, part in ipairs({ target.caption, target.name, target.hp }) do
+			for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do
 				if part then table.insert(target.dockWords, UI.intro(part, 8, 0, UI.DOCK_OUT * 0.5, UI.DOCK_OUT * 0.5)) end
 			end
 		end
