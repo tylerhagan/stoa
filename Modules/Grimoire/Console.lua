@@ -186,14 +186,19 @@ function Console:BuildMatte(frame, bg, edges, inner, arch, archSize)
 		paint(edge, "hairline", 0.2)
 	end
 
-	-- A chunky bevel: a soft lit band under each half of the top edge.
+	-- A chunky, square bevel under each half of the top edge: a flat lit
+	-- step with a hard dark line where it meets the face.
 	for i = 1, 2 do
 		local bevel = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
 		bevel:SetPoint("TOPLEFT", edges[i], "BOTTOMLEFT")
 		bevel:SetPoint("TOPRIGHT", edges[i], "BOTTOMRIGHT")
 		bevel:SetHeight(3)
-		bevel:SetColorTexture(1, 1, 1, 1)
-		UI.setGradient(bevel, { "VERTICAL", 0, 1 }, 1, 1, 1, 0.14)
+		bevel:SetColorTexture(1, 1, 1, 0.1)
+		local step = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
+		step:SetPoint("TOPLEFT", bevel, "BOTTOMLEFT")
+		step:SetPoint("TOPRIGHT", bevel, "BOTTOMRIGHT")
+		step:SetColorTexture(0, 0, 0, 0.55)
+		UI.pixel(step, "height")
 	end
 
 	local light = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
