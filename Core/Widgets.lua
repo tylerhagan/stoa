@@ -1861,8 +1861,8 @@ function UI.plaque(frame, coinSide, opts)
 		end
 		if plaque.dock then
 			-- The console's gold; silver for a rare.
-			local dr, dg, db, da = Stoa:Color("accent")
-			da = 1
+			local dr, dg, db = Stoa:Color("accent")
+			local da = 1
 			if rank == "rare" then dr, dg, db = unpack(SILVER) end
 			if UI.matte() then dr, dg, db, da = 1, 1, 1, DOCK_BEVEL_A end
 			plaque.dock.top:SetVertexColor(dr, dg, db, da)
