@@ -27,8 +27,14 @@ local ART_CHAT_GAP = 24
 local TAB_ART = { size = 128, x0 = 32, top = 24, foot = 70, cap = 52 }
 local TAB_TEXT_PAD = 26
 
+-- The tabs stand on the console's top edge with the leather art and on
+-- the matte console (its own tab art, Tools/art/matte_tabs.py).
 local function artOn()
-	return Console:Art()
+	return Console:Art() or (Console:Matte() and not Console.db.slim)
+end
+
+local function tabFile(kind)
+	return UI.MEDIA .. "Textures\\ChatTab" .. (Console:Matte() and "Matte" or "") .. kind
 end
 
 local function tabRise()
@@ -220,8 +226,8 @@ local function paintTab(tab)
 	local kind = tab.selected and "Open" or "Closed"
 	if tab.kind ~= kind then
 		tab.kind = kind
-		for _, tex in ipairs(tab.base) do tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind) end
-		for _, tex in ipairs(tab.lines) do tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind .. "Lines") end
+		for _, tex in ipairs(tab.base) do tex:SetTexture(tabFile(kind)) end
+		for _, tex in ipairs(tab.lines) do tex:SetTexture(tabFile(kind .. "Lines")) end
 	end
 	-- The open tab sits in front, so its border reads over its neighbours'.
 	tab:SetFrameLevel(strip:GetFrameLevel() + (tab.selected and 3 or 1))

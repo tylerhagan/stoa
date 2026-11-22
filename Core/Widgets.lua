@@ -994,7 +994,7 @@ end
 -- of leather and stone. The grain is drawn one texel to the screen pixel.
 UI.GRAIN = UI.MEDIA .. "Textures\\MatteGrain"
 local GRAIN_SIZE = 128
-local GRAIN_ALPHA = { smooth = 0.07, fine = 0.14, rough = 0.24 }
+local GRAIN_ALPHA = { smooth = 0.07, fine = 0.105, rough = 0.14 }
 
 function UI.matte()
 	return Stoa.db ~= nil and Stoa.db.material == "matte"

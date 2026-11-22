@@ -23,3 +23,4 @@ Gold `*Lines` textures are white with alpha, and the theme accent tints them in 
 - `plaque_join.py <Media/Textures>` draws `PlaqueJoin.tga` and `PlaqueJoinLines.tga` (320x288, shown at 80x72): the docked target plaque's right end, its gold top edge curving up into the portrait ring that rests on the console rim.
 - `matte_grain.py [out]` draws `MatteGrain.tga` (128x128, a tiling pebble grain, each texel white or black with its strength in the alpha): the Matte material's surface on the console and windows (`Core/Widgets.lua` UI.GRAIN).
 - `halo_arcs.py [Media/Textures]` draws the Halo's other arc styles, `HaloArc{Blade,Visor,Gauge,Tube}{Left,Right}.tga` (128x256, white with alpha): the Arc style setting (`Modules/Halo/Halo.lua` ARC_STYLES).
+- `matte_tabs.py [Media/Textures]` draws the matte console's chat tabs, `ChatTabMatte{Open,Closed}[Lines].tga`, in the leather tabs' layout (`Modules/Grimoire/Housing.lua` tabFile).

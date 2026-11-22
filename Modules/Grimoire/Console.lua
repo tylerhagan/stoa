@@ -186,6 +186,16 @@ function Console:BuildMatte(frame, bg, edges, inner, arch, archSize)
 		paint(edge, "hairline", 0.2)
 	end
 
+	-- A chunky bevel: a soft lit band under each half of the top edge.
+	for i = 1, 2 do
+		local bevel = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
+		bevel:SetPoint("TOPLEFT", edges[i], "BOTTOMLEFT")
+		bevel:SetPoint("TOPRIGHT", edges[i], "BOTTOMRIGHT")
+		bevel:SetHeight(3)
+		bevel:SetColorTexture(1, 1, 1, 1)
+		UI.setGradient(bevel, { "VERTICAL", 0, 1 }, 1, 1, 1, 0.14)
+	end
+
 	local light = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
 	light:SetPoint("TOPLEFT")
 	light:SetPoint("BOTTOMRIGHT")
@@ -240,12 +250,12 @@ function Console:BuildWells(frame)
 		local fill = frame:CreateTexture(nil, "BACKGROUND", nil, -3)
 		fill:SetColorTexture(0, 0, 0, 0.46)
 		local shade = frame:CreateTexture(nil, "BACKGROUND", nil, -2)
-		shade:SetColorTexture(0, 0, 0, 0.5)
+		shade:SetColorTexture(0, 0, 0, 0.6)
 		shade:SetPoint("TOPLEFT", fill)
 		shade:SetPoint("TOPRIGHT", fill)
-		shade:SetHeight(2)
+		shade:SetHeight(3)
 		local lip = frame:CreateTexture(nil, "BACKGROUND", nil, -2)
-		lip:SetColorTexture(1, 1, 1, 0.08)
+		lip:SetColorTexture(1, 1, 1, 0.11)
 		lip:SetPoint("TOPLEFT", fill, "BOTTOMLEFT")
 		lip:SetPoint("TOPRIGHT", fill, "BOTTOMRIGHT")
 		UI.pixel(lip, "height")
@@ -1920,7 +1930,7 @@ function Console:PaintDividers()
 	-- Matte: a moulded seam, a dark line with a faint lit edge and no diamond.
 	local matte = self:Matte()
 	local lineAlpha, creaseAlpha = 0.4, 0.5
-	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, 0.07, 0.85 end
+	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, 0.1, 0.9 end
 	for _, div in ipairs(self.dividers) do
 		div.upper:SetColorTexture(1, 1, 1, 1)
 		div.lower:SetColorTexture(1, 1, 1, 1)
@@ -1933,6 +1943,8 @@ function Console:PaintDividers()
 			div.upper:SetColorTexture(r, g, b, lineAlpha * 0.75)
 			div.lower:SetColorTexture(r, g, b, lineAlpha * 0.75)
 		end
+		div.creaseUp:SetWidth(matte and 2 or 1)
+		div.creaseDown:SetWidth(matte and 2 or 1)
 		div.mark:SetColorTexture(r, g, b, matte and 0 or 0.7)
 		div.seat:SetColorTexture(0, 0, 0, matte and 0 or 0.55)
 		for _, crease in ipairs({ div.creaseUp, div.creaseDown }) do
