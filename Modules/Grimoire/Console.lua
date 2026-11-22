@@ -19,10 +19,6 @@ local Console = Stoa:NewModule("Grimoire", {
 	hideBarArt = true,
 	houseMenu = true,
 	art = true,
-	-- What the console is made of: "leather" (the art above) or "matte",
-	-- a moulded black shell with a fine grain ("smooth", "fine", "rough").
-	material = "leather",
-	grain = "fine",
 	-- Quiet mana play on the mana bar, as on the Halo.
 	manaRule = true,
 	castCost = true,
@@ -79,7 +75,7 @@ function Console:Art()
 end
 
 function Console:Matte()
-	return self.db.material == "matte"
+	return UI.matte()
 end
 
 function Console:Build()
@@ -175,9 +171,6 @@ end
 -- The matte console: the drawn panel made near solid, a grain over it one
 -- texel to the pixel, a little light along the top and quiet edges, as one
 -- moulded piece of black hardware. Uses the plain console's layout.
-local GRAIN_SIZE = 128
-local GRAIN_ALPHA = { smooth = 0.05, fine = 0.11, rough = 0.2 }
-
 function Console:BuildMatte(frame, bg, edges, inner, arch)
 	local slim = self.db.slim
 	UI.unpaint(bg)
@@ -200,7 +193,7 @@ function Console:BuildMatte(frame, bg, edges, inner, arch)
 	local grains = {}
 	local function grain(sublevel)
 		local tex = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel)
-		tex:SetTexture(UI.MEDIA .. "Textures\\MatteGrain", "REPEAT", "REPEAT")
+		tex:SetTexture(UI.GRAIN, "REPEAT", "REPEAT")
 		grains[#grains + 1] = tex
 		return tex
 	end
@@ -221,18 +214,7 @@ function Console:BuildMatte(frame, bg, edges, inner, arch)
 	self.grains = grains
 
 	local function tile()
-		local perUnit = 1
-		local screenHeight = GetPhysicalScreenSize and select(2, GetPhysicalScreenSize())
-		local scale = frame:GetEffectiveScale()
-		if screenHeight and screenHeight > 0 and scale and scale > 0 then
-			perUnit = scale * screenHeight / 768
-		end
-		for _, tex in ipairs(grains) do
-			local width, height = tex:GetWidth(), tex:GetHeight()
-			if width and width > 0 then
-				tex:SetTexCoord(0, width * perUnit / GRAIN_SIZE, 0, height * perUnit / GRAIN_SIZE)
-			end
-		end
+		for _, tex in ipairs(grains) do UI.fitGrain(tex) end
 	end
 	tile()
 	frame:HookScript("OnSizeChanged", tile)
@@ -244,7 +226,7 @@ end
 
 -- The grain's strength (the Grain setting).
 function Console:PaintMatte()
-	local alpha = GRAIN_ALPHA[self.db.grain] or GRAIN_ALPHA.fine
+	local alpha = UI.grainAlpha()
 	for _, tex in ipairs(self.grains or {}) do tex:SetVertexColor(1, 1, 1, alpha) end
 end
 
@@ -392,7 +374,11 @@ function Console:BuildSeal(frame)
 	RegisterStateDriver(button, "visibility", "[combat] hide; show")
 
 	if not art then
-		local outer = circle(seal, "BORDER", 0, size + 12, "hairline")
+		-- Matte: the portrait sits in a recess, a dark seam in place of
+		-- the hairline.
+		local matte = self:Matte()
+		local outer = circle(seal, "BORDER", 0, size + (matte and 14 or 12), not matte and "hairline" or nil)
+		if matte then outer:SetColorTexture(0, 0, 0, 0.85) end
 		outer:SetPoint("CENTER")
 		local gap = circle(seal, "BORDER", 1, size + 10, "panel")
 		gap:SetPoint("CENTER")

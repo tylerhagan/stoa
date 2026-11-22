@@ -35,7 +35,28 @@ local Halo = Stoa:NewModule("Halo", {
 	-- with no console to read them from), and the target plaque rests faint.
 	restArcs = false,
 	restFade = false,
+	-- The arcs' drawing: an ARC_STYLES key.
+	arcStyle = "line",
 })
+
+-- The arc drawings (Tools/art/halo_arcs.py): `file` goes between HaloArc
+-- and the side in the texture's name; `ry` is the arc's height against its
+-- width where it isn't a true circle.
+local ARC_STYLES = {
+	line = { file = "" },
+	blade = { file = "Blade" },
+	visor = { file = "Visor", ry = 0.86 },
+	gauge = { file = "Gauge" },
+	tube = { file = "Tube" },
+}
+
+local function arcStyle()
+	return ARC_STYLES[Halo.db and Halo.db.arcStyle] or ARC_STYLES.line
+end
+
+local function arcFile(side)
+	return UI.MEDIA .. "Textures\\HaloArc" .. arcStyle().file .. side
+end
 
 local REST_ARCS = 0.4
 local REST_FADE = 0.45
@@ -132,7 +153,7 @@ end
 -- Build ---------------------------------------------------------------------
 
 local function arc(parent, side, token)
-	local file = UI.MEDIA .. "Textures\\HaloArc" .. side
+	local file = arcFile(side)
 	local sb = CreateFrame("StatusBar", nil, parent)
 	sb:SetSize(SIZE / 2, SIZE)
 	sb:SetOrientation("VERTICAL")
@@ -222,11 +243,12 @@ function Halo:BuildManaPlay(frame, arcBar, manaText)
 	form:Hide()
 	local db = self.db
 	self.manaPlay = Stoa.Power.dress(arcBar, {
-		texture = UI.MEDIA .. "Textures\\HaloArcRight",
+		texture = arcFile("Right"),
 		enabled = function(key) return db[key] end,
 		place = function(tex, f)
 			local y = f * SIZE - SIZE / 2
-			local x = math.sqrt(math.max(ARC_RADIUS * ARC_RADIUS - y * y, 0))
+			local tall = y / (arcStyle().ry or 1)
+			local x = math.sqrt(math.max(ARC_RADIUS * ARC_RADIUS - tall * tall, 0))
 			tex:ClearAllPoints()
 			tex:SetPoint("CENTER", arcBar, "LEFT", x, y)
 		end,

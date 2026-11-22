@@ -989,6 +989,33 @@ end
 -- a slice of it at its natural size rather than stretching it, and it
 -- fades out towards the top, where titles and text start.
 
+-- The Matte material (Stoa.db.material): the console and windows as
+-- moulded black hardware, a fine grain (Tools/art/matte_grain.py) in place
+-- of leather and stone. The grain is drawn one texel to the screen pixel.
+UI.GRAIN = UI.MEDIA .. "Textures\\MatteGrain"
+local GRAIN_SIZE = 128
+local GRAIN_ALPHA = { smooth = 0.05, fine = 0.11, rough = 0.2 }
+
+function UI.matte()
+	return Stoa.db ~= nil and Stoa.db.material == "matte"
+end
+
+function UI.grainAlpha()
+	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.fine
+end
+
+function UI.fitGrain(tex)
+	local width, height = tex:GetWidth(), tex:GetHeight()
+	if Stoa:IsSecret(width) or Stoa:IsSecret(height) or not width or width <= 0 then return end
+	local perUnit = 1
+	local screenHeight = GetPhysicalScreenSize and select(2, GetPhysicalScreenSize())
+	local scale = tex:GetEffectiveScale()
+	if screenHeight and screenHeight > 0 and scale and scale > 0 then
+		perUnit = scale * screenHeight / 768
+	end
+	tex:SetTexCoord(0, width * perUnit / GRAIN_SIZE, 0, height * perUnit / GRAIN_SIZE)
+end
+
 local STONE = UI.MEDIA .. "Textures\\WindowStone"
 local STONE_SIZE = 1024
 local STONE_INSET = 2
@@ -998,6 +1025,7 @@ local STONE_TOP = 0.3
 local stones = {}
 
 local function fitStone(tex)
+	if tex.stoaGrain then return UI.fitGrain(tex) end
 	local width, height = tex:GetWidth(), tex:GetHeight()
 	if Stoa:IsSecret(width) or Stoa:IsSecret(height) or not width or width <= 0 then return end
 	tex:SetTexCoord(0, width / STONE_SIZE, 0, height / STONE_SIZE)
@@ -1008,7 +1036,9 @@ end
 function UI.stone(frame, top, bottom)
 	if not frame or not frame.CreateTexture or frame.stoaStone then return end
 	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
-	tex:SetTexture(STONE, "REPEAT", "REPEAT")
+	-- Matte windows wear the grain where the others wear the stone.
+	tex.stoaGrain = UI.matte()
+	tex:SetTexture(tex.stoaGrain and UI.GRAIN or STONE, "REPEAT", "REPEAT")
 	if top then
 		tex:SetPoint("TOPLEFT", top, "BOTTOMLEFT")
 		tex:SetPoint("TOPRIGHT", top, "BOTTOMRIGHT")
@@ -1021,7 +1051,11 @@ function UI.stone(frame, top, bottom)
 	else
 		tex:SetPoint("BOTTOM", 0, STONE_INSET)
 	end
-	UI.gradient(tex, "text", UI.STONE_STRENGTH, "VERTICAL", 1, STONE_TOP)
+	if tex.stoaGrain then
+		tex:SetVertexColor(1, 1, 1, UI.grainAlpha())
+	else
+		UI.gradient(tex, "text", UI.STONE_STRENGTH, "VERTICAL", 1, STONE_TOP)
+	end
 	frame.stoaStone = tex
 	stones[#stones + 1] = tex
 	if frame.HookScript then
@@ -1269,6 +1303,13 @@ function UI.badge(parent, word, token)
 	end)
 	badge:Set(word, token)
 	return badge
+end
+
+-- The Grain setting, on every matte window.
+function UI.paintGrain()
+	for _, tex in ipairs(stones) do
+		if tex.stoaGrain then tex:SetVertexColor(1, 1, 1, UI.grainAlpha()) end
+	end
 end
 
 function UI.showStone(on)

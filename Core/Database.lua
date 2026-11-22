@@ -37,6 +37,11 @@ local accountDefaults = {
 	-- "painted" puts the leather and brass frames on the minimap, the
 	-- portrait coins and the Halo's signature slot; "plain" keeps lines.
 	ornament = "plain",
+	-- What STOA is made of: "leather" (leather, brass and stone) or
+	-- "matte", moulded black hardware with a grain ("smooth", "fine",
+	-- "rough") on the console and windows.
+	material = "leather",
+	grain = "fine",
 	-- Items marked as junk, by itemID, sold with the greys.
 	junk = {},
 	modules = {},

@@ -21,4 +21,5 @@ Gold `*Lines` textures are white with alpha, and the theme accent tints them in 
 - `glyphs.py`: the small interface glyphs (GlyphCross, GlyphPlus, GlyphMinus, GlyphChevron, GlyphShift, GlyphDot), white with alpha and tinted in game.
 - `plaque_dock.py <Media/Textures>` draws the restyled target plaque's pieces: `TargetBar.tga` and `TargetBarEdge.tga` (512x64, a pill the exact shape of the 228x20 health bar, used as its mask and outline).
 - `plaque_join.py <Media/Textures>` draws `PlaqueJoin.tga` and `PlaqueJoinLines.tga` (320x288, shown at 80x72): the docked target plaque's right end, its gold top edge curving up into the portrait ring that rests on the console rim.
-- `matte_grain.py [out]` draws `MatteGrain.tga` (128x128, a tiling pebble grain, each texel white or black with its strength in the alpha): the matte console's surface (`Modules/Grimoire/Console.lua` BuildMatte).
+- `matte_grain.py [out]` draws `MatteGrain.tga` (128x128, a tiling pebble grain, each texel white or black with its strength in the alpha): the Matte material's surface on the console and windows (`Core/Widgets.lua` UI.GRAIN).
+- `halo_arcs.py [Media/Textures]` draws the Halo's other arc styles, `HaloArc{Blade,Visor,Gauge,Tube}{Left,Right}.tga` (128x256, white with alpha): the Arc style setting (`Modules/Halo/Halo.lua` ARC_STYLES).
