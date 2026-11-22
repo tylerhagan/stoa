@@ -42,7 +42,7 @@ local BEZEL_SPREAD = 52
 -- Matte: health and mana sit down in the shell either side of the bezel,
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
 -- centre and RESOURCE_DROP under its rim, each bar in a thin slot.
-local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 84, -42
+local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 84, -37
 -- The resting target docks on the rim just past the arch (Halo:PlaceTarget).
 Console.MATTE_DOCK_X = MATTE_ARCH / 2 + 4
 local SEAL_SIZE = 76
@@ -278,7 +278,7 @@ end
 -- `zones` is up to four { left, right } spans from the console's left.
 local WELL_PAD, WELL_BOTTOM = 12, 8
 -- The bars' well starts lower, under the bezel's foot.
-local WELL_BARS, WELL_BARS_TOP = 3, -58
+local WELL_BARS, WELL_BARS_TOP = 3, -48
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
 	for i, well in ipairs(self.wells) do
