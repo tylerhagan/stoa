@@ -35,23 +35,23 @@ def ring(a, b):
 
 # The rim's shadow on the shell, falling a little downwards.
 drop = np.hypot(x, y + 2.0)
-black = np.where(r >= RIM_OUT, np.clip(1 - (drop - RIM_OUT) / 4.5, 0, 1) * 0.55, black)
+black = np.where(r >= RIM_OUT, np.clip(1 - (drop - RIM_OUT) / 4.5, 0, 1) * 0.35, black)
 # The rim: an outer chamfer facing out, a flat face, an inner wall facing in.
 m = ring(RIM_FACE, RIM_OUT)
-white = np.where(m, np.clip(up, 0, 1) * 0.34 + 0.03, white)
-black = np.where(m, np.clip(-up, 0, 1) * 0.6, black)
+white = np.where(m, np.clip(up, 0, 1) * 0.2 + 0.02, white)
+black = np.where(m, np.clip(-up, 0, 1) * 0.4, black)
 m = ring(RIM_IN, RIM_FACE)
-white = np.where(m, 0.07 + np.clip(up, 0, 1) * 0.04, white)
+white = np.where(m, 0.045 + np.clip(up, 0, 1) * 0.025, white)
 m = ring(CHANNEL, RIM_IN)
-black = np.where(m, 0.35 + np.clip(up, 0, 1) * 0.5, black)
-white = np.where(m, np.clip(-up, 0, 1) * 0.2, white)
+black = np.where(m, 0.3 + np.clip(up, 0, 1) * 0.3, black)
+white = np.where(m, np.clip(-up, 0, 1) * 0.12, white)
 # The channel's smooth floor, shaded under the rim's upper wall.
 m = ring(LIP, CHANNEL)
 black = np.where(m, 0.62 + np.clip(up, 0, 1) * np.clip((r - (CHANNEL - 3)) / 3, 0, 1) * 0.25, black)
 # The lip down to the portrait: dark above, catching light below.
 m = ring(PORTRAIT - 1, LIP)
 black = np.where(m, 0.9 - np.clip(-up, 0, 1) * 0.25, black)
-white = np.where(m & (r >= LIP - 1.2), np.clip(-up, 0, 1) * 0.22, white)
+white = np.where(m & (r >= LIP - 1.2), np.clip(-up, 0, 1) * 0.14, white)
 
 # One layer: black under white.
 alpha = black + white - black * white

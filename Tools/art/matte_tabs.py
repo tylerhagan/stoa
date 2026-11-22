@@ -55,9 +55,9 @@ above = y < FOOT
 d = key(26)
 body = (d <= 0) & above
 tone = np.full((n, n), 38.0) + grain
-tone = np.where(body & (y < 26 + 3.5), 92.0, tone)             # lit top
-tone = np.where(body & (y > FOOT - 3.5), 12.0, tone)           # dark foot
-tone = np.where(body & (d > -SEAM) & (y >= 26 + 3.5), 8.0, tone)  # side seams
+tone = np.where(body & (y < 26 + 3.5), 66.0, tone)             # lit top
+tone = np.where(body & (y > FOOT - 3.5), 18.0, tone)           # dark foot
+tone = np.where(body & (d > -SEAM) & (y >= 26 + 3.5), 14.0, tone)  # side seams
 alpha = down(body * 1.0)
 rgb = np.divide(down(tone * body), alpha, out=np.zeros((SIZE, SIZE)), where=alpha > 0)
 save("Closed", np.stack([rgb, rgb + 1, rgb + 3], axis=2), alpha)

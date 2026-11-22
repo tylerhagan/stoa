@@ -56,9 +56,9 @@ def save(name, layers):
 
 block = box()
 save("MatteBlock", [
-    ((block <= 0) & (block > -1.0), False, 0.4),
-    ((block <= 0) & (box(-2.6) > 0), False, 0.6),
-    ((block <= 0) & (box(2.4) > 0), True, 0.22),
+    ((block <= 0) & (block > -1.0), False, 0.3),
+    ((block <= 0) & (box(-2.6) > 0), False, 0.45),
+    ((block <= 0) & (box(2.4) > 0), True, 0.15),
 ])
 
 # The well keeps its last row for the lit line under its bottom edge.
@@ -66,5 +66,5 @@ well = box(bottom=SIZE - 1)
 save("MatteWell", [
     ((well > 0) & (box(1.0, bottom=SIZE - 1) <= 0), True, 0.14),
     (well <= 0, False, 0.5),
-    ((well <= 0) & (box(2.2, bottom=SIZE - 1) > 0), False, 0.62),
+    ((well <= 0) & (box(2.2, bottom=SIZE - 1) > 0), False, 0.5),
 ])

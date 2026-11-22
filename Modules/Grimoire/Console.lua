@@ -201,11 +201,11 @@ function Console:BuildMatte(frame, bg, edges, inner, arch, archSize)
 		bevel:SetPoint("TOPLEFT", edges[i], "BOTTOMLEFT")
 		bevel:SetPoint("TOPRIGHT", edges[i], "BOTTOMRIGHT")
 		bevel:SetHeight(3)
-		bevel:SetColorTexture(1, 1, 1, 0.1)
+		bevel:SetColorTexture(1, 1, 1, 0.07)
 		local step = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
 		step:SetPoint("TOPLEFT", bevel, "BOTTOMLEFT")
 		step:SetPoint("TOPRIGHT", bevel, "BOTTOMRIGHT")
-		step:SetColorTexture(0, 0, 0, 0.55)
+		step:SetColorTexture(0, 0, 0, 0.4)
 		UI.pixel(step, "height")
 	end
 
