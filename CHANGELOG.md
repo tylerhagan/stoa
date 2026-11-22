@@ -16,6 +16,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Fixed: gear with stats your role doesn't use (strength on a priest) was called an upgrade when its item level was higher. It now reads "Nothing for Ranged DPS, below your neck".
 - Dressing Room: the custom set field, Save and the item list switch are dressed and sit in one tidy row over the model.
 - `/stoa report` has a Chat line with the chat's size and place.
+- **Switch spec from Ready**: click your role under Ready on the console (Healer, Ranged DPS...) and a small card shows both specs with their role and tree split. Click the other one to switch (the game's short cast, not in combat). Open talents goes to the talent window.
 - Releases now go to Wago Addons as well as CurseForge.
 
 ## 1.6.0

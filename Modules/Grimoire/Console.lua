@@ -747,6 +747,16 @@ function Console:BuildFellowship(frame, space)
 	local ready = column(readyCol, "Ready")
 	local role = text(readyCol, "serif", Stoa.typeSize.title, "accent")
 	role:SetPoint("TOPLEFT", ready, "BOTTOMLEFT", 0, -6)
+	-- Click the role to switch spec (SpecSwitch.lua).
+	local roleHit = CreateFrame("Button", nil, readyCol)
+	roleHit:SetPoint("TOPLEFT", role, -2, 2)
+	roleHit:SetPoint("BOTTOMRIGHT", role, 2, -2)
+	roleHit:SetScript("OnClick", function(own)
+		local switch = Stoa.modules.SpecSwitch
+		if switch and not InCombatLockdown() then switch:Toggle(own) end
+	end)
+	roleHit:SetScript("OnEnter", function() role:SetAlpha(0.8) end)
+	roleHit:SetScript("OnLeave", function() role:SetAlpha(1) end)
 	-- Small jobs (Jobs below): a gold diamond and "3 small jobs", the list
 	-- on hover. Nothing shows when there's nothing to do.
 	local note = CreateFrame("Button", nil, readyCol)
