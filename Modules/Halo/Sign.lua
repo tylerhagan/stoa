@@ -54,6 +54,62 @@ function Sign.left(aura)
 	return expires - GetTime()
 end
 
+-- How long a spell of yours lasts, talents included: the length last seen
+-- on its aura, else the length in the spell's own description (the game
+-- writes talent changes into it), else `base`. Talent and level changes
+-- clear what was read, so the next look reads again.
+local lengths, seen = {}, {}
+
+local function described(spellID, base)
+	local text = C_Spell and C_Spell.GetSpellDescription and C_Spell.GetSpellDescription(spellID)
+	if type(text) ~= "string" or Stoa:IsSecret(text) or text == "" then return nil end
+	-- The description's time closest to the base length, so a "every 3
+	-- sec" beside "over 18 sec" isn't taken for it.
+	local best
+	for number, unit in text:gmatch("(%d+%.?%d*)%s*(%a+)") do
+		local value = tonumber(number)
+		unit = unit:lower()
+		if unit == "min" or unit == "mins" or unit == "minutes" or unit == "minute" then
+			value = value * 60
+		elseif not (unit == "sec" or unit == "secs" or unit == "seconds" or unit == "second") then
+			value = nil
+		end
+		if value and value >= base * 0.5 and value <= base * 3
+			and (not best or math.abs(value - base) < math.abs(best - base)) then
+			best = value
+		end
+	end
+	return best or base
+end
+
+function Sign.length(spellID, base)
+	if not spellID then return base end
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+	if name and seen[name] then return seen[name] end
+	local length = lengths[spellID]
+	if not length then
+		length = described(spellID, base)
+		-- Not loaded yet: use the base and read again next time.
+		if not length then return base end
+		lengths[spellID] = length
+	end
+	return length
+end
+
+-- Remember the full length of your own aura when the game shows it.
+function Sign.learn(name, aura)
+	local duration = name and aura and Stoa:PlainNumber(aura.duration)
+	if duration and duration > 0 then seen[name] = duration end
+end
+
+local function forget()
+	wipe(lengths)
+	wipe(seen)
+end
+for _, event in ipairs({ "SPELLS_CHANGED", "PLAYER_TALENT_UPDATE", "TRAIT_CONFIG_UPDATED", "PLAYER_LEVEL_UP" }) do
+	Stoa:On(event, forget)
+end
+
 -- An aura's stacks, or nil when hidden.
 function Sign.stacks(aura)
 	return Stoa:PlainNumber(aura and aura.applications)
@@ -349,6 +405,7 @@ end
 function Sign.debuff(coin, text, name, casts, key, length)
 	UI.coinArt(coin, name)
 	local aura = Sign.aura("target", name, "HARMFUL|PLAYER")
+	Sign.learn(name, aura)
 	local left = Sign.left(aura)
 	if left then return Sign.timer(coin, text, GetTime() + left, length, aura, "target"), aura end
 	local at = casts:On(key, length)

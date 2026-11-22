@@ -310,12 +310,14 @@ function Paladin:CoinState(key, coin)
 		local aura = auraByName("player", nameOf("holyShield"), "HELPFUL")
 		local left = auraLeft(aura)
 		local cast = self.casts and self.casts.holyShield
-		local ends = left and (now + left) or (not aura and cast and now - cast < DURATIONS.holyShield and cast + DURATIONS.holyShield) or nil
-		return setCoin(coin, ends, DURATIONS.holyShield, aura, "player")
+		local length = Stoa.Sign.length(SPELLS.holyShield, DURATIONS.holyShield)
+		local ends = left and (now + left) or (not aura and cast and now - cast < length and cast + length) or nil
+		return setCoin(coin, ends, length, aura, "player")
 	elseif key == "consecration" then
 		local cast = self.casts and self.casts.consecration
-		local ends = cast and now - cast < DURATIONS.consecration and cast + DURATIONS.consecration or nil
-		return setCoin(coin, ends, DURATIONS.consecration)
+		local length = Stoa.Sign.length(SPELLS.consecration, DURATIONS.consecration)
+		local ends = cast and now - cast < length and cast + length or nil
+		return setCoin(coin, ends, length)
 	end
 end
 
