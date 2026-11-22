@@ -37,6 +37,8 @@ local SLIM_SEAL = 36
 local ARCH_SIZE = 220
 -- The matte console's arch: a boss just wider than the portrait's recess.
 local MATTE_ARCH = 132
+-- How much wider than the portrait the matte bezel's texture is drawn.
+local BEZEL_SPREAD = 52
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 110
 
@@ -434,14 +436,23 @@ function Console:BuildSeal(frame)
 	RegisterStateDriver(button, "visibility", "[combat] hide; show")
 
 	if not art then
-		-- Matte: the portrait sits in a recess, a dark seam in place of
-		-- the hairline.
+		-- Matte: the portrait sits in a moulded bezel (slim: a dark recess)
+		-- in place of the hairline.
 		local matte = self:Matte()
-		local outer = circle(seal, "BORDER", 0, size + (matte and 14 or 12), not matte and "hairline" or nil)
-		if matte then outer:SetColorTexture(0, 0, 0, 0.85) end
-		outer:SetPoint("CENTER")
-		local gap = circle(seal, "BORDER", 1, size + 10, "panel")
-		gap:SetPoint("CENTER")
+		if matte and not slim then
+			-- A moulded bezel (Tools/art/matte_bezel.py): a deep lip, a
+			-- smooth channel for the level ring's ticks, a raised rim.
+			local bezel = seal:CreateTexture(nil, "BORDER", nil, 0)
+			bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
+			bezel:SetSize(size + BEZEL_SPREAD, size + BEZEL_SPREAD)
+			bezel:SetPoint("CENTER")
+		else
+			local outer = circle(seal, "BORDER", 0, size + (matte and 14 or 12), not matte and "hairline" or nil)
+			if matte then outer:SetColorTexture(0, 0, 0, 0.85) end
+			outer:SetPoint("CENTER")
+			local gap = circle(seal, "BORDER", 1, size + 10, "panel")
+			gap:SetPoint("CENTER")
+		end
 	end
 	local ring = circle(seal, "BORDER", 2, size + 4)
 	ring:SetPoint("CENTER")
