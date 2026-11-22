@@ -128,7 +128,8 @@ end
 -- The Painted ornament (Stoa.db.ornament): leather and brass frames on the
 -- few one-of-a-kind pieces instead of fine lines.
 function UI.ornate()
-	return Stoa.db and Stoa.db.ornament == "painted"
+	-- Matte has no leather or brass: it wears its own moulded pieces.
+	return Stoa.db and Stoa.db.ornament == "painted" and Stoa.db.material ~= "matte"
 end
 
 -- A small leather and brass ring (Tools/art/coin_frame.py) round a circle
