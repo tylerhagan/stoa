@@ -552,6 +552,8 @@ function Tooltip:Upgrade(tip, link)
 			tip:AddLine("Fills your empty " .. slot, Stoa:Color("accent"))
 		elseif gain > 0 then
 			tip:AddLine(("UPGRADE  +%d%% over your %s, for %s"):format(gain, slot, role), Stoa:Color("accent"))
+		elseif gain <= -100 then
+			tip:AddLine(("Nothing for %s, below your %s"):format(role, slot), Stoa:Color("muted"))
 		elseif gain < 0 then
 			tip:AddLine(("%d%% below your %s, for %s"):format(-gain, slot, role), Stoa:Color("muted"))
 		elseif source then

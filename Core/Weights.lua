@@ -142,15 +142,18 @@ function Weights.score(link)
 	if not (weights and link and getStats) or Stoa:IsSecret(link) then return nil end
 	local ok, stats = pcall(getStats, link)
 	if not ok or type(stats) ~= "table" then return nil end
-	local total = 0
+	local total, seen = 0, 0
 	local armor = armorWeight(weights)
 	for key, value in pairs(stats) do
 		local name = type(key) == "string" and short(key)
 		value = Stoa:PlainNumber(value)
+		if name and value then seen = seen + 1 end
 		-- Every role values armour a little, so plain armour with no other
 		-- stats still scores (and mail beats leather for the same slot).
 		local weight = (name == "armor" and armor) or weights[name] or 0
 		if name and value then total = total + value * weight end
 	end
-	return total
+	-- Second: how many stats were read, so "nothing your role counts" (a
+	-- real answer) is told from "no stats to read".
+	return total, seen
 end
