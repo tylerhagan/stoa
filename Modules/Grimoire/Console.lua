@@ -42,7 +42,7 @@ local BEZEL_SPREAD = 52
 -- Matte: health and mana sit down in the shell either side of the bezel,
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
 -- centre and RESOURCE_DROP under its rim, each bar in a thin slot.
-local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 84, -30
+local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 84, -32
 -- The resting target docks on the rim just past the arch (Halo:PlaceTarget).
 Console.MATTE_DOCK_X = MATTE_ARCH / 2 + 4
 local SEAL_SIZE = 76
@@ -530,26 +530,24 @@ function Console:BuildSeal(frame)
 	local matte = self:Matte()
 	local health = bar(frame, matte and MATTE_RESOURCE_W or 150, 3, "health")
 	health:SetReverseFill(true)
-	local healthText = text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 4)
+	-- Matte: the values are as small as their captions, one line over the bar.
+	local valueFont, valueSize = matte and "sans" or "serif", matte and Stoa.typeSize.caption or Stoa.typeSize.title
+	local healthText = text(frame, valueFont, valueSize, "text", "RIGHT")
+	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, matte and 5 or 4)
 	local healthCap = caption(frame, "Health")
 
 	local mana = bar(frame, matte and MATTE_RESOURCE_W or 150, 3, "mana")
-	local manaText = text(frame, "serif", Stoa.typeSize.title, "mana")
-	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 4)
+	local manaText = text(frame, valueFont, valueSize, "mana")
+	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, matte and 5 or 4)
 	local manaCap = caption(frame, "Mana")
 
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
 	if matte then
-		-- The number past the bar's outer end, in line with it, the caption
-		-- over that end, and a slot under each bar: a dark groove with a
-		-- faint lit lower lip, like a meter set into the shell.
-		healthText:ClearAllPoints()
-		healthText:SetPoint("RIGHT", health, "LEFT", -10, 0)
-		manaText:ClearAllPoints()
-		manaText:SetPoint("LEFT", mana, "RIGHT", 10, 0)
+		-- The caption over the bar's outer end, the value over its seal
+		-- end, and a slot under each bar: a dark groove with a faint lit
+		-- lower lip, like a meter set into the shell.
 		health:SetPoint("RIGHT", frame, "TOP", -MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP)
 		healthCap:SetPoint("BOTTOMLEFT", health, "TOPLEFT", 0, 5)
 		mana:SetPoint("LEFT", frame, "TOP", MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP)
