@@ -535,6 +535,12 @@ function Console:BuildSeal(frame)
 		if matte and not slim then
 			-- A moulded bezel (Tools/art/matte_bezel.py): a deep lip, a
 			-- smooth channel for the level ring's ticks, a raised rim.
+			-- The medallion is its own solid body: a full disc under the
+			-- bezel, above the console and the tab, so none of the shell's
+			-- edges, grain or light reads through the bezel's shading.
+			seal:SetFrameLevel(frame:GetFrameLevel() + 3)
+			local body = circle(seal, "BACKGROUND", -2, MATTE_ARCH, "panel", 1)
+			body:SetPoint("CENTER")
 			local bezel = seal:CreateTexture(nil, "BORDER", nil, 0)
 			bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
 			bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
