@@ -39,6 +39,12 @@ local ARCH_SIZE = 220
 local MATTE_ARCH = 132
 -- How much wider than the portrait the matte bezel's texture is drawn.
 local BEZEL_SPREAD = 52
+-- Matte: health and mana sit in a moulded block either side of the arch,
+-- standing on the rim. Each runs from behind the arch out to SHOULDER_END
+-- from the console's centre; the bars start SHOULDER_BAR out. The resting
+-- target docks just past the mana block (Halo:PlaceTarget).
+local SHOULDER_H, SHOULDER_END, SHOULDER_BAR, SHOULDER_FOOT = 46, 250, 84, 14
+Console.MATTE_DOCK_X = SHOULDER_END + 3
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 110
 
@@ -271,6 +277,8 @@ end
 
 -- `zones` is up to four { left, right } spans from the console's left.
 local WELL_PAD, WELL_BOTTOM = 12, 8
+-- The bars' well starts lower, under the bezel's foot.
+local WELL_BARS, WELL_BARS_TOP = 3, -58
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
 	for i, well in ipairs(self.wells) do
@@ -279,7 +287,7 @@ function Console:PlaceWells(zones, top)
 		if on then
 			local fill = well[1]
 			fill:ClearAllPoints()
-			fill:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - WELL_PAD + 0.5), top + 8)
+			fill:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - WELL_PAD + 0.5), i == WELL_BARS and WELL_BARS_TOP or top + 8)
 			fill:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + WELL_PAD + 0.5), WELL_BOTTOM)
 		end
 		for _, part in ipairs(well) do part:SetShown(on and true or false) end
@@ -502,7 +510,7 @@ function Console:BuildSeal(frame)
 	-- nothing floats over the world.
 	local role = text(seal, "italic", Stoa.typeSize.label, "accent", "CENTER")
 	role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
-	role:SetShown(not art and not slim)
+	role:SetShown(not art and not slim and not self:Matte())
 	self.roleText = role
 
 	if slim then
@@ -519,25 +527,51 @@ function Console:BuildSeal(frame)
 	end
 
 	-- Health on the left, filling towards the seal; mana on the right.
+	local matte = self:Matte()
 	local health = bar(frame, 150, 3, "health")
 	health:SetReverseFill(true)
-	health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
 	local healthText = text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
 	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 4)
 	local healthCap = caption(frame, "Health")
-	healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
 
 	local mana = bar(frame, 150, 3, "mana")
-	mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
 	local manaText = text(frame, "serif", Stoa.typeSize.title, "mana")
 	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 4)
 	local manaCap = caption(frame, "Mana")
-	manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
 
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
+	if matte then
+		-- In the blocks: the bar low, the number over its seal end and the
+		-- caption over its outer end.
+		health:SetPoint("RIGHT", frame, "TOP", -SHOULDER_BAR, 11)
+		healthCap:SetPoint("BOTTOMLEFT", health, "TOPLEFT", 0, 5)
+		mana:SetPoint("LEFT", frame, "TOP", SHOULDER_BAR, 11)
+		manaCap:SetPoint("BOTTOMRIGHT", mana, "TOPRIGHT", 0, 5)
+		self:BuildShoulders(frame)
+	else
+		health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
+		healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
+		mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
+		manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
+	end
 	self:BuildManaPlay(mana, manaCap)
+end
+
+-- The matte blocks health and mana sit in: a moulded card each side,
+-- drawn under the console so its inner end runs behind the arch and its
+-- foot behind the panel, leaving a block standing on the rim.
+function Console:BuildShoulders(frame)
+	for _, sign in ipairs({ -1, 1 }) do
+		local block = CreateFrame("Frame", nil, frame)
+		block:SetFrameLevel(math.max(0, frame:GetFrameLevel() - 1))
+		local inner, outer = sign * 20, sign * SHOULDER_END
+		block:SetPoint("TOPLEFT", frame, "TOP", math.min(inner, outer), SHOULDER_H)
+		block:SetPoint("BOTTOMRIGHT", frame, "TOP", math.max(inner, outer), -SHOULDER_FOOT)
+		UI.roundPanel(block, 0.98)
+		table.insert(self.resourceParts, block)
+	end
 end
 
 -- With the art: health and mana sit down in the leather either side of

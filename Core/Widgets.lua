@@ -1656,29 +1656,37 @@ UI.PLAQUE_SOCKET_X = 24
 UI.PLAQUE_JOIN_SPAN = JOIN_CX - JOIN_LEAD + JOIN_R
 -- From where the curve starts to where its corner begins to round.
 UI.PLAQUE_JOIN_FLAT = JOIN_CX - JOIN_LEAD
+-- Matte: the same pieces as square hardware (Tools/art/matte_dock.py): a
+-- block standing on the rim, a faint lit bevel inside its top edge in place
+-- of the gold line, and no shadow.
+local DOCK_BEVEL_A = 0.13
+local function dockArt(name)
+	return UI.MEDIA .. "Textures\\" .. name .. (UI.matte() and "Matte" or "")
+end
 local function buildDock(frame, plaque)
 	local dock = {}
 	local body = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 	body:SetColorTexture(1, 1, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 1)
 	top:SetColorTexture(1, 1, 1)
-	top:SetHeight(2)
+	top:SetHeight(UI.matte() and 3 or 2)
 	local join = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-	join:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoin")
+	join:SetTexture(dockArt("PlaqueJoin"))
 	join:SetSize(JOIN_W, JOIN_ART_H)
 	local lines = frame:CreateTexture(nil, "BORDER", nil, 1)
-	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinLines")
+	lines:SetTexture(dockArt("PlaqueJoin") .. "Lines")
 	lines:SetAllPoints(join)
 	local socket = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-	socket:SetTexture(UI.MEDIA .. "Textures\\PlaqueSocket")
+	socket:SetTexture(dockArt("PlaqueSocket"))
 	socket:SetSize(SOCKET_W, SOCKET_ART_H)
 	socket:SetPoint("BOTTOMLEFT")
 	local socketLines = frame:CreateTexture(nil, "BORDER", nil, 1)
-	socketLines:SetTexture(UI.MEDIA .. "Textures\\PlaqueSocketLines")
+	socketLines:SetTexture(dockArt("PlaqueSocket") .. "Lines")
 	socketLines:SetAllPoints(socket)
 	dock.body, dock.top, dock.join, dock.lines = body, top, join, lines
 	dock.socket, dock.socketLines = socket, socketLines
 	plaque.dock = dock
+	if UI.matte() then return dock end
 	-- Shown only while something sits behind the sweep (SetShadow).
 	local shadow = frame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	shadow:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinShadow")
@@ -1708,13 +1716,14 @@ function UI.plaqueStep(frame)
 	local body = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 	body:SetColorTexture(1, 1, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 1)
+	local matte = UI.matte()
 	top:SetColorTexture(1, 1, 1)
-	top:SetHeight(2)
+	top:SetHeight(matte and 3 or 2)
 	local step = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-	step:SetTexture(UI.MEDIA .. "Textures\\PlaqueStep")
+	step:SetTexture(dockArt("PlaqueStep"))
 	step:SetSize(STEP_W, STEP_ART_H)
 	local lines = frame:CreateTexture(nil, "BORDER", nil, 1)
-	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueStepLines")
+	lines:SetTexture(dockArt("PlaqueStep") .. "Lines")
 	lines:SetAllPoints(step)
 	local parts = { body, top, step, lines }
 	-- The plain line is drawn on whole pixels and the art's line is not, so
@@ -1729,24 +1738,30 @@ function UI.plaqueStep(frame)
 		UI.tint(part, "panel", 1)
 	end
 	for _, part in ipairs({ top, lines }) do
-		local r, g, b = Stoa:Color("accent")
-		part:SetVertexColor(r, g, b, STEP_LINE_A)
-		UI.tint(part, "accent", STEP_LINE_A)
+		if matte then
+			part:SetVertexColor(1, 1, 1, DOCK_BEVEL_A)
+		else
+			local r, g, b = Stoa:Color("accent")
+			part:SetVertexColor(r, g, b, STEP_LINE_A)
+			UI.tint(part, "accent", STEP_LINE_A)
+		end
 	end
+	-- The plain line: centred on the top edge, or (matte) just inside it.
+	local lift = matte and 0 or 1
 	function slab:Layout(curve)
 		body:ClearAllPoints()
 		body:SetPoint("BOTTOMLEFT")
 		body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
 		top:ClearAllPoints()
-		top:SetPoint("TOPLEFT", 0, 1)
+		top:SetPoint("TOPLEFT", 0, lift)
 		-- Up to where the art's own line starts: the line is see-through,
 		-- so an overlap would show as a brighter spot.
-		top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - STEP_LEAD, 1)
+		top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - STEP_LEAD, lift)
 		-- The art hangs from the plain line, not from the frame's bottom:
 		-- measured from two edges, the two lines rounded to different
 		-- pixels and showed a small bump where they met.
 		step:ClearAllPoints()
-		step:SetPoint("TOPLEFT", top, "TOPRIGHT", 0, 1)
+		step:SetPoint("TOPLEFT", top, "TOPRIGHT", 0, 2 - lift)
 	end
 	function slab:SetShown(on)
 		for _, part in ipairs(parts) do part:SetShown(on) end
@@ -1846,11 +1861,13 @@ function UI.plaque(frame, coinSide, opts)
 		end
 		if plaque.dock then
 			-- The console's gold; silver for a rare.
-			local dr, dg, db = Stoa:Color("accent")
+			local dr, dg, db, da = Stoa:Color("accent")
+			da = 1
 			if rank == "rare" then dr, dg, db = unpack(SILVER) end
-			plaque.dock.top:SetVertexColor(dr, dg, db, 1)
-			plaque.dock.lines:SetVertexColor(dr, dg, db, 1)
-			plaque.dock.socketLines:SetVertexColor(dr, dg, db, 1)
+			if UI.matte() then dr, dg, db, da = 1, 1, 1, DOCK_BEVEL_A end
+			plaque.dock.top:SetVertexColor(dr, dg, db, da)
+			plaque.dock.lines:SetVertexColor(dr, dg, db, da)
+			plaque.dock.socketLines:SetVertexColor(dr, dg, db, da)
 		end
 	end
 
@@ -1865,6 +1882,7 @@ function UI.plaque(frame, coinSide, opts)
 		local dock = plaque.dock or (on and buildDock(frame, plaque))
 		fill:SetShown(not on)
 		if edge then edge:SetShown(not on) end
+		if frame.stoaMould then frame.stoaMould:SetShown(not on) end
 		for _, part in ipairs(plaque.medallionParts) do part:SetShown(not on) end
 		if dock then
 			for _, part in pairs(dock) do part:SetShown(on) end
@@ -1874,9 +1892,11 @@ function UI.plaque(frame, coinSide, opts)
 			dock.body:SetPoint("BOTTOMLEFT", SOCKET_W, 0)
 			dock.body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
 			-- Centred on the top edge, as the art draws its line.
+			local lift = UI.matte() and 0 or 1
 			dock.top:ClearAllPoints()
-			dock.top:SetPoint("TOPLEFT", SOCKET_W, 1)
-			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 1)
+			dock.top:SetPoint("TOPLEFT", SOCKET_W, lift)
+			-- Up to where the join's own line starts.
+			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - (UI.matte() and JOIN_LEAD or 0), lift)
 			dock.join:ClearAllPoints()
 			dock.join:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - JOIN_LEAD, 0)
 		else
@@ -1915,6 +1935,7 @@ function UI.plaque(frame, coinSide, opts)
 		fill:SetShown(not on)
 		if edge then edge:SetShown(not on) end
 		if on then plaque:SetDocked(false) end
+		if frame.stoaMould then frame.stoaMould:SetShown(not on) end
 		if plaque.medallion then
 			plaque.placeCoin(on and 0.75 or 1)
 			plaque:SetReaction(plaque.reaction)

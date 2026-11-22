@@ -380,10 +380,12 @@ function Halo:PlaceTarget()
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.
 		self.targetResting = true
-		self.targetDocks = console.Art and console:Art() or false
+		-- Matte: a block of its own on the rim, past the mana block.
+		local matte = console.Matte and console:Matte() or false
+		self.targetDocks = matte or console.Art and console:Art() or false
 		if self.targetDocks then
-			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", UI.PLAQUE_SOCKET_X, console:OpenHeight() + TARGET_DOCK_Y)
-			self.targetTextLeft = TARGET_DOCK_TEXT
+			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", matte and console.MATTE_DOCK_X or UI.PLAQUE_SOCKET_X, console:OpenHeight() + TARGET_DOCK_Y)
+			self.targetTextLeft = matte and TARGET_PAD or TARGET_DOCK_TEXT
 		else
 			local gap = 150 * (console.ART_SCALE or 0.556) + 22
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
@@ -856,13 +858,15 @@ function Halo:PlaceTargetOfTarget(curve)
 	if docked then
 		local left = curve + UI.PLAQUE_JOIN_SPAN - TOT_TUCK
 		-- Its corner starts rounding just past its words.
-		local stepCurve = TOT_DOCK_TEXT + TOT_WIDTH + 10 - UI.PLAQUE_STEP_FLAT
+		-- Matte ends are straight, so the words start just past the tuck.
+		local textLeft = UI.matte() and TOT_TUCK + 12 or TOT_DOCK_TEXT
+		local stepCurve = textLeft + TOT_WIDTH + 10 - UI.PLAQUE_STEP_FLAT
 		-- Behind the plaque: a lower strata than its LOW.
 		chip:SetFrameStrata("BACKGROUND")
 		chip:SetSize(stepCurve + UI.PLAQUE_STEP_SPAN, UI.PLAQUE_STEP_H)
 		chip:SetPoint("BOTTOMLEFT", target, "BOTTOMLEFT", left, 0)
 		chip.slab:Layout(stepCurve)
-		chip.label:SetPoint("TOPLEFT", TOT_DOCK_TEXT, -6)
+		chip.label:SetPoint("TOPLEFT", textLeft, -6)
 	else
 		chip:SetFrameStrata("LOW")
 		chip:SetSize(TOT_WIDTH, CHIP_HEIGHT)
