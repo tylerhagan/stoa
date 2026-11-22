@@ -166,6 +166,19 @@ do
 	IsPlayerSpell = real
 	drain()
 end
+-- The spec card under Ready: open, refresh, close.
+do
+	local ok, e = xpcall(function()
+		local switch, console = Stoa.modules.SpecSwitch, Stoa.modules.Grimoire
+		local owner = (console and console.roleWord) or UIParent
+		switch:Toggle(owner)
+		switch:Refresh()
+		switch:PlaceProxy()
+		switch:Toggle(owner)
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "spec card: " .. e end
+	drain()
+end
 -- Small figures: bags with room, worn gear, a pace and gold history.
 do
 	local realSlots, realFree, realDurability = C_Container.GetContainerNumSlots, C_Container.GetContainerNumFreeSlots, GetInventoryItemDurability
