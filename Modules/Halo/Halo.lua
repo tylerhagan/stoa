@@ -431,12 +431,15 @@ function Halo:LayoutTarget(curve)
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
 		local left = self.targetTextLeft
-		target.caption:SetPoint("TOPLEFT", left, -9)
-		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", left + TARGET_BAR_W, -9)
+		-- Matte: the block is lower, so the rows sit closer.
+		local tight = UI.matte()
+		local top = tight and -7 or -9
+		target.caption:SetPoint("TOPLEFT", left, top)
+		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", left + TARGET_BAR_W, top)
 		target.caption:SetPoint("RIGHT", target.cue, "LEFT", -8, 0)
-		target.name:SetPoint("TOPLEFT", left, -22)
+		target.name:SetPoint("TOPLEFT", left, tight and -19 or -22)
 		target.name:SetWidth(TARGET_BAR_W)
-		target.hp:SetPoint("TOPLEFT", left, -40)
+		target.hp:SetPoint("TOPLEFT", left, tight and -36 or -40)
 	else
 		target:SetSize(TARGET_WIDTH, TARGET_HEIGHT)
 		target.caption:SetPoint("TOPLEFT", TARGET_PAD, -12)

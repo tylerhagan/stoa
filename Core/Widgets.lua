@@ -1652,9 +1652,9 @@ local SHADOW_W = JOIN_W + 8
 -- The socket art: 56x70, its left edge 24 right of the medallion's centre.
 local SOCKET_W, SOCKET_ART_H = 56, 70
 UI.PLAQUE_JOIN_H = JOIN_H
--- Matte: the docked plaque is as tall as the console's dial, which it
--- comes out of (Tools/art/matte_dock.py DOCK_TOP, DOCK_ART_H).
-local MATTE_DOCK_H, MATTE_DOCK_ART_H = 75, 77
+-- Matte: the docked plaque is as tall as the tab beside the console's
+-- dial, which it comes out of (Tools/art/matte_dock.py DOCK_TOP, DOCK_ART_H).
+local MATTE_DOCK_H, MATTE_DOCK_ART_H = 57, 59
 function UI.plaqueDockHeight()
 	return UI.matte() and MATTE_DOCK_H or JOIN_H
 end

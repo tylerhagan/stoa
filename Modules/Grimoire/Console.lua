@@ -52,10 +52,14 @@ local BEZEL_SCALE = 128 / 76
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
 -- centre and RESOURCE_DROP under its rim, each bar in a thin slot.
 local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 94, -32
--- The docked target starts at the dial's centre, its art cut round the
--- dial (Tools/art/matte_dock.py), and its words start clear of the dial.
-Console.MATTE_DOCK_X = 0
-Console.MATTE_DOCK_TEXT = MATTE_ARCH / 2 + 12
+-- A tab always stands on the rim beside the dial, a quarter lower than
+-- it, with a cone for the target's portrait (BuildTargetCone; art from
+-- Tools/art/matte_dock.py). The docked target starts under the tab's
+-- rounded corner and runs on from it, its words just past the cone.
+local MATTE_TAB_W, MATTE_TAB_H, MATTE_TAB_END = 128, 59, 122
+local CONE_X, CONE_Y, CONE_R = 86, 28, 17
+Console.MATTE_DOCK_X = MATTE_TAB_END - 16
+Console.MATTE_DOCK_TEXT = 18
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 110
 
@@ -128,7 +132,8 @@ function Console:Build()
 	leftEdge:SetPoint("TOPRIGHT", frame, "TOP", -archGap, 0)
 	local rightEdge = line(frame)
 	rightEdge:SetPoint("TOPRIGHT")
-	rightEdge:SetPoint("TOPLEFT", frame, "TOP", archGap, 0)
+	-- Matte: the right half starts past the tab beside the dial.
+	rightEdge:SetPoint("TOPLEFT", frame, "TOP", matte and not slim and MATTE_TAB_END or archGap, 0)
 	local inner = line(frame, "hairline", 0.1)
 	inner:SetPoint("TOPLEFT", 0, -5)
 	inner:SetPoint("TOPRIGHT", 0, -5)
@@ -169,6 +174,7 @@ function Console:Build()
 		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch, archSize, archY)
 	end
 
+	if matte and not slim then self:BuildTargetCone(frame) end
 	self:BuildSeal(frame)
 	self:BuildNotes(frame, space)
 	self:BuildFellowship(frame, space)
@@ -196,6 +202,59 @@ end
 -- The matte console: the drawn panel made near solid, a grain over it one
 -- texel to the pixel, a little light along the top and quiet edges, as one
 -- moulded piece of black hardware. Uses the plain console's layout.
+-- Matte: the tab beside the dial and the cone set in it. The cone is dark
+-- and empty until you have a target, then holds its portrait, wherever the
+-- target's own plaque is showing. It fades with the arch when the console
+-- folds.
+function Console:BuildTargetCone(frame)
+	local holder = CreateFrame("Frame", nil, frame)
+	holder:SetSize(MATTE_TAB_W, MATTE_TAB_H)
+	holder:SetPoint("BOTTOMLEFT", frame, "TOP", 0, -1)
+	local tab = holder:CreateTexture(nil, "BACKGROUND")
+	tab:SetTexture(UI.MEDIA .. "Textures\\MatteTab")
+	tab:SetAllPoints()
+	tab:SetVertexColor(Stoa:Color("panel"))
+	UI.tint(tab, "panel", 1)
+	-- The same faint light along its top as the docked plaque's.
+	local lines = holder:CreateTexture(nil, "BACKGROUND", nil, 1)
+	lines:SetTexture(UI.MEDIA .. "Textures\\MatteTabLines")
+	lines:SetAllPoints()
+	lines:SetVertexColor(1, 1, 1, 0.05)
+	local size = CONE_R * 2
+	local bezel = holder:CreateTexture(nil, "BORDER")
+	bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
+	bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
+	bezel:SetPoint("CENTER", holder, "BOTTOMLEFT", CONE_X, CONE_Y + 1)
+	local pit = circle(holder, "BORDER", 1, size + 4)
+	pit:SetColorTexture(0, 0, 0, 0.55)
+	pit:SetPoint("CENTER", bezel)
+	local rim = circle(holder, "ARTWORK", 0, size + 3, "text")
+	rim:SetPoint("CENTER", bezel)
+	local portrait = holder:CreateTexture(nil, "ARTWORK", nil, 1)
+	portrait:SetSize(size, size)
+	portrait:SetPoint("CENTER", bezel)
+	local round = holder:CreateMaskTexture()
+	round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	round:SetAllPoints(portrait)
+	portrait:AddMaskTexture(round)
+	self.cone = { holder = holder, portrait = portrait, rim = rim }
+	table.insert(self.archParts, holder)
+	local function update() self:UpdateTargetCone() end
+	Stoa:On("PLAYER_TARGET_CHANGED", update)
+	Stoa:On("PLAYER_ENTERING_WORLD", update)
+	Stoa:OnUnit("UNIT_PORTRAIT_UPDATE", { "target" }, update)
+	update()
+end
+
+function Console:UpdateTargetCone()
+	local cone = self.cone
+	if not cone then return end
+	local has = UnitExists("target") and true or false
+	if has then SetPortraitTexture(cone.portrait, "target") end
+	cone.portrait:SetShown(has)
+	cone.rim:SetShown(has)
+end
+
 function Console:BuildMatte(frame, bg, edges, inner, arch, archSize, archY)
 	local slim = self.db.slim
 	UI.unpaint(bg)
