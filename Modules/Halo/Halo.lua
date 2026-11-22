@@ -380,12 +380,12 @@ function Halo:PlaceTarget()
 		-- to the console itself: it folds in a fight, and a secure frame
 		-- anchored to it would make that fold a blocked action.
 		self.targetResting = true
-		-- Matte: a block of its own on the rim, past the mana block.
+		-- Matte: a block that comes out of the console's dial.
 		local matte = console.Matte and console:Matte() or false
 		self.targetDocks = matte or console.Art and console:Art() or false
 		if self.targetDocks then
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", matte and console.MATTE_DOCK_X or UI.PLAQUE_SOCKET_X, console:OpenHeight() + TARGET_DOCK_Y)
-			self.targetTextLeft = matte and TARGET_PAD or TARGET_DOCK_TEXT
+			self.targetTextLeft = matte and console.MATTE_DOCK_TEXT or TARGET_DOCK_TEXT
 		else
 			local gap = 150 * (console.ART_SCALE or 0.556) + 22
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
@@ -405,6 +405,10 @@ function Halo:PlaceTarget()
 	local curve = barEnd + 14
 	if self.targetResting and self.targetDocks then curve = barEnd + 14 - UI.PLAQUE_JOIN_FLAT end
 	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
+	-- Matte: the docked block starts behind the dial, so clicks there stay
+	-- the dial's.
+	local behind = target.plaque.docked and UI.matte() and console.MATTE_DOCK_TEXT - TARGET_PAD or 0
+	target:SetHitRectInsets(behind, 0, 0, 0)
 	self:LayoutTarget(target.plaque.docked and curve or nil)
 	self:PlaceTargetOfTarget(target.plaque.docked and curve or nil)
 	target:SetAlpha(self:TargetAlpha())
@@ -424,7 +428,7 @@ function Halo:LayoutTarget(curve)
 	target.laidDocked, target.laidCurve = docked, curve
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
 	if docked then
-		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.PLAQUE_JOIN_H)
+		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
 		local left = self.targetTextLeft
 		target.caption:SetPoint("TOPLEFT", left, -9)
@@ -477,6 +481,9 @@ function Halo:BuildTarget(frame)
 	-- The medallion faces away from the Halo, balancing the card.
 	local plaque = UI.plaque(target, "RIGHT", { medallion = true })
 	target.plaque = plaque
+	-- Matte: a new target's block comes out of the dial. Only its art
+	-- moves; the secure button itself is never animated.
+	target:HookScript("OnShow", function() plaque:PlayDock() end)
 	self:BuildTargetCast(target)
 	Stoa:RegisterMover("target", target, "Target plaque", {
 		default = function() self:PlaceTarget() end,

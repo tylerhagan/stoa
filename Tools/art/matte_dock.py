@@ -2,14 +2,16 @@
 
     python3 Tools/art/matte_dock.py [Media/Textures]
 
-In matte the resting target is a moulded block standing on the console's
-rim beside the mana block, and the target of target a lower block behind
-it. These are the same pieces as the leather's (plaque_join.py), on the
-same canvases so Core/Widgets.lua places them with the same numbers, but
-square hardware: a small rounded top corner and a straight side.
+In matte the resting target is a moulded block that comes out of the
+console's dial: as tall as the dial's round body and starting at its
+centre, so the two read as one pill-shaped piece. The target of target is
+a lower block behind it. The pieces are laid out like the leather's
+(plaque_join.py), so Core/Widgets.lua places them with the same numbers
+across, but taller (MATTE_DOCK_H there) and square: a small rounded top
+corner and a straight side.
 
-- PlaqueJoinMatte.tga: the right end (131x70 units, the side at 72).
-- PlaqueSocketMatte.tga: the left end (56x70 units).
+- PlaqueJoinMatte.tga: the right end (131x77 units, the side at 72).
+- PlaqueSocketMatte.tga: the left end (56x77 units), cut round the dial.
 - PlaqueStepMatte.tga: the target of target's right end (87x46, side at 48).
 
 Each is white with a dark seam down its side and takes the panel colour;
@@ -24,6 +26,34 @@ from PIL import Image
 out_dir = (sys.argv[1] if len(sys.argv) > 1 else "Media/Textures").rstrip("/\\")
 PX, SS = 2, 4
 BEVEL, SEAM = 3.0, 1.5
+
+
+# The matte dial: the round body the bezel stands on, as the target's art
+# sees it (Console.lua MATTE_ARCH, MATTE_SEAL_Y; the art's bottom edge is
+# one unit under the rim). The plaque is as tall as the dial, so the two
+# read as one pill-shaped piece.
+DIAL_R, DIAL_Y, DOCK_TOP, DOCK_ART_H = 54.0, 21.0, 75.0, 77
+
+
+def socket(name, w):
+    """The left end: a block whose left edge is at the dial's centre, with
+    the dial's circle cut out of it (a unit inside, so no seam shows)."""
+    h = DOCK_ART_H
+    n_x, n_y = w * PX * SS, h * PX * SS
+    x = (np.arange(n_x) + 0.5) / (PX * SS)
+    y = h - (np.arange(n_y) + 0.5) / (PX * SS)
+    x, y = np.meshgrid(x, y)
+    fill = (y <= DOCK_TOP) & (np.hypot(x, y - DIAL_Y) > DIAL_R - 1)
+    bevel = fill & (DOCK_TOP - y <= BEVEL)
+
+    def down(a):
+        return a.reshape(h * PX, SS, w * PX, SS).mean(axis=(1, 3))
+
+    for suffix, alpha in (("", down(fill * 1.0)), ("Lines", down(bevel * 1.0))):
+        img = np.full((h * PX, w * PX, 4), 255, dtype=np.uint8)
+        img[..., 3] = np.round(alpha * 255)
+        Image.fromarray(img, "RGBA").save("%s/%s%s.tga" % (out_dir, name, suffix))
+    print(name, w, h)
 
 
 def piece(name, w, h, top, side, corner, mirror=False):
@@ -59,7 +89,6 @@ def piece(name, w, h, top, side, corner, mirror=False):
     print(name, w, h)
 
 
-piece("PlaqueJoinMatte", 131, 70, 68.0, 72.0, 10.0)
-# The socket is the same end, mirrored, filling its whole width.
-piece("PlaqueSocketMatte", 56, 70, 68.0, 56.0, 10.0, mirror=True)
+piece("PlaqueJoinMatte", 131, DOCK_ART_H, DOCK_TOP, 72.0, 12.0)
+socket("PlaqueSocketMatte", 56)
 piece("PlaqueStepMatte", 87, 46, 44.0, 48.0, 8.0)

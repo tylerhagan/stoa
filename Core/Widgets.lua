@@ -1651,6 +1651,12 @@ local SHADOW_W = JOIN_W + 8
 -- The socket art: 56x70, its left edge 24 right of the medallion's centre.
 local SOCKET_W, SOCKET_ART_H = 56, 70
 UI.PLAQUE_JOIN_H = JOIN_H
+-- Matte: the docked plaque is as tall as the console's dial, which it
+-- comes out of (Tools/art/matte_dock.py DOCK_TOP, DOCK_ART_H).
+local MATTE_DOCK_H, MATTE_DOCK_ART_H = 75, 77
+function UI.plaqueDockHeight()
+	return UI.matte() and MATTE_DOCK_H or JOIN_H
+end
 UI.PLAQUE_SOCKET_X = 24
 -- From where the curve starts to the plaque's right end.
 UI.PLAQUE_JOIN_SPAN = JOIN_CX - JOIN_LEAD + JOIN_R
@@ -1672,13 +1678,14 @@ local function buildDock(frame, plaque)
 	top:SetHeight(UI.matte() and 3 or 2)
 	local join = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 	join:SetTexture(dockArt("PlaqueJoin"))
-	join:SetSize(JOIN_W, JOIN_ART_H)
+	local artH = UI.matte() and MATTE_DOCK_ART_H or JOIN_ART_H
+	join:SetSize(JOIN_W, artH)
 	local lines = frame:CreateTexture(nil, "BORDER", nil, 1)
 	lines:SetTexture(dockArt("PlaqueJoin") .. "Lines")
 	lines:SetAllPoints(join)
 	local socket = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 	socket:SetTexture(dockArt("PlaqueSocket"))
-	socket:SetSize(SOCKET_W, SOCKET_ART_H)
+	socket:SetSize(SOCKET_W, UI.matte() and MATTE_DOCK_ART_H or SOCKET_ART_H)
 	socket:SetPoint("BOTTOMLEFT")
 	local socketLines = frame:CreateTexture(nil, "BORDER", nil, 1)
 	socketLines:SetTexture(dockArt("PlaqueSocket") .. "Lines")
@@ -1686,7 +1693,38 @@ local function buildDock(frame, plaque)
 	dock.body, dock.top, dock.join, dock.lines = body, top, join, lines
 	dock.socket, dock.socketLines = socket, socketLines
 	plaque.dock = dock
-	if UI.matte() then return dock end
+	if UI.matte() then
+		-- The block comes out of the dial: its body grows from its dial
+		-- end while its far end rides out with it (plaque:PlayDock). The
+		-- end by the dial stays put, so nothing crosses the dial.
+		local function group(region)
+			local g = region:CreateAnimationGroup()
+			plaque.dockMotion = plaque.dockMotion or {}
+			table.insert(plaque.dockMotion, g)
+			return g
+		end
+		for _, region in ipairs({ body, top }) do
+			local grow = group(region):CreateAnimation("Scale")
+			grow:SetScaleFrom(0.55, 1)
+			grow:SetScaleTo(1, 1)
+			grow:SetOrigin("LEFT", 0, 0)
+			grow:SetDuration(UI.MOTION.open)
+			grow:SetSmoothing("OUT")
+		end
+		plaque.dockRides = {}
+		for _, region in ipairs({ join, lines }) do
+			local g = group(region)
+			local from = g:CreateAnimation("Translation")
+			from:SetDuration(0)
+			from:SetOrder(1)
+			local ride = g:CreateAnimation("Translation")
+			ride:SetDuration(UI.MOTION.open)
+			ride:SetOrder(2)
+			ride:SetSmoothing("OUT")
+			table.insert(plaque.dockRides, { from, ride })
+		end
+		return dock
+	end
 	-- Shown only while something sits behind the sweep (SetShadow).
 	local shadow = frame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	shadow:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinShadow")
@@ -1908,6 +1946,21 @@ function UI.plaque(frame, coinSide, opts)
 		paintFill()
 		plaque:SetRank(plaque.rank)
 		plaque:SetReaction(plaque.reaction)
+	end
+
+	-- Matte: plays the docked block coming out of the dial. Its far end
+	-- starts where the shorter body ends.
+	function plaque:PlayDock()
+		if not (plaque.docked and plaque.dockMotion) then return end
+		local back = (plaque.curve - SOCKET_W) * 0.45
+		for _, pair in ipairs(plaque.dockRides) do
+			pair[1]:SetOffset(-back, 0)
+			pair[2]:SetOffset(back, 0)
+		end
+		for _, g in ipairs(plaque.dockMotion) do
+			g:Stop()
+			g:Play()
+		end
 	end
 
 	-- The docked sweep's shadow, for when something stands behind it.

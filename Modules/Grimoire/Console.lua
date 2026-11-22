@@ -52,8 +52,10 @@ local BEZEL_SCALE = 128 / 76
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
 -- centre and RESOURCE_DROP under its rim, each bar in a thin slot.
 local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 94, -32
--- The resting target docks on the rim just past the arch (Halo:PlaceTarget).
-Console.MATTE_DOCK_X = MATTE_ARCH / 2 + 4
+-- The docked target starts at the dial's centre, its art cut round the
+-- dial (Tools/art/matte_dock.py), and its words start clear of the dial.
+Console.MATTE_DOCK_X = 0
+Console.MATTE_DOCK_TEXT = MATTE_ARCH / 2 + 12
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 110
 
