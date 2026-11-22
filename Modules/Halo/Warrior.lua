@@ -70,11 +70,11 @@ function Warrior:UpdateCoins()
 		if Sign.knows(SPELLS[key]) then
 			if key == "battleShout" then
 				index = index + 1
-				state[key] = Sign.buff(self.coins[index], letter, nameOf(key), self.casts, key, LENGTHS[key])
+				state[key] = Sign.buff(self.coins[index], letter, nameOf(key), self.casts, key, Sign.length(SPELLS[key], LENGTHS[key]))
 			elseif hostile then
 				index = index + 1
 				local aura
-				state[key], aura = Sign.debuff(self.coins[index], letter, nameOf(key), self.casts, key, LENGTHS[key])
+				state[key], aura = Sign.debuff(self.coins[index], letter, nameOf(key), self.casts, key, Sign.length(SPELLS[key], LENGTHS[key]))
 				if key == "sunder" then self.sunders = aura and (Sign.stacks(aura) or 1) or 0 end
 			end
 		end
