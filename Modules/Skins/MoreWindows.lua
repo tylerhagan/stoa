@@ -378,7 +378,7 @@ end
 local ADDONS_DROP = 14
 -- Dressing Room: the set field, Save and the item list switch in one row
 -- over the model, edge to edge with it and all one height.
-local DRESSUP_ROW_Y, DRESSUP_ROW_H = -31, 22
+local DRESSUP_ROW_Y, DRESSUP_ROW_H = -40, 22
 
 local function quietButtonArt(button)
 	for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
