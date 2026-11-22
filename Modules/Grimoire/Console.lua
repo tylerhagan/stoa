@@ -35,6 +35,8 @@ local SPINE_HEIGHT = 22
 local SLIM_HEIGHT = 44
 local SLIM_SEAL = 36
 local ARCH_SIZE = 220
+-- The matte console's arch: a boss just wider than the portrait's recess.
+local MATTE_ARCH = 132
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 110
 
@@ -83,7 +85,8 @@ function Console:Build()
 	local space = Stoa.space
 	local slim = db.slim
 	-- The slim console has no arch, so its top line runs straight across.
-	local archGap = slim and 0 or ARCH_SIZE / 2
+	local archSize = self:Matte() and MATTE_ARCH or ARCH_SIZE
+	local archGap = slim and 0 or archSize / 2
 
 	local frame = CreateFrame("Frame", "StoaConsole", UIParent)
 	frame:SetFrameStrata("BACKGROUND")
@@ -110,9 +113,9 @@ function Console:Build()
 
 	-- The arch: a hairline circle behind a panel circle, both centred on the
 	-- console's top edge; the panel hides their lower halves.
-	local archRing = circle(frame, "BACKGROUND", -8, ARCH_SIZE + 2, "hairline")
+	local archRing = circle(frame, "BACKGROUND", -8, archSize + 2, "hairline")
 	archRing:SetPoint("CENTER", frame, "TOP")
-	local arch = circle(frame, "BACKGROUND", -7, ARCH_SIZE, "panel")
+	local arch = circle(frame, "BACKGROUND", -7, archSize, "panel")
 	arch:SetPoint("CENTER", frame, "TOP")
 
 	-- When folded the arch fades away and this hairline closes the gap, so the
@@ -141,7 +144,7 @@ function Console:Build()
 		self.archParts = self:BuildArt(frame)
 		self.flatParts = { bg, leftEdge, rightEdge, inner }
 	elseif self:Matte() then
-		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch)
+		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch, archSize)
 	end
 
 	self:BuildSeal(frame)
@@ -171,7 +174,7 @@ end
 -- The matte console: the drawn panel made near solid, a grain over it one
 -- texel to the pixel, a little light along the top and quiet edges, as one
 -- moulded piece of black hardware. Uses the plain console's layout.
-function Console:BuildMatte(frame, bg, edges, inner, arch)
+function Console:BuildMatte(frame, bg, edges, inner, arch, archSize)
 	local slim = self.db.slim
 	UI.unpaint(bg)
 	paint(bg, "panel", 0.98)
@@ -180,15 +183,15 @@ function Console:BuildMatte(frame, bg, edges, inner, arch)
 	inner:Hide()
 	for _, edge in ipairs(edges) do
 		UI.unpaint(edge)
-		paint(edge, "hairline", 0.12)
+		paint(edge, "hairline", 0.2)
 	end
 
 	local light = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
 	light:SetPoint("TOPLEFT")
-	light:SetPoint("TOPRIGHT")
-	light:SetHeight(slim and 20 or 56)
+	light:SetPoint("BOTTOMRIGHT")
 	light:SetColorTexture(1, 1, 1, 1)
-	UI.setGradient(light, { "VERTICAL", 0, 1 }, 1, 1, 1, 0.05)
+	-- Lit from above: the shell is a shade lighter at its top edge.
+	UI.setGradient(light, { "VERTICAL", 0, 1 }, 1, 1, 1, 0.075)
 
 	local grains = {}
 	local function grain(sublevel)
@@ -202,11 +205,11 @@ function Console:BuildMatte(frame, bg, edges, inner, arch)
 	if not slim then
 		-- The arch's own grain: the half of its circle above the top edge.
 		local cap = grain(-4)
-		cap:SetSize(ARCH_SIZE, ARCH_SIZE / 2)
+		cap:SetSize(archSize, archSize / 2)
 		cap:SetPoint("BOTTOM", frame, "TOP")
 		local round = frame:CreateMaskTexture()
 		round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-		round:SetSize(ARCH_SIZE, ARCH_SIZE)
+		round:SetSize(archSize, archSize)
 		round:SetPoint("CENTER", frame, "TOP")
 		cap:AddMaskTexture(round)
 		-- Fades with the arch inside its own strength (see the fold).
@@ -214,6 +217,7 @@ function Console:BuildMatte(frame, bg, edges, inner, arch)
 		table.insert(self.archParts, cap)
 	end
 	self.grains = grains
+	if not slim then self:BuildWells(frame) end
 
 	local function tile()
 		for _, tex in ipairs(grains) do UI.fitGrain(tex) end
@@ -224,6 +228,51 @@ function Console:BuildMatte(frame, bg, edges, inner, arch)
 		Stoa:On(event, tile)
 	end
 	self:PaintMatte()
+end
+
+-- Wells: each of the console's zones (chat, At a glance, the bars, the
+-- pages) sits in a smooth recess sunk into the rough shell: a darker
+-- ground, a shadow under its top lip and a lit edge along its bottom.
+-- Flat colours, so they fade with the pages; placed by PlaceDividers.
+function Console:BuildWells(frame)
+	self.wells = {}
+	for i = 1, 4 do
+		local fill = frame:CreateTexture(nil, "BACKGROUND", nil, -3)
+		fill:SetColorTexture(0, 0, 0, 0.46)
+		local shade = frame:CreateTexture(nil, "BACKGROUND", nil, -2)
+		shade:SetColorTexture(0, 0, 0, 0.5)
+		shade:SetPoint("TOPLEFT", fill)
+		shade:SetPoint("TOPRIGHT", fill)
+		shade:SetHeight(2)
+		local lip = frame:CreateTexture(nil, "BACKGROUND", nil, -2)
+		lip:SetColorTexture(1, 1, 1, 0.08)
+		lip:SetPoint("TOPLEFT", fill, "BOTTOMLEFT")
+		lip:SetPoint("TOPRIGHT", fill, "BOTTOMRIGHT")
+		UI.pixel(lip, "height")
+		local well = { fill, shade, lip }
+		for _, part in ipairs(well) do
+			part:Hide()
+			self:AddPage(part)
+		end
+		self.wells[i] = well
+	end
+end
+
+-- `zones` is up to four { left, right } spans from the console's left.
+local WELL_PAD, WELL_BOTTOM = 12, 8
+function Console:PlaceWells(zones, top)
+	if not self.wells then return end
+	for i, well in ipairs(self.wells) do
+		local zone = zones[i]
+		local on = zone and zone[2] - zone[1] > 40
+		if on then
+			local fill = well[1]
+			fill:ClearAllPoints()
+			fill:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - WELL_PAD + 0.5), top + 8)
+			fill:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + WELL_PAD + 0.5), WELL_BOTTOM)
+		end
+		for _, part in ipairs(well) do part:SetShown(on and true or false) end
+	end
 end
 
 -- The grain's strength (the Grain setting).
@@ -1924,6 +1973,14 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 	end
 	local pageWidth = Stoa:PlainNumber(self.rightPage:GetWidth()) or 0
 	if not self.db.freeRight then spots[3] = { barsRight, width - inset - pageWidth } end
+	if self.wells then
+		self:PlaceWells({
+			chatRight and { inset, chatRight },
+			glanceShown and { inset + 484, inset + 484 + (Stoa:PlainNumber(glance:GetWidth()) or 0) },
+			{ barsLeft, barsRight },
+			not self.db.freeRight and pageWidth > 1 and { width - inset - pageWidth, width - inset },
+		}, top)
+	end
 	local on = self.db.dividers ~= false
 	for i, div in ipairs(dividers) do
 		local spot = spots[i]
