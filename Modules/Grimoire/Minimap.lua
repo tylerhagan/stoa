@@ -20,6 +20,9 @@ local PAINTED = {
 	round = { file = "MinimapFrameRing", scale = 1.332 },
 }
 
+-- Matte: how far the housing's rim and its black lip stand out from the map.
+local HOUSING_RIM, HOUSING_LIP = 13, 4
+
 local function hide(region)
 	if region and region.Hide then
 		region:Hide()
@@ -65,6 +68,14 @@ function MinimapStyle:Style()
 		self:Square(map, frame, painted)
 	elseif painted then
 		self:Painted(map, "round")
+	elseif UI.matte() then
+		-- The round map: the same housing as two discs.
+		local size = map:GetWidth()
+		local rim = UI.circle(frame, "BACKGROUND", 0, size + HOUSING_RIM * 2, "panel", 1)
+		rim:SetPoint("CENTER")
+		local lip = UI.circle(frame, "BACKGROUND", 1, size + HOUSING_LIP * 2)
+		lip:SetColorTexture(0, 0, 0, 0.92)
+		lip:SetPoint("CENTER")
 	else
 		local size = map:GetWidth()
 		local outer = UI.circle(frame, "BACKGROUND", 0, size + 8, "hairline")
@@ -106,12 +117,29 @@ function MinimapStyle:Square(map, frame, painted)
 		self:Painted(map, "square")
 		return
 	end
+	if UI.matte() then
+		self:MatteHousing(frame)
+		return
+	end
 	local gap = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", 4)
 	if gap then UI.tint(gap, "panel") end
 	local accent = UI.sliced(frame, "BORDER", "WindowEdge.tga", 2)
 	if accent then UI.tint(accent, "accent", 0.8) end
 	local hair = UI.sliced(frame, "BORDER", "WindowEdge.tga", 5)
 	if hair then UI.tint(hair, "hairline") end
+end
+
+-- Matte: no lines. The map sits sunk in a moulded housing, as the portrait
+-- sits in the medallion's bezel: a solid matte rim lit along its top and
+-- shaded along its bottom (the block's own bevel), and a black lip down to
+-- the map.
+function MinimapStyle:MatteHousing(frame)
+	local rim = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", HOUSING_RIM)
+	if rim then UI.tint(rim, "panel", 1) end
+	local mould = UI.sliced(frame, "BORDER", "MatteBlock.tga", HOUSING_RIM)
+	if mould then mould:SetDrawLayer("BORDER", 1) end
+	local lip = UI.sliced(frame, "ARTWORK", "WindowFill.tga", HOUSING_LIP)
+	if lip then lip:SetVertexColor(0, 0, 0, 0.92) end
 end
 
 -- The painted frame lies over the map's edge, so it sits on a frame just
