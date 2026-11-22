@@ -41,6 +41,10 @@ local MATTE_ARCH = 132
 -- its bezel ends above the bars' well. The bezel's texture is drawn
 -- BEZEL_SCALE times the portrait's width (128 for the 76 it was drawn at).
 local MATTE_SEAL, MATTE_SEAL_Y = 68, 9
+-- Matte: the shield sits in a socket left of the bezel, at the head of the
+-- health row, and the class mark in one on the right, at the head of mana.
+-- From the portrait's centre.
+local CREST_SOCKET_MARK, CREST_SOCKET_X, CREST_SOCKET_Y = 18, 68, -41
 local BEZEL_SCALE = 128 / 76
 -- Matte: health and mana sit down in the shell either side of the bezel,
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
@@ -485,8 +489,17 @@ function Console:BuildSeal(frame)
 	-- Halo's settings; slim leaves them to the Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db then
-		local crest = art and 29 or 22
+		local crest = art and 29 or matteSeal and CREST_SOCKET_MARK or 22
 		self.crestSize, self.crestPortrait = crest, portrait
+		if matteSeal then
+			-- A small round socket for each, set in the shell between the
+			-- bezel and the bars: dark when its mark is out.
+			for _, sign in ipairs({ -1, 1 }) do
+				local socket = circle(seal, "BACKGROUND", 0, CREST_SOCKET_MARK + 8)
+				socket:SetColorTexture(0, 0, 0, 0.45)
+				socket:SetPoint("CENTER", portrait, "CENTER", sign * CREST_SOCKET_X, CREST_SOCKET_Y)
+			end
+		end
 		if halo.db.shield then
 			local shield = UI.shieldGauge(seal, crest)
 			shield:SetFrameLevel(seal:GetFrameLevel() + 6)
@@ -1195,6 +1208,11 @@ function Console:PlaceCrest()
 		for i, gauge in ipairs(shown) do
 			gauge:SetPoint("CENTER", self.crestPortrait, "CENTER", CREST_X - (i - 1) * step + nudge, CREST_Y + nudge)
 		end
+		return
+	end
+	if self:Matte() then
+		if shield then shield:SetPoint("CENTER", self.crestPortrait, "CENTER", -CREST_SOCKET_X + nudge, CREST_SOCKET_Y - nudge) end
+		if mark then mark:SetPoint("CENTER", self.crestPortrait, "CENTER", CREST_SOCKET_X + nudge, CREST_SOCKET_Y - nudge) end
 		return
 	end
 	local lift = math.floor(CREST_FOOT + (size - drop) / 2 - drop / 2 + 0.5)
