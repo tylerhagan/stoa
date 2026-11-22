@@ -378,7 +378,10 @@ end
 local ADDONS_DROP = 14
 -- Dressing Room: the set field, Save and the item list switch in one row
 -- over the model, edge to edge with it and all one height.
-local DRESSUP_ROW_Y, DRESSUP_ROW_H = -40, 22
+local DRESSUP_ROW_Y, DRESSUP_ROW_H = -44, 22
+-- The model starts a little lower (the game's own top is -63), so the row
+-- has air above and below it.
+local DRESSUP_MODEL_TOP = -72
 
 local function quietButtonArt(button)
 	for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
@@ -399,6 +402,10 @@ end
 function AFTER.dressup(frame)
 	if InCombatLockdown() then return end
 	local dropdown, toggle = frame.CustomSetDropdown, frame.ToggleCustomSetDetailsButton
+	local scene = frame.ModelScene
+	if type(scene) == "table" and not forbidden(scene) and scene.SetPoint then
+		scene:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, DRESSUP_MODEL_TOP)
+	end
 	if type(dropdown) == "table" and not forbidden(dropdown) then
 		if not dropdown.stoaField then
 			dropdown.stoaField = true
