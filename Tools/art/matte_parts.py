@@ -6,11 +6,12 @@ Both are 32x32 and nine-sliced at 12, with the windows' corner
 (window_corners.py RADIUS), and carry their own black and white, so they
 are drawn untinted:
 
-- MatteBlock.tga: the bevel laid over a card, plaque or window to make it
-  a moulded block: a lit band along the top, a dark one along the bottom,
-  a fine dark line round the sides, clear in the middle.
+- MatteBlock.tga: the shading laid over a card, plaque or window to make
+  it a moulded block: light falling off its top, shade gathering at its
+  bottom, clear in the middle and no lines.
 - MatteWell.tga: a recess sunk into the console's shell: a dark smooth
-  ground, a shadow under its top lip and a lit line under its bottom edge.
+  ground, deeper under its top lip and a shade lighter where its floor
+  rises to the bottom edge.
 """
 import sys
 
@@ -35,7 +36,8 @@ def box(shift=0.0, bottom=SIZE):
 
 
 def save(name, layers):
-    """`layers` are (mask, white?, alpha), later ones over earlier ones."""
+    """`layers` are (mask, white?, alpha), later ones over earlier ones.
+    `alpha` may be an array, for shading that falls away."""
     colour = np.zeros((n, n))
     alpha = np.zeros((n, n))
     for mask, white, strength in layers:
@@ -54,17 +56,22 @@ def save(name, layers):
     print(name, "alpha", int(img[..., 3].min()), int(img[..., 3].max()))
 
 
+def fall(distance, reach):
+    """1 at the edge, easing to nothing `reach` texels in."""
+    return np.clip(1 - distance / reach, 0, 1) ** 2
+
+
+# No lines anywhere: like moulded matte plastic, a shape shows only by the
+# light falling off its top and the shade gathering under it.
 block = box()
+inside = block <= 0
 save("MatteBlock", [
-    ((block <= 0) & (block > -1.0), False, 0.3),
-    ((block <= 0) & (box(-2.6) > 0), False, 0.45),
-    ((block <= 0) & (box(2.4) > 0), True, 0.15),
+    (inside & (y > SIZE / 2), False, 0.3 * fall(SIZE - y, 5.0)),
+    (inside & (y <= SIZE / 2), True, 0.09 * fall(y, 4.0)),
 ])
 
-# The well keeps its last row for the lit line under its bottom edge.
-well = box(bottom=SIZE - 1)
+well = box()
+inside = well <= 0
 save("MatteWell", [
-    ((well > 0) & (box(1.0, bottom=SIZE - 1) <= 0), True, 0.14),
-    (well <= 0, False, 0.5),
-    ((well <= 0) & (box(2.2, bottom=SIZE - 1) > 0), False, 0.5),
+    (inside, False, 0.46 + 0.3 * fall(y, 6.0) - 0.14 * fall(SIZE - y, 5.0)),
 ])

@@ -198,22 +198,18 @@ function Console:BuildMatte(frame, bg, edges, inner, arch, archSize)
 	inner:Hide()
 	for _, edge in ipairs(edges) do
 		UI.unpaint(edge)
-		paint(edge, "hairline", 0.2)
+		paint(edge, "hairline", 0.07)
 	end
 
-	-- A chunky, square bevel under each half of the top edge: a flat lit
-	-- step with a hard dark line where it meets the face.
+	-- The top edge is rounded over, not cut: no line, only light that
+	-- falls off a few units down each half of the face.
 	for i = 1, 2 do
 		local bevel = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
 		bevel:SetPoint("TOPLEFT", edges[i], "BOTTOMLEFT")
 		bevel:SetPoint("TOPRIGHT", edges[i], "BOTTOMRIGHT")
-		bevel:SetHeight(3)
-		bevel:SetColorTexture(1, 1, 1, 0.07)
-		local step = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
-		step:SetPoint("TOPLEFT", bevel, "BOTTOMLEFT")
-		step:SetPoint("TOPRIGHT", bevel, "BOTTOMRIGHT")
-		step:SetColorTexture(0, 0, 0, 0.4)
-		UI.pixel(step, "height")
+		bevel:SetHeight(7)
+		bevel:SetColorTexture(1, 1, 1, 1)
+		UI.setGradient(bevel, { "VERTICAL", 0, 1 }, 1, 1, 1, 0.06)
 	end
 
 	local light = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
@@ -574,13 +570,7 @@ function Console:BuildSeal(frame)
 			slot:SetPoint("TOPLEFT", meter, "TOPLEFT", -2, 2)
 			slot:SetPoint("BOTTOMRIGHT", meter, "BOTTOMRIGHT", 2, -2)
 			slot:SetColorTexture(0, 0, 0, 0.6)
-			local lip = frame:CreateTexture(nil, "BACKGROUND", nil, -3)
-			lip:SetPoint("TOPLEFT", slot, "BOTTOMLEFT")
-			lip:SetPoint("TOPRIGHT", slot, "BOTTOMRIGHT")
-			lip:SetColorTexture(1, 1, 1, 0.06)
-			UI.pixel(lip, "height")
 			table.insert(self.resourceParts, slot)
-			table.insert(self.resourceParts, lip)
 		end
 	else
 		health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
@@ -1996,7 +1986,7 @@ function Console:PaintDividers()
 	-- Matte: a moulded seam, a dark line with a faint lit edge and no diamond.
 	local matte = self:Matte()
 	local lineAlpha, creaseAlpha = 0.4, 0.5
-	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, 0.1, 0.9 end
+	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, 0.04, 0.6 end
 	for _, div in ipairs(self.dividers) do
 		div.upper:SetColorTexture(1, 1, 1, 1)
 		div.lower:SetColorTexture(1, 1, 1, 1)

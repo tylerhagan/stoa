@@ -1659,7 +1659,7 @@ UI.PLAQUE_JOIN_FLAT = JOIN_CX - JOIN_LEAD
 -- Matte: the same pieces as square hardware (Tools/art/matte_dock.py): a
 -- block standing on the rim, a faint lit bevel inside its top edge in place
 -- of the gold line, and no shadow.
-local DOCK_BEVEL_A = 0.09
+local DOCK_BEVEL_A = 0.05
 local function dockArt(name)
 	return UI.MEDIA .. "Textures\\" .. name .. (UI.matte() and "Matte" or "")
 end
