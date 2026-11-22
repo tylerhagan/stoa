@@ -470,6 +470,9 @@ function Party:UpdateCard(card)
 	local strip = card.style and card.style.strip
 	local low = not gone and fraction and fraction < (strip and STRIP_LOW or LOW_HEALTH)
 	local dispel = not gone and self:DispelFor(unit)
+	-- Heals halved shows to healers only: red stripes in the bar's empty end.
+	local halved = (not gone and not self:Quiet() and self:HealsHalved(unit)) or false
+	UI.setHalved(card.hp, halved)
 
 	if gone then
 		card.percent:SetText("-")
@@ -481,6 +484,7 @@ function Party:UpdateCard(card)
 		if dispel then pips[#pips + 1] = { dispel.word, dispel.token } end
 		if not self:Quiet() then
 			if low then pips[#pips + 1] = { "LOW", "danger" } end
+			if halved then pips[#pips + 1] = { "HEALS HALF", "hostile" } end
 			self:AuraPips(unit, pips)
 		end
 	end
@@ -556,6 +560,34 @@ local LOCKOUT_IDS = {
 	{ 6788, "Weakened Soul", "WS" },
 	{ 25771, "Forbearance", "FRB" },
 }
+
+-- Debuffs that halve the healing taken: Mortal Strike, from players and
+-- from monsters, and Mortal Wound. Blizzard leaves these readable in a
+-- fight, so they're looked up by id (C_Secrets says which are; any it
+-- keeps hidden are dropped once, the first time a card asks).
+local HEALS_HALVED_IDS = { 12294, 21551, 21552, 21553, 9347, 13737, 15708, 16856, 17547, 19643, 24573, 25646 }
+local halvedIDs
+
+function Party:HealsHalved(unit)
+	local lookup = C_UnitAuras and C_UnitAuras.GetUnitAuraBySpellID
+	if not lookup then return false end
+	if not halvedIDs then
+		halvedIDs = {}
+		local secrets = _G.C_Secrets
+		for _, id in ipairs(HEALS_HALVED_IDS) do
+			local ok, hidden = true, false
+			if secrets and secrets.ShouldSpellAuraBeSecret then
+				ok, hidden = pcall(secrets.ShouldSpellAuraBeSecret, id)
+			end
+			if ok and not Stoa:IsSecret(hidden) and hidden ~= true then halvedIDs[#halvedIDs + 1] = id end
+		end
+	end
+	for _, id in ipairs(halvedIDs) do
+		local ok, aura = pcall(lookup, unit, id)
+		if ok and aura then return true end
+	end
+	return false
+end
 
 local function byName(list)
 	local map = {}
@@ -746,6 +778,7 @@ function Party:BuildWatch()
 	name:SetWidth(WATCH_BAR_W)
 	name:SetWordWrap(false)
 	local hp = UI.plaqueBar(watch, WATCH_BAR_W, WATCH_BAR_H)
+	UI.halvedStripes(hp)
 	hp:SetPoint("TOPLEFT", WATCH_PAD, -48)
 	-- Their shields run on past the health, inside the same rounded well.
 	local absorb = CreateFrame("StatusBar", nil, hp)
@@ -824,8 +857,10 @@ function Party:PreviewWatch()
 	watch.power:SetValue(40)
 	watch.power:SetStatusBarColor(Stoa:Color("text"))
 	watch.power:Show()
-	watch.word:SetText("HURT")
-	watch.word:SetTextColor(Stoa:Color("accent"))
+	-- The sample tank carries Mortal Strike, to show the stripes.
+	watch.word:SetText("HEALS HALF")
+	watch.word:SetTextColor(Stoa:Color("hostile"))
+	UI.setHalved(watch.hp, true)
 	watch.hp:SetMinMaxValues(0, 100)
 	watch.hp:SetValue(62)
 	watch.hp:SetStatusBarColor(Stoa:Color("health"))
@@ -887,10 +922,21 @@ function Party:UpdateWatch()
 
 	local fraction = healthFraction(unit)
 	local word, token
+	local halved = false
 	if not flag(UnitIsConnected(unit)) then
 		word, token = "OFFLINE", "muted"
 	elseif flag(UnitIsDeadOrGhost(unit)) then
 		word, token = "DEAD", "muted"
+	else
+		halved = self:HealsHalved(unit)
+	end
+	UI.setHalved(watch.hp, halved)
+	if word then
+		-- Offline or dead: said above.
+	elseif fraction and fraction < LOW_HEALTH then
+		word, token = "LOW", "danger"
+	elseif halved then
+		word, token = "HEALS HALF", "hostile"
 	elseif fraction then
 		if fraction < LOW_HEALTH then word, token = "LOW", "danger"
 		elseif fraction < HURT_HEALTH then word, token = "HURT", "accent"

@@ -1471,6 +1471,7 @@ function UI.unitCard(card, styleName)
 
 	local hp = UI.bar(card, 10, 10, "health")
 	card.hp = hp
+	UI.halvedStripes(hp)
 
 	-- Shields sit on the empty end of the health bar, starting where health
 	-- stops. The bar clips them so a big shield never spills past the card.
@@ -1922,6 +1923,35 @@ function UI.plaqueBar(frame, width, height)
 	UI.legible(amount)
 	hp.mask, hp.words, hp.percent, hp.amount = mask, words, percent, amount
 	return hp
+end
+
+-- Heals halved (Mortal Strike and the like): red stripes over the empty end
+-- of a health bar, the stretch your heals have to fill. Hidden until
+-- UI.setHalved turns them on. A plaque bar's stripes take its rounded mask.
+function UI.halvedStripes(hp)
+	local fill = hp:CreateTexture(nil, "BACKGROUND", nil, 2)
+	fill:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
+	fill:SetPoint("BOTTOMRIGHT")
+	UI.paint(fill, "hostile", 0.5)
+	local stripes = hp:CreateTexture(nil, "BACKGROUND", nil, 3)
+	stripes:SetAllPoints(fill)
+	stripes:SetTexture(UI.MEDIA .. "Textures\\Hatch", "REPEAT", "REPEAT")
+	if stripes.SetHorizTile then stripes:SetHorizTile(true) end
+	if stripes.SetVertTile then stripes:SetVertTile(true) end
+	if hp.mask then
+		fill:AddMaskTexture(hp.mask)
+		stripes:AddMaskTexture(hp.mask)
+	end
+	fill:Hide()
+	stripes:Hide()
+	hp.halvedFill, hp.halvedStripes = fill, stripes
+end
+
+function UI.setHalved(hp, on)
+	if not hp.halvedFill or hp.halvedOn == on then return end
+	hp.halvedOn = on
+	hp.halvedFill:SetShown(on)
+	hp.halvedStripes:SetShown(on)
 end
 
 -- The health beside a plaque bar's percent, as the game gives it.

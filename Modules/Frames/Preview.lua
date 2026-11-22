@@ -6,7 +6,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 
 local SAMPLE = {
-	{ name = "Brunhok", class = "WARRIOR", mark = 8, health = 0.62, absorb = 0.18, pips = { { "SHLD", "shield" }, { "WS 11" }, { "RNW 9" } } },
+	{ name = "Brunhok", class = "WARRIOR", mark = 8, health = 0.62, absorb = 0.18, halved = true, pips = { { "SHLD", "shield" }, { "HEALS HALF", "hostile" }, { "RNW 9" } } },
 	{ name = "Thalindra", class = "PRIEST", mark = 1, health = 0.95, pips = { { "INNR FR" } } },
 	{ name = "Seren", class = "ROGUE", health = 0.71, dispel = "magic", pips = { { "MAGIC", "magic" } } },
 	{ name = "Velaris", class = "MAGE", health = 0.78, absorb = 0.1, target = true, pips = { { "WS 4" } } },
@@ -51,6 +51,7 @@ local function fill(card, sample)
 	card.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
 	card.absorb:SetMinMaxValues(0, 1)
 	card.absorb:SetValue(sample.absorb or 0)
+	UI.setHalved(card.hp, sample.halved and not Stoa.modules.Party:Quiet() or false)
 	card.percent:SetText(sample.status and "-" or math.floor(sample.health * 100 + 0.5))
 	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
 
