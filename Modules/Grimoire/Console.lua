@@ -37,8 +37,11 @@ local SLIM_SEAL = 36
 local ARCH_SIZE = 220
 -- The matte console's arch: a boss just wider than the portrait's recess.
 local MATTE_ARCH = 132
--- How much wider than the portrait the matte bezel's texture is drawn.
-local BEZEL_SPREAD = 52
+-- The matte seal: a little smaller than the plain one and set higher, so
+-- its bezel ends above the bars' well. The bezel's texture is drawn
+-- BEZEL_SCALE times the portrait's width (128 for the 76 it was drawn at).
+local MATTE_SEAL, MATTE_SEAL_Y = 68, 9
+local BEZEL_SCALE = 128 / 76
 -- Matte: health and mana sit down in the shell either side of the bezel,
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
 -- centre and RESOURCE_DROP under its rim, each bar in a thin slot.
@@ -278,7 +281,7 @@ end
 -- `zones` is up to four { left, right } spans from the console's left.
 local WELL_PAD, WELL_BOTTOM = 12, 8
 -- The bars' well starts lower, under the bezel's foot.
-local WELL_BARS, WELL_BARS_TOP = 3, -46
+local WELL_BARS, WELL_BARS_TOP = 3, -48
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
 	for i, well in ipairs(self.wells) do
@@ -405,11 +408,12 @@ function Console:BuildSeal(frame)
 	-- With the leather art the seal sits in the art's arch, a size larger,
 	-- and the arch's own gold ring stands in for the seal's outer rings.
 	local art, slim = self:Art(), self.db.slim
-	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or SEAL_SIZE
+	local matteSeal = self:Matte() and not slim
+	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or matteSeal and MATTE_SEAL or SEAL_SIZE
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
 	-- Slim: the seal sits in the line, its head just over the top edge.
-	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or 6
+	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or 6
 	seal:SetPoint("CENTER", frame, "TOP", 0, sealY)
 	self.seal = seal
 
@@ -452,7 +456,7 @@ function Console:BuildSeal(frame)
 			-- smooth channel for the level ring's ticks, a raised rim.
 			local bezel = seal:CreateTexture(nil, "BORDER", nil, 0)
 			bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
-			bezel:SetSize(size + BEZEL_SPREAD, size + BEZEL_SPREAD)
+			bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
 			bezel:SetPoint("CENTER")
 		else
 			local outer = circle(seal, "BORDER", 0, size + (matte and 14 or 12), not matte and "hairline" or nil)

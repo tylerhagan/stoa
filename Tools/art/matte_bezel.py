@@ -6,8 +6,8 @@ A moulded ring of hardware round the seal, the housing of a thumbstick:
 from the portrait outwards, a deep lip, a smooth channel the level ring's
 ticks sit in, and a raised rim lit from above, with its shadow on the
 shell below. 256x256, carrying its own black and white, drawn untinted
-128 px across by Console.lua's BuildSeal (BEZEL_SPREAD) round the 76 px
-portrait; clear in the middle. Radii below are screen pixels.
+at 128/76 of the portrait's width by Console.lua's BuildSeal (BEZEL_SCALE);
+clear in the middle. Radii below are screen pixels for a 76 px portrait.
 """
 import sys
 
