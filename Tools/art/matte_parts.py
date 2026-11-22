@@ -66,5 +66,5 @@ well = box(bottom=SIZE - 1)
 save("MatteWell", [
     ((well > 0) & (box(1.0, bottom=SIZE - 1) <= 0), True, 0.14),
     (well <= 0, False, 0.5),
-    ((well <= 0) & (box(3.0, bottom=SIZE - 1) > 0), False, 0.78),
+    ((well <= 0) & (box(2.2, bottom=SIZE - 1) > 0), False, 0.62),
 ])
