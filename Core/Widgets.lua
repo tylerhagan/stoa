@@ -920,6 +920,18 @@ function UI.foldGlyph(button)
 	end
 end
 
+-- Matte: the bevel that makes a card, plaque or window a moulded block
+-- (Tools/art/matte_parts.py): lit along the top, dark along the bottom.
+-- It carries its own black and white, so it is never tinted.
+function UI.mould(frame, outset)
+	if not UI.matte() or not frame or frame.stoaMould then return end
+	local tex = sliced(frame, "BORDER", "MatteBlock.tga", outset)
+	if not tex then return end
+	tex:SetDrawLayer("BORDER", 1)
+	frame.stoaMould = tex
+	return tex
+end
+
 -- A rounded panel with a hairline edge behind a whole frame, for windows
 -- Stoa restyles. `kind` "window" takes the window corners (10px) instead
 -- of the card ones. Square where slicing isn't available.
@@ -943,6 +955,7 @@ function UI.roundPanel(frame, alpha, kind)
 	end
 	frame.stoaPanelEdge = edge
 	frame.stoaPanelBg = bg
+	UI.mould(frame)
 	UI.applyTheme()
 	return bg
 end
@@ -1225,6 +1238,7 @@ function UI.surface(frame, kind, opts)
 			tex:Show()
 		end
 		frame.stoaPanelEdge = edge
+		UI.mould(frame, outset)
 	end
 	if spec.stone and not opts.noStone then UI.stone(frame, frame.stoaHeader, frame.stoaFooter) end
 	frame.stoaSurface = fill
@@ -1766,6 +1780,7 @@ function UI.plaque(frame, coinSide, opts)
 	-- One fine edge.
 	local edge = sliced(frame, "BORDER", "CardEdge.tga")
 	plaque.lines = { edge }
+	UI.mould(frame)
 
 	-- The reaction strip along the top, inside the rounded corners.
 	local strip = frame:CreateTexture(nil, "ARTWORK")

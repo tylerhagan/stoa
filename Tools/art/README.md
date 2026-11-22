@@ -24,3 +24,4 @@ Gold `*Lines` textures are white with alpha, and the theme accent tints them in 
 - `matte_grain.py [out]` draws `MatteGrain.tga` (128x128, a tiling pebble grain, each texel white or black with its strength in the alpha): the Matte material's surface on the console and windows (`Core/Widgets.lua` UI.GRAIN).
 - `halo_arcs.py [Media/Textures]` draws the Halo's other arc styles, `HaloArc{Blade,Visor,Gauge,Tube}{Left,Right}.tga` (128x256, white with alpha): the Arc style setting (`Modules/Halo/Halo.lua` ARC_STYLES).
 - `matte_tabs.py [Media/Textures]` draws the matte console's chat tabs, `ChatTabMatte{Open,Closed}[Lines].tga`, in the leather tabs' layout (`Modules/Grimoire/Housing.lua` tabFile).
+- `matte_parts.py [Media/Textures]` draws the Matte material's moulded pieces, `MatteBlock.tga` (the bevel over cards, plaques and windows, `Core/Widgets.lua` UI.mould) and `MatteWell.tga` (the console's rounded recesses, `Console.lua` BuildWells); 32x32, nine-sliced at 12.

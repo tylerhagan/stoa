@@ -241,30 +241,24 @@ function Console:BuildMatte(frame, bg, edges, inner, arch, archSize)
 end
 
 -- Wells: each of the console's zones (chat, At a glance, the bars, the
--- pages) sits in a smooth recess sunk into the rough shell: a darker
--- ground, a shadow under its top lip and a lit edge along its bottom.
--- Flat colours, so they fade with the pages; placed by PlaceDividers.
+-- pages) sits in a smooth rounded recess sunk into the rough shell: a
+-- darker ground, a shadow under its top lip and a lit line under its
+-- bottom edge, all in one sliced piece (Tools/art/matte_parts.py) that
+-- fades with the pages. Placed by PlaceDividers.
 function Console:BuildWells(frame)
 	self.wells = {}
 	for i = 1, 4 do
 		local fill = frame:CreateTexture(nil, "BACKGROUND", nil, -3)
-		fill:SetColorTexture(0, 0, 0, 0.46)
-		local shade = frame:CreateTexture(nil, "BACKGROUND", nil, -2)
-		shade:SetColorTexture(0, 0, 0, 0.6)
-		shade:SetPoint("TOPLEFT", fill)
-		shade:SetPoint("TOPRIGHT", fill)
-		shade:SetHeight(3)
-		local lip = frame:CreateTexture(nil, "BACKGROUND", nil, -2)
-		lip:SetColorTexture(1, 1, 1, 0.11)
-		lip:SetPoint("TOPLEFT", fill, "BOTTOMLEFT")
-		lip:SetPoint("TOPRIGHT", fill, "BOTTOMRIGHT")
-		UI.pixel(lip, "height")
-		local well = { fill, shade, lip }
-		for _, part in ipairs(well) do
-			part:Hide()
-			self:AddPage(part)
+		fill:SetTexture(UI.MEDIA .. "Textures\\MatteWell")
+		if fill.SetTextureSliceMargins then
+			fill:SetTextureSliceMargins(12, 12, 12, 12)
+			if fill.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
+				fill:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+			end
 		end
-		self.wells[i] = well
+		fill:Hide()
+		self:AddPage(fill)
+		self.wells[i] = { fill }
 	end
 end
 
