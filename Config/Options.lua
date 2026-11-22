@@ -278,7 +278,7 @@ local function build()
 	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, words = "brass frame leather fancy" })
 	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
 	-- Material changes with a reload, so this row is only built for Matte.
-	if db.material == "matte" then
+	if Stoa.UI.matte() then
 		choice(db, "grain", "Matte grain", "How rough the Matte black surface is.", "fine", { { "smooth", "Smooth" }, { "fine", "Fine" }, { "rough", "Rough" } }, { words = "matte texture rough smooth", change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end })
 	end
 	toggle(db, "windowStone", "Stone behind windows", "Faint rings and grain in the theme's colour behind windows and STOA's own pages. The console keeps its leather.", true, {
