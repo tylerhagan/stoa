@@ -19,6 +19,8 @@ local PAD = 20
 local CONTENT = WIDTH - NAV - DETAIL - PAD * 4
 local INLINE = 210 -- the widest control that sits beside a setting's name
 local ROW_GAP = 6
+-- A setting tucked under the one it belongs to (entry.under).
+local UNDER_INDENT, UNDER_GAP = 16, 0
 
 local current = "parts"
 local query
@@ -739,19 +741,35 @@ function Window:Draw(keep)
 	local mixed = query or current == "changed"
 	local function place(entries)
 		for _, entry in ipairs(entries) do
-			local groupName = mixed and (self:PageName(entry.page) .. ": " .. entry.group) or entry.group
-			if groupName ~= lastGroup then
-				lastGroup = groupName
-				y = groupHeader(groupName, y - 8)
+			if Options.shown(entry) then
+				local groupName = mixed and (self:PageName(entry.page) .. ": " .. entry.group) or entry.group
+				if groupName ~= lastGroup then
+					lastGroup = groupName
+					y = groupHeader(groupName, y - 8)
+				end
+				local row = Window.rowFor(entry)
+				-- A setting under another sits close beneath it, set in
+				-- behind a short rule, so the two read as one control.
+				local tuck = entry.under and not mixed and UNDER_INDENT or 0
+				if tuck > 0 then
+					y = y + ROW_GAP - UNDER_GAP
+					if not row.tie then
+						row.tie = row:CreateTexture(nil, "BORDER")
+						UI.paint(row.tie, "hairline")
+						UI.pixel(row.tie, "width")
+						row.tie:SetPoint("TOPLEFT", -UNDER_INDENT + 4, -4)
+						row.tie:SetPoint("BOTTOMLEFT", -UNDER_INDENT + 4, 4)
+					end
+				end
+				if row.tie then row.tie:SetShown(tuck > 0) end
+				row:ClearAllPoints()
+				row:SetPoint("TOPLEFT", tuck, y)
+				local h = row:Layout(CONTENT - tuck)
+				row:SetSize(CONTENT - tuck, h)
+				if row.control and row.control.Refresh then row.control:Refresh() end
+				row:Show()
+				y = y - h - ROW_GAP
 			end
-			local row = Window.rowFor(entry)
-			row:ClearAllPoints()
-			row:SetPoint("TOPLEFT", 0, y)
-			local h = row:Layout(CONTENT)
-			row:SetSize(CONTENT, h)
-			if row.control and row.control.Refresh then row.control:Refresh() end
-			row:Show()
-			y = y - h - ROW_GAP
 		end
 	end
 	place(list)

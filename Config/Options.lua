@@ -157,6 +157,10 @@ local function add(entry)
 	entry.id = entry.id or entry.key
 	entry.quiet = QUIET[entry.name] or nil
 	entry.more = not (entry.everyday or EVERYDAY[entry.name]) or nil
+	-- A setting that belongs to another (`under` = its id) is drawn tucked
+	-- beneath it, so it folds away with it too.
+	local parent = entry.under and Options.byId[entry.under]
+	if parent then entry.more = parent.more end
 	if Options.byId[entry.id] then entry.id = entry.id .. #Options.list end
 	Options.list[#Options.list + 1] = entry
 	Options.byId[entry.id] = entry
@@ -277,10 +281,12 @@ local function build()
 	group = "Painted pieces"
 	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, words = "brass frame leather fancy" })
 	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
-	-- Material changes with a reload, so this row is only built for Matte.
-	if Stoa.UI.matte() then
-		choice(db, "grain", "Matte grain", "How rough the Matte black surface is.", "fine", { { "smooth", "Smooth" }, { "fine", "Fine" }, { "rough", "Rough" } }, { words = "matte texture rough smooth", change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end })
-	end
+	-- Part of the Material choice: tucked under it, there once Matte black
+	-- is picked (even before the reload that brings the material in).
+	choice(db, "grain", "Matte grain", "How rough the Matte black surface is.", "fine", { { "smooth", "Smooth" }, { "fine", "Fine" }, { "rough", "Rough" } }, {
+		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth",
+		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
+	})
 	toggle(db, "windowStone", "Stone behind windows", "Faint rings and grain in the theme's colour behind windows and STOA's own pages. The console keeps its leather.", true, {
 		words = "texture background granite", change = function() Stoa.UI.showStone(Stoa.db.windowStone) end,
 	})
@@ -921,6 +927,11 @@ function Options.search(query)
 end
 
 -- A page's settings: the everyday ones, and those under More.
+-- False for a setting that only matters under another's choice (showWhen).
+function Options.shown(entry)
+	return not entry.showWhen or entry.showWhen() and true or false
+end
+
 function Options.onPage(id)
 	local out, more = {}, {}
 	for _, entry in ipairs(Options.list) do
