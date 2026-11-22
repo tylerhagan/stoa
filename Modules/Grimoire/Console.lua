@@ -36,15 +36,17 @@ local SLIM_HEIGHT = 44
 local SLIM_SEAL = 36
 local ARCH_SIZE = 220
 -- The matte console's arch: a boss just wider than the portrait's recess.
-local MATTE_ARCH = 132
+-- Matte has no arch: the bezel stands half out of the shell on its own
+-- round body, like a thumbstick, centred MATTE_SEAL_Y above the top edge.
+local MATTE_ARCH = 108
 -- The matte seal: a little smaller than the plain one and set higher, so
 -- its bezel ends above the bars' well. The bezel's texture is drawn
 -- BEZEL_SCALE times the portrait's width (128 for the 76 it was drawn at).
-local MATTE_SEAL, MATTE_SEAL_Y = 68, 9
+local MATTE_SEAL, MATTE_SEAL_Y = 68, 20
 -- Matte: the shield sits in a socket left of the bezel, at the head of the
 -- health row, and the class mark in one on the right, at the head of mana.
 -- From the portrait's centre.
-local CREST_SOCKET_MARK, CREST_SOCKET_X, CREST_SOCKET_Y = 18, 68, -41
+local CREST_SOCKET_MARK, CREST_SOCKET_X, CREST_SOCKET_Y = 18, 68, -32 - MATTE_SEAL_Y
 local BEZEL_SCALE = 128 / 76
 -- Matte: health and mana sit down in the shell either side of the bezel,
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
@@ -100,8 +102,11 @@ function Console:Build()
 	local space = Stoa.space
 	local slim = db.slim
 	-- The slim console has no arch, so its top line runs straight across.
-	local archSize = self:Matte() and MATTE_ARCH or ARCH_SIZE
-	local archGap = slim and 0 or archSize / 2
+	local matte = self:Matte()
+	local archSize = matte and MATTE_ARCH or ARCH_SIZE
+	local archY = matte and MATTE_SEAL_Y or 0
+	-- Where the arch's circle crosses the top edge.
+	local archGap = slim and 0 or math.sqrt((archSize / 2) ^ 2 - archY ^ 2)
 
 	local frame = CreateFrame("Frame", "StoaConsole", UIParent)
 	frame:SetFrameStrata("BACKGROUND")
@@ -129,9 +134,9 @@ function Console:Build()
 	-- The arch: a hairline circle behind a panel circle, both centred on the
 	-- console's top edge; the panel hides their lower halves.
 	local archRing = circle(frame, "BACKGROUND", -8, archSize + 2, "hairline")
-	archRing:SetPoint("CENTER", frame, "TOP")
+	archRing:SetPoint("CENTER", frame, "TOP", 0, archY)
 	local arch = circle(frame, "BACKGROUND", -7, archSize, "panel")
-	arch:SetPoint("CENTER", frame, "TOP")
+	arch:SetPoint("CENTER", frame, "TOP", 0, archY)
 
 	-- When folded the arch fades away and this hairline closes the gap, so the
 	-- spine reads as one clean line.
@@ -159,7 +164,7 @@ function Console:Build()
 		self.archParts = self:BuildArt(frame)
 		self.flatParts = { bg, leftEdge, rightEdge, inner }
 	elseif self:Matte() then
-		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch, archSize)
+		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch, archSize, archY)
 	end
 
 	self:BuildSeal(frame)
@@ -189,7 +194,7 @@ end
 -- The matte console: the drawn panel made near solid, a grain over it one
 -- texel to the pixel, a little light along the top and quiet edges, as one
 -- moulded piece of black hardware. Uses the plain console's layout.
-function Console:BuildMatte(frame, bg, edges, inner, arch, archSize)
+function Console:BuildMatte(frame, bg, edges, inner, arch, archSize, archY)
 	local slim = self.db.slim
 	UI.unpaint(bg)
 	paint(bg, "panel", 0.98)
@@ -231,12 +236,12 @@ function Console:BuildMatte(frame, bg, edges, inner, arch, archSize)
 	if not slim then
 		-- The arch's own grain: the half of its circle above the top edge.
 		local cap = grain(-4)
-		cap:SetSize(archSize, archSize / 2)
+		cap:SetSize(archSize, archSize / 2 + archY)
 		cap:SetPoint("BOTTOM", frame, "TOP")
 		local round = frame:CreateMaskTexture()
 		round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 		round:SetSize(archSize, archSize)
-		round:SetPoint("CENTER", frame, "TOP")
+		round:SetPoint("CENTER", frame, "TOP", 0, archY)
 		cap:AddMaskTexture(round)
 		-- Fades with the arch inside its own strength (see the fold).
 		cap.stoaGrainCap = true
