@@ -1,9 +1,9 @@
--- Stoa Grimoire: switch spec from the role word.
+-- Stoa Grimoire: switch layout from the role word.
 -- Clicking the role under Ready (Healer, Ranged DPS...) opens a small card
--- with both talent specs: the role STOA uses for each and its tree split.
--- Click the other spec to start the game's spec switch (a short cast);
--- the console's role follows when it lands. Built the first time it's
--- opened, so it costs nothing until then.
+-- with STOA's four role layouts. Click one and this spec uses it from now
+-- on (the same as Settings > Roles). Below them, the other talent spec:
+-- click it to start the game's spec switch (a short cast). Built the
+-- first time it's opened, so it costs nothing until then.
 local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
@@ -12,7 +12,7 @@ local SpecSwitch = Stoa:NewModule("SpecSwitch", {
 	enabled = true,
 })
 
-local WIDTH, ROW_H, PAD = 260, 40, 12
+local WIDTH, ROW_H, SPEC_H, PAD = 260, 26, 40, 12
 
 local function call(fn, ...)
 	if not fn then return nil end
@@ -27,8 +27,7 @@ end
 local function roleFor(slot)
 	local roles = Stoa.char and Stoa.char.roles
 	local chosen = roles and roles["slot" .. slot]
-	local role = (chosen and chosen ~= "AUTO" and chosen) or Stoa:DefaultRole()
-	return Stoa.ROLE_LABELS[role] or role
+	return (chosen and chosen ~= "AUTO" and chosen) or Stoa:DefaultRole()
 end
 
 -- "Shadow · 0 / 15 / 36": the tree with the most points, then each tree's
@@ -58,10 +57,11 @@ local function treeLine(slot)
 	return ("%s%s%s"):format(best or "", UI.SEP, table.concat(points, " / "))
 end
 
-local function row(card, index)
+-- A row: a lamp, a name, a word at the right. Roles use one line; the
+-- spec row adds its tree split under the name.
+local function row(card, height)
 	local button = CreateFrame("Button", nil, card)
-	button:SetSize(WIDTH - PAD * 2, ROW_H)
-	button:SetPoint("TOPLEFT", card.heading, "BOTTOMLEFT", 0, -6 - (index - 1) * (ROW_H + 4))
+	button:SetSize(WIDTH - PAD * 2, height)
 	button:RegisterForClicks("LeftButtonUp")
 	local lit = button:CreateTexture(nil, "BACKGROUND")
 	lit:SetAllPoints()
@@ -74,35 +74,61 @@ local function row(card, index)
 	local ring = UI.circle(button, "ARTWORK", 1, 7, "muted", 0.4)
 	ring:SetPoint("CENTER", dot)
 	local name = UI.text(button, "serif", Stoa.typeSize.name, "text")
-	name:SetPoint("TOPLEFT", 24, -5)
-	local trees = UI.text(button, "sans", Stoa.typeSize.caption, "muted")
-	trees:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -2)
+	if height > ROW_H then name:SetPoint("TOPLEFT", 24, -5) else name:SetPoint("LEFT", 24, 0) end
 	local state = UI.text(button, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	state:SetPoint("RIGHT", -8, 0)
-	button.lit, button.dot, button.ring, button.name, button.trees, button.state = lit, dot, ring, name, trees, state
-	button:SetScript("OnClick", function(own)
-		if own.active or own.locked or InCombatLockdown() then return end
-		local set = C_SpecializationInfo and C_SpecializationInfo.SetActiveSpecGroup or SetActiveTalentGroup
-		if set then pcall(set, own.slot) end
-		card:Hide()
-	end)
+	button.lit, button.dot, button.ring, button.name, button.state = lit, dot, ring, name, state
 	return button
+end
+
+local function lamp(button, on)
+	button.lit:SetShown(on)
+	button.dot:SetShown(on)
+	button.ring:SetShown(not on)
 end
 
 function SpecSwitch:Build()
 	local card = CreateFrame("Frame", "StoaSpecCard", UIParent)
-	card:SetSize(WIDTH, PAD * 2 + 20 + (ROW_H + 4) * 2 + 26)
 	card:SetFrameStrata("DIALOG")
 	card:SetClampedToScreen(true)
 	card:EnableMouse(true)
 	card:Hide()
 	UI.roundPanel(card, 0.98)
-	card.heading = UI.caption(card, "Specs")
+	card.heading = UI.caption(card, "Layout for this spec")
 	card.heading:SetPoint("TOPLEFT", PAD, -PAD)
-	card.rows = { row(card, 1), row(card, 2) }
-	local rule = UI.line(card)
-	rule:SetPoint("TOPLEFT", card.rows[2], "BOTTOMLEFT", 0, -8)
-	rule:SetPoint("TOPRIGHT", card.rows[2], "BOTTOMRIGHT", 0, -8)
+	-- The four role layouts.
+	card.roles = {}
+	local above = card.heading
+	for i, role in ipairs(Stoa.ROLES) do
+		local button = row(card, ROW_H)
+		button:SetPoint("TOPLEFT", above, "BOTTOMLEFT", 0, i == 1 and -6 or -2)
+		button.role = role
+		button.name:SetText(Stoa.ROLE_LABELS[role])
+		button:SetScript("OnClick", function(own)
+			if own.active or InCombatLockdown() then return end
+			Stoa:SetRoleForSlot(Stoa.ActiveSpecSlot(), own.role)
+			self:Refresh()
+		end)
+		card.roles[i] = button
+		above = button
+	end
+	-- The other talent spec, when there is one.
+	local specHead = UI.caption(card, "Talent spec")
+	specHead:SetPoint("TOPLEFT", above, "BOTTOMLEFT", 0, -12)
+	local spec = row(card, SPEC_H)
+	spec:SetPoint("TOPLEFT", specHead, "BOTTOMLEFT", 0, -6)
+	local trees = UI.text(spec, "sans", Stoa.typeSize.caption, "muted")
+	trees:SetPoint("TOPLEFT", spec.name, "BOTTOMLEFT", 0, -2)
+	spec.trees = trees
+	spec:SetScript("OnClick", function(own)
+		if own.locked or InCombatLockdown() then return end
+		local set = C_SpecializationInfo and C_SpecializationInfo.SetActiveSpecGroup or SetActiveTalentGroup
+		if set then pcall(set, own.slot) end
+		card:Hide()
+	end)
+	card.spec, card.specHead, card.lastRole = spec, specHead, above
+	card.rule = UI.line(card)
+	local rule = card.rule
 	-- "Open talents": the words, with a secure button over them (placed in
 	-- Toggle) that clicks the game's own talent button. Opening the talent
 	-- window from STOA's code would taint it.
@@ -137,21 +163,35 @@ function SpecSwitch:Refresh()
 	local card = self.card
 	if not card then return end
 	local active = Stoa.ActiveSpecSlot()
-	local groups = numGroups()
-	local fighting = InCombatLockdown()
-	for slot, button in ipairs(card.rows) do
-		local locked = slot > groups
-		button.slot, button.active, button.locked = slot, slot == active, locked
-		button.name:SetText(locked and "Second spec" or roleFor(slot))
-		button.trees:SetText(locked and "Not learned yet" or (treeLine(slot) or (slot == 1 and "Primary" or "Secondary")))
-		button.state:SetText(button.active and "Active" or (locked or fighting) and "" or "Switch")
-		UI.paint(button.state, button.active and "muted" or "accent")
-		button.lit:SetShown(button.active)
-		button.dot:SetShown(button.active)
-		button.ring:SetShown(not button.active)
-		button:SetAlpha(locked and 0.5 or 1)
+	local current = roleFor(active)
+	for _, button in ipairs(card.roles) do
+		button.active = button.role == current
+		lamp(button, button.active)
+		button.state:SetText(button.active and "In use" or "")
 	end
-	card.note:SetText(fighting and "Not in combat" or "Short cast")
+	-- The spec you're not in, with its layout and tree split. Before dual
+	-- spec is learned (level 40) the card is the four layouts alone.
+	local spec, other = card.spec, active == 1 and 2 or 1
+	local dual = numGroups() > 1
+	spec.slot, spec.locked = other, not dual
+	spec:SetShown(dual)
+	card.specHead:SetShown(dual)
+	if dual then
+		lamp(spec, false)
+		local role = roleFor(other)
+		spec.name:SetText(Stoa.ROLE_LABELS[role] or role)
+		spec.trees:SetText(treeLine(other) or (other == 1 and "Primary" or "Secondary"))
+		spec.state:SetText(InCombatLockdown() and "" or "Switch")
+		UI.paint(spec.state, "accent")
+	end
+	local below = dual and spec or card.lastRole
+	card.rule:ClearAllPoints()
+	card.rule:SetPoint("TOPLEFT", below, "BOTTOMLEFT", 0, -8)
+	card.rule:SetPoint("TOPRIGHT", below, "BOTTOMRIGHT", 0, -8)
+	local height = PAD * 2 + 14 + 6 + #Stoa.ROLES * (ROW_H + 2) + 8 + 22
+	if dual then height = height + 12 + 14 + 6 + SPEC_H end
+	card:SetSize(WIDTH, height)
+	card.note:SetText(InCombatLockdown() and "Not in combat" or "")
 end
 
 -- The secure button over "Open talents". A secure frame can't hang from
