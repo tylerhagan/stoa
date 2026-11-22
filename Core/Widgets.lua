@@ -1666,6 +1666,10 @@ UI.PLAQUE_JOIN_FLAT = JOIN_CX - JOIN_LEAD
 -- block standing on the rim, a faint lit bevel inside its top edge in place
 -- of the gold line, and no shadow.
 local DOCK_BEVEL_A = 0.05
+-- Matte: how long the docked block takes to come out of the dial, and how
+-- much of its body is out when it starts.
+UI.DOCK_OUT = 0.26
+local DOCK_OUT_FROM = 0.1
 local function dockArt(name)
 	return UI.MEDIA .. "Textures\\" .. name .. (UI.matte() and "Matte" or "")
 end
@@ -1705,10 +1709,10 @@ local function buildDock(frame, plaque)
 		end
 		for _, region in ipairs({ body, top }) do
 			local grow = group(region):CreateAnimation("Scale")
-			grow:SetScaleFrom(0.55, 1)
+			grow:SetScaleFrom(DOCK_OUT_FROM, 1)
 			grow:SetScaleTo(1, 1)
 			grow:SetOrigin("LEFT", 0, 0)
-			grow:SetDuration(UI.MOTION.open)
+			grow:SetDuration(UI.DOCK_OUT)
 			grow:SetSmoothing("OUT")
 		end
 		plaque.dockRides = {}
@@ -1718,7 +1722,7 @@ local function buildDock(frame, plaque)
 			from:SetDuration(0)
 			from:SetOrder(1)
 			local ride = g:CreateAnimation("Translation")
-			ride:SetDuration(UI.MOTION.open)
+			ride:SetDuration(UI.DOCK_OUT)
 			ride:SetOrder(2)
 			ride:SetSmoothing("OUT")
 			table.insert(plaque.dockRides, { from, ride })
@@ -1952,7 +1956,7 @@ function UI.plaque(frame, coinSide, opts)
 	-- starts where the shorter body ends.
 	function plaque:PlayDock()
 		if not (plaque.docked and plaque.dockMotion) then return end
-		local back = (plaque.curve - SOCKET_W) * 0.45
+		local back = (plaque.curve - SOCKET_W) * (1 - DOCK_OUT_FROM)
 		for _, pair in ipairs(plaque.dockRides) do
 			pair[1]:SetOffset(-back, 0)
 			pair[2]:SetOffset(back, 0)
@@ -1961,6 +1965,7 @@ function UI.plaque(frame, coinSide, opts)
 			g:Stop()
 			g:Play()
 		end
+		return true
 	end
 
 	-- The docked sweep's shadow, for when something stands behind it.

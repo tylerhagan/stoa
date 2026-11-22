@@ -483,7 +483,20 @@ function Halo:BuildTarget(frame)
 	target.plaque = plaque
 	-- Matte: a new target's block comes out of the dial. Only its art
 	-- moves; the secure button itself is never animated.
-	target:HookScript("OnShow", function() plaque:PlayDock() end)
+	-- Its words follow once the block is most of the way out.
+	target:HookScript("OnShow", function()
+		if not plaque:PlayDock() then return end
+		if not target.dockWords then
+			target.dockWords = {}
+			for _, part in ipairs({ target.caption, target.name, target.hp }) do
+				if part then table.insert(target.dockWords, UI.intro(part, 8, 0, UI.DOCK_OUT * 0.5, UI.DOCK_OUT * 0.5)) end
+			end
+		end
+		for _, g in ipairs(target.dockWords) do
+			g:Stop()
+			g:Play()
+		end
+	end)
 	self:BuildTargetCast(target)
 	Stoa:RegisterMover("target", target, "Target plaque", {
 		default = function() self:PlaceTarget() end,
