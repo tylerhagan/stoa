@@ -71,6 +71,7 @@ function MinimapStyle:Style()
 	elseif UI.matte() then
 		-- The round map: the same housing as two discs.
 		local size = map:GetWidth()
+		self.housing = HOUSING_RIM
 		local rim = UI.circle(frame, "BACKGROUND", 0, size + HOUSING_RIM * 2, "panel", 1)
 		rim:SetPoint("CENTER")
 		local lip = UI.circle(frame, "BACKGROUND", 1, size + HOUSING_LIP * 2)
@@ -134,6 +135,7 @@ end
 -- shaded along its bottom (the block's own bevel), and a black lip down to
 -- the map.
 function MinimapStyle:MatteHousing(frame)
+	self.housing = HOUSING_RIM
 	local rim = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", HOUSING_RIM)
 	if rim then UI.tint(rim, "panel", 1) end
 	local mould = UI.sliced(frame, "BORDER", "MatteBlock.tga", HOUSING_RIM)

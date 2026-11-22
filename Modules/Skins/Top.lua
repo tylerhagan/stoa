@@ -363,7 +363,12 @@ function Top:SeatHeader()
 	local width = Stoa:PlainNumber(strip:GetWidth())
 	local style = Stoa.modules.Minimap
 	local above = 4
-	if style and style.painted then above = math.floor(map:GetWidth() * 0.065) + 6 end
+	if style and style.painted then
+		above = math.floor(map:GetWidth() * 0.065) + 6
+	elseif style and style.housing then
+		-- Matte: clear of the housing's rim.
+		above = style.housing + 4
+	end
 	seating = true
 	strip:ClearAllPoints()
 	strip:SetPoint("BOTTOM", map, "TOP", 0, above)
