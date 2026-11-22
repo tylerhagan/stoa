@@ -209,6 +209,8 @@ function Console:BuildMatte(frame, bg, edges, inner, arch)
 		round:SetSize(ARCH_SIZE, ARCH_SIZE)
 		round:SetPoint("CENTER", frame, "TOP")
 		cap:AddMaskTexture(round)
+		-- Fades with the arch inside its own strength (see the fold).
+		cap.stoaGrainCap = true
 		table.insert(self.archParts, cap)
 	end
 	self.grains = grains
@@ -227,7 +229,7 @@ end
 -- The grain's strength (the Grain setting).
 function Console:PaintMatte()
 	local alpha = UI.grainAlpha()
-	for _, tex in ipairs(self.grains or {}) do tex:SetVertexColor(1, 1, 1, alpha) end
+	for _, tex in ipairs(self.grains or {}) do tex:SetVertexColor(1, 1, 1, alpha * (tex.stoaCapFade or 1)) end
 end
 
 -- Lays the leather along the console: the tile repeating edge to edge
@@ -1704,6 +1706,10 @@ function Console:SetOpen(open, instant)
 			if part.stoaDaylit then
 				part.stoaGoldFade = fade
 				self:PaintDaylitPart(part.stoaDaylit)
+			elseif part.stoaGrainCap then
+				-- A plain alpha would write over the grain's strength.
+				part.stoaCapFade = fade
+				part:SetVertexColor(1, 1, 1, UI.grainAlpha() * fade)
 			else
 				UI.fadeTo(part, fade)
 			end
