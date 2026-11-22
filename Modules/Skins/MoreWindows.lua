@@ -46,7 +46,7 @@ local TARGETS = {
 	{ name = "ProfessionsFrame", after = "professions" },
 	{ name = "ProfessionsBookFrame", deep = 2 },
 	-- The item list beside the model is its own panel hanging off the side.
-	{ name = "DressUpFrame", panels = { "CustomSetDetailsPanel" } },
+	{ name = "DressUpFrame", panels = { "CustomSetDetailsPanel" }, after = "dressup" },
 	{ name = "ItemTextFrame", after = "book" },
 	{ name = "MacroFrame", after = "macro" },
 	{ name = "CollectionsJournal", deep = 3, after = "collections" },
@@ -71,10 +71,11 @@ local TARGETS = {
 
 local hide = Stoa.frames.hide
 
-local function hideOwnArt(frame)
+-- `keep`: textures Stoa drew on this frame itself, which stay.
+local function hideOwnArt(frame, keep)
 	if not (frame and frame.GetRegions) then return end
 	for _, region in ipairs({ frame:GetRegions() }) do
-		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
+		if region.IsObjectType and region:IsObjectType("Texture") and not (keep and keep[region]) then region:SetAlpha(0) end
 	end
 	hide(frame.NineSlice)
 	hide(frame.Bg)
@@ -229,10 +230,17 @@ end
 -- panel of its own in.
 local function dressSidePanel(panel)
 	if not panel or forbidden(panel) then return end
-	hideOwnArt(panel)
-	if panel.stoaSidePanel then return end
-	panel.stoaSidePanel = true
+	-- This runs on every show; Stoa's own ground is a texture of the panel
+	-- too, so it is told apart or the second show would clear it.
+	hideOwnArt(panel, panel.stoaSideArt)
+	if panel.stoaSideArt then return end
+	local before, mine = {}, {}
+	for _, region in ipairs({ panel:GetRegions() }) do before[region] = true end
 	UI.windowPanel(panel, nil, {})
+	for _, region in ipairs({ panel:GetRegions() }) do
+		if not before[region] then mine[region] = true end
+	end
+	panel.stoaSideArt = mine
 end
 
 function dressInner(target, frame)
@@ -368,6 +376,94 @@ end
 -- search start just under the title, half under the header band; they
 -- (and the usage block under them, which the list hangs from) sit lower.
 local ADDONS_DROP = 14
+-- Dressing Room: the set field, Save and the item list switch in one row
+-- over the model, edge to edge with it and all one height.
+local DRESSUP_ROW_Y, DRESSUP_ROW_H = -44, 22
+-- The model starts a little lower (the game's own top is -63), so the row
+-- has air above and below it.
+local DRESSUP_MODEL_TOP = -72
+
+local function quietButtonArt(button)
+	for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
+		local tex = button[getter] and button[getter](button)
+		if tex then tex:SetAlpha(0) end
+	end
+end
+
+-- A dark rounded ground with an edge that warms under the mouse.
+local function dressField(button)
+	UI.roundPanel(button, 0.95)
+	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
+	button:HookScript("OnEnter", function() glow:Set(Stoa:Color("accent")) end)
+	button:HookScript("OnLeave", function() glow:Clear() end)
+	return glow
+end
+
+function AFTER.dressup(frame)
+	if InCombatLockdown() then return end
+	local dropdown, toggle = frame.CustomSetDropdown, frame.ToggleCustomSetDetailsButton
+	local scene = frame.ModelScene
+	if type(scene) == "table" and not forbidden(scene) and scene.SetPoint then
+		scene:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, DRESSUP_MODEL_TOP)
+	end
+	if type(dropdown) == "table" and not forbidden(dropdown) then
+		if not dropdown.stoaField then
+			dropdown.stoaField = true
+			for _, key in ipairs({ "Background", "Arrow" }) do
+				if dropdown[key] and dropdown[key].SetAlpha then dropdown[key]:SetAlpha(0) end
+			end
+			dressField(dropdown)
+			local chevron = UI.glyph(dropdown, "Chevron", 12, "muted")
+			chevron:SetPoint("RIGHT", -6, 0)
+			chevron:SetRotation(-math.pi / 2)
+			local text = dropdown.Text
+			if text and text.SetTextColor then
+				Stoa:SetFont(text, "sans", Stoa.typeSize.body)
+				text:SetShadowOffset(0, 0)
+				text:SetTextColor(Stoa:Color("text"))
+			end
+			UI.applyTheme()
+		end
+		dropdown:ClearAllPoints()
+		dropdown:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, DRESSUP_ROW_Y)
+		dropdown:SetHeight(DRESSUP_ROW_H)
+		local save = dropdown.SaveButton
+		local windows = Stoa.modules.Windows
+		if type(save) == "table" and not forbidden(save) then
+			if windows and windows.DressButton then windows.DressButton(save) end
+			save:SetHeight(DRESSUP_ROW_H)
+		end
+	end
+	if type(toggle) == "table" and not forbidden(toggle) then
+		quietButtonArt(toggle)
+		if not toggle.stoaField then
+			toggle.stoaField = true
+			dressField(toggle)
+			-- Three short lines: a list.
+			local lines = {}
+			for i = 1, 3 do
+				local bar = toggle:CreateTexture(nil, "OVERLAY")
+				bar:SetSize(10, 1)
+				UI.pixel(bar, "height")
+				bar:SetPoint("CENTER", 0, (2 - i) * 4)
+				bar:SetColorTexture(1, 1, 1)
+				lines[i] = bar
+			end
+			local function paint(over)
+				local r, g, b = Stoa:Color(over and "accent" or "muted")
+				for _, bar in ipairs(lines) do bar:SetVertexColor(r, g, b) end
+			end
+			toggle:HookScript("OnEnter", function() paint(true) end)
+			toggle:HookScript("OnLeave", function() paint(false) end)
+			toggle:HookScript("OnShow", function() quietButtonArt(toggle) end)
+			paint(false)
+		end
+		toggle:ClearAllPoints()
+		toggle:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, DRESSUP_ROW_Y)
+		toggle:SetSize(DRESSUP_ROW_H, DRESSUP_ROW_H)
+	end
+end
+
 function AFTER.addons(frame)
 	if InCombatLockdown() then return end
 	for _, key in ipairs({ "Dropdown", "ForceLoad", "SearchBox", "Performance" }) do dropTops(frame[key], ADDONS_DROP) end

@@ -214,8 +214,8 @@ function Items.upgrade(link)
 		if gain then return gain, name, none, source end
 	end
 	if not Stoa.Weights then return nil end
-	local score = Stoa.Weights.score(link)
-	if not score or score <= 0 then return nil end
+	local score, seen = Stoa.Weights.score(link)
+	if not score or (score <= 0 and (seen or 0) == 0) then return nil end
 	local _, _, equipLoc = Items.info(link)
 	local slots = Items.slotsFor(equipLoc)
 	if not slots then return nil end
@@ -231,6 +231,13 @@ function Items.upgrade(link)
 		if not worst or wornScore < worst then worstSlot, worst, empty = slot, wornScore, not worn end
 	end
 	local name = Items.SLOT_NAMES[worstSlot] or "slot"
+	-- Stats, but none your role counts (strength for a caster): below worn
+	-- gear that has some, rather than a win on item level alone. Against
+	-- gear just as empty, the level decides.
+	if score <= 0 then
+		if worst > 0 then return -100, name, false end
+		return nil
+	end
 	-- Only a slot with nothing in it is empty; worn gear with nothing your
 	-- role counts loses to anything that has some.
 	if worst <= 0 then return 100, name, empty and true or false end
