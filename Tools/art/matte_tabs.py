@@ -10,7 +10,7 @@ no gap, so each is square-sided with a dark seam down each side. Closed is
 a key standing up: lit along its top, dark along its foot. Open is the
 key pressed in (the selected window, or one under a click): lower, darker,
 shadowed under its top lip. The base carries its own tones; Lines is the
-small light on a pressed key, white with alpha, tinted by the accent.
+lamp lit over a pressed key, white with alpha, tinted by the accent.
 """
 import sys
 
@@ -75,9 +75,13 @@ tone = np.where(body & (d > -SEAM), 6.0, tone)
 alpha = down(slot * 1.0)
 rgb = np.divide(down(tone * slot), alpha, out=np.zeros((SIZE, SIZE)), where=alpha > 0)
 save("Open", np.stack([rgb, rgb + 1, rgb + 2], axis=2), alpha)
-# The light: a short bar near the key's foot. The middle column of the
-# texture is stretched, so it is drawn only there and in the caps' inner
-# edges, and grows with the key.
-light = (np.abs(y - 64) <= 1.3) & (x > 44) & (x < 84)
-save("OpenLines", np.full((SIZE, SIZE, 3), 255.0), down(light * 0.95))
+# The light: a lamp in the slot over the pressed key, a bright bar with a
+# soft glow round it. The middle column of the texture is stretched, so it
+# is drawn only there and in the caps' inner edges, and grows with the key.
+LAMP = 28.5
+ends = np.clip((x - 42) / 6.0, 0, 1) * np.clip((86 - x) / 6.0, 0, 1)
+core = np.clip(1.6 - np.abs(y - LAMP), 0, 1)
+glow = np.exp(-((y - LAMP) / 3.2) ** 2) * 0.4
+light = np.maximum(core, glow) * ends * (y < FOOT)
+save("OpenLines", np.full((SIZE, SIZE, 3), 255.0), down(light))
 print("done")
