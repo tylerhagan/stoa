@@ -42,7 +42,7 @@ local BEZEL_SPREAD = 52
 -- Matte: health and mana sit down in the shell either side of the bezel,
 -- as in the leather, over the bars' well: RESOURCE_OUT from the console's
 -- centre and RESOURCE_DROP under its rim, each bar in a thin slot.
-local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 84, -37
+local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 84, -30
 -- The resting target docks on the rim just past the arch (Halo:PlaceTarget).
 Console.MATTE_DOCK_X = MATTE_ARCH / 2 + 4
 local SEAL_SIZE = 76
@@ -278,7 +278,7 @@ end
 -- `zones` is up to four { left, right } spans from the console's left.
 local WELL_PAD, WELL_BOTTOM = 12, 8
 -- The bars' well starts lower, under the bezel's foot.
-local WELL_BARS, WELL_BARS_TOP = 3, -48
+local WELL_BARS, WELL_BARS_TOP = 3, -46
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
 	for i, well in ipairs(self.wells) do
@@ -543,9 +543,13 @@ function Console:BuildSeal(frame)
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
 	if matte then
-		-- The number over the bar's seal end, the caption over its outer
-		-- end, and a slot under each bar: a dark groove with a faint lit
-		-- lower lip, like a meter set into the shell.
+		-- The number past the bar's outer end, in line with it, the caption
+		-- over that end, and a slot under each bar: a dark groove with a
+		-- faint lit lower lip, like a meter set into the shell.
+		healthText:ClearAllPoints()
+		healthText:SetPoint("RIGHT", health, "LEFT", -10, 0)
+		manaText:ClearAllPoints()
+		manaText:SetPoint("LEFT", mana, "RIGHT", 10, 0)
 		health:SetPoint("RIGHT", frame, "TOP", -MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP)
 		healthCap:SetPoint("BOTTOMLEFT", health, "TOPLEFT", 0, 5)
 		mana:SetPoint("LEFT", frame, "TOP", MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP)
