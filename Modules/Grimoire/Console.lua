@@ -38,7 +38,9 @@ local ARCH_SIZE = 220
 -- The matte console's arch: a boss just wider than the portrait's recess.
 -- Matte has no arch: the bezel stands half out of the shell on its own
 -- round body, like a thumbstick, centred MATTE_SEAL_Y above the top edge.
-local MATTE_ARCH = 108
+-- The body runs a few units past the bezel's rim, so the rim's shadow
+-- falls on solid shell and not as a see-through band over the world.
+local MATTE_ARCH = 116
 -- The matte seal: a little smaller than the plain one and set higher, so
 -- its bezel ends above the bars' well. The bezel's texture is drawn
 -- BEZEL_SCALE times the portrait's width (128 for the 76 it was drawn at).
