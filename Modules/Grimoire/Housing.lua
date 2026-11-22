@@ -223,7 +223,8 @@ local function showsWhispers(chatFrame)
 end
 
 local function paintTab(tab)
-	local kind = tab.selected and "Open" or "Closed"
+	-- Matte: a key under a click goes down like the selected one.
+	local kind = (tab.selected or tab.down) and "Open" or "Closed"
 	if tab.kind ~= kind then
 		tab.kind = kind
 		for _, tex in ipairs(tab.base) do tex:SetTexture(tabFile(kind)) end
@@ -282,6 +283,10 @@ local function makeTab()
 		local blizzard = blizzardTab(self.chatFrame)
 		if blizzard then blizzard:Click(button) end
 	end)
+	if Console:Matte() then
+		tab:SetScript("OnMouseDown", function(self) self.down = true paintTab(self) end)
+		tab:SetScript("OnMouseUp", function(self) self.down = nil paintTab(self) end)
+	end
 	tab:SetScript("OnEnter", paintTab)
 	tab:SetScript("OnLeave", paintTab)
 	return tab
@@ -327,7 +332,8 @@ local function refreshTabs()
 		tab:SetWidth(width + TAB_TEXT_PAD * 2)
 		tab:ClearAllPoints()
 		tab:SetPoint("BOTTOMLEFT", strip, "BOTTOMLEFT", x, 0)
-		x = x + tab:GetWidth() + TAB_GAP
+		-- The matte keys stand in one bank, side against side.
+		x = x + tab:GetWidth() + (Console:Matte() and 0 or TAB_GAP)
 		tab.selected = chatFrame == selected
 		paintTab(tab)
 		tab:Show()
