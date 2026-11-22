@@ -55,7 +55,7 @@ function Hunter:UpdateCoins()
 			local key, letter = entry[1], entry[2]
 			if Sign.knows(SPELLS[key]) then
 				index = index + 1
-				state[key] = Sign.debuff(self.coins[index], letter, nameOf(key), self.casts, key, LENGTHS[key])
+				state[key] = Sign.debuff(self.coins[index], letter, nameOf(key), self.casts, key, Sign.length(SPELLS[key], LENGTHS[key]))
 			end
 		end
 	end

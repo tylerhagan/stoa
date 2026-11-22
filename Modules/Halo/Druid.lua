@@ -109,7 +109,7 @@ function Druid:NoteCast(name)
 			if key == "lacerate" then
 				local record = self.lacerate
 				local who = Sign.targetKey()
-				if record and record.who == who and GetTime() - record.at < DURATIONS.lacerate then
+				if record and record.who == who and GetTime() - record.at < Sign.length(SPELLS.lacerate, DURATIONS.lacerate) then
 					record.stacks = math.min(record.stacks + 1, LACERATE_MAX)
 				else
 					record = { who = who, stacks = 1 }
@@ -131,7 +131,7 @@ function Druid:LacerateStacks(aura)
 	local stacks = Sign.stacks(aura)
 	if stacks then return stacks end
 	local record = self.lacerate
-	if record and record.who == Sign.targetKey() and GetTime() - record.at < DURATIONS.lacerate then
+	if record and record.who == Sign.targetKey() and GetTime() - record.at < Sign.length(SPELLS.lacerate, DURATIONS.lacerate) then
 		return record.stacks
 	end
 	return aura and 1 or 0
@@ -141,7 +141,7 @@ end
 
 function Druid:Debuff(index, letter, key)
 	local coin = self.coins[index]
-	return Sign.debuff(coin, letter, nameOf(key), self.casts, key, DURATIONS[key])
+	return Sign.debuff(coin, letter, nameOf(key), self.casts, key, Sign.length(SPELLS[key], DURATIONS[key]))
 end
 
 function Druid:Cooldown(index, letter, key, active)
