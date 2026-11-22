@@ -62,7 +62,7 @@ end
 
 -- A dark disc with a hairline ring, behind a round icon or the round button.
 local function disc(frame, size, alpha)
-	local edge = UI.circle(frame, "BACKGROUND", -8, size + 2, "hairline")
+	local edge = UI.circle(frame, "BACKGROUND", -8, size + 2, "hairline", UI.edgeAlpha())
 	edge:SetPoint("CENTER")
 	local fill = UI.circle(frame, "BACKGROUND", -7, size, "panel", alpha)
 	fill:SetPoint("CENTER")

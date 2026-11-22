@@ -188,7 +188,7 @@ local function tabArt(tab)
 	local edge = UI.sliced(tab, "BORDER", "TabEdge.tga")
 	if edge then
 		edge:SetPoint("TOPLEFT", 0, 3)
-		UI.tint(edge, "hairline")
+		UI.tint(edge, "hairline", UI.edgeAlpha())
 	end
 	local underline = tab:CreateTexture(nil, "ARTWORK")
 	underline:SetHeight(2)

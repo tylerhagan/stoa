@@ -132,6 +132,14 @@ function UI.ornate()
 	return Stoa.db and Stoa.db.ornament == "painted" and Stoa.db.material ~= "matte"
 end
 
+-- Matte: a block is shaped by its shading, so the edge round a panel, card
+-- or window is only a whisper (the console's rim wears the same), where
+-- the other materials draw the theme's hairline.
+local MATTE_EDGE = 0.07
+function UI.edgeAlpha()
+	return Stoa.db ~= nil and Stoa.db.material == "matte" and MATTE_EDGE or nil
+end
+
 -- A small leather and brass ring (Tools/art/coin_frame.py) round a circle
 -- the given size, on the parent's overlay. Returns the leather and the
 -- brass; tint the brass yourself.
@@ -951,7 +959,7 @@ function UI.roundPanel(frame, alpha, kind)
 	end
 	local edge = UI.roundBorder(frame, edgeFile, 1)
 	for _, tex in ipairs(edge.edges) do
-		UI.tint(tex, "hairline")
+		UI.tint(tex, "hairline", UI.edgeAlpha())
 		tex:Show()
 	end
 	frame.stoaPanelEdge = edge
@@ -1173,7 +1181,9 @@ function UI.emboss(frame, header)
 	UI.pixel(top, "height")
 	top:SetPoint("TOPLEFT", header, "TOPLEFT", EMBOSS_INSET, -1)
 	top:SetPoint("TOPRIGHT", header, "TOPRIGHT", -EMBOSS_INSET, -1)
-	UI.tint(top, "text", 0.22)
+	-- Matte: the header's top light is the block's own bevel, so the line
+	-- stays only as a trace.
+	UI.tint(top, "text", UI.edgeAlpha() or 0.22)
 	local lip = frame:CreateTexture(nil, "BORDER", nil, 3)
 	lip:SetTexture(UI.WHITE)
 	UI.pixel(lip, "height")
@@ -1235,7 +1245,7 @@ function UI.surface(frame, kind, opts)
 	if spec.edge then
 		local edge = UI.roundBorder(frame, "WindowEdge.tga", 1, outset)
 		for _, tex in ipairs(edge.edges) do
-			UI.tint(tex, "hairline")
+			UI.tint(tex, "hairline", UI.edgeAlpha())
 			tex:Show()
 		end
 		frame.stoaPanelEdge = edge
