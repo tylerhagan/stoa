@@ -341,11 +341,12 @@ local SLAB_NUM_W = 76
 local SLAB_AURA_Y = 6
 local SLAB_CAST_Y = SLAB_AURA_Y + 22 + 6
 local SLAB_OVER = 5
--- Rank on the slab: a diamond in the caption's own line of text.
+-- Rank on the slab: a coloured word standing on the block's top left
+-- (gold ELITE or BOSS, silver RARE). KICK steps in beside it.
 local SLAB_GOLD = { 0.87, 0.70, 0.36 }
-local function slabDiamond(color)
-	return ("|T%sTextures\\GlyphDiamond:9:9:0:0:32:32:0:32:0:32:%d:%d:%d|t "):format(
-		UI.MEDIA, math.floor(color[1] * 255), math.floor(color[2] * 255), math.floor(color[3] * 255))
+local function slabWord(word, color)
+	return ("|cff%02x%02x%02x%s|r"):format(
+		math.floor(color[1] * 255), math.floor(color[2] * 255), math.floor(color[3] * 255), word)
 end
 
 -- Out of combat, on the full console with its art, the plaque docks on the
@@ -494,7 +495,9 @@ function Halo:LayoutTarget(curve)
 		target.kick:ClearAllPoints()
 		if slab then
 			target.threat:SetPoint("BOTTOMRIGHT", target, "TOPRIGHT", -SLAB_PAD, SLAB_OVER)
-			target.kick:SetPoint("BOTTOMLEFT", target, "TOPLEFT", SLAB_PAD, SLAB_OVER)
+			target.rankWord:ClearAllPoints()
+			target.rankWord:SetPoint("BOTTOMLEFT", target, "TOPLEFT", SLAB_PAD, SLAB_OVER)
+			target.kick:SetPoint("BOTTOMLEFT", target.rankWord, "BOTTOMRIGHT", 0, 0)
 		else
 			target.threat:SetPoint("TOPRIGHT", target.hp, "BOTTOMRIGHT", 0, -12)
 			target.kick:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -12)
@@ -643,8 +646,10 @@ function Halo:BuildTarget(frame)
 	-- On a friend: your buffs on them as the party cards' tags.
 	target.pips = UI.pipRow(target, hp, 12)
 	target.threat, target.caption = threat, caption
-	-- Matte: these two hang under the slab, over the world.
-	if UI.matte() then UI.legible(threat); UI.legible(kick) end
+	-- Matte: these stand on top of the slab, over the world.
+	local rankWord = UI.caption(target, "")
+	target.rankWord = rankWord
+	if UI.matte() then UI.legible(threat); UI.legible(kick); UI.legible(rankWord) end
 	if self.db.targetStrip then
 		plaque:SetBare(true)
 		for _, fs in ipairs({ caption, cue, name, threat, kick }) do UI.legible(fs) end
@@ -1136,9 +1141,8 @@ function Halo:UpdateTarget()
 	-- Docked there's no portrait, so the level leads the caption.
 	local slab = self.targetSlab and not target.plaque.docked
 	if slab then
-		-- On the slab the level leads the line; rank is a small diamond
-		-- before it (gold elite, silver rare, both for a rare elite), and
-		-- the creature type takes the right end of the line.
+		-- On the slab the level leads the line, the creature type takes
+		-- its right end, and rank is a word on top of the block.
 		target.plaque:SetLevel(nil)
 		words = { levelText or "" }
 	elseif target.plaque.docked then
@@ -1161,11 +1165,16 @@ function Halo:UpdateTarget()
 	end
 	local slabKind
 	if slab then
-		local marks = ""
-		if rank == "rare" or rank == "rareelite" then marks = marks .. slabDiamond(Stoa.silver) end
-		if rank == "elite" or rank == "rareelite" or rank == "worldboss" then marks = marks .. slabDiamond(SLAB_GOLD) end
+		local marks = {}
+		if rank == "rare" or rank == "rareelite" then marks[#marks + 1] = slabWord("RARE", Stoa.silver) end
+		if rank == "elite" or rank == "rareelite" then marks[#marks + 1] = slabWord("ELITE", SLAB_GOLD) end
+		if rank == "worldboss" then marks[#marks + 1] = slabWord("BOSS", SLAB_GOLD) end
+		-- The trailing gap keeps KICK, which follows it, a word away.
+		target.rankWord:SetText(#marks > 0 and table.concat(marks, " ") .. "   " or "")
 		slabKind = UI.join({ unpack(words, 2) })
-		words = { marks .. words[1] }
+		words = { words[1] }
+	else
+		target.rankWord:SetText("")
 	end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
