@@ -1050,24 +1050,28 @@ local function raiseMenuKey(button)
 		tex:SetColorTexture(r, g, b, a)
 		return tex
 	end
+	-- Everything stays a pixel inside the button: the menu's keys touch
+	-- within a group, and a line drawn past one key's edge would land on
+	-- its neighbour's and muddle light with shade.
 	local face = line("BACKGROUND", -8, 1, 1, 1, 0.055)
-	face:SetAllPoints()
+	face:SetPoint("TOPLEFT", 1, -1)
+	face:SetPoint("BOTTOMRIGHT", -1, 2)
 	local top = line("BACKGROUND", -6, 1, 1, 1, 0.16)
-	top:SetPoint("TOPLEFT")
-	top:SetPoint("TOPRIGHT")
+	top:SetPoint("TOPLEFT", face, "TOPLEFT")
+	top:SetPoint("TOPRIGHT", face, "TOPRIGHT")
 	UI.pixel(top, "height")
-	local foot = line("BACKGROUND", -6, 0, 0, 0, 0.55)
-	foot:SetPoint("BOTTOMLEFT")
-	foot:SetPoint("BOTTOMRIGHT")
+	local foot = line("BACKGROUND", -6, 0, 0, 0, 0.5)
+	foot:SetPoint("BOTTOMLEFT", face, "BOTTOMLEFT")
+	foot:SetPoint("BOTTOMRIGHT", face, "BOTTOMRIGHT")
 	UI.pixel(foot, "height")
-	local under = line("BACKGROUND", -6, 0, 0, 0, 0.7)
-	under:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, 0)
-	under:SetPoint("TOPRIGHT", button, "BOTTOMRIGHT", 0, 0)
-	under:SetHeight(2)
+	local under = line("BACKGROUND", -6, 0, 0, 0, 0.75)
+	under:SetPoint("TOPLEFT", face, "BOTTOMLEFT")
+	under:SetPoint("TOPRIGHT", face, "BOTTOMRIGHT")
+	under:SetPoint("BOTTOM", button, "BOTTOM")
 	for _, side in ipairs({ "LEFT", "RIGHT" }) do
 		local edge = line("BACKGROUND", -7, 1, 1, 1, 0.05)
-		edge:SetPoint("TOP" .. side)
-		edge:SetPoint("BOTTOM" .. side)
+		edge:SetPoint("TOP" .. side, face, "TOP" .. side)
+		edge:SetPoint("BOTTOM" .. side, face, "BOTTOM" .. side)
 		UI.pixel(edge, "width")
 	end
 	return face
@@ -1076,7 +1080,7 @@ end
 local function dressMenuKey(button)
 	if type(button) ~= "table" or forbidden(button) then return end
 	if not menuKeys[button] then
-		menuKeys[button] = { glow = UI.border(button, 1), face = raiseMenuKey(button) }
+		menuKeys[button] = { glow = UI.border(button, 1, -1), face = raiseMenuKey(button) }
 	end
 	-- Blizzard cleared these scripts when it built the button, so each
 	-- build hooks them once.
