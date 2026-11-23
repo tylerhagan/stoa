@@ -1936,7 +1936,7 @@ function UI.plaque(frame, coinSide, opts)
 	function plaque:SetRank(rank)
 		plaque.rank = rank
 		local r, g, b = Stoa:Color("text")
-		local a = 0.16
+		local a = UI.edgeAlpha() or 0.16
 		if rank == "elite" then r, g, b = Stoa:Color("accent"); a = 0.9 end
 		if rank == "rare" then r, g, b = unpack(SILVER); a = 0.9 end
 		if edge then edge:SetVertexColor(r, g, b, a) end

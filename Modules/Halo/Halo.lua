@@ -326,11 +326,14 @@ local TARGET_MARK = 16
 -- Matte: at the Halo the plaque is a slab, the same moulded block as the
 -- docked one: no portrait, the level, name and cue on one line over the
 -- bar, and the threat and KICK words on a line just under the block.
-local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 232, 56, 11
+local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 232, 52, 11
 local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
 local SLAB_NAME_W = 132
--- From the bar's foot to the line under the block.
-local SLAB_UNDER = 21
+-- Under the block: the aura icons first, close to it, then the line of
+-- words (from the bar's foot), then the cast.
+local SLAB_AURA_Y = 6
+local SLAB_UNDER = 14 + SLAB_AURA_Y + 22 + 5
+local SLAB_CAST_Y = SLAB_AURA_Y + 22 + 5 + 14
 
 -- Out of combat, on the full console with its art, the plaque docks on the
 -- gold rim on the mana side, beside the bars you read there: as tall as the
@@ -369,8 +372,8 @@ function Halo:PlaceTargetAuras()
 		icons[1]:SetPoint("TOPLEFT", self.target.hp, "BOTTOMLEFT", 0, -26 - step)
 	elseif self.targetSlab then
 		-- Under the line of words that hangs below the slab.
-		cast:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", SLAB_PAD, -22)
-		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", SLAB_PAD, -22 - step)
+		cast:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", SLAB_PAD, -SLAB_CAST_Y)
+		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", SLAB_PAD, -SLAB_AURA_Y)
 	else
 		cast:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_PAD, -6)
 		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_PAD, -6 - step)
@@ -475,11 +478,11 @@ function Halo:LayoutTarget(curve)
 	if slab then
 		target:SetSize(SLAB_WIDTH, SLAB_HEIGHT)
 		-- The level leads the line, the name beside it, the cue at the end.
-		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -12)
-		target.cue:SetPoint("TOPRIGHT", -SLAB_PAD, -12)
+		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -10)
+		target.cue:SetPoint("TOPRIGHT", -SLAB_PAD, -10)
 		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
 		target.name:SetWidth(SLAB_NAME_W)
-		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -27)
+		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -24)
 	elseif docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
@@ -1012,7 +1015,8 @@ end
 function Halo:ResetTargetName()
 	local fs = self.target and self.target.name
 	if not fs or not UnitExists("target") then return end
-	Stoa:SetFont(fs, "serif", Stoa.typeSize.name)
+	-- The slab's line is lower, so its name is a step smaller.
+	Stoa:SetFont(fs, "serif", self.targetSlab and not self.target.plaque.docked and Stoa.typeSize.label or Stoa.typeSize.name)
 	fs:SetText("")
 	fs:SetText(UnitName("target"))
 end
