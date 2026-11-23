@@ -1017,6 +1017,72 @@ local function tryHook(owner, method, fn)
 	if not ok then Stoa.catch(err) end
 end
 
+-- The game menu (Esc). It stays out of Windows:Dress (LEAVE): its buttons
+-- lead to Edit Mode, Log Out and Exit, so nothing of Blizzard's is moved,
+-- resized, reparented or given new fields here. STOA only lays a card
+-- behind it, fades Blizzard's art and paints dark keys over the red
+-- buttons. The menu takes its buttons from a pool and sets their scripts
+-- afresh each time it opens, so the keys are painted after each build.
+local menuKeys = setmetatable({}, { __mode = "k" })
+local function paintMenuKey(button, over)
+	local key = menuKeys[button]
+	if not key then return end
+	for _, part in ipairs(PANEL_PARTS) do hide(button[part]) end
+	local lit = button.GetHighlightTexture and button:GetHighlightTexture()
+	if lit then lit:SetAlpha(0) end
+	local enabled = not button.IsEnabled or button:IsEnabled()
+	local text = button.GetFontString and button:GetFontString()
+	if text then
+		Stoa:SetFont(text, "sans", Stoa.typeSize.label)
+		text:SetShadowOffset(0, 0)
+		text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+	end
+	if over and enabled then key.glow:Set(Stoa:Color("accent")) else key.glow:Clear() end
+end
+
+local function dressMenuKey(button)
+	if type(button) ~= "table" or forbidden(button) then return end
+	if not menuKeys[button] then
+		UI.roundPanel(button, 0.95)
+		menuKeys[button] = { glow = UI.roundBorder(button, "CardEdge.tga", 1) }
+	end
+	-- Blizzard cleared these scripts when it built the button, so each
+	-- build hooks them once.
+	button:HookScript("OnEnter", function(own) paintMenuKey(own, true) end)
+	button:HookScript("OnLeave", function(own) paintMenuKey(own, false) end)
+	paintMenuKey(button, false)
+end
+
+local function dressGameMenu()
+	local menu = rawget(_G, "GameMenuFrame")
+	if type(menu) ~= "table" or forbidden(menu) or type(menu.InitButtons) ~= "function" then return end
+	local card
+	local function dress()
+		if not card then
+			card = CreateFrame("Frame", nil, menu)
+			card:SetAllPoints(menu)
+			card:EnableMouse(false)
+			UI.surface(card, "card", { alpha = 0.97 })
+		end
+		card:SetFrameLevel(menu:GetFrameLevel())
+		if menu.Border and menu.Border.SetAlpha then menu.Border:SetAlpha(0) end
+		local header = menu.Header
+		if header then
+			for _, part in ipairs({ "LeftBG", "RightBG", "CenterBG" }) do hide(header[part]) end
+			local title = header.Text
+			if title and title.SetTextColor then
+				Stoa:SetFont(title, "serif", Stoa.typeSize.name)
+				title:SetShadowOffset(0, 0)
+				title:SetTextColor(Stoa:Color("text"))
+				title:ClearAllPoints()
+				title:SetPoint("TOP", menu, "TOP", 0, -17)
+			end
+		end
+		for _, button in ipairs(menu.buttons or {}) do dressMenuKey(button) end
+	end
+	tryHook(menu, "InitButtons", function() xpcall(dress, Stoa.catch) end)
+end
+
 local function dressMenus()
 	local manager = type(Menu) == "table" and type(Menu.GetManager) == "function" and Menu.GetManager()
 	-- A dropdown keeps its description between openings, so its submenu
@@ -1145,6 +1211,7 @@ function Windows:OnEnable()
 	guarded(dressBags)
 	guarded(dressTooltips)
 	guarded(dressMenus)
+	guarded(dressGameMenu)
 	guarded(dressReadyCheck)
 	-- The trainer window loads with its own addon the first time it opens.
 	-- Forever's trainer addon has a bootstrap part that loads at startup,
