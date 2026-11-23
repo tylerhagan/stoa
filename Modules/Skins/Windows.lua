@@ -1038,39 +1038,45 @@ local function paintMenuKey(button, over)
 		text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
 	end
 	if over and enabled then key.glow:Set(Stoa:Color("accent")) else key.glow:Clear() end
-	key.sheen:SetAlpha(over and enabled and 1 or 0.6)
+	key.face:SetColorTexture(1, 1, 1, over and enabled and 0.1 or 0.055)
 end
 
--- Depth for a key: light falling on its upper half and a soft dark foot
--- under it, so it stands off the block.
+-- A key is a flat, square-cornered plate with no gloss. Its depth is two
+-- fine lines: light caught on the top edge, shade along the foot, and a
+-- dark line under it where it meets the block.
 local function raiseMenuKey(button)
-	local sheen = button:CreateTexture(nil, "BACKGROUND", nil, -6)
-	sheen:SetPoint("TOPLEFT", 2, -2)
-	sheen:SetPoint("BOTTOMRIGHT", -2, 2)
-	sheen:SetColorTexture(1, 1, 1, 1)
-	if sheen.SetGradient and CreateColor then
-		sheen:SetGradient("VERTICAL", CreateColor(0, 0, 0, 0.3), CreateColor(1, 1, 1, 0.14))
-	else
-		sheen:SetColorTexture(1, 1, 1, 0.03)
+	local function line(layer, sub, r, g, b, a)
+		local tex = button:CreateTexture(nil, layer, nil, sub)
+		tex:SetColorTexture(r, g, b, a)
+		return tex
 	end
-	local foot = button:CreateTexture(nil, "BACKGROUND", nil, -8)
-	foot:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 3, 1)
-	foot:SetPoint("TOPRIGHT", button, "BOTTOMRIGHT", -3, 1)
-	foot:SetHeight(4)
-	foot:SetColorTexture(1, 1, 1, 1)
-	if foot.SetGradient and CreateColor then
-		foot:SetGradient("VERTICAL", CreateColor(0, 0, 0, 0), CreateColor(0, 0, 0, 0.55))
-	else
-		foot:SetColorTexture(0, 0, 0, 0.3)
+	local face = line("BACKGROUND", -8, 1, 1, 1, 0.055)
+	face:SetAllPoints()
+	local top = line("BACKGROUND", -6, 1, 1, 1, 0.16)
+	top:SetPoint("TOPLEFT")
+	top:SetPoint("TOPRIGHT")
+	UI.pixel(top, "height")
+	local foot = line("BACKGROUND", -6, 0, 0, 0, 0.55)
+	foot:SetPoint("BOTTOMLEFT")
+	foot:SetPoint("BOTTOMRIGHT")
+	UI.pixel(foot, "height")
+	local under = line("BACKGROUND", -6, 0, 0, 0, 0.7)
+	under:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, 0)
+	under:SetPoint("TOPRIGHT", button, "BOTTOMRIGHT", 0, 0)
+	under:SetHeight(2)
+	for _, side in ipairs({ "LEFT", "RIGHT" }) do
+		local edge = line("BACKGROUND", -7, 1, 1, 1, 0.05)
+		edge:SetPoint("TOP" .. side)
+		edge:SetPoint("BOTTOM" .. side)
+		UI.pixel(edge, "width")
 	end
-	return sheen
+	return face
 end
 
 local function dressMenuKey(button)
 	if type(button) ~= "table" or forbidden(button) then return end
 	if not menuKeys[button] then
-		UI.roundPanel(button, 0.95)
-		menuKeys[button] = { glow = UI.roundBorder(button, "CardEdge.tga", 1), sheen = raiseMenuKey(button) }
+		menuKeys[button] = { glow = UI.border(button, 1), face = raiseMenuKey(button) }
 	end
 	-- Blizzard cleared these scripts when it built the button, so each
 	-- build hooks them once.
@@ -1089,19 +1095,8 @@ local function dressGameMenu()
 			card:SetAllPoints(menu)
 			card:EnableMouse(false)
 			UI.surface(card, "card", { alpha = 1 })
-			-- Depth: a soft shadow thrown on the world around the block
-			-- and light falling down its upper part.
+			-- Depth: a soft shadow thrown on the world around the block.
 			UI.roundBorder(card, "CardGlow.tga", 3, 3):Set(0, 0, 0, 0.75)
-			local light = card:CreateTexture(nil, "BACKGROUND", nil, -6)
-			light:SetPoint("TOPLEFT", 2, -2)
-			light:SetPoint("TOPRIGHT", -2, -2)
-			light:SetHeight(90)
-			light:SetColorTexture(1, 1, 1, 1)
-			if light.SetGradient and CreateColor then
-				light:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, 0.06))
-			else
-				light:Hide()
-			end
 		end
 		card:SetFrameLevel(menu:GetFrameLevel())
 		if menu.Border and menu.Border.SetAlpha then menu.Border:SetAlpha(0) end
