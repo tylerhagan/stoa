@@ -386,6 +386,29 @@ local function paintGuildTabs(frame)
 	end
 end
 
+-- /stoa guild: what the page words see, for a report when they look wrong.
+local function modeName(mode)
+	local modes = rawget(_G, "COMMUNITIES_FRAME_DISPLAY_MODES")
+	if mode == nil then return "nil" end
+	for key, value in pairs(modes or {}) do if value == mode then return key end end
+	return tostring(mode)
+end
+
+Stoa.commands.guild = function()
+	local frame = rawget(_G, "CommunitiesFrame")
+	if type(frame) ~= "table" then Stoa:Print("guild window not loaded") return end
+	local mode = frame.GetDisplayMode and frame:GetDisplayMode()
+	local chosen = chosenGuildTab(frame)
+	Stoa:Print("page:", modeName(mode), "lit:", chosen and chosen.stoaGuildWord and chosen.stoaGuildWord:GetText() or "none")
+	for _, entry in ipairs(GUILD_TABS) do
+		local tab = frame[entry[1]]
+		if type(tab) == "table" then
+			Stoa:Print(entry[2], "shown", tostring(tab:IsShown()), "checked", tostring(tab:GetChecked()),
+				"mode", modeName(tab.displayMode), "line", tostring(tab.stoaGuildLine and tab.stoaGuildLine:IsShown()))
+		end
+	end
+end
+
 -- Each page tab is faded out whole (its own art, checked glow and all) and
 -- its word and underline live on a cover that ignores the fade and lets
 -- the mouse through to the tab. Only paintGuildTab, by the window's page,
