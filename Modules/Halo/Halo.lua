@@ -509,17 +509,17 @@ function Halo:LayoutTarget(curve)
 			first:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -12)
 		end
 	end
-	if target.mark then
-		target.mark:ClearAllPoints()
-		target.mark:SetPoint("LEFT", target.name, "LEFT", target.nameWidth - TARGET_MARK, 0)
-	end
+	target.markCorner = slab
+	if target.mark then self:PlaceTargetMark() end
 	if slab then
 		target:SetSize(SLAB_WIDTH, SLAB_HEIGHT)
 		-- The level leads the line, the name beside it, the cue at the end.
 		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -10)
 		target.cue:SetPoint("TOPRIGHT", -SLAB_PAD, -10)
+		-- The name runs from the level to the creature type, however long
+		-- either is.
 		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
-		target.name:SetWidth(SLAB_NAME_W)
+		target.name:SetPoint("RIGHT", target.cue, "LEFT", -8, 0)
 		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -29)
 	elseif docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
@@ -1071,15 +1071,27 @@ end
 
 -- The target's raid mark at the right end of its name line; the name
 -- gives it room while it shows.
+-- On the slab the mark rides the block's top left corner, as on the party
+-- cards, since the name line is full.
+function Halo:PlaceTargetMark()
+	local target = self.target
+	target.mark:ClearAllPoints()
+	if target.markCorner then
+		target.mark:SetPoint("CENTER", target, "TOPLEFT", 2, -2)
+	else
+		target.mark:SetPoint("LEFT", target.name, "LEFT", (target.nameWidth or TARGET_BAR_W) - TARGET_MARK, 0)
+	end
+end
+
 function Halo:UpdateTargetMark()
 	local target = self.target
 	if not (target and target.name) then return end
 	if not target.mark then
 		target.mark = UI.raidMark(target, TARGET_MARK)
-		target.mark:SetPoint("LEFT", target.name, "LEFT", (target.nameWidth or TARGET_BAR_W) - TARGET_MARK, 0)
+		self:PlaceTargetMark()
 	end
 	local shown = target.mark:Update("target")
-	target.name:SetWidth((target.nameWidth or TARGET_BAR_W) - (shown and TARGET_MARK + 6 or 0))
+	target.name:SetWidth((target.nameWidth or TARGET_BAR_W) - (shown and not target.markCorner and TARGET_MARK + 6 or 0))
 end
 
 function Halo:ResetTargetName()
