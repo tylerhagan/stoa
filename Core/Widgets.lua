@@ -329,7 +329,13 @@ function UI.bar(parent, width, height, token)
 	UI.paint(sb, token)
 	local track = sb:CreateTexture(nil, "BACKGROUND")
 	track:SetAllPoints()
-	UI.paint(track, "text", 0.08)
+	if UI.matte() then
+		-- Matte: the bar runs in a dark groove, a shade under the shell,
+		-- not a lighter strip that reads as an outline when it is empty.
+		track:SetColorTexture(0, 0, 0, 0.5)
+	else
+		UI.paint(track, "text", 0.08)
+	end
 	sb.track = track
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
@@ -2090,7 +2096,7 @@ function UI.plaqueBar(frame, width, height)
 	local rim = words:CreateTexture(nil, "BORDER")
 	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
 	rim:SetAllPoints(mask)
-	UI.tint(rim, "text", 0.18)
+	UI.tint(rim, "text", UI.edgeAlpha() or 0.18)
 	local percent = UI.text(words, "sans", Stoa.typeSize.body, "text", "LEFT")
 	percent:SetPoint("LEFT", 10, 0)
 	UI.legible(percent)
