@@ -607,6 +607,7 @@ local function build()
 	group = "Loot"
 	toggle(of("Loot"), "enabled", "Loot feed and gold an hour", "A short fading list of what you loot above the chat, plus gold an hour and loot value for At a glance.", true, { id = "lootFeed", reload = true, cmd = "/stoa loot", words = "gold per hour" })
 	choice(of("Loot"), "show", "Show the loot feed", "When the list above the chat shows. Off by default: the chat already lists your loot.", "NEVER", Stoa.Rules.options({ "WORLD", "ALWAYS", "SOLO", "GROUP", "NEVER" }), { id = "lootShow", list = true, change = rulesChanged })
+	toggle(of("Rolls"), "enabled", "Loot rolls up off the bars, with who chose what", "The Need, Greed and Pass cards stack from their own spot (Loot rolls in unlock mode) instead of over your bars. Under each card you see who has chosen what; once your card goes, a small card shows every choice, the rolls and the winner for a few seconds. /stoa rolls shows a sample.", true, { id = "lootRolls", reload = true, cmd = "/stoa rolls", words = "need greed pass roll group loot winner" })
 	actions("lootReset", "Totals", "Gold an hour and loot value count from the last time you started them.", { { "Start the totals again", command("loot", "reset") } }, { cmd = "/stoa loot reset" })
 
 	-- Comforts

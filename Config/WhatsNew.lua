@@ -28,6 +28,7 @@ local NOTES = {
 		lines = {
 			{ "Heals halved", "When Mortal Strike or Mortal Wound is on someone, red stripes fill the empty part of their health bar on the tank watch and your party cards, with a HEALS HALF word. It works in a fight.", classes = { "PRIEST", "PALADIN", "DRUID", "SHAMAN" } },
 			{ "Readable over bright ground", "Buff timers, the Halo's cast bar and the chat on a folded console sit on soft dark plates, so they read over sand, snow and sky." },
+			{ "Loot rolls", "Need and Greed cards now sit right of the middle of the screen, off your bars, and show who chose what. A small card then shows every roll and the winner." },
 			{ "Switch layout from Ready", "Click your role under Ready on the console to pick Tank, Healer, Melee or Ranged for this spec, or to switch to your other talent spec." },
 		},
 	},
