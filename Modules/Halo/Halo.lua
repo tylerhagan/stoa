@@ -326,12 +326,15 @@ local TARGET_MARK = 16
 -- Matte: at the Halo the plaque is a slab, the same moulded block as the
 -- docked one: no portrait, the level, name and cue on one line over the
 -- bar, and the threat and KICK words on a line just under the block.
--- The health is a slim line; its percent and amount sit at the right of
--- the name line, so the hostile word steps out (the red line says it).
+-- The health is a slim line with its percent and amount at its right end,
+-- so the name has the whole line above; the hostile word steps out (the
+-- red line says it).
 local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 244, 46, 11
 local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
 local SLAB_BAR_H = 5
-local SLAB_NAME_W = 116
+local SLAB_NAME_W = SLAB_BAR_W - 30
+-- Room at the bar's right end for the numbers.
+local SLAB_NUM_W = 76
 -- Under the block: the aura icons, close to it, then the cast. The words
 -- (threat, KICK, a friend's tags) stand on top of the block instead, so
 -- nothing under it leaves a gap when there are no auras.
@@ -463,9 +466,9 @@ function Halo:LayoutTarget(curve)
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
 	local barW = slab and SLAB_BAR_W or TARGET_BAR_W
 	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
-	target.hp:SetSize(barW, slab and SLAB_BAR_H or TARGET_BAR_H)
+	target.hp:SetSize(slab and barW - SLAB_NUM_W or barW, slab and SLAB_BAR_H or TARGET_BAR_H)
 	if target.hp.rim then target.hp.rim:SetShown(not slab) end
-	target.power:SetWidth(barW - 16)
+	target.power:SetWidth((slab and barW - SLAB_NUM_W or barW) - 16)
 	target.power:ClearAllPoints()
 	target.power:SetPoint("TOP", target.hp, "BOTTOM", 0, slab and -3 or -4)
 	-- The numbers: inside the bar, or beside the name over the slim one.
@@ -473,7 +476,7 @@ function Halo:LayoutTarget(curve)
 	percent:ClearAllPoints()
 	amount:ClearAllPoints()
 	if slab then
-		percent:SetPoint("RIGHT", target, "TOPRIGHT", -SLAB_PAD, -16)
+		percent:SetPoint("RIGHT", target, "TOPRIGHT", -SLAB_PAD, -32)
 		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
 	else
 		percent:SetPoint("LEFT", 10, 0)
@@ -510,7 +513,7 @@ function Halo:LayoutTarget(curve)
 		target.cue:SetPoint("TOPRIGHT", -SLAB_PAD, -10)
 		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
 		target.name:SetWidth(SLAB_NAME_W)
-		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -27)
+		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -30)
 	elseif docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
