@@ -278,6 +278,9 @@ local COMMUNITIES_DROP = 10
 local COMMUNITIES_PARTS = {
 	"StreamDropdown", "CommunitiesListDropdown", "VoiceChatHeadset", "Chat",
 }
+-- Blizzard's content starts under a 23px title strip; STOA's header is
+-- taller, so the content drops by the difference plus a little air.
+local BLIZZARD_STRIP, CONTENT_AIR = 23, 8
 -- The roster's member list (wide, with column heads 60px above its top) and
 -- its two view dropdowns are placed by guildRoster instead.
 local ROSTER_DROPDOWNS = { "GuildMemberListDropdown", "CommunityMemberListDropdown" }
@@ -347,12 +350,34 @@ local function isGuild(info)
 	return info and guildType ~= nil and info.clubType == guildType
 end
 
+-- Which page word is lit follows the window's page, not the tab's own
+-- checked state: a click toggles a check button without Blizzard
+-- unchecking the old one in a way the words saw.
+local function chosenGuildTab(frame)
+	local modes = rawget(_G, "COMMUNITIES_FRAME_DISPLAY_MODES")
+	local mode = modes and frame.GetDisplayMode and frame:GetDisplayMode()
+	if not mode then return nil end
+	if mode == modes.CHAT then return frame.ChatTab end
+	if mode == modes.ROSTER or (frame.IsShowingApplicantList and frame:IsShowingApplicantList()) then return frame.RosterTab end
+	if mode == modes.GUILD_BENEFITS then return frame.GuildBenefitsTab end
+	if mode == modes.GUILD_INFO then return frame.GuildInfoTab end
+	if mode == modes.GUILD_PREFERRED_PLAY_SETTINGS then return frame.GuildPreferredPlaySettingsTab end
+end
+
 local function paintGuildTab(tab)
 	local word = tab.stoaGuildWord
 	if not word then return end
-	local chosen = tab.GetChecked and tab:GetChecked()
+	local parent = tab:GetParent()
+	local chosen = parent and chosenGuildTab(parent) == tab
 	word:SetTextColor(Stoa:Color(chosen and "text" or "muted"))
 	tab.stoaGuildLine:SetShown(chosen and true or false)
+end
+
+local function paintGuildTabs(frame)
+	for _, entry in ipairs(GUILD_TABS) do
+		local tab = frame[entry[1]]
+		if type(tab) == "table" and tab.stoaGuildWord then paintGuildTab(tab) end
+	end
 end
 
 local function guildTabWord(tab, label)
@@ -376,6 +401,7 @@ local function guildTabWord(tab, label)
 	tab.stoaGuildWord, tab.stoaGuildLine = word, line
 	UI.applyTheme()
 	hooksecurefunc(tab, "SetChecked", paintGuildTab)
+	tab:HookScript("OnClick", function(self) paintGuildTabs(self:GetParent()) end)
 	tab:HookScript("OnEnter", function(self) if not self:GetChecked() then self.stoaGuildWord:SetTextColor(Stoa:Color("accent")) end end)
 	tab:HookScript("OnLeave", paintGuildTab)
 	paintGuildTab(tab)
@@ -394,7 +420,12 @@ local function placeGuildTabs(frame)
 			if tab:IsShown() and tab.stoaGuildWord and anchor then
 				-- Above every part of the window, so nothing Blizzard lays
 				-- out near the top can take the clicks.
-				tab:SetFrameLevel(frame:GetFrameLevel() + 120)
+				-- That includes the title strip, which Forever keeps at
+				-- frame level 510 and which took the words' lower half.
+				local level = frame:GetFrameLevel() + 120
+				local strip = frame.TitleContainer
+				if strip and strip.GetFrameLevel then level = math.max(level, strip:GetFrameLevel() + 5) end
+				tab:SetFrameLevel(level)
 				tab:SetSize(math.ceil(tab.stoaGuildWord:GetStringWidth()) + 8, 26)
 				tab:ClearAllPoints()
 				tab:SetPoint("RIGHT", anchor, "LEFT", -gap, 0)
@@ -517,10 +548,8 @@ function AFTER.communities(frame)
 		frame.stoaGuildHooks = true
 		if frame.UpdateCommunitiesTabs then
 			hooksecurefunc(frame, "UpdateCommunitiesTabs", function(own)
-				if not InCombatLockdown() then
-					placeGuildTabs(own)
-					guildTitle(own)
-				end
+				if not InCombatLockdown() then xpcall(AFTER.communities, Stoa.catch, own) end
+				paintGuildTabs(own)
 			end)
 		end
 		-- Who is online and the message change while the window is open.
@@ -536,11 +565,17 @@ function AFTER.communities(frame)
 	sizeGuild(frame)
 	local small = guildMinimized(frame)
 	local listMode = not small and guildListMode(frame)
-	-- The MOTD row takes its room only on the chat and roster pages.
-	local drop = listMode and (COMMUNITIES_DROP + MOTD_ROW) or COMMUNITIES_DROP
+	local band = (frame.stoaHeader and frame.stoaHeader.stoaHeight) or 30
+	local base = small and COMMUNITIES_DROP or math.max(COMMUNITIES_DROP, band + 2 - BLIZZARD_STRIP + CONTENT_AIR)
+	-- The MOTD row takes its room only on the chat and roster pages; the
+	-- club list beside it (and the pages hung from it) drop by the base.
+	local drop = listMode and (base + MOTD_ROW) or base
 	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key], drop) end
+	dropTops(frame.CommunitiesList, small and 0 or base)
+	frame.stoaGuildDrop = drop
 	guildRoster(frame, drop)
 	placeGuildTabs(frame)
+	paintGuildTabs(frame)
 	guildTitle(frame)
 	guildMotd(frame, listMode)
 end
@@ -672,7 +707,7 @@ end
 -- it, which put them over the MOTD row and the view dropdown up in the
 -- header (under the page words, taking their clicks). The list now hangs
 -- below the MOTD row, the dropdown sits level with the offline box.
-local ROSTER_HEAD = 64
+local ROSTER_HEAD = 64 + CONTENT_AIR
 local function rosterTop(frame)
 	local band = (frame.stoaHeader and frame.stoaHeader.stoaHeight) or 30
 	return band + 2 + MOTD_ROW + ROSTER_HEAD
@@ -696,12 +731,13 @@ guildRoster = function(frame, drop)
 			-- Blizzard places the list again when the page changes, after
 			-- the window's own layout pass.
 			hooksecurefunc(list, "RefreshLayout", function()
-				local small = guildMinimized(frame)
-				local d = (not small and guildListMode(frame)) and (COMMUNITIES_DROP + MOTD_ROW) or COMMUNITIES_DROP
+				local d = frame.stoaGuildDrop or COMMUNITIES_DROP
 				xpcall(placeMemberList, Stoa.catch, frame, d)
 			end)
 		end
 		placeMemberList(frame, drop)
+		-- "35/113 Online" over the list: the header says it already.
+		if list.MemberCount and list.MemberCount.SetAlpha then list.MemberCount:SetAlpha(0) end
 		local offline = list.ShowOfflineButton
 		if type(offline) == "table" and offline.Text and not offline.stoaWord then
 			offline.stoaWord = true
