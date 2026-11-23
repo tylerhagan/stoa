@@ -1178,6 +1178,17 @@ function Spellbook.FitWindow(talents)
 	end
 end
 
+-- The options arrow is a square key as tall as the search field beside it.
+function Spellbook.FitSearchArrow(talents)
+	local search, arrow = talents.SearchBox, talents.SearchOptionsDropdown
+	if not (search and arrow and arrow.SetSize) then return end
+	local height = search:GetHeight()
+	if not height or height < 8 then return end
+	arrow:SetSize(height, height)
+	arrow:ClearAllPoints()
+	arrow:SetPoint("LEFT", search, "RIGHT", 6, 0)
+end
+
 local function dressTalents()
 	local frame = PlayerSpellsFrame
 	local talents = frame and frame.TalentsFrame
@@ -1193,6 +1204,7 @@ local function dressTalents()
 		-- The window's stone rings fight the cards, so talents go without.
 		UI.stoneOn(frame, false)
 		guarded(Spellbook.FitWindow, self)
+		guarded(Spellbook.FitSearchArrow, self)
 	end)
 	talents:HookScript("OnHide", function(self)
 		UI.stoneOn(frame, true)
@@ -1233,6 +1245,7 @@ local function dressTalents()
 	if windows and windows.DressSearch then
 		guarded(windows.DressSearch, talents.SearchBox)
 		guarded(windows.DressArrowDropdown, talents.SearchOptionsDropdown)
+		guarded(Spellbook.FitSearchArrow, talents)
 	end
 	Spellbook.DressTreeHeaders(talents)
 	Spellbook.PaintTalentTabs(talents)
