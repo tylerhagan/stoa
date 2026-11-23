@@ -60,7 +60,10 @@ local function isPanelButton(button)
 	if parent and parent.tabTemplate then return false end
 	local name = button.GetName and button:GetName()
 	if type(name) == "string" and name:find("Tab%d+$") then return false end
-	return button.Left and button.Middle and button.Right
+	if button.Left and button.Middle and button.Right then return true end
+	-- The newer red buttons (Add New Friend and the like) are three-slice:
+	-- Left, Center and Right, set from an atlas kit on every state change.
+	return button.Left and button.Center and button.Right and button.atlasName ~= nil
 end
 
 local function plainTextures(button)
@@ -71,6 +74,33 @@ local function plainTextures(button)
 	end
 end
 
+-- Depth for the dark keys: only a soft dark shadow 1px under the key (a
+-- light rim along the top read as a harsh grey line). Pressed, the key
+-- sinks onto it and its words drop a pixel. Textures and hooked scripts
+-- only, so secure buttons are fine.
+local KEY_LIP = 1
+local function keyDepth(button, face)
+	local lip = UI.sliced(button, "BACKGROUND", "CardFill.tga")
+	if not (lip and face) then return end
+	if face.SetDrawLayer then face:SetDrawLayer("BACKGROUND", -6) end
+	lip:SetDrawLayer("BACKGROUND", -8)
+	lip:ClearAllPoints()
+	lip:SetPoint("TOPLEFT", 0, -KEY_LIP)
+	lip:SetPoint("BOTTOMRIGHT", 0, -KEY_LIP)
+	lip:SetVertexColor(0, 0, 0, 0.45)
+	if button.SetPushedTextOffset then button:SetPushedTextOffset(0, -1) end
+	local function press(down)
+		local enabled = not button.IsEnabled or button:IsEnabled()
+		local y = (down and enabled) and 0 or -KEY_LIP
+		lip:SetPoint("TOPLEFT", 0, y)
+		lip:SetPoint("BOTTOMRIGHT", 0, y)
+	end
+	button:HookScript("OnMouseDown", function() press(true) end)
+	button:HookScript("OnMouseUp", function() press(false) end)
+	button:HookScript("OnLeave", function() press(false) end)
+	press(false)
+end
+
 local function dressButton(button)
 	if not button or button.stoaDressed then return end
 	button.stoaDressed = true
@@ -79,7 +109,8 @@ local function dressButton(button)
 	button:HookScript("OnShow", plainTextures)
 	button:HookScript("OnEnable", plainTextures)
 	button:HookScript("OnDisable", plainTextures)
-	UI.roundPanel(button, 0.95)
+	local face = UI.roundPanel(button, 0.95)
+	keyDepth(button, face)
 	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
 	local text = button.GetFontString and button:GetFontString()
 	if text then
@@ -143,6 +174,109 @@ local function dressButtonsIn(frame, depth)
 	end
 end
 
+-- Search boxes (talents, spellbook): Blizzard's gold-rimmed field becomes
+-- a dark rounded well whose edge warms while you type in it. The magnifier
+-- and the grey hint stay.
+local function dressSearch(box)
+	if type(box) ~= "table" or not box.CreateTexture or forbidden(box) or box.stoaSearch then return end
+	box.stoaSearch = true
+	for _, key in ipairs({ "Left", "Middle", "Right", "Mid" }) do hide(box[key]) end
+	if box.NineSlice then hide(box.NineSlice) end
+	local fill = UI.sliced(box, "BACKGROUND", "CardFill.tga")
+	if fill then
+		-- The field's text sits 6px in from its frame on the left.
+		fill:SetPoint("TOPLEFT", -6, 0)
+		fill:SetDrawLayer("BACKGROUND", -8)
+		fill:SetVertexColor(0, 0, 0, 0.45)
+	end
+	local edge = UI.roundBorder(box, "CardEdge.tga", 1)
+	if edge.edges[1] then edge.edges[1]:SetPoint("TOPLEFT", -6, 0) end
+	local function paint()
+		if box:HasFocus() then edge:Set(Stoa:Color("accent")) else edge:Set(Stoa:Color("hairline")) end
+	end
+	box:HookScript("OnEditFocusGained", paint)
+	box:HookScript("OnEditFocusLost", paint)
+	paint()
+	UI.applyTheme()
+end
+
+-- The small square arrow buttons that open a menu (the talents' search
+-- options): a dark rounded key with a quiet down chevron instead of the
+-- yellow button. Blizzard sets the arrow's art on every press, so the art
+-- goes by alpha, which a new atlas keeps.
+local function dressArrowDropdown(button)
+	if type(button) ~= "table" or not button.CreateTexture or forbidden(button) or button.stoaArrow then return end
+	button.stoaArrow = true
+	for _, key in ipairs({ "Arrow", "Background", "Icon" }) do hide(button[key]) end
+	plainTextures(button)
+	UI.roundPanel(button, 0.95)
+	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
+	local chevron = UI.glyph(button, "Chevron", 12, "muted")
+	chevron:SetPoint("CENTER", 0, 0)
+	chevron:SetRotation(-math.pi / 2)
+	button:HookScript("OnEnter", function()
+		glow:Set(Stoa:Color("accent"))
+		chevron:SetVertexColor(Stoa:Color("accent"))
+	end)
+	button:HookScript("OnLeave", function()
+		glow:Clear()
+		chevron:SetVertexColor(Stoa:Color("muted"))
+	end)
+	UI.applyTheme()
+end
+
+-- Blizzard's minimal scroll bar (gold arrows, a bevelled thumb): the arrows
+-- and track go clear, and the thumb is a thin pill that lights in the
+-- accent under the mouse or while dragged. The arrows stay where they are
+-- and still click; only their art goes.
+local function paintThumb(thumb)
+	local pill = thumb.stoaPill
+	if not pill then return end
+	local lit = thumb.over or thumb.down
+	local r, g, b = Stoa:Color(lit and "accent" or "muted")
+	pill:SetVertexColor(r, g, b, lit and 0.9 or 0.4)
+end
+
+local function dressScrollBar(bar)
+	if type(bar) ~= "table" or forbidden(bar) or bar.stoaScroll then return end
+	bar.stoaScroll = true
+	for _, key in ipairs({ "Back", "Forward" }) do
+		local step = bar[key]
+		if type(step) == "table" and step.SetAlpha then step:SetAlpha(0) end
+	end
+	local track = bar.Track
+	if type(track) ~= "table" then return end
+	for _, key in ipairs({ "Begin", "Middle", "End" }) do
+		if track[key] and track[key].SetAlpha then track[key]:SetAlpha(0) end
+	end
+	local rail = track:CreateTexture(nil, "BACKGROUND")
+	rail:SetTexture(UI.WHITE)
+	rail:SetWidth(1)
+	UI.pixel(rail, "width")
+	rail:SetPoint("TOP", 0, 0)
+	rail:SetPoint("BOTTOM", 0, 0)
+	UI.tint(rail, "hairline", 0.6)
+	local thumb = track.Thumb
+	if type(thumb) ~= "table" or not thumb.CreateTexture then return end
+	for _, key in ipairs({ "Begin", "Middle", "End" }) do
+		if thumb[key] and thumb[key].SetAlpha then thumb[key]:SetAlpha(0) end
+	end
+	local pill = thumb:CreateTexture(nil, "OVERLAY")
+	pill:SetTexture(UI.WHITE)
+	pill:SetWidth(3)
+	pill:SetPoint("TOP", 0, -1)
+	pill:SetPoint("BOTTOM", 0, 1)
+	thumb.stoaPill = pill
+	if thumb.OnButtonStateChanged then hooksecurefunc(thumb, "OnButtonStateChanged", paintThumb) end
+	thumb:HookScript("OnEnter", paintThumb)
+	thumb:HookScript("OnLeave", paintThumb)
+	paintThumb(thumb)
+	UI.applyTheme()
+end
+
+Windows.DressSearch = dressSearch
+Windows.DressScrollBar = dressScrollBar
+Windows.DressArrowDropdown = dressArrowDropdown
 Windows.DressButtonsIn = dressButtonsIn
 Windows.DressButton = dressButton
 Windows.DressClose = dressClose
@@ -255,7 +389,7 @@ end
 local FAMILY = {
 	MerchantFrame = "trade", MailFrame = "trade", OpenMailFrame = "trade",
 	AuctionHouseFrame = "trade", BankFrame = "trade",
-	FriendsFrame = "social", CommunitiesFrame = "social", GuildFrame = "social",
+	FriendsFrame = "social", SocialUIFrame = "social", CommunitiesFrame = "social", GuildFrame = "social",
 	PVEFrame = "social", LFDParentFrame = "social", RaidParentFrame = "social",
 }
 -- The rulebook's band is BAND tall on every window with room for it.
@@ -839,6 +973,112 @@ local function dressTooltip(tip)
 	tip:HookScript("OnShow", function(self) hide(self.NineSlice) end)
 end
 
+-- Dropdown menus (the minimap's tracking list, the friends status, every
+-- right-click menu): Blizzard's menus come from one shared pool and get
+-- their gold-edged background drawn again each time they open, so each
+-- menu, and each submenu, takes the tooltip's dark card when it opens.
+-- Only the menu's own background goes; its lines, ticks and icons stay.
+-- Forever's menus are guarded proxies: they refuse new textures (the
+-- card can't be drawn on them), so STOA's card is a frame of its own,
+-- a child of the menu at the menu's level (the lines sit above it), and
+-- the menu's own art is faded out each time it opens.
+local menuCards = setmetatable({}, { __mode = "k" })
+
+local function menuCard(menu)
+	local card = menuCards[menu]
+	if card then return card end
+	local ok, made = pcall(CreateFrame, "Frame", nil, menu)
+	if not (ok and made) then return nil end
+	card = made
+	card:SetPoint("TOPLEFT", menu, "TOPLEFT", 0, 0)
+	card:SetPoint("BOTTOMRIGHT", menu, "BOTTOMRIGHT", 0, 7)
+	card:EnableMouse(false)
+	UI.surface(card, "card", { alpha = 0.96 })
+	menuCards[menu] = card
+	return card
+end
+
+local function dressMenu(menu)
+	if type(menu) ~= "table" or not menu.GetRegions or forbidden(menu) then return end
+	local card = menuCard(menu)
+	if not card then return end
+	pcall(card.SetFrameLevel, card, menu:GetFrameLevel())
+	card:Show()
+	for _, region in ipairs({ menu:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
+	end
+end
+
+-- One hook that may fail on its own without taking the others with it:
+-- the menu manager is a guarded proxy that can refuse new fields.
+local function tryHook(owner, method, fn)
+	if type(owner) ~= "table" or type(owner[method]) ~= "function" then return end
+	local ok, err = pcall(hooksecurefunc, owner, method, fn)
+	if not ok then Stoa.catch(err) end
+end
+
+local function dressMenus()
+	local manager = type(Menu) == "table" and type(Menu.GetManager) == "function" and Menu.GetManager()
+	-- A dropdown keeps its description between openings, so its submenu
+	-- callback is added once.
+	local watched = setmetatable({}, { __mode = "k" })
+	local function opened(own, _, description)
+		dressMenu(own:GetOpenMenu())
+		-- Submenus open later from the same description.
+		if type(description) == "table" and not watched[description] and description.AddMenuAcquiredCallback then
+			watched[description] = true
+			description:AddMenuAcquiredCallback(function(menu) xpcall(dressMenu, Stoa.catch, menu) end)
+		end
+	end
+	if type(manager) == "table" then
+		for _, method in ipairs({ "OpenMenu", "OpenContextMenu" }) do tryHook(manager, method, opened) end
+	end
+	-- Right-click menus on unit frames (the target's, the party's) open
+	-- through the game's secure unit code, past the hooks above. Every menu
+	-- draws its gold box from its style's Generate, so the dress follows
+	-- that too. Each style mixin copied Generate when made, so each is
+	-- hooked on its own.
+	for _, name in ipairs({ "MenuStyle1Mixin", "MenuStyle1ThinMixin", "MenuStyle2Mixin" }) do
+		local style = rawget(_G, name)
+		tryHook(style, "Generate", function(menu) xpcall(dressMenu, Stoa.catch, menu) end)
+	end
+	local variants = rawget(_G, "MenuVariants")
+	if type(variants) ~= "table" then return end
+	-- The lines inside: a faint light under the mouse instead of the gold
+	-- glow, ticks and radio marks in the accent, the submenu arrow quiet.
+	local function quiet(tex, token, alpha)
+		if not (tex and tex.SetDesaturated) then return end
+		tex:SetDesaturated(true)
+		local r, g, b = Stoa:Color(token)
+		tex:SetVertexColor(r, g, b, alpha or 1)
+	end
+	do
+		tryHook(variants, "CreateHighlight", function(frame)
+			local light = type(frame) == "table" and frame.highlight
+			if not (light and light.SetTexture) then return end
+			-- The soft alpha lives in the colour itself, so a later
+			-- SetVertexColor(1, 1, 1) can't turn it into a bright bar.
+			light:SetColorTexture(1, 1, 1, 0.06)
+			light:SetBlendMode("BLEND")
+		end)
+	end
+	for _, method in ipairs({ "CreateCheckbox", "CreateRadio" }) do
+		do
+			tryHook(variants, method, function(_, frame, isSelected, data)
+				local mark = type(frame) == "table" and frame.leftTexture1
+				if not mark then return end
+				local ok, chosen = pcall(isSelected, data)
+				quiet(mark, (ok and chosen) and "accent" or "muted", (ok and chosen) and 1 or 0.6)
+			end)
+		end
+	end
+	do
+		tryHook(variants, "CreateSubmenuArrow", function(frame)
+			quiet(type(frame) == "table" and frame.arrow, "muted")
+		end)
+	end
+end
+
 local function dressTooltips()
 	for _, name in ipairs(TOOLTIPS) do dressTooltip(_G[name]) end
 	local bar = GameTooltipStatusBar
@@ -904,6 +1144,7 @@ function Windows:OnEnable()
 	guarded(dressMerchant)
 	guarded(dressBags)
 	guarded(dressTooltips)
+	guarded(dressMenus)
 	guarded(dressReadyCheck)
 	-- The trainer window loads with its own addon the first time it opens.
 	-- Forever's trainer addon has a bootstrap part that loads at startup,

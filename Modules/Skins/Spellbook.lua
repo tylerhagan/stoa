@@ -729,6 +729,9 @@ local function dressBook()
 	end
 	trainerWord(frame, book)
 	Spellbook:PaintTrainerWord()
+	-- Blizzard's search (shown in Pages view) in the same dark field.
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressSearch then guarded(windows.DressSearch, book.SearchBox) end
 	viewWord(frame, book)
 	Stoa:AfterCombat(function() guarded(Spellbook.ShowView, Spellbook, Spellbook.db.view or "list") end)
 	book:HookScript("OnShow", function()
@@ -1225,6 +1228,11 @@ local function dressTalents()
 		for _, button in ipairs({ talents.ApplyButton, talents.InspectCopyButton, talents.ActiveSpec and talents.ActiveSpec.ActivateButton }) do
 			guarded(windows.DressButton, button)
 		end
+	end
+	-- The search row: the field and its options arrow.
+	if windows and windows.DressSearch then
+		guarded(windows.DressSearch, talents.SearchBox)
+		guarded(windows.DressArrowDropdown, talents.SearchOptionsDropdown)
 	end
 	Spellbook.DressTreeHeaders(talents)
 	Spellbook.PaintTalentTabs(talents)

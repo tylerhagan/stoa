@@ -852,6 +852,8 @@ local CARD_SLICE = 12
 local function sliced(parent, layer, file, outset, margin)
 	if not parent.CreateTexture then return nil end
 	local tex = parent:CreateTexture(nil, layer)
+	-- (A guarded proxy, such as a game menu, hands back nothing.)
+	if not tex then return nil end
 	if not tex.SetTextureSliceMargins then
 		tex:Hide()
 		return nil
