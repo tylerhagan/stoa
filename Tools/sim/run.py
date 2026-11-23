@@ -811,7 +811,8 @@ do
 		UnitExists = function(u) return u == "player" or u == "target" end
 		UnitIsPlayer = function(u) return u == "player" or u == "target" end
 		halo:UpdateTarget()
-		local words = halo.target.caption:GetText() or ""
+		-- Matte's slab rows put them at the line's far end, in the cue.
+		local words = (halo.target.caption:GetText() or "") .. " " .. (halo.target.cue:GetText() or "")
 		if not words:find("HUMAN") then SIM_ERRORS[#SIM_ERRORS + 1] = "Target caption: no race for a player (" .. words .. ")" end
 		UnitExists, UnitIsPlayer = realExists, realPlayer
 	end

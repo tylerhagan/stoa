@@ -341,6 +341,10 @@ local SLAB_NUM_W = 76
 local SLAB_AURA_Y = 6
 local SLAB_CAST_Y = SLAB_AURA_Y + 22 + 6
 local SLAB_OVER = 5
+-- Matte, docked: the block on the console is the slab's twin: the same
+-- line of level, name and creature type over the same slim health line,
+-- set in the taller block the dial's tab gives it.
+local DOCK_SLIM_NAME_Y, DOCK_SLIM_BAR_Y = -14, -34
 -- Rank on the slab: a coloured word standing on the block's top left
 -- (gold ELITE or BOSS, silver RARE). KICK steps in beside it.
 local SLAB_GOLD = { 0.87, 0.70, 0.36 }
@@ -471,20 +475,23 @@ function Halo:LayoutTarget(curve)
 	if docked == target.laidDocked and slab == target.laidSlab and (not docked or curve == target.laidCurve) then return end
 	target.laidDocked, target.laidCurve, target.laidSlab = docked, curve, slab
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
+	-- Slim: the slab's rows, at the Halo or docked in Matte.
+	local slim = slab or docked and UI.matte() or false
+	local left = docked and self.targetTextLeft or SLAB_PAD
 	local barW = slab and SLAB_BAR_W or TARGET_BAR_W
 	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
-	target.hp:SetSize(slab and barW - SLAB_NUM_W or barW, slab and SLAB_BAR_H or TARGET_BAR_H)
-	if target.hp.rim then target.hp.rim:SetShown(not slab) end
+	target.hp:SetSize(slim and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or TARGET_BAR_H)
+	if target.hp.rim then target.hp.rim:SetShown(not slim) end
 	-- On the slab the power line runs the health line's full length.
-	target.power:SetWidth(slab and barW - SLAB_NUM_W or barW - 16)
+	target.power:SetWidth(slim and barW - SLAB_NUM_W or barW - 16)
 	target.power:ClearAllPoints()
-	target.power:SetPoint("TOP", target.hp, "BOTTOM", 0, slab and -3 or -4)
+	target.power:SetPoint("TOP", target.hp, "BOTTOM", 0, slim and -3 or -4)
 	-- The numbers: inside the bar, or beside the name over the slim one.
 	local percent, amount = target.hp.percent, target.hp.amount
 	percent:ClearAllPoints()
 	amount:ClearAllPoints()
-	if slab then
-		percent:SetPoint("RIGHT", target, "TOPRIGHT", -SLAB_PAD, -33)
+	if slim then
+		percent:SetPoint("RIGHT", target, "TOPLEFT", left + barW, (slab and -29 or DOCK_SLIM_BAR_Y) - 4)
 		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
 	else
 		percent:SetPoint("LEFT", 10, 0)
@@ -493,10 +500,10 @@ function Halo:LayoutTarget(curve)
 	if target.threat and target.kick then
 		target.threat:ClearAllPoints()
 		target.kick:ClearAllPoints()
-		if slab then
-			target.threat:SetPoint("BOTTOMRIGHT", target, "TOPRIGHT", -SLAB_PAD, SLAB_OVER)
+		if slim then
+			target.threat:SetPoint("BOTTOMRIGHT", target, "TOPLEFT", left + barW, SLAB_OVER)
 			target.rankWord:ClearAllPoints()
-			target.rankWord:SetPoint("BOTTOMLEFT", target, "TOPLEFT", SLAB_PAD, SLAB_OVER)
+			target.rankWord:SetPoint("BOTTOMLEFT", target, "TOPLEFT", left, SLAB_OVER)
 			target.kick:SetPoint("BOTTOMLEFT", target.rankWord, "BOTTOMRIGHT", 0, 0)
 		else
 			target.threat:SetPoint("TOPRIGHT", target.hp, "BOTTOMRIGHT", 0, -12)
@@ -506,13 +513,15 @@ function Halo:LayoutTarget(curve)
 	if target.pips and target.pips.pips[1] then
 		local first = target.pips.pips[1]
 		first:ClearAllPoints()
-		if slab then
-			first:SetPoint("BOTTOMLEFT", target, "TOPLEFT", SLAB_PAD, SLAB_OVER)
+		if slim then
+			first:SetPoint("BOTTOMLEFT", target, "TOPLEFT", left, SLAB_OVER)
 		else
 			first:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -12)
 		end
 	end
-	target.markCorner = slab
+	-- The raid mark sits on the block's top edge: its left corner, or
+	-- docked (where that corner is behind the dial) over the bar's end.
+	target.markCorner = slab and 2 or slim and left + barW or false
 	if target.mark then self:PlaceTargetMark() end
 	if slab then
 		target:SetSize(SLAB_WIDTH, SLAB_HEIGHT)
@@ -524,6 +533,13 @@ function Halo:LayoutTarget(curve)
 		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
 		target.name:SetPoint("RIGHT", target.cue, "LEFT", -8, 0)
 		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -29)
+	elseif slim then
+		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
+		target.caption:SetPoint("TOPLEFT", left, DOCK_SLIM_NAME_Y)
+		target.cue:SetPoint("TOPRIGHT", target, "TOPLEFT", left + barW, DOCK_SLIM_NAME_Y)
+		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
+		target.name:SetPoint("RIGHT", target.cue, "LEFT", -8, 0)
+		target.hp:SetPoint("TOPLEFT", left, DOCK_SLIM_BAR_Y)
 	elseif docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
@@ -1082,7 +1098,7 @@ function Halo:PlaceTargetMark()
 	local target = self.target
 	target.mark:ClearAllPoints()
 	if target.markCorner then
-		target.mark:SetPoint("CENTER", target, "TOPLEFT", 2, -2)
+		target.mark:SetPoint("CENTER", target, "TOPLEFT", target.markCorner, -2)
 	else
 		target.mark:SetPoint("LEFT", target.name, "LEFT", (target.nameWidth or TARGET_BAR_W) - TARGET_MARK, 0)
 	end
@@ -1099,11 +1115,18 @@ function Halo:UpdateTargetMark()
 	target.name:SetWidth((target.nameWidth or TARGET_BAR_W) - (shown and not target.markCorner and TARGET_MARK + 6 or 0))
 end
 
+-- The slab's rows: at the Halo in Matte, and on Matte's docked block.
+function Halo:TargetSlim()
+	local docked = self.target and self.target.plaque.docked
+	if docked then return UI.matte() end
+	return self.targetSlab or false
+end
+
 function Halo:ResetTargetName()
 	local fs = self.target and self.target.name
 	if not fs or not UnitExists("target") then return end
 	-- The slab's line is lower, so its name is a step smaller.
-	Stoa:SetFont(fs, "serif", self.targetSlab and not self.target.plaque.docked and Stoa.typeSize.label or Stoa.typeSize.name)
+	Stoa:SetFont(fs, "serif", self:TargetSlim() and Stoa.typeSize.label or Stoa.typeSize.name)
 	fs:SetText("")
 	fs:SetText(UnitName("target"))
 end
@@ -1139,7 +1162,7 @@ function Halo:UpdateTarget()
 	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
 	local levelText = level and (level < 0 and "??" or tostring(level)) or nil
 	-- Docked there's no portrait, so the level leads the caption.
-	local slab = self.targetSlab and not target.plaque.docked
+	local slab = self:TargetSlim()
 	if slab then
 		-- On the slab the level leads the line, the creature type takes
 		-- its right end, and rank is a word on top of the block.
