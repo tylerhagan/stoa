@@ -1038,13 +1038,39 @@ local function paintMenuKey(button, over)
 		text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
 	end
 	if over and enabled then key.glow:Set(Stoa:Color("accent")) else key.glow:Clear() end
+	key.sheen:SetAlpha(over and enabled and 1 or 0.6)
+end
+
+-- Depth for a key: light falling on its upper half and a soft dark foot
+-- under it, so it stands off the block.
+local function raiseMenuKey(button)
+	local sheen = button:CreateTexture(nil, "BACKGROUND", nil, -6)
+	sheen:SetPoint("TOPLEFT", 2, -2)
+	sheen:SetPoint("BOTTOMRIGHT", -2, 2)
+	sheen:SetColorTexture(1, 1, 1, 1)
+	if sheen.SetGradient and CreateColor then
+		sheen:SetGradient("VERTICAL", CreateColor(0, 0, 0, 0.3), CreateColor(1, 1, 1, 0.14))
+	else
+		sheen:SetColorTexture(1, 1, 1, 0.03)
+	end
+	local foot = button:CreateTexture(nil, "BACKGROUND", nil, -8)
+	foot:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 3, 1)
+	foot:SetPoint("TOPRIGHT", button, "BOTTOMRIGHT", -3, 1)
+	foot:SetHeight(4)
+	foot:SetColorTexture(1, 1, 1, 1)
+	if foot.SetGradient and CreateColor then
+		foot:SetGradient("VERTICAL", CreateColor(0, 0, 0, 0), CreateColor(0, 0, 0, 0.55))
+	else
+		foot:SetColorTexture(0, 0, 0, 0.3)
+	end
+	return sheen
 end
 
 local function dressMenuKey(button)
 	if type(button) ~= "table" or forbidden(button) then return end
 	if not menuKeys[button] then
 		UI.roundPanel(button, 0.95)
-		menuKeys[button] = { glow = UI.roundBorder(button, "CardEdge.tga", 1) }
+		menuKeys[button] = { glow = UI.roundBorder(button, "CardEdge.tga", 1), sheen = raiseMenuKey(button) }
 	end
 	-- Blizzard cleared these scripts when it built the button, so each
 	-- build hooks them once.
@@ -1062,7 +1088,20 @@ local function dressGameMenu()
 			card = CreateFrame("Frame", nil, menu)
 			card:SetAllPoints(menu)
 			card:EnableMouse(false)
-			UI.surface(card, "card", { alpha = 0.97 })
+			UI.surface(card, "card", { alpha = 1 })
+			-- Depth: a soft shadow thrown on the world around the block
+			-- and light falling down its upper part.
+			UI.roundBorder(card, "CardGlow.tga", 3, 3):Set(0, 0, 0, 0.75)
+			local light = card:CreateTexture(nil, "BACKGROUND", nil, -6)
+			light:SetPoint("TOPLEFT", 2, -2)
+			light:SetPoint("TOPRIGHT", -2, -2)
+			light:SetHeight(90)
+			light:SetColorTexture(1, 1, 1, 1)
+			if light.SetGradient and CreateColor then
+				light:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, 0.06))
+			else
+				light:Hide()
+			end
 		end
 		card:SetFrameLevel(menu:GetFrameLevel())
 		if menu.Border and menu.Border.SetAlpha then menu.Border:SetAlpha(0) end
