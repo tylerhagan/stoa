@@ -74,11 +74,11 @@ local function plainTextures(button)
 	end
 end
 
--- Depth for the dark keys: a hard dark lip 2px under the key, a 1px light
+-- Depth for the dark keys: a soft dark lip 1px under the key, a faint light
 -- rim along its top and a faint light falling down the face. Pressed, the
 -- key sinks onto its lip and its words drop a pixel. Textures and hooked
 -- scripts only, so secure buttons are fine.
-local KEY_LIP = 2
+local KEY_LIP = 1
 local function keyDepth(button, face)
 	local lip = UI.sliced(button, "BACKGROUND", "CardFill.tga")
 	if not (lip and face) then return end
@@ -87,19 +87,19 @@ local function keyDepth(button, face)
 	lip:ClearAllPoints()
 	lip:SetPoint("TOPLEFT", 0, -KEY_LIP)
 	lip:SetPoint("BOTTOMRIGHT", 0, -KEY_LIP)
-	lip:SetVertexColor(0, 0, 0, 0.9)
+	lip:SetVertexColor(0, 0, 0, 0.45)
 	local sheen = button:CreateTexture(nil, "BACKGROUND", nil, -5)
 	sheen:SetTexture(UI.WHITE)
 	sheen:SetHeight(1)
 	sheen:SetPoint("TOPLEFT", 5, -1)
 	sheen:SetPoint("TOPRIGHT", -5, -1)
-	sheen:SetVertexColor(1, 1, 1, 0.14)
+	sheen:SetVertexColor(1, 1, 1, 0.06)
 	local fall = button:CreateTexture(nil, "BACKGROUND", nil, -5)
 	fall:SetTexture(UI.WHITE)
 	fall:SetPoint("TOPLEFT", 2, -2)
 	fall:SetPoint("BOTTOMRIGHT", -2, 2)
 	if fall.SetGradient and CreateColor then
-		fall:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, 0.05))
+		fall:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, 0.025))
 	else
 		fall:Hide()
 	end
@@ -107,8 +107,8 @@ local function keyDepth(button, face)
 	local function press(down)
 		local enabled = not button.IsEnabled or button:IsEnabled()
 		down = down and enabled
-		lip:SetPoint("TOPLEFT", 0, down and -1 or -KEY_LIP)
-		lip:SetPoint("BOTTOMRIGHT", 0, down and -1 or -KEY_LIP)
+		lip:SetPoint("TOPLEFT", 0, down and 0 or -KEY_LIP)
+		lip:SetPoint("BOTTOMRIGHT", 0, down and 0 or -KEY_LIP)
 		sheen:SetAlpha(down and 0.4 or (enabled and 1 or 0.5))
 		fall:SetAlpha(down and 0 or 1)
 	end

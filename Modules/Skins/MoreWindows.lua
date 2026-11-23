@@ -284,7 +284,7 @@ local BLIZZARD_STRIP, CONTENT_AIR = 23, 8
 -- The roster's member list (wide, with column heads 60px above its top) and
 -- its two view dropdowns are placed by guildRoster instead.
 local ROSTER_DROPDOWNS = { "GuildMemberListDropdown", "CommunityMemberListDropdown" }
-local guildRoster
+local guildRoster, guildInner
 -- The side tabs, in header order, with their words.
 local GUILD_TABS = {
 	{ "ChatTab", "Chat" }, { "RosterTab", "Roster" }, { "GuildBenefitsTab", "Perks" },
@@ -357,6 +357,10 @@ local function chosenGuildTab(frame)
 	local modes = rawget(_G, "COMMUNITIES_FRAME_DISPLAY_MODES")
 	local mode = modes and frame.GetDisplayMode and frame:GetDisplayMode()
 	if not mode then return nil end
+	for _, entry in ipairs(GUILD_TABS) do
+		local tab = frame[entry[1]]
+		if type(tab) == "table" and tab.displayMode ~= nil and tab.displayMode == mode then return tab end
+	end
 	if mode == modes.CHAT then return frame.ChatTab end
 	if mode == modes.ROSTER or (frame.IsShowingApplicantList and frame:IsShowingApplicantList()) then return frame.RosterTab end
 	if mode == modes.GUILD_BENEFITS then return frame.GuildBenefitsTab end
@@ -401,8 +405,13 @@ local function guildTabWord(tab, label)
 	tab.stoaGuildWord, tab.stoaGuildLine = word, line
 	UI.applyTheme()
 	hooksecurefunc(tab, "SetChecked", paintGuildTab)
-	tab:HookScript("OnClick", function(self) paintGuildTabs(self:GetParent()) end)
-	tab:HookScript("OnEnter", function(self) if not self:GetChecked() then self.stoaGuildWord:SetTextColor(Stoa:Color("accent")) end end)
+	tab:HookScript("OnClick", function(self)
+		local frame = self:GetParent()
+		paintGuildTabs(frame)
+		-- Once more after Blizzard has finished switching the page.
+		C_Timer.After(0, function() paintGuildTabs(frame) end)
+	end)
+	tab:HookScript("OnEnter", function(self) if not self.stoaGuildLine:IsShown() then self.stoaGuildWord:SetTextColor(Stoa:Color("accent")) end end)
 	tab:HookScript("OnLeave", paintGuildTab)
 	paintGuildTab(tab)
 end
@@ -570,10 +579,17 @@ function AFTER.communities(frame)
 	-- The MOTD row takes its room only on the chat and roster pages; the
 	-- club list beside it (and the pages hung from it) drop by the base.
 	local drop = listMode and (base + MOTD_ROW) or base
-	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key], drop) end
+	for _, key in ipairs(COMMUNITIES_PARTS) do
+		-- Maximised, the chat hangs from the club list, which has already
+		-- dropped by the base: it takes only the rest.
+		local amount = drop
+		if key == "Chat" and not small then amount = drop - base end
+		dropTops(frame[key], amount)
+	end
 	dropTops(frame.CommunitiesList, small and 0 or base)
 	frame.stoaGuildDrop = drop
 	guildRoster(frame, drop)
+	xpcall(guildInner, Stoa.catch, frame)
 	placeGuildTabs(frame)
 	paintGuildTabs(frame)
 	guildTitle(frame)
@@ -755,6 +771,150 @@ guildRoster = function(frame, drop)
 			dropdown:SetPoint("RIGHT", frame, "TOPRIGHT", -30, -y)
 			dropdown:SetFrameLevel(frame:GetFrameLevel() + 20)
 		end
+	end
+end
+
+-- The inside of the guild window: Blizzard's blue stone club list, gold
+-- bevels round the chat and member list, the gold channel dropdowns and the
+-- marbled rows become STOA's dark column, wells and fields.
+local function alphaOff(region)
+	if region and region.SetAlpha then region:SetAlpha(0) end
+end
+
+local function quietInset(inset)
+	if type(inset) ~= "table" or forbidden(inset) then return end
+	alphaOff(inset.NineSlice)
+	alphaOff(inset.Bg)
+end
+
+local function column(owner, alpha, side)
+	if owner.stoaColumn then return end
+	local fill = owner:CreateTexture(nil, "BACKGROUND", nil, -6)
+	fill:SetTexture(UI.WHITE)
+	fill:SetAllPoints()
+	fill:SetVertexColor(0, 0, 0, alpha)
+	local rule = owner:CreateTexture(nil, "BORDER")
+	rule:SetTexture(UI.WHITE)
+	UI.pixel(rule, "width")
+	rule:SetPoint("TOP" .. side)
+	rule:SetPoint("BOTTOM" .. side)
+	UI.tint(rule, "hairline")
+	owner.stoaColumn = fill
+	UI.applyTheme()
+end
+
+-- Each scroll list builds its rows as they scroll into view.
+local function eachRow(scrollBox, key, fn)
+	if type(scrollBox) ~= "table" or forbidden(scrollBox) or scrollBox[key] then return end
+	scrollBox[key] = true
+	if ScrollUtil and ScrollUtil.AddAcquiredFrameCallback then
+		ScrollUtil.AddAcquiredFrameCallback(scrollBox, function(_, row) xpcall(fn, Stoa.catch, row) end, scrollBox, true)
+	elseif scrollBox.ForEachFrame then
+		scrollBox:ForEachFrame(function(row) xpcall(fn, Stoa.catch, row) end)
+	end
+end
+
+-- A club in the list: a dark rounded tile, its name in the text colour, an
+-- accent edge on the open one. Blizzard swaps the tile's atlas per club,
+-- so its own art is only ever faded out, never replaced.
+local function paintClub(row)
+	if not row.stoaClubFill then return end
+	local chosen = row.Selection and row.Selection:IsShown()
+	if chosen then row.stoaClubEdge:Set(Stoa:Color("accent")) else row.stoaClubEdge:Clear() end
+	local r, g, b = Stoa:Color("panel")
+	row.stoaClubFill:SetVertexColor(r, g, b, chosen and 0.95 or (row.stoaOver and 0.8 or 0.55))
+	local name = row.Name
+	if name and name.SetTextColor then
+		local enabled = not row.IsEnabled or row:IsEnabled()
+		name:SetTextColor(Stoa:Color(enabled and "text" or "muted"))
+	end
+end
+
+local function dressClub(row)
+	if type(row) ~= "table" or forbidden(row) then return end
+	for _, key in ipairs({ "Background", "Selection", "NewCommunityFlash" }) do alphaOff(row[key]) end
+	alphaOff(row.GetHighlightTexture and row:GetHighlightTexture())
+	if not row.stoaClubFill then
+		local fill = UI.sliced(row, "BACKGROUND", "CardFill.tga")
+		if not fill then return end
+		fill:ClearAllPoints()
+		fill:SetPoint("TOPLEFT", 6, -3)
+		fill:SetPoint("BOTTOMRIGHT", -6, 3)
+		fill:SetDrawLayer("BACKGROUND", -8)
+		local edge = UI.roundBorder(row, "CardEdge.tga", 1)
+		for _, tex in ipairs(edge.edges) do
+			tex:ClearAllPoints()
+			tex:SetPoint("TOPLEFT", 6, -3)
+			tex:SetPoint("BOTTOMRIGHT", -6, 3)
+		end
+		row.stoaClubFill, row.stoaClubEdge = fill, edge
+		if row.Name then
+			Stoa:SetFont(row.Name, "sans", Stoa.typeSize.body)
+			row.Name:SetShadowOffset(0, 0)
+		end
+		if row.Selection then
+			hooksecurefunc(row.Selection, "Show", function() paintClub(row) end)
+			hooksecurefunc(row.Selection, "Hide", function() paintClub(row) end)
+			hooksecurefunc(row.Selection, "SetShown", function() paintClub(row) end)
+		end
+		row:HookScript("OnEnter", function(self) self.stoaOver = true paintClub(self) end)
+		row:HookScript("OnLeave", function(self) self.stoaOver = nil paintClub(self) end)
+		for _, method in ipairs({ "Init", "SetFindCommunity", "SetAddCommunity", "SetGuildFinder", "SetEntryEnabled" }) do
+			if row[method] then
+				hooksecurefunc(row, method, function(self)
+					for _, key in ipairs({ "Background", "Selection", "NewCommunityFlash" }) do alphaOff(self[key]) end
+					-- The add and find tiles' green icons go quiet.
+					local icon = self.Icon
+					if icon and icon.SetDesaturated then icon:SetDesaturated(method ~= "Init") end
+					paintClub(self)
+				end)
+			end
+		end
+	end
+	paintClub(row)
+end
+
+-- A member row: Blizzard's bevelled bar goes, a faint light under the mouse.
+local function dressMemberRow(row)
+	if type(row) ~= "table" or forbidden(row) or row.stoaRow then return end
+	row.stoaRow = true
+	alphaOff(row.GetNormalTexture and row:GetNormalTexture())
+	local over = row.GetHighlightTexture and row:GetHighlightTexture()
+	if over and over.SetTexture then
+		over:SetTexture(UI.WHITE)
+		over:SetVertexColor(1, 1, 1, 0.05)
+	end
+end
+
+guildInner = function(frame)
+	local windows = Stoa.modules.Windows
+	local list = frame.CommunitiesList
+	if type(list) == "table" and not forbidden(list) then
+		for _, key in ipairs({ "Bg", "TopFiligree", "BottomFiligree" }) do alphaOff(list[key]) end
+		alphaOff(list.FilligreeOverlay)
+		quietInset(list.InsetFrame)
+		column(list, 0.22, "RIGHT")
+		eachRow(list.ScrollBox, "stoaClubRows", dressClub)
+	end
+	local chat = frame.Chat
+	if type(chat) == "table" and not forbidden(chat) then
+		quietInset(chat.InsetFrame)
+		if chat.InsetFrame and not chat.InsetFrame.stoaWell then UI.well(chat.InsetFrame, 0) end
+	end
+	if windows and windows.DressSearch then xpcall(windows.DressSearch, Stoa.catch, frame.ChatEditBox) end
+	for _, key in ipairs({ "StreamDropdown", "CommunitiesListDropdown" }) do
+		local dropdown = frame[key]
+		if type(dropdown) == "table" and not forbidden(dropdown) then dressDropdownField(dropdown) end
+	end
+	local members = frame.MemberList
+	if type(members) == "table" and not forbidden(members) then
+		quietInset(members.InsetFrame)
+		if members.ColumnDisplay then
+			alphaOff(members.ColumnDisplay.Background)
+			alphaOff(members.ColumnDisplay.TopTileStreaks)
+		end
+		column(members, 0.18, "LEFT")
+		eachRow(members.ScrollBox, "stoaMemberRows", dressMemberRow)
 	end
 end
 
