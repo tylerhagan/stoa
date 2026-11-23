@@ -13,6 +13,9 @@ local Halo = Stoa:NewModule("Halo", {
 	-- The target as a strip: no panel, a small portrait, words over the
 	-- world, level with the Halo. Off brings back the solid plaque.
 	targetStrip = false,
+	-- Matte: the target as the full plaque with its portrait (the size of
+	-- the leather one) instead of the smaller slab.
+	targetFull = false,
 	hidePlayerFrame = true,
 	hideTargetFrame = true,
 	-- Who your target is targeting, as a small line at the plaque's right.
@@ -406,7 +409,7 @@ function Halo:PlaceTarget()
 	if not target or InCombatLockdown() then return end
 	if Stoa:HasSavedPosition("target") then
 		-- Moved by hand it never docks, but Matte still makes it the slab.
-		self.targetSlab = UI.matte() and not self.db.targetStrip or false
+		self.targetSlab = self:SlabWanted()
 		if self.targetSlab and target.hp then
 			target.plaque:SetPlain(true)
 			self:LayoutTarget(nil)
@@ -449,11 +452,11 @@ function Halo:PlaceTarget()
 	-- Docked, the corner starts rounding just past the health bar: there's
 	-- no portrait to leave room for.
 	local docks = self.targetResting and self.targetDocks
-	local barEnd = (self.targetTextLeft or TARGET_PAD) + (docks and UI.matte() and DOCK_SLIM_BAR_W or TARGET_BAR_W)
+	local barEnd = (self.targetTextLeft or TARGET_PAD) + (docks and self:SlabWanted() and DOCK_SLIM_BAR_W or TARGET_BAR_W)
 	local curve = barEnd + 14
 	if self.targetResting and self.targetDocks then curve = barEnd + 14 - UI.PLAQUE_JOIN_FLAT end
 	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
-	self.targetSlab = UI.matte() and not target.plaque.docked and not self.db.targetStrip or false
+	self.targetSlab = not target.plaque.docked and self:SlabWanted()
 	target.plaque:SetPlain(self.targetSlab)
 	-- Matte: the docked block starts behind the dial, so clicks there stay
 	-- the dial's.
@@ -479,7 +482,7 @@ function Halo:LayoutTarget(curve)
 	target.laidDocked, target.laidCurve, target.laidSlab = docked, curve, slab
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
 	-- Slim: the slab's rows, at the Halo or docked in Matte.
-	local slim = slab or docked and UI.matte() or false
+	local slim = slab or docked and self:SlabWanted() or false
 	local left = docked and self.targetTextLeft or SLAB_PAD
 	local barW = slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
 	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
@@ -1024,13 +1027,13 @@ function Halo:PlaceTargetOfTarget(curve)
 		-- Its corner starts rounding just past its words.
 		-- Matte ends are straight, so the words start just past the tuck.
 		local textLeft = UI.matte() and TOT_TUCK + 12 or TOT_DOCK_TEXT
-		local stepCurve = textLeft + (UI.matte() and TOT_TIGHT_W or TOT_WIDTH) + 10 - UI.PLAQUE_STEP_FLAT
+		local stepCurve = textLeft + (self:SlabWanted() and TOT_TIGHT_W or TOT_WIDTH) + 10 - UI.PLAQUE_STEP_FLAT
 		-- Behind the plaque: a lower strata than its LOW.
 		chip:SetFrameStrata("BACKGROUND")
 		chip:SetSize(stepCurve + UI.PLAQUE_STEP_SPAN, UI.PLAQUE_STEP_H)
 		chip:SetPoint("BOTTOMLEFT", target, "BOTTOMLEFT", left, 0)
 		chip.slab:Layout(stepCurve)
-		chip.label:SetPoint("TOPLEFT", textLeft, UI.matte() and -11 or -6)
+		chip.label:SetPoint("TOPLEFT", textLeft, self:SlabWanted() and -11 or -6)
 	else
 		chip:SetFrameStrata("LOW")
 		if self.targetSlab then
@@ -1046,7 +1049,7 @@ function Halo:PlaceTargetOfTarget(curve)
 		end
 	end
 	-- Matte: one line over the health line, docked or beside the slab.
-	chip:SetTight(docked and UI.matte() or not docked and self.targetSlab or false)
+	chip:SetTight(docked and self:SlabWanted() or not docked and self.targetSlab or false)
 	if chip.slab then chip.slab:SetShown(docked) end
 	if chip.fill then
 		chip.fill:SetShown(not docked)
@@ -1121,8 +1124,13 @@ end
 -- The slab's rows: at the Halo in Matte, and on Matte's docked block.
 function Halo:TargetSlim()
 	local docked = self.target and self.target.plaque.docked
-	if docked then return UI.matte() end
+	if docked then return self:SlabWanted() end
 	return self.targetSlab or false
+end
+
+-- Matte's smaller target, unless the full plaque or the words were chosen.
+function Halo:SlabWanted()
+	return UI.matte() and not self.db.targetStrip and not self.db.targetFull or false
 end
 
 function Halo:ResetTargetName()

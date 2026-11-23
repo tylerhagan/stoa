@@ -803,6 +803,15 @@ local function build()
 		get = function() local m = module("Halo"); return m and m.targetStrip and "words" or "plaque" end,
 		set = function(v) local m = module("Halo"); if m then m.targetStrip = v == "words" end end,
 	})
+	-- Matte only: tucked under the target's shape.
+	choice(nil, "targetSize", "Matte target size", "Compact is a small block: name, type and a slim health line. Full is the larger plaque with the target's portrait, the size of the Leather one.", "compact", {
+		{ "compact", "Compact" }, { "full", "Full" },
+	}, {
+		id = "targetSize", reload = true, under = "targetShape", words = "target frame plaque slab size big small portrait matte",
+		showWhen = function() local m = module("Halo"); return db().material == "matte" and not (m and m.targetStrip) end,
+		get = function() local m = module("Halo"); return m and m.targetFull and "full" or "compact" end,
+		set = function(v) local m = module("Halo"); if m then m.targetFull = v == "full" end end,
+	})
 	choice(nil, "restFrames", "Target and party out of combat", "Faint rests them at half strength until a fight starts or the mouse is over them.", "full", {
 		{ "full", "Full strength" }, { "faint", "Faint" },
 	}, {
