@@ -543,7 +543,6 @@ function Halo:LayoutTarget(curve)
 	elseif docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
-		local left = self.targetTextLeft
 		-- Matte: the block is lower, so the rows sit closer.
 		local tight = UI.matte()
 		local top = tight and -7 or -9
