@@ -468,7 +468,8 @@ function Halo:LayoutTarget(curve)
 	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
 	target.hp:SetSize(slab and barW - SLAB_NUM_W or barW, slab and SLAB_BAR_H or TARGET_BAR_H)
 	if target.hp.rim then target.hp.rim:SetShown(not slab) end
-	target.power:SetWidth((slab and barW - SLAB_NUM_W or barW) - 16)
+	-- On the slab the power line runs the health line's full length.
+	target.power:SetWidth(slab and barW - SLAB_NUM_W or barW - 16)
 	target.power:ClearAllPoints()
 	target.power:SetPoint("TOP", target.hp, "BOTTOM", 0, slab and -3 or -4)
 	-- The numbers: inside the bar, or beside the name over the slim one.
