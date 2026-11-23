@@ -514,12 +514,25 @@ local function guildTitle(frame)
 		title:SetPoint("LEFT", header, "LEFT", 18, 0)
 		title:SetPoint("RIGHT", frame.MaximizeMinimizeFrame or header, "LEFT", -8, 0)
 	else
-		title:SetPoint("BOTTOMLEFT", header, "LEFT", 18, 1)
-		title:SetPoint("RIGHT", right, "LEFT", -16, 0)
-		sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
-		sub:SetPoint("RIGHT", title, "RIGHT")
+		-- One line: the name, a fine rule, then who is online, all on the
+		-- header's middle. A long name gives way to the page words.
+		local room = (right:GetLeft() or 0) - (header:GetLeft() or 0) - 18 - 16 - sub:GetStringWidth() - 26
+		title:SetPoint("LEFT", header, "LEFT", 18, 0)
+		if room > 40 then title:SetWidth(math.min(title:GetStringWidth() + 2, room)) end
+		sub:SetPoint("LEFT", title, "RIGHT", 26, -1)
+		if not frame.stoaGuildRule then
+			local rule = frame:CreateTexture(nil, "ARTWORK")
+			rule:SetTexture(UI.WHITE)
+			rule:SetSize(1, 14)
+			UI.pixel(rule, "width")
+			UI.tint(rule, "hairline")
+			frame.stoaGuildRule = rule
+		end
+		frame.stoaGuildRule:ClearAllPoints()
+		frame.stoaGuildRule:SetPoint("LEFT", title, "RIGHT", 13, 0)
 	end
 	sub:SetShown(not small)
+	if frame.stoaGuildRule then frame.stoaGuildRule:SetShown(not small) end
 end
 
 -- The message of the day (a guild's, or a community's broadcast) on its
