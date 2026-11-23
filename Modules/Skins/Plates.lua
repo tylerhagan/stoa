@@ -366,6 +366,8 @@ local function plateName(frame)
 	pcall(function() parts.name:SetText(UnitName(frame.unit)) end)
 end
 
+local slimCast
+
 -- Shows the chosen style's parts and sizes the bar.
 local function applyStyle(frame)
 	if not frame.stoaDressed or not isPlate(frame) then return end
@@ -387,6 +389,7 @@ local function applyStyle(frame)
 			end
 		end
 	end
+	slimCast(frame.CastBarsContainer and frame.CastBarsContainer.castBar, style.flush and true or false)
 	local pill = not style.box and not style.brass and not style.flush
 	parts.well:SetVertexColor(0, 0, 0, style.flush and 0.8 or UI.SURFACES.well.black)
 	-- The Matte line keeps a fine black rim, so it reads on bright ground
@@ -431,8 +434,47 @@ local function dressCast(cast)
 	if cast.Background then cast.Background:SetAlpha(0) end
 	if cast.Border then cast.Border:SetAlpha(0) end
 	if cast.Icon then cast.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
-	UI.tint(UI.pillFill(cast, PAD), "panel", 0.85)
-	UI.pillEdge(cast, PAD):Set(0, 0, 0, 0.9)
+	cast.stoaPill = UI.tint(UI.pillFill(cast, PAD), "panel", 0.85)
+	local edge = UI.pillEdge(cast, PAD)
+	edge:Set(0, 0, 0, 0.9)
+	cast.stoaPillEdge = edge
+end
+
+-- The Matte line's cast: a thin line under the health line with the spell's
+-- icon and name below it, in place of a tall bright bar with the name
+-- inside. The game lays the bar out again whenever plate options change
+-- (and applyStyle follows it), so this only needs to set it, not undo it.
+local CAST_LINE = 4
+function slimCast(cast, slim)
+	if not cast or not cast.stoaDressed then return end
+	if cast.stoaPill then cast.stoaPill:SetShown(not slim) end
+	if cast.stoaPillEdge then
+		if slim then cast.stoaPillEdge:Clear() else cast.stoaPillEdge:Set(0, 0, 0, 0.9) end
+	end
+	if cast.stoaRim then cast.stoaRim:SetShown(slim) end
+	-- The glows round the bar (an important cast, a cast at you) are drawn
+	-- for a tall bar.
+	for _, key in ipairs({ "ImportantCastIndicator", "CastTargetIndicator" }) do
+		if cast[key] then cast[key]:SetAlpha(slim and 0 or 1) end
+	end
+	if not slim or (cast.IsProtected and cast:IsProtected()) then return end
+	local box = cast:GetParent()
+	if not box then return end
+	if not cast.stoaRim then
+		cast.stoaRim = UI.pillFill(cast, 1)
+		cast.stoaRim:SetDrawLayer("BACKGROUND", -7)
+		cast.stoaRim:SetVertexColor(0, 0, 0, 0.95)
+	end
+	cast:ClearAllPoints()
+	cast:SetPoint("TOPLEFT", box, "TOPLEFT", 0, 0)
+	cast:SetPoint("TOPRIGHT", box, "TOPRIGHT", 0, 0)
+	cast:SetHeight(CAST_LINE)
+	if cast.Spark then cast.Spark:SetHeight(CAST_LINE + 2) end
+	if cast.Icon then
+		cast.Icon:ClearAllPoints()
+		cast.Icon:SetPoint("TOPLEFT", cast, "BOTTOMLEFT", 0, -3)
+		cast.Icon:SetSize(11, 11)
+	end
 end
 
 local function dress(frame)

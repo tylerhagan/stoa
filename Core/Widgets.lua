@@ -857,6 +857,9 @@ local CARD_SLICE = 12
 -- The Matte small key's pieces (Tools/art/matte_key.py) slice at 5.
 local KEY_SLICE = 5
 UI.KEY_SLICE = KEY_SLICE
+-- The Matte card plate (4 pixel corner) is nine-sliced at 8.
+local CARD_SLICE = 8
+UI.CARD_SLICE = CARD_SLICE
 
 local function sliced(parent, layer, file, outset, margin)
 	if not parent.CreateTexture then return nil end
@@ -1563,21 +1566,33 @@ function UI.raidMark(parent, size)
 	return mark
 end
 
+-- Matte: takes the hard corners off a square health bar. The corners are
+-- covered in the card's own colour (MatteBarCorners.tga, a 2 pixel
+-- corner), which costs one texture and no mask.
+function UI.softCorners(bar)
+	local corners = sliced(bar, "OVERLAY", "MatteBarCorners.tga", 0, 3)
+	if not corners then return end
+	corners:SetDrawLayer("OVERLAY", 7)
+	UI.tint(corners, "panel", 1)
+	bar.corners = corners
+	return corners
+end
+
 function UI.unitCard(card, styleName)
 	-- The rulebook's card surface: panel fill and one hairline edge, as on
 	-- tooltips and plaques. A stronger border shows states (a dispel, low
 	-- health or your target); dispels also get a soft halo outside.
-	-- Matte: the small key's plate instead (Tools/art/matte_key.py): a
-	-- 2 pixel corner, light caught on the top edge, shade along the foot
+	-- Matte: the card plate instead (Tools/art/matte_key.py): a
+	-- 4 pixel corner, light caught on the top edge, shade along the foot
 	-- and a dark line under it, with a crisp state outline to match.
-	local plate = UI.matte() and sliced(card, "BACKGROUND", "MatteKeyFill.tga", 0, KEY_SLICE)
+	local plate = UI.matte() and sliced(card, "BACKGROUND", "MatteCardFill.tga", 0, CARD_SLICE)
 	if plate then
 		plate:SetDrawLayer("BACKGROUND", -8)
 		UI.tint(plate, "panel", 0.97)
-		local lines = sliced(card, "BACKGROUND", "MatteKey.tga", 0, KEY_SLICE)
+		local lines = sliced(card, "BACKGROUND", "MatteCard.tga", 0, CARD_SLICE)
 		lines:SetDrawLayer("BACKGROUND", -7)
 		card.stoaSurface, card.stoaSurfaceKind, card.stoaKeyLines = plate, "card", lines
-		local ring = sliced(card, "OVERLAY", "MatteCardState.tga", 0, KEY_SLICE)
+		local ring = sliced(card, "OVERLAY", "MatteCardState.tga", 0, CARD_SLICE)
 		ring:Hide()
 		card.state = {
 			edges = { ring },
@@ -1607,6 +1622,7 @@ function UI.unitCard(card, styleName)
 
 	local hp = UI.bar(card, 10, 10, "health")
 	card.hp = hp
+	if plate then UI.softCorners(hp) end
 	UI.halvedStripes(hp)
 
 	-- Shields sit on the empty end of the health bar, starting where health
@@ -1900,10 +1916,10 @@ end
 
 function UI.plaque(frame, coinSide, opts)
 	local plaque = {}
-	-- Matte: the small key's plate (2 pixel corner, fine light and shade
+	-- Matte: the card plate (4 pixel corner, fine light and shade
 	-- lines) instead of the rounded card with its edge and bevel.
 	local keyed = UI.matte()
-	local fill = sliced(frame, "BACKGROUND", keyed and "MatteKeyFill.tga" or "CardFill.tga", 0, keyed and KEY_SLICE or nil)
+	local fill = sliced(frame, "BACKGROUND", keyed and "MatteCardFill.tga" or "CardFill.tga", 0, keyed and CARD_SLICE or nil)
 	if not fill then
 		fill = frame:CreateTexture(nil, "BACKGROUND")
 		fill:SetAllPoints()
@@ -1927,7 +1943,7 @@ function UI.plaque(frame, coinSide, opts)
 	local edge
 	if keyed and fill and fill.SetTextureSliceMargins then
 		-- Kept as the frame's mould, so docking and the bare style hide it.
-		frame.stoaMould = sliced(frame, "BORDER", "MatteKey.tga", 0, KEY_SLICE)
+		frame.stoaMould = sliced(frame, "BORDER", "MatteCard.tga", 0, CARD_SLICE)
 		plaque.lines = {}
 	else
 		edge = sliced(frame, "BORDER", "CardEdge.tga")
@@ -2176,6 +2192,7 @@ function UI.plaqueBar(frame, width, height)
 	UI.legible(amount)
 	hp.mask, hp.words, hp.percent, hp.amount, hp.rim = mask, words, percent, amount, rim
 	hp.square = square
+	if square then UI.softCorners(hp) end
 	return hp
 end
 
