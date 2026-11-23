@@ -1666,7 +1666,9 @@ do
 			halo:LayoutTarget(nil)
 			if plaque.dock and plaque.dock.join:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: join stays undocked" end
 			if target.laidDocked then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: still laid out docked" end
-			if not plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait missing undocked" end
+			-- The Matte slab has no portrait; the leather plaque keeps its own.
+			if not plaque.plain and not plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait missing undocked" end
+			if plaque.plain and plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait shows on the slab" end
 			if plaque.shadow and plaque.shadow:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: shadow stays undocked" end
 			halo:PlaceTarget()
 		end

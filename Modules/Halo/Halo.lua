@@ -322,6 +322,15 @@ local TARGET_COIN_SPACE = UI.PLAQUE_MEDALLION_SPACE
 local TARGET_BAR_W = TARGET_WIDTH - TARGET_PAD - TARGET_COIN_SPACE
 local TARGET_BAR_H = 14
 local TARGET_CAST_H = 14
+local TARGET_MARK = 16
+-- Matte: at the Halo the plaque is a slab, the same moulded block as the
+-- docked one: no portrait, the level, name and cue on one line over the
+-- bar, and the threat and KICK words on a line just under the block.
+local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 232, 56, 11
+local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
+local SLAB_NAME_W = 132
+-- From the bar's foot to the line under the block.
+local SLAB_UNDER = 21
 
 -- Out of combat, on the full console with its art, the plaque docks on the
 -- gold rim on the mana side, beside the bars you read there: as tall as the
@@ -358,6 +367,10 @@ function Halo:PlaceTargetAuras()
 		-- threat and KICK words between them.
 		cast:SetPoint("TOPLEFT", self.target.hp, "BOTTOMLEFT", 0, -26)
 		icons[1]:SetPoint("TOPLEFT", self.target.hp, "BOTTOMLEFT", 0, -26 - step)
+	elseif self.targetSlab then
+		-- Under the line of words that hangs below the slab.
+		cast:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", SLAB_PAD, -22)
+		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", SLAB_PAD, -22 - step)
 	else
 		cast:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_PAD, -6)
 		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_PAD, -6 - step)
@@ -367,7 +380,17 @@ end
 
 function Halo:PlaceTarget()
 	local target, frame = self.target, self.frame
-	if not target or InCombatLockdown() or Stoa:HasSavedPosition("target") then return end
+	if not target or InCombatLockdown() then return end
+	if Stoa:HasSavedPosition("target") then
+		-- Moved by hand it never docks, but Matte still makes it the slab.
+		self.targetSlab = UI.matte() and not self.db.targetStrip or false
+		if self.targetSlab and target.hp then
+			target.plaque:SetPlain(true)
+			self:LayoutTarget(nil)
+			self:PlaceTargetAuras()
+		end
+		return
+	end
 	local console = Stoa.modules.Grimoire
 	local edge = console and console.enabled and console.frame
 	target:ClearAllPoints()
@@ -405,6 +428,8 @@ function Halo:PlaceTarget()
 	local curve = barEnd + 14
 	if self.targetResting and self.targetDocks then curve = barEnd + 14 - UI.PLAQUE_JOIN_FLAT end
 	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
+	self.targetSlab = UI.matte() and not target.plaque.docked and not self.db.targetStrip or false
+	target.plaque:SetPlain(self.targetSlab)
 	-- Matte: the docked block starts behind the dial, so clicks there stay
 	-- the dial's.
 	local behind = target.plaque.docked and UI.matte() and console.MATTE_DOCK_TEXT - TARGET_PAD or 0
@@ -424,10 +449,38 @@ function Halo:LayoutTarget(curve)
 	local target = self.target
 	if not (target and target.hp) then return end
 	local docked = curve ~= nil
-	if docked == target.laidDocked and (not docked or curve == target.laidCurve) then return end
-	target.laidDocked, target.laidCurve = docked, curve
+	local slab = not docked and self.targetSlab or false
+	if docked == target.laidDocked and slab == target.laidSlab and (not docked or curve == target.laidCurve) then return end
+	target.laidDocked, target.laidCurve, target.laidSlab = docked, curve, slab
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
-	if docked then
+	local barW = slab and SLAB_BAR_W or TARGET_BAR_W
+	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
+	target.hp:SetWidth(barW)
+	target.power:SetWidth(barW - 16)
+	local under = slab and SLAB_UNDER or 12
+	if target.threat and target.kick then
+		target.threat:ClearAllPoints()
+		target.threat:SetPoint("TOPRIGHT", target.hp, "BOTTOMRIGHT", 0, -under)
+		target.kick:ClearAllPoints()
+		target.kick:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -under)
+	end
+	if target.pips and target.pips.pips[1] then
+		target.pips.pips[1]:ClearAllPoints()
+		target.pips.pips[1]:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -under)
+	end
+	if target.mark then
+		target.mark:ClearAllPoints()
+		target.mark:SetPoint("LEFT", target.name, "LEFT", target.nameWidth - TARGET_MARK, 0)
+	end
+	if slab then
+		target:SetSize(SLAB_WIDTH, SLAB_HEIGHT)
+		-- The level leads the line, the name beside it, the cue at the end.
+		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -12)
+		target.cue:SetPoint("TOPRIGHT", -SLAB_PAD, -12)
+		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
+		target.name:SetWidth(SLAB_NAME_W)
+		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -27)
+	elseif docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
 		local left = self.targetTextLeft
@@ -549,6 +602,8 @@ function Halo:BuildTarget(frame)
 	-- On a friend: your buffs on them as the party cards' tags.
 	target.pips = UI.pipRow(target, hp, 12)
 	target.threat, target.caption = threat, caption
+	-- Matte: these two hang under the slab, over the world.
+	if UI.matte() then UI.legible(threat); UI.legible(kick) end
 	if self.db.targetStrip then
 		plaque:SetBare(true)
 		for _, fs in ipairs({ caption, cue, name, threat, kick }) do UI.legible(fs) end
@@ -943,16 +998,15 @@ end
 
 -- The target's raid mark at the right end of its name line; the name
 -- gives it room while it shows.
-local TARGET_MARK = 16
 function Halo:UpdateTargetMark()
 	local target = self.target
 	if not (target and target.name) then return end
 	if not target.mark then
 		target.mark = UI.raidMark(target, TARGET_MARK)
-		target.mark:SetPoint("LEFT", target.name, "LEFT", TARGET_BAR_W - TARGET_MARK, 0)
+		target.mark:SetPoint("LEFT", target.name, "LEFT", (target.nameWidth or TARGET_BAR_W) - TARGET_MARK, 0)
 	end
 	local shown = target.mark:Update("target")
-	target.name:SetWidth(TARGET_BAR_W - (shown and TARGET_MARK + 6 or 0))
+	target.name:SetWidth((target.nameWidth or TARGET_BAR_W) - (shown and TARGET_MARK + 6 or 0))
 end
 
 function Halo:ResetTargetName()
@@ -994,7 +1048,13 @@ function Halo:UpdateTarget()
 	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
 	local levelText = level and (level < 0 and "??" or tostring(level)) or nil
 	-- Docked there's no portrait, so the level leads the caption.
-	if target.plaque.docked then
+	local slab = self.targetSlab and not target.plaque.docked
+	if slab then
+		-- The slab's line has room for the level alone: a plus for an
+		-- elite, and the caption's colour says elite or rare.
+		target.plaque:SetLevel(nil)
+		words = { levelText and (levelText .. (#words > 0 and "+" or "")) or "" }
+	elseif target.plaque.docked then
 		target.plaque:SetLevel(nil)
 		-- Just the number, as on tooltips: the word cost the room the
 		-- creature type needs.
@@ -1012,6 +1072,7 @@ function Halo:UpdateTarget()
 	elseif kind and not unspecified then
 		words[#words + 1] = kind:upper()
 	end
+	if slab then words = { words[1] } end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
 		or (rank == "elite" or rank == "worldboss") and "elite" or nil

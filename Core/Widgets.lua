@@ -1974,7 +1974,7 @@ function UI.plaque(frame, coinSide, opts)
 		fill:SetShown(not on)
 		if edge then edge:SetShown(not on) end
 		if frame.stoaMould then frame.stoaMould:SetShown(not on) end
-		for _, part in ipairs(plaque.medallionParts) do part:SetShown(not on) end
+		for _, part in ipairs(plaque.medallionParts) do part:SetShown(not on and not plaque.plain) end
 		if dock then
 			for _, part in pairs(dock) do part:SetShown(on) end
 		end
@@ -1994,7 +1994,7 @@ function UI.plaque(frame, coinSide, opts)
 			plaque.placeCoin(plaque.bare and 0.75 or 1)
 		end
 		-- Docked, there is no portrait: callers put the level in words.
-		coin:SetShown(not on)
+		coin:SetShown(not on and not plaque.plain)
 		if plaque.shadow then plaque.shadow:SetShown(on and plaque.shadowWanted or false) end
 		paintFill()
 		plaque:SetRank(plaque.rank)
@@ -2026,13 +2026,26 @@ function UI.plaque(frame, coinSide, opts)
 	-- The strip: a colour token, or nil to hide it.
 	function plaque:SetReaction(token)
 		plaque.reaction = token
-		if token and not plaque.bare and not plaque.docked then
+		if token and not plaque.bare and not plaque.docked and not plaque.plain then
 			local r, g, b = Stoa:Color(token)
 			strip:SetVertexColor(r, g, b, 0.9)
 			strip:Show()
 		else
 			strip:Hide()
 		end
+	end
+	-- Plain (the Matte slab): the moulded block alone, with no portrait and
+	-- no reaction strip. Callers put the level in words.
+	function plaque:SetPlain(on)
+		on = on and true or false
+		if on == (plaque.plain or false) then return end
+		plaque.plain = on
+		local show = not on and not plaque.docked
+		if plaque.medallionParts then
+			for _, part in ipairs(plaque.medallionParts) do part:SetShown(show) end
+		end
+		coin:SetShown(show)
+		plaque:SetReaction(plaque.reaction)
 	end
 	-- Bare: no panel, edge or reaction strip, and a smaller portrait, so
 	-- the words stand over the world like the party strips. Callers make
