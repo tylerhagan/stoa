@@ -146,6 +146,59 @@ local function dressButtonsIn(frame, depth)
 	end
 end
 
+-- Search boxes (talents, spellbook): Blizzard's gold-rimmed field becomes
+-- a dark rounded well whose edge warms while you type in it. The magnifier
+-- and the grey hint stay.
+local function dressSearch(box)
+	if type(box) ~= "table" or not box.CreateTexture or forbidden(box) or box.stoaSearch then return end
+	box.stoaSearch = true
+	for _, key in ipairs({ "Left", "Middle", "Right", "Mid" }) do hide(box[key]) end
+	if box.NineSlice then hide(box.NineSlice) end
+	local fill = UI.sliced(box, "BACKGROUND", "CardFill.tga")
+	if fill then
+		-- The field's text sits 6px in from its frame on the left.
+		fill:SetPoint("TOPLEFT", -6, 0)
+		fill:SetDrawLayer("BACKGROUND", -8)
+		fill:SetVertexColor(0, 0, 0, 0.45)
+	end
+	local edge = UI.roundBorder(box, "CardEdge.tga", 1)
+	if edge.edges[1] then edge.edges[1]:SetPoint("TOPLEFT", -6, 0) end
+	local function paint()
+		if box:HasFocus() then edge:Set(Stoa:Color("accent")) else edge:Set(Stoa:Color("hairline")) end
+	end
+	box:HookScript("OnEditFocusGained", paint)
+	box:HookScript("OnEditFocusLost", paint)
+	paint()
+	UI.applyTheme()
+end
+
+-- The small square arrow buttons that open a menu (the talents' search
+-- options): a dark rounded key with a quiet down chevron instead of the
+-- yellow button. Blizzard sets the arrow's art on every press, so the art
+-- goes by alpha, which a new atlas keeps.
+local function dressArrowDropdown(button)
+	if type(button) ~= "table" or not button.CreateTexture or forbidden(button) or button.stoaArrow then return end
+	button.stoaArrow = true
+	for _, key in ipairs({ "Arrow", "Background", "Icon" }) do hide(button[key]) end
+	plainTextures(button)
+	UI.roundPanel(button, 0.95)
+	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
+	local chevron = UI.glyph(button, "Chevron", 12, "muted")
+	chevron:SetPoint("CENTER", 0, 0)
+	chevron:SetRotation(-math.pi / 2)
+	button:HookScript("OnEnter", function()
+		glow:Set(Stoa:Color("accent"))
+		chevron:SetVertexColor(Stoa:Color("accent"))
+	end)
+	button:HookScript("OnLeave", function()
+		glow:Clear()
+		chevron:SetVertexColor(Stoa:Color("muted"))
+	end)
+	UI.applyTheme()
+end
+
+Windows.DressSearch = dressSearch
+Windows.DressArrowDropdown = dressArrowDropdown
 Windows.DressButtonsIn = dressButtonsIn
 Windows.DressButton = dressButton
 Windows.DressClose = dressClose
