@@ -4,7 +4,7 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
 
-## 1.7.0
+## 1.6.1
 
 - **Loot rolls up off the bars**: the Need, Greed and Pass cards stack from their own spot, right of the middle of the screen, instead of over your action bars. Move them in unlock mode (Loot rolls). Under each card a list shows everyone in the group, one name a line in class colours, with what they chose (Need, Greed, Pass or still choosing). Once your own card goes, a small card keeps the same list with each roll, then the winner, for 6 seconds. `/stoa rolls` shows two samples; Settings > Loot turns it off.
 - **Heals halved**: for healers, when Mortal Strike (from a player or a monster) or Mortal Wound is on someone, red stripes fill the empty end of their health bar on the tank watch and the party cards, and the watch says HEALS HALF (a tag says it on the cards). Blizzard leaves these debuffs readable in a fight, so it works in combat. `/stoa test` shows it on the sample tank.

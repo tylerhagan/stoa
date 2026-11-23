@@ -23,8 +23,8 @@ Stoa.WhatsNew = WhatsNew
 local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
-		edition = "1.7.0",
-		title = "New in STOA 1.7",
+		edition = "1.6.1",
+		title = "New in STOA 1.6.1",
 		lines = {
 			{ "Heals halved", "When Mortal Strike or Mortal Wound is on someone, red stripes fill the empty part of their health bar on the tank watch and your party cards, with a HEALS HALF word. It works in a fight.", classes = { "PRIEST", "PALADIN", "DRUID", "SHAMAN" } },
 			{ "Readable over bright ground", "Buff timers, the Halo's cast bar and the chat on a folded console sit on soft dark plates, so they read over sand, snow and sky." },
