@@ -372,7 +372,7 @@ local function paintGuildTab(tab)
 	local word = tab.stoaGuildWord
 	if not word then return end
 	local parent = tab:GetParent()
-	local chosen = parent and chosenGuildTab(parent) == tab
+	local chosen = parent and tab:IsShown() and chosenGuildTab(parent) == tab
 	word:SetTextColor(Stoa:Color(chosen and "text" or "muted"))
 	tab.stoaGuildLine:SetShown(chosen and true or false)
 end
@@ -561,6 +561,12 @@ function AFTER.communities(frame)
 				paintGuildTabs(own)
 			end)
 		end
+		-- Every page change and every opening repaints the words, whatever
+		-- path Blizzard took to get there.
+		if frame.SetDisplayMode then
+			hooksecurefunc(frame, "SetDisplayMode", function(own) paintGuildTabs(own) end)
+		end
+		frame:HookScript("OnShow", function(own) paintGuildTabs(own) end)
 		-- Who is online and the message change while the window is open.
 		for _, event in ipairs({ "GUILD_ROSTER_UPDATE", "GUILD_MOTD", "CLUB_UPDATED" }) do
 			Stoa:On(event, function()
