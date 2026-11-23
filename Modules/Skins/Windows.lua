@@ -60,7 +60,10 @@ local function isPanelButton(button)
 	if parent and parent.tabTemplate then return false end
 	local name = button.GetName and button:GetName()
 	if type(name) == "string" and name:find("Tab%d+$") then return false end
-	return button.Left and button.Middle and button.Right
+	if button.Left and button.Middle and button.Right then return true end
+	-- The newer red buttons (Add New Friend and the like) are three-slice:
+	-- Left, Center and Right, set from an atlas kit on every state change.
+	return button.Left and button.Center and button.Right and button.atlasName ~= nil
 end
 
 local function plainTextures(button)
@@ -255,7 +258,7 @@ end
 local FAMILY = {
 	MerchantFrame = "trade", MailFrame = "trade", OpenMailFrame = "trade",
 	AuctionHouseFrame = "trade", BankFrame = "trade",
-	FriendsFrame = "social", CommunitiesFrame = "social", GuildFrame = "social",
+	FriendsFrame = "social", SocialUIFrame = "social", CommunitiesFrame = "social", GuildFrame = "social",
 	PVEFrame = "social", LFDParentFrame = "social", RaidParentFrame = "social",
 }
 -- The rulebook's band is BAND tall on every window with room for it.
@@ -839,6 +842,55 @@ local function dressTooltip(tip)
 	tip:HookScript("OnShow", function(self) hide(self.NineSlice) end)
 end
 
+-- Dropdown menus (the minimap's tracking list, the friends status, every
+-- right-click menu): Blizzard's menus come from one shared pool and get
+-- their gold-edged background drawn again each time they open, so each
+-- menu, and each submenu, takes the tooltip's dark card when it opens.
+-- Only the menu's own background goes; its lines, ticks and icons stay.
+local function dressMenu(menu)
+	if type(menu) ~= "table" or not menu.GetRegions or forbidden(menu) then return end
+	if not menu.stoaMenuArt then
+		local before = {}
+		for _, region in ipairs({ menu:GetRegions() }) do before[region] = true end
+		UI.surface(menu, "card", { alpha = 0.96 })
+		-- Blizzard's menus keep 8px above their lines and 15 below (room
+		-- for its art's shadow); the card leaves the same air on each side.
+		local fill = menu.stoaSurface
+		if fill then fill:SetPoint("BOTTOMRIGHT", 0, 7) end
+		local edge = menu.stoaPanelEdge and menu.stoaPanelEdge.edges and menu.stoaPanelEdge.edges[1]
+		if edge then edge:SetPoint("BOTTOMRIGHT", 0, 7) end
+		local keep = {}
+		for _, region in ipairs({ menu:GetRegions() }) do
+			if not before[region] then keep[region] = true end
+		end
+		menu.stoaMenuArt = keep
+	end
+	for _, region in ipairs({ menu:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") and not menu.stoaMenuArt[region] then
+			region:SetAlpha(0)
+		end
+	end
+end
+
+local function dressMenus()
+	local manager = type(Menu) == "table" and type(Menu.GetManager) == "function" and Menu.GetManager()
+	if type(manager) ~= "table" then return end
+	-- A dropdown keeps its description between openings, so its submenu
+	-- callback is added once.
+	local watched = setmetatable({}, { __mode = "k" })
+	local function opened(own, _, description)
+		dressMenu(own:GetOpenMenu())
+		-- Submenus open later from the same description.
+		if type(description) == "table" and not watched[description] and description.AddMenuAcquiredCallback then
+			watched[description] = true
+			description:AddMenuAcquiredCallback(function(menu) xpcall(dressMenu, Stoa.catch, menu) end)
+		end
+	end
+	for _, method in ipairs({ "OpenMenu", "OpenContextMenu" }) do
+		if type(manager[method]) == "function" then hooksecurefunc(manager, method, opened) end
+	end
+end
+
 local function dressTooltips()
 	for _, name in ipairs(TOOLTIPS) do dressTooltip(_G[name]) end
 	local bar = GameTooltipStatusBar
@@ -904,6 +956,7 @@ function Windows:OnEnable()
 	guarded(dressMerchant)
 	guarded(dressBags)
 	guarded(dressTooltips)
+	guarded(dressMenus)
 	guarded(dressReadyCheck)
 	-- The trainer window loads with its own addon the first time it opens.
 	-- Forever's trainer addon has a bootstrap part that loads at startup,
