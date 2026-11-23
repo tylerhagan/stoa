@@ -24,13 +24,10 @@ local MAX_RESULTS = 3
 -- EncounterLootDropRollState: 0 need, 1 off-spec need, 2 transmog, 3 greed,
 -- 4 not chosen yet, 5 pass.
 local NOT_YET, PASS = 4, 5
-local GROUPS = {
-	{ states = { [0] = true }, label = "Need", token = "accent" },
-	{ states = { [1] = true }, label = "Off-spec", token = "accent" },
-	{ states = { [2] = true, [3] = true }, label = "Greed", token = "text" },
-	{ states = { [PASS] = true }, label = "Pass", token = "muted" },
-}
-local WORD = { [0] = "Need", [1] = "Off-spec", [2] = "Transmog", [3] = "Greed", [5] = "Pass" }
+local WORD = { [0] = "Need", [1] = "Off-spec", [2] = "Transmog", [3] = "Greed", [NOT_YET] = "Choosing", [5] = "Pass" }
+-- List order: need first, those still choosing last.
+local RANK = { [0] = 1, [1] = 2, [2] = 3, [3] = 3, [PASS] = 4, [NOT_YET] = 5 }
+local TOKEN = { [0] = "accent", [1] = "accent", [2] = "text", [3] = "text", [PASS] = "muted", [NOT_YET] = "muted" }
 
 local function secret(value) return Stoa:IsSecret(value) end
 
@@ -81,21 +78,35 @@ local function dropFor(frame, taken)
 	return best
 end
 
-local function chooserLines(info)
-	local lines = {}
-	for _, group in ipairs(GROUPS) do
-		local names = {}
-		for _, roll in ipairs(info.rollInfos) do
-			if group.states[roll.state] then
-				local name = colored(roll.playerName, roll.playerClass)
-				if name then table.insert(names, name) end
-			end
-		end
-		if #names > 0 then
-			table.insert(lines, hex(group.token) .. group.label .. "|r   " .. table.concat(names, ", "))
+-- One row per player: their name, and what they chose (with the roll once
+-- the game shows it). Returns the two columns as text, and the row count.
+local function rows(info)
+	local list = {}
+	for _, roll in ipairs(info.rollInfos) do
+		local name = colored(roll.playerName, roll.playerClass)
+		local state = not secret(roll.state) and roll.state
+		if name and WORD[state] then
+			local number = type(roll.roll) == "number" and not secret(roll.roll) and roll.roll or nil
+			table.insert(list, { name = name, state = state, roll = number or 0,
+				choice = hex(TOKEN[state]) .. WORD[state] .. (number and ("  " .. number) or "") .. "|r" })
 		end
 	end
-	return lines
+	table.sort(list, function(a, b)
+		if RANK[a.state] ~= RANK[b.state] then return RANK[a.state] < RANK[b.state] end
+		return a.roll > b.roll
+	end)
+	local names, choices = {}, {}
+	for i, row in ipairs(list) do names[i], choices[i] = row.name, row.choice end
+	return table.concat(names, "\n"), table.concat(choices, "\n"), #list
+end
+
+-- Two columns, names left and choices right, kept on the same lines.
+local function columns(parent)
+	local names = UI.text(parent, "sans", Stoa.typeSize.caption, "text")
+	local choices = UI.text(parent, "sans", Stoa.typeSize.caption, "text", "RIGHT")
+	names:SetSpacing(3)
+	choices:SetSpacing(3)
+	return names, choices
 end
 
 function Rolls:WhoPanel(frame)
@@ -105,10 +116,9 @@ function Rolls:WhoPanel(frame)
 	panel:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, 1)
 	panel:SetHeight(LINE_H)
 	UI.surface(panel, "card", { alpha = 0.96 })
-	panel.text = UI.text(panel, "sans", Stoa.typeSize.caption, "text")
-	panel.text:SetPoint("TOPLEFT", 12, -5)
-	panel.text:SetPoint("TOPRIGHT", -12, -5)
-	panel.text:SetSpacing(3)
+	panel.names, panel.choices = columns(panel)
+	panel.names:SetPoint("TOPLEFT", 12, -6)
+	panel.choices:SetPoint("TOPRIGHT", -12, -6)
 	panel:Hide()
 	frame.stoaWho = panel
 	return panel
@@ -132,32 +142,12 @@ function Rolls:ResultCard(i)
 	card.name:SetWordWrap(false)
 	card.status = UI.text(card, "sans", Stoa.typeSize.caption, "accent", "RIGHT")
 	card.status:SetPoint("RIGHT", card, "TOPRIGHT", -10, -20)
-	card.list = UI.text(card, "sans", Stoa.typeSize.caption, "text")
-	card.list:SetPoint("TOPLEFT", card.icon, "BOTTOMLEFT", 0, -6)
-	card.list:SetPoint("RIGHT", card, "RIGHT", -10, 0)
-	card.list:SetSpacing(3)
+	card.names, card.choices = columns(card)
+	card.names:SetPoint("TOPLEFT", card.icon, "BOTTOMLEFT", 0, -6)
+	card.choices:SetPoint("TOPRIGHT", card, "TOPRIGHT", -10, -38)
 	card:Hide()
 	results[i] = card
 	return card
-end
-
-local function resultLines(info)
-	local entries = {}
-	for _, roll in ipairs(info.rollInfos) do
-		local name = colored(roll.playerName, roll.playerClass)
-		if name and roll.state ~= NOT_YET then
-			local word = WORD[roll.state] or ""
-			local number = type(roll.roll) == "number" and not secret(roll.roll) and (" " .. roll.roll) or ""
-			local token = roll.state == PASS and "muted" or (roll.state <= 1 and "accent" or "text")
-			table.insert(entries, name .. " " .. hex(token) .. word .. number .. "|r")
-		end
-	end
-	-- Two to a line keeps a raid's worth short.
-	local lines = {}
-	for i = 1, #entries, 2 do
-		table.insert(lines, entries[i] .. (entries[i + 1] and ("     " .. entries[i + 1]) or ""))
-	end
-	return lines
 end
 
 local function statusOf(info)
@@ -181,9 +171,10 @@ local function fillResult(card, drop)
 	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
 	if color then card.name:SetTextColor(color.r, color.g, color.b) else UI.paint(card.name, "text") end
 	card.status:SetText(statusOf(info))
-	local lines = resultLines(info)
-	card.list:SetText(table.concat(lines, "\n"))
-	card:SetHeight(40 + #lines * LINE_H + (#lines > 0 and 4 or 0))
+	local names, choices, count = rows(info)
+	card.names:SetText(names)
+	card.choices:SetText(choices)
+	card:SetHeight(40 + count * LINE_H + (count > 0 and 4 or 0))
 end
 
 -- Layout ---------------------------------------------------------------------
@@ -201,12 +192,14 @@ function Rolls:Layout()
 			if frame and frame.IsShown and frame:IsShown() then
 				local id = dropFor(frame, taken)
 				local panel = self:WhoPanel(frame)
-				local lines = id and chooserLines(drops[id].info) or {}
+				local names, choices, count
+				if id then names, choices, count = rows(drops[id].info) end
 				local extra = 0
-				if #lines > 0 then
+				if count and count > 0 then
 					taken[id] = true
-					panel.text:SetText(table.concat(lines, "\n"))
-					extra = 10 + #lines * LINE_H
+					panel.names:SetText(names)
+					panel.choices:SetText(choices)
+					extra = 12 + count * LINE_H
 					panel:SetHeight(extra)
 					panel:Show()
 				else
@@ -316,8 +309,22 @@ Stoa.commands.rolls = function()
 			},
 		},
 	}
+	-- And one still rolling, as the list reads while people choose.
+	drops["sampleLive"] = {
+		seen = GetTime() - 1,
+		info = {
+			itemHyperlink = "|cff1eff00|Hitem:6948::::::::1:::::::::|h[Sample, still rolling]|h|r",
+			rollInfos = {
+				{ playerName = "Moria", playerClass = "PALADIN", state = 0 },
+				{ playerName = "Isel", playerClass = "MAGE", state = 3 },
+				{ playerName = "Vex", playerClass = "WARLOCK", state = PASS },
+				{ playerName = me, playerClass = class, state = NOT_YET },
+				{ playerName = "Bram", playerClass = "DRUID", state = NOT_YET },
+			},
+		},
+	}
 	C_Timer.After(HOLD + 0.1, function()
-		drops["sample"] = nil
+		drops["sample"], drops["sampleLive"] = nil, nil
 		Rolls:Layout()
 	end)
 	Rolls:Layout()
