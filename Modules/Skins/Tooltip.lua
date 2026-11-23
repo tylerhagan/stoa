@@ -5,9 +5,9 @@
 --     shadow under it and room above and below the name;
 --   * the name takes the unit's colour (class, or the nameplates' reaction
 --     colours: amber enemy, pale gold neutral, blue friend); the card's edge
---     stays a plain hairline, except for rank: elites get a doubled gold
---     line, rares a doubled silver one, rare elites gold outside and silver
---     inside, bosses a heavier doubled gold, and their header warms with
+--     stays a plain hairline, except for rank: elites get a gold line,
+--     rares a silver one, rare elites gold with a silver header, bosses a
+--     heavier gold, and their header warms with
 --     that colour fading across it. Items above common fade their quality
 --     colour across the header the same way;
 --   * names in the serif, the rest in the sans; who it is on one quiet
@@ -691,8 +691,8 @@ local TIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingToo
 
 -- Rank outlines and the header fade ---------------------------------------------------
 
--- Who gets a rank outline: the outer line's colour, the inner's, and
--- whether the outer is doubled up to read heavier.
+-- Who gets a rank outline: the line's colour, the header fade's, and
+-- whether the line is doubled up to read heavier.
 local RANKS = {
 	elite = { "accent", "accent" },
 	rare = { RARE_SILVER, RARE_SILVER },
@@ -726,9 +726,11 @@ function Tooltip:Rank(tip, classification)
 	local r, g, b = rgb(rank[1])
 	outlines[1]:Set(r, g, b, 1)
 	if rank.heavy then outlines[2]:Set(r, g, b, 1) else outlines[2]:Clear() end
-	local ir, ig, ib = rgb(rank[2])
-	outlines[3]:Set(ir, ig, ib, 0.55)
-	self:Fade(tip, r, g, b)
+	-- One line only: a second line inside the first, on top of the header
+	-- band and its rule, read as layer upon layer. The pair's second colour
+	-- (a rare elite's silver) warms the header instead.
+	outlines[3]:Clear()
+	self:Fade(tip, rgb(rank[2]))
 end
 
 local function clear(tip)
