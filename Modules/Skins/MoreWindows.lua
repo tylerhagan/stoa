@@ -276,9 +276,12 @@ local GUILD_W, GUILD_H = 1100, 640
 local MOTD_ROW = 26
 local COMMUNITIES_DROP = 10
 local COMMUNITIES_PARTS = {
-	"StreamDropdown", "CommunitiesListDropdown", "GuildMemberListDropdown", "CommunityMemberListDropdown",
-	"VoiceChatHeadset", "Chat", "MemberList",
+	"StreamDropdown", "CommunitiesListDropdown", "VoiceChatHeadset", "Chat",
 }
+-- The roster's member list (wide, with column heads 60px above its top) and
+-- its two view dropdowns are placed by guildRoster instead.
+local ROSTER_DROPDOWNS = { "GuildMemberListDropdown", "CommunityMemberListDropdown" }
+local guildRoster
 -- The side tabs, in header order, with their words.
 local GUILD_TABS = {
 	{ "ChatTab", "Chat" }, { "RosterTab", "Roster" }, { "GuildBenefitsTab", "Perks" },
@@ -389,6 +392,9 @@ local function placeGuildTabs(frame)
 		if type(tab) == "table" and not forbidden(tab) then
 			guildTabWord(tab, GUILD_TABS[i][2])
 			if tab:IsShown() and tab.stoaGuildWord and anchor then
+				-- Above every part of the window, so nothing Blizzard lays
+				-- out near the top can take the clicks.
+				tab:SetFrameLevel(frame:GetFrameLevel() + 120)
 				tab:SetSize(math.ceil(tab.stoaGuildWord:GetStringWidth()) + 8, 26)
 				tab:ClearAllPoints()
 				tab:SetPoint("RIGHT", anchor, "LEFT", -gap, 0)
@@ -533,6 +539,7 @@ function AFTER.communities(frame)
 	-- The MOTD row takes its room only on the chat and roster pages.
 	local drop = listMode and (COMMUNITIES_DROP + MOTD_ROW) or COMMUNITIES_DROP
 	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key], drop) end
+	guildRoster(frame, drop)
 	placeGuildTabs(frame)
 	guildTitle(frame)
 	guildMotd(frame, listMode)
@@ -640,6 +647,81 @@ local function dressField(button)
 	return glow
 end
 
+-- A WowStyle1 dropdown in STOA's dark field with a chevron.
+local function dressDropdownField(dropdown)
+	if dropdown.stoaField then return end
+	dropdown.stoaField = true
+	for _, key in ipairs({ "Background", "Arrow" }) do
+		if dropdown[key] and dropdown[key].SetAlpha then dropdown[key]:SetAlpha(0) end
+	end
+	dressField(dropdown)
+	local chevron = UI.glyph(dropdown, "Chevron", 12, "muted")
+	chevron:SetPoint("RIGHT", -6, 0)
+	chevron:SetRotation(-math.pi / 2)
+	local text = dropdown.Text
+	if text and text.SetTextColor then
+		Stoa:SetFont(text, "sans", Stoa.typeSize.body)
+		text:SetShadowOffset(0, 0)
+		text:SetTextColor(Stoa:Color("text"))
+	end
+	UI.applyTheme()
+end
+
+-- The roster page: Blizzard hangs the wide member list from the club
+-- list's top, with its column heads and "Show Offline Members" 60px above
+-- it, which put them over the MOTD row and the view dropdown up in the
+-- header (under the page words, taking their clicks). The list now hangs
+-- below the MOTD row, the dropdown sits level with the offline box.
+local ROSTER_HEAD = 64
+local function rosterTop(frame)
+	local band = (frame.stoaHeader and frame.stoaHeader.stoaHeight) or 30
+	return band + 2 + MOTD_ROW + ROSTER_HEAD
+end
+
+local function placeMemberList(frame, drop)
+	local list = frame.MemberList
+	if type(list) ~= "table" or forbidden(list) or InCombatLockdown() then return end
+	if list.expandedDisplay and not guildMinimized(frame) then
+		list:SetPoint("TOPLEFT", frame, "TOPLEFT", LIST_EDGE + 22, -rosterTop(frame))
+	else
+		dropTops(list, drop)
+	end
+end
+
+guildRoster = function(frame, drop)
+	local list = frame.MemberList
+	if type(list) == "table" and not forbidden(list) then
+		if not list.stoaRosterHook and list.RefreshLayout then
+			list.stoaRosterHook = true
+			-- Blizzard places the list again when the page changes, after
+			-- the window's own layout pass.
+			hooksecurefunc(list, "RefreshLayout", function()
+				local small = guildMinimized(frame)
+				local d = (not small and guildListMode(frame)) and (COMMUNITIES_DROP + MOTD_ROW) or COMMUNITIES_DROP
+				xpcall(placeMemberList, Stoa.catch, frame, d)
+			end)
+		end
+		placeMemberList(frame, drop)
+		local offline = list.ShowOfflineButton
+		if type(offline) == "table" and offline.Text and not offline.stoaWord then
+			offline.stoaWord = true
+			Stoa:SetFont(offline.Text, "sans", Stoa.typeSize.body)
+			offline.Text:SetShadowOffset(0, 0)
+			offline.Text:SetTextColor(Stoa:Color("muted"))
+		end
+	end
+	local y = rosterTop(frame) - 42
+	for _, key in ipairs(ROSTER_DROPDOWNS) do
+		local dropdown = frame[key]
+		if type(dropdown) == "table" and not forbidden(dropdown) then
+			dressDropdownField(dropdown)
+			dropdown:ClearAllPoints()
+			dropdown:SetPoint("RIGHT", frame, "TOPRIGHT", -30, -y)
+			dropdown:SetFrameLevel(frame:GetFrameLevel() + 20)
+		end
+	end
+end
+
 function AFTER.dressup(frame)
 	if InCombatLockdown() then return end
 	local dropdown, toggle = frame.CustomSetDropdown, frame.ToggleCustomSetDetailsButton
@@ -648,23 +730,7 @@ function AFTER.dressup(frame)
 		scene:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, DRESSUP_MODEL_TOP)
 	end
 	if type(dropdown) == "table" and not forbidden(dropdown) then
-		if not dropdown.stoaField then
-			dropdown.stoaField = true
-			for _, key in ipairs({ "Background", "Arrow" }) do
-				if dropdown[key] and dropdown[key].SetAlpha then dropdown[key]:SetAlpha(0) end
-			end
-			dressField(dropdown)
-			local chevron = UI.glyph(dropdown, "Chevron", 12, "muted")
-			chevron:SetPoint("RIGHT", -6, 0)
-			chevron:SetRotation(-math.pi / 2)
-			local text = dropdown.Text
-			if text and text.SetTextColor then
-				Stoa:SetFont(text, "sans", Stoa.typeSize.body)
-				text:SetShadowOffset(0, 0)
-				text:SetTextColor(Stoa:Color("text"))
-			end
-			UI.applyTheme()
-		end
+		dressDropdownField(dropdown)
 		dropdown:ClearAllPoints()
 		dropdown:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, DRESSUP_ROW_Y)
 		dropdown:SetHeight(DRESSUP_ROW_H)
