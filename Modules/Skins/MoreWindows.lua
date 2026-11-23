@@ -36,6 +36,10 @@ local TARGETS = {
 	{ name = "PVEFrame" },
 	{ name = "LFDParentFrame" },
 	{ name = "FriendsFrame", parts = { "FriendsFrameInset", "WhoFrameListInset", "WhoFrameEditBoxInset" } },
+	-- Forever's friends window is the newer social window: the Battle.net
+	-- bar starts 22px down, so the strip stays short, and its tabs hang
+	-- down the right edge as icon tiles.
+	{ name = "SocialUIFrame", band = 24, after = "social" },
 	-- A slimmer band: the channel dropdown and online count start just
 	-- under the title, and the usual band reached halfway down them.
 	{ name = "CommunitiesFrame", band = 30, after = "communities" },
@@ -293,6 +297,9 @@ end
 local AFTER = {}
 local wardrobeTabs
 function AFTER.communities(frame)
+	-- Its minimise button was the last red one in the header.
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressMaxMin then windows.DressMaxMin(frame.MaximizeMinimizeFrame) end
 	if InCombatLockdown() or not frame:IsShown() then return end
 	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key]) end
 end
@@ -490,7 +497,8 @@ local function paintSideTab(tab)
 	tab.stoaSideRim:SetVertexColor(Stoa:Color(chosen and "accent" or "hairline"))
 	local icon = tab.Icon
 	if icon and icon.SetDesaturated then
-		icon:SetDesaturated(false)
+		-- (Glyph tabs grey their icon themselves when the tab is unavailable.)
+		if not tab.stoaGlyphTab then icon:SetDesaturated(false) end
 		icon:SetAlpha(chosen and 1 or 0.7)
 	end
 end
@@ -501,23 +509,33 @@ end
 -- animation doesn't touch), the icon loses the mask and keeps Blizzard's
 -- placing, and a square tile with a hairline rim sits behind it.
 local SIDE_ART = { "Background", "SelectedTexture", "TabGlow", "HighlightTexture" }
-local function dressSideTab(tab)
+-- `glyph`: the icon is an atlas glyph that Blizzard sets again (at its own
+-- size) each time the tab is picked, as on the friends window; it keeps
+-- its size and the tile is a fixed square centred where the icon sits.
+local GLYPH_TILE = 40
+local function dressSideTab(tab, glyph)
 	if type(tab) ~= "table" or not tab.CreateTexture or forbidden(tab) or tab.stoaSideTab then return end
 	local icon = tab.Icon
 	if not icon then return end
 	tab.stoaSideTab = true
+	tab.stoaGlyphTab = glyph and true or nil
 	for _, key in ipairs(SIDE_ART) do
 		local part = tab[key]
 		if type(part) == "table" and part.SetVertexColor then part:SetVertexColor(1, 1, 1, 0) end
 	end
 	if tab.Mask and icon.RemoveMaskTexture then pcall(icon.RemoveMaskTexture, icon, tab.Mask) end
-	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	local size = 34
-	icon:SetSize(size, size)
 	local rim = tab:CreateTexture(nil, "BACKGROUND", nil, 1)
 	rim:SetTexture(UI.WHITE)
-	rim:SetPoint("TOPLEFT", icon, -4, 4)
-	rim:SetPoint("BOTTOMRIGHT", icon, 4, -4)
+	if glyph then
+		rim:SetSize(GLYPH_TILE, GLYPH_TILE)
+		rim:SetPoint("CENTER", -3, 0)
+	else
+		icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		local size = 34
+		icon:SetSize(size, size)
+		rim:SetPoint("TOPLEFT", icon, -4, 4)
+		rim:SetPoint("BOTTOMRIGHT", icon, 4, -4)
+	end
 	local fill = tab:CreateTexture(nil, "BACKGROUND", nil, 2)
 	fill:SetTexture(UI.WHITE)
 	fill:SetPoint("TOPLEFT", rim, 1, -1)
@@ -545,6 +563,50 @@ end
 function AFTER.professions(frame)
 	dressSideTab(frame.ProfessionsOverviewTab)
 	for _, tab in ipairs(frame.rightProfessionTabs or {}) do dressSideTab(tab) end
+end
+
+-- Friends (the social window): its tabs come from a pool when the window
+-- opens or its features change, so each new one is dressed as it turns up.
+-- The Battle.net bar's metal strip and the gold rules around the list go;
+-- the friend cards stay as Blizzard draws them.
+local function dressSocialTabs(frame)
+	local pool = frame.socialTabPool
+	if not (pool and pool.EnumerateActive) then return end
+	for tab in pool:EnumerateActive() do dressSideTab(tab, true) end
+end
+
+local SOCIAL_LISTS = { "FriendsList", "RecentAlliesList", "QuickJoinList", "FriendRequestsList", "RaidList", "RecruitAFriendList" }
+function AFTER.social(frame)
+	dressSocialTabs(frame)
+	if frame.stoaSocial then return end
+	frame.stoaSocial = true
+	if frame.RefreshTabs then
+		hooksecurefunc(frame, "RefreshTabs", function(own) dressSocialTabs(own) end)
+	end
+	local bar = frame.BattleNetBar
+	if bar then
+		hide(bar.Background)
+		hide(bar.ControlsContainer and bar.ControlsContainer.BattleNetBackground)
+	end
+	hide(frame.TopFade)
+	hide(frame.BottomFade)
+	local hr, hg, hb = Stoa:Color("hairline")
+	for _, key in ipairs(SOCIAL_LISTS) do
+		local list = frame[key]
+		if type(list) == "table" and not forbidden(list) then
+			for _, rule in ipairs({ list.TopDivider, list.BottomDivider }) do
+				if rule and rule.SetDesaturated then
+					rule:SetDesaturated(true)
+					rule:SetVertexColor(hr, hg, hb, 1)
+				end
+			end
+		end
+	end
+	local windows = Stoa.modules.Windows
+	-- The ignore list opens as its own small window beside it.
+	if windows and windows.Dress and frame.IgnoreListFrame and not forbidden(frame.IgnoreListFrame) then
+		windows:Dress(frame.IgnoreListFrame)
+	end
 end
 
 -- Appearances: its Items and Sets tabs sit inside the page under the title,
