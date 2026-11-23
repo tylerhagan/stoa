@@ -52,7 +52,7 @@ local STYLES = {
 	inline = { height = 18, pill = true, value = "RIGHT", nameInside = true },
 	brass = { height = 12, brass = true, bevel = true, badge = true },
 	slim = { height = 5, pill = true },
-	matte = { height = 10, flush = true, quietLevel = true },
+	matte = { height = 7, flush = true, quietLevel = true },
 }
 
 function Plates:Style()
