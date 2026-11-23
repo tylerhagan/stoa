@@ -373,6 +373,20 @@ local function applyStyle(frame)
 	local parts = frame.stoaParts or buildParts(frame)
 	local bar = frame.healthBar
 	if style.height and not (bar.IsProtected and bar:IsProtected()) then bar:SetHeight(style.height) end
+	if style.flush then
+		-- The game pins the bar to its container by two corners, so the
+		-- bar's own height is ignored: the line is made by the container.
+		-- The name is freed from the bar's width, so it is never cut short.
+		local box = frame.HealthBarsContainer
+		if type(box) == "table" and box.SetHeight and not (box.IsProtected and box:IsProtected()) then
+			box:SetHeight(style.height)
+			if frame.name and frame.name.ClearAllPoints then
+				frame.name:ClearAllPoints()
+				frame.name:SetPoint("BOTTOM", box, "TOP", 0, 3)
+				frame.name:SetJustifyH("CENTER")
+			end
+		end
+	end
 	local pill = not style.box and not style.brass and not style.flush
 	parts.well:SetVertexColor(0, 0, 0, style.flush and 0.72 or UI.SURFACES.well.black)
 	frame.stoaPillFill:SetShown(pill)
