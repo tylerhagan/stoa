@@ -982,6 +982,51 @@ local function dressMenus()
 	for _, method in ipairs({ "OpenMenu", "OpenContextMenu" }) do
 		if type(manager[method]) == "function" then hooksecurefunc(manager, method, opened) end
 	end
+	-- Right-click menus on unit frames (the target's, the party's) open
+	-- through the game's secure unit code, past the hooks above. Every menu
+	-- draws its gold box from its style's Generate, so the dress follows
+	-- that too. Each style mixin copied Generate when made, so each is
+	-- hooked on its own.
+	for _, name in ipairs({ "MenuStyle1Mixin", "MenuStyle1ThinMixin", "MenuStyle2Mixin" }) do
+		local style = rawget(_G, name)
+		if type(style) == "table" and type(style.Generate) == "function" then
+			hooksecurefunc(style, "Generate", function(menu) xpcall(dressMenu, Stoa.catch, menu) end)
+		end
+	end
+	local variants = rawget(_G, "MenuVariants")
+	if type(variants) ~= "table" then return end
+	-- The lines inside: a faint light under the mouse instead of the gold
+	-- glow, ticks and radio marks in the accent, the submenu arrow quiet.
+	local function quiet(tex, token, alpha)
+		if not (tex and tex.SetDesaturated) then return end
+		tex:SetDesaturated(true)
+		local r, g, b = Stoa:Color(token)
+		tex:SetVertexColor(r, g, b, alpha or 1)
+	end
+	if type(variants.CreateHighlight) == "function" then
+		hooksecurefunc(variants, "CreateHighlight", function(frame)
+			local light = type(frame) == "table" and frame.highlight
+			if not (light and light.SetTexture) then return end
+			light:SetTexture(UI.WHITE)
+			light:SetBlendMode("BLEND")
+			light:SetVertexColor(1, 1, 1, 0.07)
+		end)
+	end
+	for _, method in ipairs({ "CreateCheckbox", "CreateRadio" }) do
+		if type(variants[method]) == "function" then
+			hooksecurefunc(variants, method, function(_, frame, isSelected, data)
+				local mark = type(frame) == "table" and frame.leftTexture1
+				if not mark then return end
+				local ok, chosen = pcall(isSelected, data)
+				quiet(mark, (ok and chosen) and "accent" or "muted", (ok and chosen) and 1 or 0.6)
+			end)
+		end
+	end
+	if type(variants.CreateSubmenuArrow) == "function" then
+		hooksecurefunc(variants, "CreateSubmenuArrow", function(frame)
+			quiet(type(frame) == "table" and frame.arrow, "muted")
+		end)
+	end
 end
 
 local function dressTooltips()
