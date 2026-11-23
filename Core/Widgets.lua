@@ -858,8 +858,8 @@ local CARD_SLICE = 12
 local KEY_SLICE = 5
 UI.KEY_SLICE = KEY_SLICE
 -- The Matte card plate (4 pixel corner) is nine-sliced at 8.
-local CARD_SLICE = 8
-UI.CARD_SLICE = CARD_SLICE
+local PLATE_SLICE = 8
+UI.PLATE_SLICE = PLATE_SLICE
 
 local function sliced(parent, layer, file, outset, margin)
 	if not parent.CreateTexture then return nil end
@@ -1585,14 +1585,14 @@ function UI.unitCard(card, styleName)
 	-- Matte: the card plate instead (Tools/art/matte_key.py): a
 	-- 4 pixel corner, light caught on the top edge, shade along the foot
 	-- and a dark line under it, with a crisp state outline to match.
-	local plate = UI.matte() and sliced(card, "BACKGROUND", "MatteCardFill.tga", 0, CARD_SLICE)
+	local plate = UI.matte() and sliced(card, "BACKGROUND", "MatteCardFill.tga", 0, PLATE_SLICE)
 	if plate then
 		plate:SetDrawLayer("BACKGROUND", -8)
 		UI.tint(plate, "panel", 0.97)
-		local lines = sliced(card, "BACKGROUND", "MatteCard.tga", 0, CARD_SLICE)
+		local lines = sliced(card, "BACKGROUND", "MatteCard.tga", 0, PLATE_SLICE)
 		lines:SetDrawLayer("BACKGROUND", -7)
 		card.stoaSurface, card.stoaSurfaceKind, card.stoaKeyLines = plate, "card", lines
-		local ring = sliced(card, "OVERLAY", "MatteCardState.tga", 0, CARD_SLICE)
+		local ring = sliced(card, "OVERLAY", "MatteCardState.tga", 0, PLATE_SLICE)
 		ring:Hide()
 		card.state = {
 			edges = { ring },
@@ -1919,7 +1919,7 @@ function UI.plaque(frame, coinSide, opts)
 	-- Matte: the card plate (4 pixel corner, fine light and shade
 	-- lines) instead of the rounded card with its edge and bevel.
 	local keyed = UI.matte()
-	local fill = sliced(frame, "BACKGROUND", keyed and "MatteCardFill.tga" or "CardFill.tga", 0, keyed and CARD_SLICE or nil)
+	local fill = sliced(frame, "BACKGROUND", keyed and "MatteCardFill.tga" or "CardFill.tga", 0, keyed and PLATE_SLICE or nil)
 	if not fill then
 		fill = frame:CreateTexture(nil, "BACKGROUND")
 		fill:SetAllPoints()
@@ -1943,7 +1943,7 @@ function UI.plaque(frame, coinSide, opts)
 	local edge
 	if keyed and fill and fill.SetTextureSliceMargins then
 		-- Kept as the frame's mould, so docking and the bare style hide it.
-		frame.stoaMould = sliced(frame, "BORDER", "MatteCard.tga", 0, CARD_SLICE)
+		frame.stoaMould = sliced(frame, "BORDER", "MatteCard.tga", 0, PLATE_SLICE)
 		plaque.lines = {}
 	else
 		edge = sliced(frame, "BORDER", "CardEdge.tga")
