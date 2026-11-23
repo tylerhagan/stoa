@@ -1045,8 +1045,79 @@ local function quietRegions(owner)
 	end
 end
 
+-- Three even columns: the message of the day, the guild information, the
+-- news. Blizzard stacks the first two in one narrow column with the
+-- information squeezed at its foot; STOA hangs the information in the
+-- empty middle and lets the message of the day run the first column's
+-- height. STOA's own small heading sits over each.
+local INFO_GAP, INFO_HEAD = 14, 26
+
+local function infoHeading(owner, words)
+	local label = UI.text(owner, "sans", Stoa.typeSize.micro, "accent")
+	label:SetText(words)
+	return label
+end
+
+local function placeGuildDetails(details)
+	local info, news = details.Info, details.News
+	if type(info) ~= "table" or type(news) ~= "table" then return end
+	local width = details:GetWidth()
+	if not width or width < 300 then return end
+	local col = math.floor((width - 2 * INFO_GAP) / 3)
+	info:ClearAllPoints()
+	info:SetPoint("TOPLEFT", details, "TOPLEFT", 0, 0)
+	info:SetPoint("BOTTOMLEFT", details, "BOTTOMLEFT", 0, 0)
+	info:SetWidth(col)
+	news:ClearAllPoints()
+	news:SetPoint("TOPRIGHT", details, "TOPRIGHT", 0, 0)
+	news:SetPoint("BOTTOMRIGHT", details, "BOTTOMRIGHT", 0, 0)
+	news:SetWidth(col)
+	local mid = details.stoaInfoMid
+	mid:ClearAllPoints()
+	mid:SetPoint("TOPLEFT", info, "TOPRIGHT", INFO_GAP, 0)
+	mid:SetPoint("BOTTOMLEFT", info, "BOTTOMRIGHT", INFO_GAP, 0)
+	mid:SetWidth(col)
+	local textWidth = col - 36
+	-- The information, in the middle column.
+	local about = info.DetailsFrame
+	if type(about) == "table" then
+		about:ClearAllPoints()
+		about:SetPoint("TOPLEFT", mid, "TOPLEFT", 14, -INFO_HEAD - 6)
+		about:SetPoint("BOTTOMRIGHT", mid, "BOTTOMRIGHT", -22, 10)
+		local child = about.GetScrollChild and about:GetScrollChild()
+		if child then
+			child:SetWidth(textWidth)
+			if child.Details then child.Details:SetWidth(textWidth) end
+		end
+	end
+	-- The message of the day runs the first column's height, unless the
+	-- guild's challenges take the top of it.
+	local motd = info.MOTDScrollFrame
+	local challenges = info.BG and info.BG:IsShown()
+	if type(motd) == "table" and not challenges then
+		motd:ClearAllPoints()
+		motd:SetPoint("TOPLEFT", info, "TOPLEFT", 14, -INFO_HEAD - 6)
+		motd:SetPoint("BOTTOMRIGHT", info, "BOTTOMRIGHT", -22, 10)
+		if motd.MOTD then motd.MOTD:SetWidth(textWidth) end
+	end
+	details.stoaMotdHead:SetShown(not challenges)
+	-- Blizzard's edit links ride on the end of each heading row.
+	if info.EditMOTDButton then
+		info.EditMOTDButton:ClearAllPoints()
+		info.EditMOTDButton:SetPoint("TOPRIGHT", info, "TOPRIGHT", -10, -6)
+	end
+	if info.EditDetailsButton then
+		info.EditDetailsButton:ClearAllPoints()
+		info.EditDetailsButton:SetPoint("TOPRIGHT", mid, "TOPRIGHT", -10, -6)
+	end
+end
+
 local function guildDetails(details, windows)
-	if type(details) ~= "table" or forbidden(details) or details.stoaDetails then return end
+	if type(details) ~= "table" or forbidden(details) then return end
+	if details.stoaDetails then
+		xpcall(placeGuildDetails, Stoa.catch, details)
+		return
+	end
 	details.stoaDetails = true
 	quietRegions(details)
 	for _, key in ipairs({ "Info", "News" }) do
@@ -1056,6 +1127,29 @@ local function guildDetails(details, windows)
 			local well = UI.well(part, 0)
 			if well then well.stoaOwn = true end
 		end
+	end
+	local info = details.Info
+	if type(info) == "table" then
+		-- Blizzard's own section labels go; STOA's headings take their place.
+		for _, region in ipairs({ info:GetRegions() }) do
+			if region:IsObjectType("FontString") and region ~= info.TitleText then region:SetAlpha(0) end
+		end
+		local mid = CreateFrame("Frame", nil, details)
+		local well = UI.well(mid, 0)
+		if well then well.stoaOwn = true end
+		details.stoaInfoMid = mid
+		details.stoaMotdHead = infoHeading(info, "MESSAGE OF THE DAY")
+		details.stoaMotdHead:SetPoint("TOPLEFT", info, "TOPLEFT", 14, -10)
+		local about = infoHeading(mid, "GUILD INFORMATION")
+		about:SetPoint("TOPLEFT", mid, "TOPLEFT", 14, -10)
+		details:HookScript("OnSizeChanged", function(own) xpcall(placeGuildDetails, Stoa.catch, own) end)
+		details:HookScript("OnShow", function(own) xpcall(placeGuildDetails, Stoa.catch, own) end)
+		if type(rawget(_G, "CommunitiesGuildInfoFrame_HideChallenges")) == "function" then
+			hooksecurefunc("CommunitiesGuildInfoFrame_HideChallenges", function()
+				xpcall(placeGuildDetails, Stoa.catch, details)
+			end)
+		end
+		xpcall(placeGuildDetails, Stoa.catch, details)
 	end
 	local filters = details.News and details.News.SetFiltersButton
 	local label = type(filters) == "table" and filters.GetFontString and filters:GetFontString()
