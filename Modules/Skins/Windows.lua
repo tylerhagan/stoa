@@ -514,8 +514,7 @@ local function liftPanel(frame, raise)
 	end
 	for _, tex in ipairs(parts) do
 		if tex and tex.SetTextureSliceMargins then
-			-- (The map's fill is drawn 2px outside its frame.)
-			if tex == mapFill then tex:SetPoint("TOPLEFT", -2, 2 + raise) else tex:SetPoint("TOPLEFT", 0, raise) end
+			tex:SetPoint("TOPLEFT", 0, raise)
 		end
 	end
 	-- The raised strip lies outside the window's own edge, so a click (or a

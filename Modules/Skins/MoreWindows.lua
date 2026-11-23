@@ -171,7 +171,9 @@ local function dressTarget(target, frame)
 		-- draw under the canvas and the quest log, so only the margins
 		-- around them (and the gap between) show it.
 		if not frame.stoaMapFill then
-			local fill = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", 2)
+			-- (Flush with the border frame's edge: drawn larger, it showed as a
+			-- second, lighter border around the header.)
+			local fill = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", 0)
 			if fill then
 				fill:SetDrawLayer("BACKGROUND", -8)
 				UI.tint(fill, "panel")
