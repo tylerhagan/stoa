@@ -1037,50 +1037,38 @@ local function paintMenuKey(button, over)
 		text:SetShadowOffset(0, 0)
 		text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
 	end
-	if over and enabled then key.glow:Set(Stoa:Color("accent")) else key.glow:Clear() end
-	key.face:SetColorTexture(1, 1, 1, over and enabled and 0.1 or 0.055)
+	local hot = over and enabled
+	key.lift:SetShown(hot)
+	if key.edge then
+		local r, g, b = Stoa:Color("accent")
+		key.edge:SetVertexColor(r, g, b, 0.85)
+		key.edge:SetShown(hot)
+	end
 end
 
--- A key is a flat, square-cornered plate with no gloss. Its depth is two
--- fine lines: light caught on the top edge, shade along the foot, and a
--- dark line under it where it meets the block.
+-- A key is a flat plate with a 2 pixel corner and no gloss (MatteKey.tga,
+-- Tools/art/matte_key.py): light caught on its top edge, shade along its
+-- foot and a dark line under it, all inside the button, since the menu's
+-- keys touch within a group. Returns the plate's hover parts.
+local KEY_SLICE = 5
 local function raiseMenuKey(button)
-	local function line(layer, sub, r, g, b, a)
-		local tex = button:CreateTexture(nil, layer, nil, sub)
-		tex:SetColorTexture(r, g, b, a)
-		return tex
-	end
-	-- Everything stays a pixel inside the button: the menu's keys touch
-	-- within a group, and a line drawn past one key's edge would land on
-	-- its neighbour's and muddle light with shade.
-	local face = line("BACKGROUND", -8, 1, 1, 1, 0.055)
-	face:SetPoint("TOPLEFT", 1, -1)
-	face:SetPoint("BOTTOMRIGHT", -1, 2)
-	local top = line("BACKGROUND", -6, 1, 1, 1, 0.16)
-	top:SetPoint("TOPLEFT", face, "TOPLEFT")
-	top:SetPoint("TOPRIGHT", face, "TOPRIGHT")
-	UI.pixel(top, "height")
-	local foot = line("BACKGROUND", -6, 0, 0, 0, 0.5)
-	foot:SetPoint("BOTTOMLEFT", face, "BOTTOMLEFT")
-	foot:SetPoint("BOTTOMRIGHT", face, "BOTTOMRIGHT")
-	UI.pixel(foot, "height")
-	local under = line("BACKGROUND", -6, 0, 0, 0, 0.75)
-	under:SetPoint("TOPLEFT", face, "BOTTOMLEFT")
-	under:SetPoint("TOPRIGHT", face, "BOTTOMRIGHT")
-	under:SetPoint("BOTTOM", button, "BOTTOM")
-	for _, side in ipairs({ "LEFT", "RIGHT" }) do
-		local edge = line("BACKGROUND", -7, 1, 1, 1, 0.05)
-		edge:SetPoint("TOP" .. side, face, "TOP" .. side)
-		edge:SetPoint("BOTTOM" .. side, face, "BOTTOM" .. side)
-		UI.pixel(edge, "width")
-	end
-	return face
+	local plate = UI.sliced(button, "BACKGROUND", "MatteKey.tga", 0, KEY_SLICE)
+	if plate then plate:SetDrawLayer("BACKGROUND", -8) end
+	-- Under the mouse the face lifts a shade and its outline shows.
+	local lift = button:CreateTexture(nil, "BACKGROUND", nil, -7)
+	lift:SetPoint("TOPLEFT", 2, -2)
+	lift:SetPoint("BOTTOMRIGHT", -2, 4)
+	lift:SetColorTexture(1, 1, 1, 0.05)
+	lift:Hide()
+	local edge = UI.sliced(button, "OVERLAY", "MatteKeyEdge.tga", 0, KEY_SLICE)
+	if edge then edge:Hide() end
+	return { lift = lift, edge = edge }
 end
 
 local function dressMenuKey(button)
 	if type(button) ~= "table" or forbidden(button) then return end
 	if not menuKeys[button] then
-		menuKeys[button] = { glow = UI.border(button, 1, -1), face = raiseMenuKey(button) }
+		menuKeys[button] = raiseMenuKey(button)
 	end
 	-- Blizzard cleared these scripts when it built the button, so each
 	-- build hooks them once.
