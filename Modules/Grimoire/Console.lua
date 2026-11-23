@@ -656,9 +656,11 @@ function Console:BuildSeal(frame)
 		mana:SetPoint("LEFT", frame, "TOP", MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP)
 		manaCap:SetPoint("BOTTOMRIGHT", mana, "TOPRIGHT", 0, 5)
 		for _, meter in ipairs({ health, mana }) do
+			-- One dark groove the bar fills: no lighter track inside it,
+			-- which read as an outline round an empty bar.
+			if meter.track then meter.track:Hide() end
 			local slot = frame:CreateTexture(nil, "BACKGROUND", nil, -3)
-			slot:SetPoint("TOPLEFT", meter, "TOPLEFT", -2, 2)
-			slot:SetPoint("BOTTOMRIGHT", meter, "BOTTOMRIGHT", 2, -2)
+			slot:SetAllPoints(meter)
 			slot:SetColorTexture(0, 0, 0, 0.6)
 			table.insert(self.resourceParts, slot)
 		end
