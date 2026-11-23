@@ -74,10 +74,10 @@ local function plainTextures(button)
 	end
 end
 
--- Depth for the dark keys: a soft dark lip 1px under the key, a faint light
--- rim along its top and a faint light falling down the face. Pressed, the
--- key sinks onto its lip and its words drop a pixel. Textures and hooked
--- scripts only, so secure buttons are fine.
+-- Depth for the dark keys: only a soft dark shadow 1px under the key (a
+-- light rim along the top read as a harsh grey line). Pressed, the key
+-- sinks onto it and its words drop a pixel. Textures and hooked scripts
+-- only, so secure buttons are fine.
 local KEY_LIP = 1
 local function keyDepth(button, face)
 	local lip = UI.sliced(button, "BACKGROUND", "CardFill.tga")
@@ -88,35 +88,16 @@ local function keyDepth(button, face)
 	lip:SetPoint("TOPLEFT", 0, -KEY_LIP)
 	lip:SetPoint("BOTTOMRIGHT", 0, -KEY_LIP)
 	lip:SetVertexColor(0, 0, 0, 0.45)
-	local sheen = button:CreateTexture(nil, "BACKGROUND", nil, -5)
-	sheen:SetTexture(UI.WHITE)
-	sheen:SetHeight(1)
-	sheen:SetPoint("TOPLEFT", 5, -1)
-	sheen:SetPoint("TOPRIGHT", -5, -1)
-	sheen:SetVertexColor(1, 1, 1, 0.06)
-	local fall = button:CreateTexture(nil, "BACKGROUND", nil, -5)
-	fall:SetTexture(UI.WHITE)
-	fall:SetPoint("TOPLEFT", 2, -2)
-	fall:SetPoint("BOTTOMRIGHT", -2, 2)
-	if fall.SetGradient and CreateColor then
-		fall:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, 0.025))
-	else
-		fall:Hide()
-	end
 	if button.SetPushedTextOffset then button:SetPushedTextOffset(0, -1) end
 	local function press(down)
 		local enabled = not button.IsEnabled or button:IsEnabled()
-		down = down and enabled
-		lip:SetPoint("TOPLEFT", 0, down and 0 or -KEY_LIP)
-		lip:SetPoint("BOTTOMRIGHT", 0, down and 0 or -KEY_LIP)
-		sheen:SetAlpha(down and 0.4 or (enabled and 1 or 0.5))
-		fall:SetAlpha(down and 0 or 1)
+		local y = (down and enabled) and 0 or -KEY_LIP
+		lip:SetPoint("TOPLEFT", 0, y)
+		lip:SetPoint("BOTTOMRIGHT", 0, y)
 	end
 	button:HookScript("OnMouseDown", function() press(true) end)
 	button:HookScript("OnMouseUp", function() press(false) end)
 	button:HookScript("OnLeave", function() press(false) end)
-	button:HookScript("OnEnable", function() press(false) end)
-	button:HookScript("OnDisable", function() press(false) end)
 	press(false)
 end
 
@@ -972,9 +953,16 @@ local function dressMenu(menu)
 	end
 end
 
+-- One hook that may fail on its own without taking the others with it:
+-- the menu manager is a guarded proxy that can refuse new fields.
+local function tryHook(owner, method, fn)
+	if type(owner) ~= "table" or type(owner[method]) ~= "function" then return end
+	local ok, err = pcall(hooksecurefunc, owner, method, fn)
+	if not ok then Stoa.catch(err) end
+end
+
 local function dressMenus()
 	local manager = type(Menu) == "table" and type(Menu.GetManager) == "function" and Menu.GetManager()
-	if type(manager) ~= "table" then return end
 	-- A dropdown keeps its description between openings, so its submenu
 	-- callback is added once.
 	local watched = setmetatable({}, { __mode = "k" })
@@ -986,8 +974,8 @@ local function dressMenus()
 			description:AddMenuAcquiredCallback(function(menu) xpcall(dressMenu, Stoa.catch, menu) end)
 		end
 	end
-	for _, method in ipairs({ "OpenMenu", "OpenContextMenu" }) do
-		if type(manager[method]) == "function" then hooksecurefunc(manager, method, opened) end
+	if type(manager) == "table" then
+		for _, method in ipairs({ "OpenMenu", "OpenContextMenu" }) do tryHook(manager, method, opened) end
 	end
 	-- Right-click menus on unit frames (the target's, the party's) open
 	-- through the game's secure unit code, past the hooks above. Every menu
@@ -996,9 +984,7 @@ local function dressMenus()
 	-- hooked on its own.
 	for _, name in ipairs({ "MenuStyle1Mixin", "MenuStyle1ThinMixin", "MenuStyle2Mixin" }) do
 		local style = rawget(_G, name)
-		if type(style) == "table" and type(style.Generate) == "function" then
-			hooksecurefunc(style, "Generate", function(menu) xpcall(dressMenu, Stoa.catch, menu) end)
-		end
+		tryHook(style, "Generate", function(menu) xpcall(dressMenu, Stoa.catch, menu) end)
 	end
 	local variants = rawget(_G, "MenuVariants")
 	if type(variants) ~= "table" then return end
@@ -1010,8 +996,8 @@ local function dressMenus()
 		local r, g, b = Stoa:Color(token)
 		tex:SetVertexColor(r, g, b, alpha or 1)
 	end
-	if type(variants.CreateHighlight) == "function" then
-		hooksecurefunc(variants, "CreateHighlight", function(frame)
+	do
+		tryHook(variants, "CreateHighlight", function(frame)
 			local light = type(frame) == "table" and frame.highlight
 			if not (light and light.SetTexture) then return end
 			light:SetTexture(UI.WHITE)
@@ -1020,8 +1006,8 @@ local function dressMenus()
 		end)
 	end
 	for _, method in ipairs({ "CreateCheckbox", "CreateRadio" }) do
-		if type(variants[method]) == "function" then
-			hooksecurefunc(variants, method, function(_, frame, isSelected, data)
+		do
+			tryHook(variants, method, function(_, frame, isSelected, data)
 				local mark = type(frame) == "table" and frame.leftTexture1
 				if not mark then return end
 				local ok, chosen = pcall(isSelected, data)
@@ -1029,8 +1015,8 @@ local function dressMenus()
 			end)
 		end
 	end
-	if type(variants.CreateSubmenuArrow) == "function" then
-		hooksecurefunc(variants, "CreateSubmenuArrow", function(frame)
+	do
+		tryHook(variants, "CreateSubmenuArrow", function(frame)
 			quiet(type(frame) == "table" and frame.arrow, "muted")
 		end)
 	end
