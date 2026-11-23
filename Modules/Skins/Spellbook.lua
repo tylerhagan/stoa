@@ -1160,6 +1160,12 @@ function Spellbook.FitWindow(talents)
 	-- The lifted page reaches up over the header, where it caught the
 	-- Shift-drag that moves the window: its top no longer takes the mouse.
 	if talents.SetHitRectInsets then talents:SetHitRectInsets(0, 0, talents:IsShown() and TALENTS_LIFT or 0, 0) end
+	-- Its own frames up there (the tree heads) still took the press, so
+	-- they hand a Shift-drag on to the window once laid out.
+	local mover = Stoa.modules.WindowMover
+	if talents:IsShown() and mover and mover.HookRaised then
+		C_Timer.After(0, function() guarded(mover.HookRaised, mover, frame, talents) end)
+	end
 	-- The spec's Activate button sat in that band: it joins the row.
 	local active, search = talents.ActiveSpec, talents.SearchBox
 	if talents:IsShown() and active and search and not active.stoaMoved then
