@@ -284,7 +284,7 @@ local BLIZZARD_STRIP, CONTENT_AIR = 23, 8
 -- The roster's member list (wide, with column heads 60px above its top) and
 -- its two view dropdowns are placed by guildRoster instead.
 local ROSTER_DROPDOWNS = { "GuildMemberListDropdown", "CommunityMemberListDropdown" }
-local guildRoster, guildInner
+local guildRoster, guildInner, guildChatRow
 -- The side tabs, in header order, with their words.
 local GUILD_TABS = {
 	{ "ChatTab", "Chat" }, { "RosterTab", "Roster" }, { "GuildBenefitsTab", "Perks" },
@@ -374,7 +374,9 @@ local function paintGuildTab(tab)
 	local parent = tab:GetParent()
 	local chosen = parent and tab:IsShown() and chosenGuildTab(parent) == tab
 	word:SetTextColor(Stoa:Color(chosen and "text" or "muted"))
-	tab.stoaGuildLine:SetShown(chosen and true or false)
+	local line = tab.stoaGuildLine
+	line:SetColorTexture(Stoa:Color("accent"))
+	line:SetShown(chosen and true or false)
 end
 
 local function paintGuildTabs(frame)
@@ -384,26 +386,29 @@ local function paintGuildTabs(frame)
 	end
 end
 
+-- Each page tab is faded out whole (its own art, checked glow and all) and
+-- its word and underline live on a cover that ignores the fade and lets
+-- the mouse through to the tab. Only paintGuildTab, by the window's page,
+-- ever shows the underline.
 local function guildTabWord(tab, label)
 	if type(tab) ~= "table" or forbidden(tab) or tab.stoaGuildWord then return end
-	for _, region in ipairs({ tab:GetRegions() }) do
-		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
-	end
-	for _, key in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetCheckedTexture", "GetDisabledTexture" }) do
-		local tex = tab[key] and tab[key](tab)
-		if tex then tex:SetAlpha(0) end
-	end
-	local word = UI.text(tab, "sans", Stoa.typeSize.label, "muted", "CENTER")
+	tab:SetAlpha(0)
+	local cover = CreateFrame("Frame", nil, tab)
+	cover:SetAllPoints()
+	cover:SetIgnoreParentAlpha(true)
+	cover:EnableMouse(false)
+	local word = cover:CreateFontString(nil, "OVERLAY")
+	Stoa:SetFont(word, "sans", Stoa.typeSize.label)
+	word:SetJustifyH("CENTER")
 	word:SetPoint("CENTER", 0, 1)
 	word:SetText(label)
-	local line = tab:CreateTexture(nil, "OVERLAY")
+	local line = cover:CreateTexture(nil, "OVERLAY")
 	line:SetTexture(UI.WHITE)
 	line:SetHeight(2)
 	line:SetPoint("TOPLEFT", word, "BOTTOMLEFT", 0, -4)
 	line:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -4)
-	UI.tint(line, "accent")
-	tab.stoaGuildWord, tab.stoaGuildLine = word, line
-	UI.applyTheme()
+	line:Hide()
+	tab.stoaGuildWord, tab.stoaGuildLine, tab.stoaGuildCover = word, line, cover
 	hooksecurefunc(tab, "SetChecked", paintGuildTab)
 	tab:HookScript("OnClick", function(self)
 		local frame = self:GetParent()
@@ -586,15 +591,15 @@ function AFTER.communities(frame)
 	-- club list beside it (and the pages hung from it) drop by the base.
 	local drop = listMode and (base + MOTD_ROW) or base
 	for _, key in ipairs(COMMUNITIES_PARTS) do
-		-- Maximised, the chat hangs from the club list, which has already
-		-- dropped by the base: it takes only the rest.
-		local amount = drop
-		if key == "Chat" and not small then amount = drop - base end
-		dropTops(frame[key], amount)
+		-- Maximised, the chat and the headset are placed under the channel
+		-- dropdown instead (guildChatRow).
+		if small or (key ~= "Chat" and key ~= "VoiceChatHeadset") then dropTops(frame[key], drop) end
 	end
-	dropTops(frame.CommunitiesList, small and 0 or base)
+	-- The club column starts right under the header, beside the MOTD row.
+	dropTops(frame.CommunitiesList, small and 0 or math.max(0, band + 2 - BLIZZARD_STRIP))
 	frame.stoaGuildDrop = drop
 	guildRoster(frame, drop)
+	if not small then xpcall(guildChatRow, Stoa.catch, frame, drop) end
 	xpcall(guildInner, Stoa.catch, frame)
 	placeGuildTabs(frame)
 	paintGuildTabs(frame)
@@ -735,13 +740,38 @@ local function rosterTop(frame)
 	return band + 2 + MOTD_ROW + ROSTER_HEAD
 end
 
+-- Blizzard's channel dropdown sits 31px down from the window's top.
+local STREAM_TOP = 31
 local function placeMemberList(frame, drop)
 	local list = frame.MemberList
 	if type(list) ~= "table" or forbidden(list) or InCombatLockdown() then return end
 	if list.expandedDisplay and not guildMinimized(frame) then
 		list:SetPoint("TOPLEFT", frame, "TOPLEFT", LIST_EDGE + 22, -rosterTop(frame))
+	elseif not guildMinimized(frame) then
+		-- Beside the chat: level with the channel dropdown.
+		list:SetPoint("TOPLEFT", frame, "TOPRIGHT", -165, -(STREAM_TOP + drop))
 	else
 		dropTops(list, drop)
+	end
+end
+
+-- The chat starts right under the channel dropdown, the headset sits at
+-- the right end of that row, and the club list's rows start at its top
+-- (Blizzard keeps 40px clear there for the dropdown the small window has).
+guildChatRow = function(frame)
+	local chat, stream = frame.Chat, frame.StreamDropdown
+	if type(chat) == "table" and type(stream) == "table" and not forbidden(chat) then
+		chat:SetPoint("TOPLEFT", stream, "BOTTOMLEFT", 6, -16)
+		local headset = frame.VoiceChatHeadset
+		if type(headset) == "table" and not forbidden(headset) then
+			headset:ClearAllPoints()
+			headset:SetPoint("RIGHT", chat, "TOPRIGHT", 8, 24)
+		end
+	end
+	local list = frame.CommunitiesList
+	local box = type(list) == "table" and list.ScrollBox
+	if type(box) == "table" and not forbidden(box) then
+		box:SetPoint("TOPLEFT", 0, 32)
 	end
 end
 
