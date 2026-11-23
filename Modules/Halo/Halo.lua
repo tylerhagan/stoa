@@ -391,6 +391,7 @@ function Halo:PlaceTarget()
 			target.plaque:SetPlain(true)
 			self:LayoutTarget(nil)
 			self:PlaceTargetAuras()
+			self:PlaceTargetOfTarget(nil)
 		end
 		return
 	end
@@ -873,12 +874,16 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 	-- Room between the two blocks: their panels reach 10 past each edge.
 	chip.stack = bare and 16 or 28
 	if not bare then
-		local fill = UI.pillFill(chip, 10)
-		UI.tint(fill, "panel", 0.9)
+		-- Matte: the same moulded block as the slab beside it.
+		local matte = UI.matte()
+		local fill = matte and UI.sliced(chip, "BACKGROUND", "CardFill.tga", 10) or UI.pillFill(chip, 10)
+		local alpha = matte and 0.97 or 0.9
+		UI.tint(fill, "panel", alpha)
 		local r, g, b = Stoa:Color("panel")
-		fill:SetVertexColor(r, g, b, 0.9)
+		fill:SetVertexColor(r, g, b, alpha)
+		if matte then UI.mould(chip, 10) end
 		local edge = UI.pillEdge(chip, 10)
-		edge:Set(Stoa:Color("hairline"))
+		if matte then edge:Clear() else edge:Set(Stoa:Color("hairline")) end
 		chip.fill, chip.edge = fill, edge
 	end
 	chip:SetAttribute("unit", unit)
@@ -904,6 +909,13 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 		for _, fs in ipairs({ label, who }) do UI.legible(fs) end
 	end
 	chip.unit, chip.name, chip.hp, chip.label = unit, who, hp, label
+	-- Beside the Matte slab the chip is as tall as it, its rows closer.
+	function chip:SetTight(on)
+		who:ClearAllPoints()
+		who:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, on and -2 or -4)
+		hp:ClearAllPoints()
+		hp:SetPoint("TOPLEFT", who, "BOTTOMLEFT", 0, on and -3 or -4)
+	end
 	Stoa:NewTicker(0.2, function()
 		if chip:IsVisible() then self:UpdateUnitChip(chip) end
 	end)
@@ -950,14 +962,23 @@ function Halo:PlaceTargetOfTarget(curve)
 		chip.label:SetPoint("TOPLEFT", textLeft, -6)
 	else
 		chip:SetFrameStrata("LOW")
-		chip:SetSize(TOT_WIDTH, CHIP_HEIGHT)
-		chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD)
+		if self.targetSlab then
+			-- Its panel reaches 10 past each edge: level with the slab's
+			-- top and foot, a small gap between the two blocks.
+			chip:SetSize(TOT_WIDTH, SLAB_HEIGHT - 20)
+			chip:SetPoint("TOPLEFT", target, "TOPRIGHT", 16, -10)
+		else
+			chip:SetSize(TOT_WIDTH, CHIP_HEIGHT)
+			chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD)
+		end
 		chip.label:SetPoint("TOPLEFT")
 	end
+	chip:SetTight(not docked and self.targetSlab or false)
 	if chip.slab then chip.slab:SetShown(docked) end
 	if chip.fill then
 		chip.fill:SetShown(not docked)
-		if docked then chip.edge:Clear() else chip.edge:Set(Stoa:Color("hairline")) end
+		if chip.stoaMould then chip.stoaMould:SetShown(not docked) end
+		if docked or UI.matte() then chip.edge:Clear() else chip.edge:Set(Stoa:Color("hairline")) end
 	end
 end
 
@@ -968,7 +989,7 @@ function Halo:BuildFocus(target)
 	chip:SetFrameStrata("LOW")
 	local function place()
 		chip:ClearAllPoints()
-		chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD - CHIP_HEIGHT - chip.stack)
+		chip:SetPoint("TOPLEFT", target, "TOPRIGHT", self.targetSlab and 16 or chip.gap, -TARGET_PAD - CHIP_HEIGHT - chip.stack)
 	end
 	place()
 	self.focus = chip
