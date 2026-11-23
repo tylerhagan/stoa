@@ -880,9 +880,21 @@ end
 local function paintClub(row)
 	if not row.stoaClubFill then return end
 	local chosen = row.Selection and row.Selection:IsShown()
-	if chosen then row.stoaClubEdge:Set(Stoa:Color("accent")) else row.stoaClubEdge:Clear() end
+	-- The open club: a lifted tile with a fine rim and a short accent bar
+	-- on its left, not a full bright outline.
+	if chosen then row.stoaClubEdge:Set(Stoa:Color("hairline")) else row.stoaClubEdge:Clear() end
+	row.stoaClubBar:SetShown(chosen and true or false)
+	row.stoaClubBar:SetVertexColor(Stoa:Color("accent"))
 	local r, g, b = Stoa:Color("panel")
-	row.stoaClubFill:SetVertexColor(r, g, b, chosen and 0.95 or (row.stoaOver and 0.8 or 0.55))
+	local lift = chosen and 0.05 or (row.stoaOver and 0.025 or 0)
+	row.stoaClubFill:SetVertexColor(r + lift, g + lift, b + lift, chosen and 0.95 or (row.stoaOver and 0.8 or 0.55))
+	-- The add and find tiles (no club) keep their icons quiet.
+	local icon = row.Icon
+	if icon and icon.SetDesaturated then
+		local quiet = row.clubId == nil
+		icon:SetDesaturated(quiet)
+		icon:SetAlpha(quiet and 0.7 or 1)
+	end
 	local name = row.Name
 	if name and name.SetTextColor then
 		local enabled = not row.IsEnabled or row:IsEnabled()
@@ -907,7 +919,13 @@ local function dressClub(row)
 			tex:SetPoint("TOPLEFT", 6, -3)
 			tex:SetPoint("BOTTOMRIGHT", -6, 3)
 		end
-		row.stoaClubFill, row.stoaClubEdge = fill, edge
+		local bar = row:CreateTexture(nil, "ARTWORK", nil, 7)
+		bar:SetTexture(UI.WHITE)
+		bar:SetWidth(2)
+		bar:SetPoint("TOPLEFT", fill, "TOPLEFT", 0, -12)
+		bar:SetPoint("BOTTOMLEFT", fill, "BOTTOMLEFT", 0, 12)
+		bar:Hide()
+		row.stoaClubFill, row.stoaClubEdge, row.stoaClubBar = fill, edge, bar
 		if row.Name then
 			Stoa:SetFont(row.Name, "sans", Stoa.typeSize.body)
 			row.Name:SetShadowOffset(0, 0)
@@ -923,9 +941,6 @@ local function dressClub(row)
 			if row[method] then
 				hooksecurefunc(row, method, function(self)
 					for _, key in ipairs({ "Background", "Selection", "NewCommunityFlash" }) do alphaOff(self[key]) end
-					-- The add and find tiles' green icons go quiet.
-					local icon = self.Icon
-					if icon and icon.SetDesaturated then icon:SetDesaturated(method ~= "Init") end
 					paintClub(self)
 				end)
 			end
@@ -946,8 +961,49 @@ local function dressMemberRow(row)
 	end
 end
 
+-- The member card that opens beside the roster: STOA's card in place of the
+-- dark dialog border, quiet labels, the notes as wells, STOA's buttons.
+local DETAIL_LABELS = { "ZoneLabel", "RankLabel", "OnlineLabel", "NoteLabel", "OfficerNoteLabel" }
+local function guildDetail(detail, windows)
+	if type(detail) ~= "table" or forbidden(detail) or detail.stoaDetail then return end
+	detail.stoaDetail = true
+	alphaOff(detail.Border)
+	UI.surface(detail, "card", { alpha = 0.97 })
+	if windows then
+		if windows.DressClose then windows.DressClose(detail.CloseButton) end
+		if windows.DressButton then
+			for _, key in ipairs({ "RemoveButton", "GroupInviteButton" }) do
+				if type(detail[key]) == "table" then xpcall(windows.DressButton, Stoa.catch, detail[key]) end
+			end
+		end
+	end
+	if type(detail.RankDropdown) == "table" and not forbidden(detail.RankDropdown) then dressDropdownField(detail.RankDropdown) end
+	for _, key in ipairs(DETAIL_LABELS) do
+		local label = detail[key]
+		if label and label.SetTextColor then label:SetTextColor(Stoa:Color("muted")) end
+	end
+	if detail.Name and detail.Name.SetTextColor then
+		Stoa:SetFont(detail.Name, "sans", Stoa.typeSize.body)
+		detail.Name:SetTextColor(Stoa:Color("text"))
+	end
+	for _, key in ipairs({ "NoteBackground", "OfficerNoteBackground" }) do
+		local box = detail[key]
+		if type(box) == "table" and box.SetBackdropColor then
+			pcall(box.SetBackdropColor, box, 0, 0, 0, 0.35)
+			local r, g, b = Stoa:Color("hairline")
+			pcall(box.SetBackdropBorderColor, box, r, g, b, 0.8)
+		end
+	end
+end
+
 guildInner = function(frame)
 	local windows = Stoa.modules.Windows
+	if windows and windows.DressScrollBar then
+		for _, owner in ipairs({ frame.CommunitiesList, frame.Chat, frame.MemberList }) do
+			if type(owner) == "table" then xpcall(windows.DressScrollBar, Stoa.catch, owner.ScrollBar) end
+		end
+	end
+	xpcall(guildDetail, Stoa.catch, frame.GuildMemberDetailFrame, windows)
 	local list = frame.CommunitiesList
 	if type(list) == "table" and not forbidden(list) then
 		for _, key in ipairs({ "Bg", "TopFiligree", "BottomFiligree" }) do alphaOff(list[key]) end
