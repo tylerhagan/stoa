@@ -20,8 +20,8 @@
 --   Inline : name at the bar's left and health at its right, inside it
 --   Brass  : a brass edge and a level badge on the bar's end
 --   Slim   : a thin bar under the name, for busy pulls
---   Matte  : the Matte slab's health line: a thin line flush in a black
---            track with no frame, and the level kept quiet
+--   Matte  : the Matte slab's health line: a slim line in a black track
+--            with a fine black rim, and the level kept quiet
 -- The target can be marked by its edge, by arrows either side, or by a soft
 -- glow behind it; plates you aren't targeting can fade, and the target can
 -- grow a little (the game's own scale setting).
@@ -52,7 +52,7 @@ local STYLES = {
 	inline = { height = 18, pill = true, value = "RIGHT", nameInside = true },
 	brass = { height = 12, brass = true, bevel = true, badge = true },
 	slim = { height = 5, pill = true },
-	matte = { height = 5, flush = true, quietLevel = true },
+	matte = { height = 10, flush = true, quietLevel = true },
 }
 
 function Plates:Style()
@@ -388,7 +388,15 @@ local function applyStyle(frame)
 		end
 	end
 	local pill = not style.box and not style.brass and not style.flush
-	parts.well:SetVertexColor(0, 0, 0, style.flush and 0.72 or UI.SURFACES.well.black)
+	parts.well:SetVertexColor(0, 0, 0, style.flush and 0.8 or UI.SURFACES.well.black)
+	-- The Matte line keeps a fine black rim, so it reads on bright ground
+	-- and dark alike.
+	if style.flush and not parts.rim then
+		parts.rim = UI.pillFill(bar, 1)
+		parts.rim:SetDrawLayer("BACKGROUND", -7)
+		parts.rim:SetVertexColor(0, 0, 0, 0.95)
+	end
+	if parts.rim then parts.rim:SetShown(style.flush and true or false) end
 	frame.stoaPillFill:SetShown(pill)
 	frame.stoaPillEdge:SetShown(pill)
 	parts.box:SetShown(style.box and true or false)
