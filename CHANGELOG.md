@@ -12,9 +12,11 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Chat on the console: when the console folds for a fight or a ride, a dark plate stands in for the leather behind the chat, so it stays readable over bright ground. On a ride or a flight the plate hides with the chat and comes back while you type.
 - Fixed: after some fights the chat could stay at the game's own size, which left the buttons beside it standing above the chat until a reload.
 - Fixed: the Dressing Room's item list lost its dark ground the second time the window opened.
+- Fixed: the Halo's timer coins used fixed base lengths when the game hid a DoT's time in a fight, so talents that make them last longer (Improved Shadow Word: Pain, for one) were ignored and the coin ran out early. Coins now take the length from the spell itself, talents included, and from the aura whenever the game shows it.
 - Fixed: gear with stats your role doesn't use (strength on a priest) was called an upgrade when its item level was higher. It now reads "Nothing for Ranged DPS, below your neck".
 - Dressing Room: the custom set field, Save and the item list switch are dressed and sit in one tidy row over the model.
 - `/stoa report` has a Chat line with the chat's size and place.
+- **Switch layout from Ready**: click your role under Ready on the console (Healer, Ranged DPS...) and a small card lists STOA's four layouts: Tank, Healer, Melee DPS and Ranged DPS. Click one and this spec uses it from then on, the same as Settings > Roles. Once you have dual spec, your other talent spec sits below them with its tree split: click it to switch spec (the game's short cast, not in combat). Open talents goes to the talent window.
 - Releases now go to Wago Addons as well as CurseForge.
 
 ## 1.6.0

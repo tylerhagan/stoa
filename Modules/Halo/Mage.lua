@@ -140,7 +140,7 @@ function Mage:UpdateCoins()
 		if key == "vulnerability" then
 			if Sign.knows(SPELLS.improvedScorch) and Sign.hostileTarget() then
 				index = index + 1
-				state[key] = Sign.debuff(self.coins[index], letter, nameOf("vulnerability"), self.casts, key, VULNERABILITY_LENGTH)
+				state[key] = Sign.debuff(self.coins[index], letter, nameOf("vulnerability"), self.casts, key, Sign.length(SPELLS.vulnerability, VULNERABILITY_LENGTH))
 			end
 		elseif Sign.knows(SPELLS[key]) then
 			index = index + 1

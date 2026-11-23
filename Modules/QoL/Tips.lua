@@ -24,6 +24,7 @@ Tips.LIST = {
 	{ "selfBuffs", "Click to rebuff", "The small icons left of the Halo are long buffs you're missing or about to lose. Click one to cast it.", "journey" },
 	{ "shiftSkip", "Shift skips the comforts", "Hold Shift as you talk to an NPC and STOA's comforts leave that talk alone, just this once.", "comforts" },
 	{ "bind", "Bind keys by hovering", "/stoa kb, then hover any action button and press a key to bind it. Backspace clears; Esc keeps the changes.", "/stoa kb" },
+	{ "specSwitch", "Switch layout from Ready", "Click your role under Ready on the console to pick another layout for this spec, or to switch talent spec.", "console" },
 	{ "glance", "Choose At a glance", "Right-click At a glance on the console to choose which numbers it shows, per spec.", "console" },
 	{ "bagViews", "Sections or one grid", "The word in the bag's header switches between sections (new, consumables, gear, junk and more) and one grid in bag order.", "windows" },
 	{ "xpBar", "Your finished quests", "The deeper gold stretch on the experience bar is what handing in your finished quests gives. Hover the bar for the count.", "journey" },

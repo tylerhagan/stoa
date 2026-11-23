@@ -46,6 +46,11 @@ local SPELLS = {
 -- How long each lasts, for the times the game won't show the aura itself:
 -- then the coin runs from your own cast on this target.
 local DURATIONS = { pain = 18, plague = 24, embrace = 30 }
+-- With talents (Improved Shadow Word: Pain adds 3s a rank) the spell's own
+-- length, as Sign.length reads it.
+local function lengthOf(key)
+	return Stoa.Sign.length(SPELLS[key], DURATIONS[key])
+end
 
 local DOTS = {
 	{ key = "pain", letter = "P" },
@@ -205,11 +210,13 @@ function Shadow:UpdateCoins()
 			self.state[key] = nil
 		else
 			local aura = findAura("target", key)
+			Stoa.Sign.learn(nameOf(key), aura)
 			-- Your own cast timing wins whenever the aura's times are hidden.
 			local cast = not (aura and auraLeft(aura)) and self:CastOn(key)
 			if cast then
-				coin.cooldown:SetCooldown(cast, DURATIONS[key])
-				local left = cast + DURATIONS[key] - GetTime()
+				local length = lengthOf(key)
+				coin.cooldown:SetCooldown(cast, length)
+				local left = cast + length - GetTime()
 				local state = left < ENDING and "ending" or "on"
 				paintCoin(coin, state)
 				self.state[key] = state
@@ -284,7 +291,7 @@ end
 function Shadow:CastOn(key)
 	local list = self.casts and self.casts[targetKey()]
 	local at = list and list[key]
-	if at and GetTime() - at < DURATIONS[key] then return at end
+	if at and GetTime() - at < lengthOf(key) then return at end
 end
 
 -- Whether your own cast put this DoT on a unit (a nameplate, say) and it
@@ -293,7 +300,7 @@ function Shadow:CastOnUnit(unit, key)
 	local who = unitKey(unit)
 	local list = who and self.casts and self.casts[who]
 	local at = list and list[key]
-	return at ~= nil and GetTime() - at < DURATIONS[key]
+	return at ~= nil and GetTime() - at < lengthOf(key)
 end
 
 function Shadow:ForgetHiddenTarget()

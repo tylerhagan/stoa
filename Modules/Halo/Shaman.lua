@@ -62,12 +62,12 @@ function Shaman:UpdateCoins()
 	local shield = shieldKey()
 	if not self:Healer() and Sign.knows(SPELLS.flameShock) and Sign.hostileTarget() then
 		index = index + 1
-		state.flameShock = Sign.debuff(self.coins[index], "F", nameOf("flameShock"), self.casts, "flameShock", LENGTHS.flameShock)
+		state.flameShock = Sign.debuff(self.coins[index], "F", nameOf("flameShock"), self.casts, "flameShock", Sign.length(SPELLS.flameShock, LENGTHS.flameShock))
 	end
 	if shield then
 		index = index + 1
 		local aura
-		state.shield, aura = Sign.buff(self.coins[index], "S", nameOf(shield), self.casts, shield, LENGTHS[shield])
+		state.shield, aura = Sign.buff(self.coins[index], "S", nameOf(shield), self.casts, shield, Sign.length(SPELLS[shield], LENGTHS[shield]))
 		self.charges = aura and Sign.stacks(aura) or nil
 	else
 		self.charges = nil
