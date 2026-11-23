@@ -2062,7 +2062,8 @@ function UI.plaque(frame, coinSide, opts)
 	-- The strip: a colour token, or nil to hide it.
 	function plaque:SetReaction(token)
 		plaque.reaction = token
-		if token and not plaque.bare and not plaque.docked and not plaque.plain then
+		-- (Matte leaves the strip out: the bar's colour already says it.)
+		if token and not plaque.bare and not plaque.docked and not plaque.plain and not UI.matte() then
 			local r, g, b = Stoa:Color(token)
 			strip:SetVertexColor(r, g, b, 0.9)
 			strip:Show()
@@ -2126,26 +2127,35 @@ function UI.plaqueBar(frame, width, height)
 	-- Coloured by its owner (hostile, low), so a theme pass mustn't turn it
 	-- back to the health colour.
 	UI.unpaint(hp)
-	local outset = (width * 64 / 512 - height) / 2
-	local mask = hp:CreateMaskTexture()
-	mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-	mask:SetPoint("TOPLEFT", 0, outset)
-	mask:SetPoint("BOTTOMRIGHT", 0, -outset)
-	hp:GetStatusBarTexture():AddMaskTexture(mask)
+	-- Matte: a square bar like the party cards', with no pill and no rim;
+	-- its owner sets the numbers beside it (UI.numbersBeside).
+	local square = UI.matte()
+	local mask
+	if not square then
+		local outset = (width * 64 / 512 - height) / 2
+		mask = hp:CreateMaskTexture()
+		mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		mask:SetPoint("TOPLEFT", 0, outset)
+		mask:SetPoint("BOTTOMRIGHT", 0, -outset)
+		hp:GetStatusBarTexture():AddMaskTexture(mask)
+	end
 	-- A dark well rather than the usual faint track, so the words read.
 	hp.track:Hide()
 	local well = hp:CreateTexture(nil, "BACKGROUND")
 	well:SetAllPoints()
 	well:SetColorTexture(0, 0, 0, 0.6)
-	well:AddMaskTexture(mask)
+	if mask then well:AddMaskTexture(mask) end
 	-- Its words sit above anything drawn over the bar (Lethal.lua).
 	local words = CreateFrame("Frame", nil, hp)
 	words:SetAllPoints()
 	words:SetFrameLevel(hp:GetFrameLevel() + 6)
-	local rim = words:CreateTexture(nil, "BORDER")
-	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
-	rim:SetAllPoints(mask)
-	UI.tint(rim, "text", UI.edgeAlpha() or 0.18)
+	local rim
+	if mask then
+		rim = words:CreateTexture(nil, "BORDER")
+		rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
+		rim:SetAllPoints(mask)
+		UI.tint(rim, "text", UI.edgeAlpha() or 0.18)
+	end
 	local percent = UI.text(words, "sans", Stoa.typeSize.body, "text", "LEFT")
 	percent:SetPoint("LEFT", 10, 0)
 	UI.legible(percent)
@@ -2154,7 +2164,17 @@ function UI.plaqueBar(frame, width, height)
 	amount:SetAlpha(0.8)
 	UI.legible(amount)
 	hp.mask, hp.words, hp.percent, hp.amount, hp.rim = mask, words, percent, amount, rim
+	hp.square = square
 	return hp
+end
+
+-- Sets a plaque bar's numbers in the room to its right (`room` wide),
+-- right-aligned, instead of inside it.
+function UI.numbersBeside(hp, room)
+	hp.percent:ClearAllPoints()
+	hp.percent:SetPoint("RIGHT", hp, "RIGHT", room, 0)
+	hp.amount:ClearAllPoints()
+	hp.amount:SetPoint("RIGHT", hp.percent, "LEFT", -6, 0)
 end
 
 -- Heals halved (Mortal Strike and the like): red stripes over the empty end

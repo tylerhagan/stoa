@@ -792,7 +792,7 @@ function Party:BuildWatch()
 	absorb:SetPoint("TOPLEFT", hp:GetStatusBarTexture(), "TOPRIGHT")
 	absorb:SetSize(WATCH_BAR_W, WATCH_BAR_H)
 	absorb:SetStatusBarColor(Stoa:Color("shield"))
-	absorb:GetStatusBarTexture():AddMaskTexture(hp.mask)
+	if hp.mask then absorb:GetStatusBarTexture():AddMaskTexture(hp.mask) end
 	absorb:SetFrameLevel(hp:GetFrameLevel() + 1)
 	-- Mana, rage or energy as a fine line under the bar.
 	local power = UI.bar(watch, WATCH_BAR_W - 16, 3, "mana")
@@ -805,6 +805,14 @@ function Party:BuildWatch()
 	watch.absorb, watch.buffs, watch.power = absorb, buffs, power
 	self.watch = watch
 	watch.slab = UI.slabCards()
+	if hp.square and not watch.slab then
+		-- Matte's full plaque: a slimmer square bar, its numbers beside it.
+		local barW = WATCH_BAR_W - SLAB_NUM_W
+		hp:SetSize(barW, 10)
+		absorb:SetSize(barW, 10)
+		UI.numbersBeside(hp, SLAB_NUM_W)
+		power:SetWidth(barW)
+	end
 	if watch.slab then
 		local barW = SLAB_BAR_W - SLAB_NUM_W
 		watch:SetSize(SLAB_WIDTH, SLAB_HEIGHT)

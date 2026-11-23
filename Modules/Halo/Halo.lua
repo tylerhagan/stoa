@@ -338,6 +338,7 @@ local SLAB_BAR_H = 8
 local SLAB_NAME_W = SLAB_BAR_W - 30
 -- Room at the bar's right end for the numbers.
 local SLAB_NUM_W = 84
+local FULL_MATTE_BAR_H = 10
 -- Under the block: the aura icons, close to it, then the cast. The words
 -- (threat, KICK, a friend's tags) stand on top of the block instead, so
 -- nothing under it leaves a gap when there are no auras.
@@ -486,10 +487,13 @@ function Halo:LayoutTarget(curve)
 	local left = docked and self.targetTextLeft or SLAB_PAD
 	local barW = slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
 	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
-	target.hp:SetSize(slim and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or TARGET_BAR_H)
+	-- Matte's full plaque: a slimmer square bar with its numbers beside it.
+	local beside = not slim and target.hp.square or false
+	local short = slim or beside
+	target.hp:SetSize(short and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or beside and FULL_MATTE_BAR_H or TARGET_BAR_H)
 	if target.hp.rim then target.hp.rim:SetShown(not slim) end
 	-- On the slab the power line runs the health line's full length.
-	target.power:SetWidth(slim and barW - SLAB_NUM_W or barW - 16)
+	target.power:SetWidth(short and barW - SLAB_NUM_W or barW - 16)
 	target.power:ClearAllPoints()
 	target.power:SetPoint("TOP", target.hp, "BOTTOM", 0, slim and -3 or -4)
 	-- The numbers: inside the bar, or beside the name over the slim one.
@@ -499,6 +503,8 @@ function Halo:LayoutTarget(curve)
 	if slim then
 		percent:SetPoint("RIGHT", target, "TOPLEFT", left + barW, (slab and -29 or DOCK_SLIM_BAR_Y) - 4)
 		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
+	elseif beside then
+		UI.numbersBeside(target.hp, SLAB_NUM_W)
 	else
 		percent:SetPoint("LEFT", 10, 0)
 		amount:SetPoint("LEFT", percent, "RIGHT", 8, 0)
