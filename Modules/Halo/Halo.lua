@@ -1284,6 +1284,9 @@ function Halo:UpdateTargetPower()
 	power.hasPower = has
 	if not has or self.target.plaque.docked then return power:Hide() end
 	UI.setUnitBar(power, "target", "power")
+	-- Matte: no track, so a target with an empty pool (most beasts) shows
+	-- no stray dark line under its health.
+	if power.track and UI.matte() then power.track:Hide() end
 	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType("target")))
 	power:SetStatusBarColor(Stoa:Color(kind and POWER_TOKENS[kind] or "mana"))
 	local dead = UnitIsDead("target")

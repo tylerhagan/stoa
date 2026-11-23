@@ -9,6 +9,10 @@ Both are 16x16 and nine-sliced at 5, with a 2 pixel corner:
   edge, a line of shade along its foot, and a dark line under it where
   it meets the block. The lines follow the corner.
 - MatteKeyEdge.tga: the plate's outline alone, in white, for the hover.
+- MatteKeyFill.tga: the whole key's shape (plate and the line under it)
+  in solid white, for the panel colour behind MatteKey on a card.
+- MatteCardState.tga: a 2 pixel outline around that whole shape, in
+  white, for a card's state (dispel, danger, your target).
 """
 import sys
 
@@ -63,3 +67,6 @@ save("MatteKey", [
 ])
 full = box(0, SIZE - UNDER)
 save("MatteKeyEdge", [((full < 0) & (full > -1), True, 1.0)])
+whole = np.minimum(plate, shadow)
+save("MatteKeyFill", [(whole < 0, True, 1.0)])
+save("MatteCardState", [((whole < 0) & (whole > -2), True, 1.0)])

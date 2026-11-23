@@ -854,6 +854,8 @@ end
 -- Rounded card pieces: one small image each, nine-sliced so the corners
 -- keep their shape at any size. Clients without slicing get square ones.
 local CARD_SLICE = 12
+-- The Matte small key's pieces (Tools/art/matte_key.py) slice at 5.
+local KEY_SLICE = 5
 
 local function sliced(parent, layer, file, outset, margin)
 	if not parent.CreateTexture then return nil end
@@ -1564,8 +1566,31 @@ function UI.unitCard(card, styleName)
 	-- The rulebook's card surface: panel fill and one hairline edge, as on
 	-- tooltips and plaques. A stronger border shows states (a dispel, low
 	-- health or your target); dispels also get a soft halo outside.
-	UI.surface(card, "card", { alpha = 0.96 })
-	card.state = UI.roundBorder(card, "CardState.tga", 2)
+	-- Matte: the small key's plate instead (Tools/art/matte_key.py): a
+	-- 2 pixel corner, light caught on the top edge, shade along the foot
+	-- and a dark line under it, with a crisp state outline to match.
+	local plate = UI.matte() and sliced(card, "BACKGROUND", "MatteKeyFill.tga", 0, KEY_SLICE)
+	if plate then
+		plate:SetDrawLayer("BACKGROUND", -8)
+		UI.tint(plate, "panel", 0.97)
+		local lines = sliced(card, "BACKGROUND", "MatteKey.tga", 0, KEY_SLICE)
+		lines:SetDrawLayer("BACKGROUND", -7)
+		card.stoaSurface, card.stoaSurfaceKind, card.stoaKeyLines = plate, "card", lines
+		local ring = sliced(card, "OVERLAY", "MatteCardState.tga", 0, KEY_SLICE)
+		ring:Hide()
+		card.state = {
+			edges = { ring },
+			Set = function(_, r, g, b, a)
+				ring:SetVertexColor(r, g, b, a or 1)
+				ring:Show()
+			end,
+			Clear = function() ring:Hide() end,
+		}
+		UI.applyTheme()
+	else
+		UI.surface(card, "card", { alpha = 0.96 })
+		card.state = UI.roundBorder(card, "CardState.tga", 2)
+	end
 	card.glow = UI.roundBorder(card, "CardGlow.tga", 3, 3)
 	-- Kept for older callers: a dispel border is the state border.
 	card.dispel = card.state
@@ -2215,6 +2240,7 @@ function UI.styleCard(card, styleName)
 	local pad = style.pad
 	-- A strip has no panel or edge; every other style gets them back.
 	if card.stoaSurface then card.stoaSurface:SetShown(not style.strip) end
+	if card.stoaKeyLines then card.stoaKeyLines:SetShown(not style.strip) end
 	if card.stoaPanelEdge then
 		for _, tex in ipairs(card.stoaPanelEdge.edges or {}) do tex:SetShown(not style.strip) end
 	end
