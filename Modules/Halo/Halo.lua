@@ -1168,9 +1168,18 @@ function Halo:UpdateTarget()
 	local rank = plain(UnitClassification("target"))
 	local level = plain(UnitLevel("target"))
 	local kind = plain(UnitCreatureType("target"))
+	-- Matte's full plaque keeps its rows but speaks like the slab: rank as
+	-- coloured words, the rest quiet, and no HOSTILE (the red bar says it).
+	local quiet = UI.matte() and not self:TargetSlim()
 	local words = {}
-	if rank == "elite" or rank == "worldboss" then words[#words + 1] = "ELITE" end
-	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
+	if quiet then
+		if rank == "rare" or rank == "rareelite" then words[#words + 1] = slabWord("RARE", Stoa.silver) end
+		if rank == "elite" or rank == "rareelite" then words[#words + 1] = slabWord("ELITE", SLAB_GOLD) end
+		if rank == "worldboss" then words[#words + 1] = slabWord("BOSS", SLAB_GOLD) end
+	else
+		if rank == "elite" or rank == "worldboss" then words[#words + 1] = "ELITE" end
+		if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
+	end
 	-- Flagged for PvP while you are not: hitting it (or helping it) would
 	-- flag you too, so the plaque says so in the warning colour.
 	local flags = plain(UnitIsPVP("target")) and not plain(UnitIsPVP("player")) or false
@@ -1214,7 +1223,8 @@ function Halo:UpdateTarget()
 		words = { words[1] }
 	else
 		target.rankWord:SetText("")
-		if pvpWord then words[#words + 1] = pvpWord end
+		-- The quiet plaque says PVP at its top right instead.
+		if pvpWord and not quiet then words[#words + 1] = pvpWord end
 	end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
@@ -1223,7 +1233,7 @@ function Halo:UpdateTarget()
 	target.caption:SetTextColor(Stoa:Color(plaqueRank and "accent" or "muted"))
 	if plaqueRank == "rare" then target.caption:SetTextColor(unpack(Stoa.silver)) end
 	-- The slab's diamonds carry the rank; its level stays quiet.
-	if slab then target.caption:SetTextColor(Stoa:Color("muted")) end
+	if slab or quiet then target.caption:SetTextColor(Stoa:Color("muted")) end
 
 	-- A dead target says so in words and steps back, rather than reading as
 	-- a hostile at zero.
@@ -1235,8 +1245,13 @@ function Halo:UpdateTarget()
 	local cue = dead and "DEAD" or hostile and "HOSTILE" or ""
 	-- The slab's numbers stand where the cue would: only DEAD is said.
 	if slab and not dead then cue = slabKind or "" end
+	if quiet and not dead then cue = flags and "PVP" or "" end
 	target.cue:SetText(cue)
-	target.cue:SetTextColor(Stoa:Color((dead or slab) and "muted" or Stoa:StateToken(cue)))
+	if quiet and cue == "PVP" then
+		target.cue:SetTextColor(Stoa:Color("danger"))
+	else
+		target.cue:SetTextColor(Stoa:Color((dead or slab) and "muted" or Stoa:StateToken(cue)))
+	end
 	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "hostile" or nil) end
 	target.hp:SetShown(not dead)
 	target.power:SetShown(not dead and target.power.hasPower and not target.plaque.docked or false)
