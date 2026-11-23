@@ -823,7 +823,13 @@ function Character:LayOut(early)
 		-- the column can always be brought back.
 		local toggle = frame.RightPaneToggleButton
 		if toggle then
-			local function seat() toggle:SetAlpha(frame.IsRightPaneCollapsed and frame:IsRightPaneCollapsed() and 1 or 0) end
+			-- While hidden it must not take clicks either: it sits by the
+			-- tab words, and a stray click there folded the window.
+			local function seat()
+				local folded = frame.IsRightPaneCollapsed and frame:IsRightPaneCollapsed() and true or false
+				toggle:SetAlpha(folded and 1 or 0)
+				if toggle.EnableMouse and not blocked(toggle) then toggle:EnableMouse(folded) end
+			end
 			hooksecurefunc(frame, "UpdateRightPaneToggleButton", seat)
 			seat()
 		end
