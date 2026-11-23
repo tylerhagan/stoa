@@ -332,11 +332,12 @@ local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 244, 46, 11
 local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
 local SLAB_BAR_H = 5
 local SLAB_NAME_W = 116
--- Under the block: the aura icons first, close to it, then the line of
--- words (from the bar's foot), then the cast.
+-- Under the block: the aura icons, close to it, then the cast. The words
+-- (threat, KICK, a friend's tags) stand on top of the block instead, so
+-- nothing under it leaves a gap when there are no auras.
 local SLAB_AURA_Y = 6
-local SLAB_UNDER = 14 + SLAB_AURA_Y + 22 + 5 -- 14: the bar's foot to the block's
-local SLAB_CAST_Y = SLAB_AURA_Y + 22 + 5 + 14
+local SLAB_CAST_Y = SLAB_AURA_Y + 22 + 6
+local SLAB_OVER = 5
 
 -- Out of combat, on the full console with its art, the plaque docks on the
 -- gold rim on the mana side, beside the bars you read there: as tall as the
@@ -478,16 +479,25 @@ function Halo:LayoutTarget(curve)
 		percent:SetPoint("LEFT", 10, 0)
 		amount:SetPoint("LEFT", percent, "RIGHT", 8, 0)
 	end
-	local under = slab and SLAB_UNDER or 12
 	if target.threat and target.kick then
 		target.threat:ClearAllPoints()
-		target.threat:SetPoint("TOPRIGHT", target.hp, "BOTTOMRIGHT", 0, -under)
 		target.kick:ClearAllPoints()
-		target.kick:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -under)
+		if slab then
+			target.threat:SetPoint("BOTTOMRIGHT", target, "TOPRIGHT", -SLAB_PAD, SLAB_OVER)
+			target.kick:SetPoint("BOTTOMLEFT", target, "TOPLEFT", SLAB_PAD, SLAB_OVER)
+		else
+			target.threat:SetPoint("TOPRIGHT", target.hp, "BOTTOMRIGHT", 0, -12)
+			target.kick:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -12)
+		end
 	end
 	if target.pips and target.pips.pips[1] then
-		target.pips.pips[1]:ClearAllPoints()
-		target.pips.pips[1]:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -under)
+		local first = target.pips.pips[1]
+		first:ClearAllPoints()
+		if slab then
+			first:SetPoint("BOTTOMLEFT", target, "TOPLEFT", SLAB_PAD, SLAB_OVER)
+		else
+			first:SetPoint("TOPLEFT", target.hp, "BOTTOMLEFT", 0, -12)
+		end
 	end
 	if target.mark then
 		target.mark:ClearAllPoints()
