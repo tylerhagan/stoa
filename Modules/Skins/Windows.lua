@@ -74,6 +74,52 @@ local function plainTextures(button)
 	end
 end
 
+-- Depth for the dark keys: a hard dark lip 2px under the key, a 1px light
+-- rim along its top and a faint light falling down the face. Pressed, the
+-- key sinks onto its lip and its words drop a pixel. Textures and hooked
+-- scripts only, so secure buttons are fine.
+local KEY_LIP = 2
+local function keyDepth(button, face)
+	local lip = UI.sliced(button, "BACKGROUND", "CardFill.tga")
+	if not (lip and face) then return end
+	if face.SetDrawLayer then face:SetDrawLayer("BACKGROUND", -6) end
+	lip:SetDrawLayer("BACKGROUND", -8)
+	lip:ClearAllPoints()
+	lip:SetPoint("TOPLEFT", 0, -KEY_LIP)
+	lip:SetPoint("BOTTOMRIGHT", 0, -KEY_LIP)
+	lip:SetVertexColor(0, 0, 0, 0.9)
+	local sheen = button:CreateTexture(nil, "BACKGROUND", nil, -5)
+	sheen:SetTexture(UI.WHITE)
+	sheen:SetHeight(1)
+	sheen:SetPoint("TOPLEFT", 5, -1)
+	sheen:SetPoint("TOPRIGHT", -5, -1)
+	sheen:SetVertexColor(1, 1, 1, 0.14)
+	local fall = button:CreateTexture(nil, "BACKGROUND", nil, -5)
+	fall:SetTexture(UI.WHITE)
+	fall:SetPoint("TOPLEFT", 2, -2)
+	fall:SetPoint("BOTTOMRIGHT", -2, 2)
+	if fall.SetGradient and CreateColor then
+		fall:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, 0.05))
+	else
+		fall:Hide()
+	end
+	if button.SetPushedTextOffset then button:SetPushedTextOffset(0, -1) end
+	local function press(down)
+		local enabled = not button.IsEnabled or button:IsEnabled()
+		down = down and enabled
+		lip:SetPoint("TOPLEFT", 0, down and -1 or -KEY_LIP)
+		lip:SetPoint("BOTTOMRIGHT", 0, down and -1 or -KEY_LIP)
+		sheen:SetAlpha(down and 0.4 or (enabled and 1 or 0.5))
+		fall:SetAlpha(down and 0 or 1)
+	end
+	button:HookScript("OnMouseDown", function() press(true) end)
+	button:HookScript("OnMouseUp", function() press(false) end)
+	button:HookScript("OnLeave", function() press(false) end)
+	button:HookScript("OnEnable", function() press(false) end)
+	button:HookScript("OnDisable", function() press(false) end)
+	press(false)
+end
+
 local function dressButton(button)
 	if not button or button.stoaDressed then return end
 	button.stoaDressed = true
@@ -82,7 +128,8 @@ local function dressButton(button)
 	button:HookScript("OnShow", plainTextures)
 	button:HookScript("OnEnable", plainTextures)
 	button:HookScript("OnDisable", plainTextures)
-	UI.roundPanel(button, 0.95)
+	local face = UI.roundPanel(button, 0.95)
+	keyDepth(button, face)
 	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
 	local text = button.GetFontString and button:GetFontString()
 	if text then
@@ -146,6 +193,59 @@ local function dressButtonsIn(frame, depth)
 	end
 end
 
+-- Search boxes (talents, spellbook): Blizzard's gold-rimmed field becomes
+-- a dark rounded well whose edge warms while you type in it. The magnifier
+-- and the grey hint stay.
+local function dressSearch(box)
+	if type(box) ~= "table" or not box.CreateTexture or forbidden(box) or box.stoaSearch then return end
+	box.stoaSearch = true
+	for _, key in ipairs({ "Left", "Middle", "Right", "Mid" }) do hide(box[key]) end
+	if box.NineSlice then hide(box.NineSlice) end
+	local fill = UI.sliced(box, "BACKGROUND", "CardFill.tga")
+	if fill then
+		-- The field's text sits 6px in from its frame on the left.
+		fill:SetPoint("TOPLEFT", -6, 0)
+		fill:SetDrawLayer("BACKGROUND", -8)
+		fill:SetVertexColor(0, 0, 0, 0.45)
+	end
+	local edge = UI.roundBorder(box, "CardEdge.tga", 1)
+	if edge.edges[1] then edge.edges[1]:SetPoint("TOPLEFT", -6, 0) end
+	local function paint()
+		if box:HasFocus() then edge:Set(Stoa:Color("accent")) else edge:Set(Stoa:Color("hairline")) end
+	end
+	box:HookScript("OnEditFocusGained", paint)
+	box:HookScript("OnEditFocusLost", paint)
+	paint()
+	UI.applyTheme()
+end
+
+-- The small square arrow buttons that open a menu (the talents' search
+-- options): a dark rounded key with a quiet down chevron instead of the
+-- yellow button. Blizzard sets the arrow's art on every press, so the art
+-- goes by alpha, which a new atlas keeps.
+local function dressArrowDropdown(button)
+	if type(button) ~= "table" or not button.CreateTexture or forbidden(button) or button.stoaArrow then return end
+	button.stoaArrow = true
+	for _, key in ipairs({ "Arrow", "Background", "Icon" }) do hide(button[key]) end
+	plainTextures(button)
+	UI.roundPanel(button, 0.95)
+	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
+	local chevron = UI.glyph(button, "Chevron", 12, "muted")
+	chevron:SetPoint("CENTER", 0, 0)
+	chevron:SetRotation(-math.pi / 2)
+	button:HookScript("OnEnter", function()
+		glow:Set(Stoa:Color("accent"))
+		chevron:SetVertexColor(Stoa:Color("accent"))
+	end)
+	button:HookScript("OnLeave", function()
+		glow:Clear()
+		chevron:SetVertexColor(Stoa:Color("muted"))
+	end)
+	UI.applyTheme()
+end
+
+Windows.DressSearch = dressSearch
+Windows.DressArrowDropdown = dressArrowDropdown
 Windows.DressButtonsIn = dressButtonsIn
 Windows.DressButton = dressButton
 Windows.DressClose = dressClose
