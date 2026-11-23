@@ -1355,6 +1355,15 @@ function UI.badge(parent, word, token)
 	return badge
 end
 
+-- Matte's compact cards: the target slab and the tank watch and pet
+-- blocks that match it, unless the full plaques were chosen (Halo's
+-- targetFull). Read at build time; the choice reloads.
+function UI.slabCards()
+	if not UI.matte() then return false end
+	local halo = Stoa.modules and Stoa.modules.Halo
+	return not (halo and halo.db and halo.db.targetFull)
+end
+
 -- The Grain setting, on every matte window.
 function UI.paintGrain()
 	for _, tex in ipairs(stones) do

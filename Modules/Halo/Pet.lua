@@ -183,7 +183,8 @@ function Pet:BuildPlaque()
 	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -8)
 	local hp = UI.bar(column, width, 7, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -8)
-	UI.engrave(hp, width)
+	-- The slab's line is shorter (see below): 244 less its pads and percent.
+	UI.engrave(hp, UI.slabCards() and 176 or width)
 	local power = UI.bar(column, width, 3, "accent")
 	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -8)
 	local foot = UI.caption(column, "")
@@ -193,6 +194,37 @@ function Pet:BuildPlaque()
 	on:SetWidth(width - 90)
 	on:SetWordWrap(false)
 
+	-- Matte: the target slab's twin. The name and mood on one line over
+	-- a slim health line with its percent at the right end; the caption
+	-- stands on top of the block and the stance line hangs under it.
+	frame.slab = UI.slabCards()
+	if frame.slab then
+		local pad, numW = 11, 46
+		local barW = 244 - pad * 2 - numW
+		frame:SetSize(244, 50)
+		frame.plaque:SetPlain(true)
+		column:ClearAllPoints()
+		column:SetAllPoints(frame)
+		caption:ClearAllPoints()
+		caption:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", pad, 5)
+		word:ClearAllPoints()
+		word:SetPoint("TOPRIGHT", -pad, -10)
+		Stoa:SetFont(name, "serif", Stoa.typeSize.label)
+		name:ClearAllPoints()
+		name:SetPoint("TOPLEFT", pad, -9)
+		name:SetPoint("RIGHT", word, "LEFT", -8, 0)
+		hp:ClearAllPoints()
+		hp:SetPoint("TOPLEFT", pad, -29)
+		hp:SetSize(barW, 8)
+		Stoa:SetFont(percent, "serif", Stoa.typeSize.label)
+		percent:ClearAllPoints()
+		percent:SetPoint("RIGHT", frame, "TOPRIGHT", -pad, -33)
+		power:ClearAllPoints()
+		power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -3)
+		power:SetWidth(barW)
+		foot:ClearAllPoints()
+		foot:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", pad, -6)
+	end
 	frame.caption, frame.word, frame.name, frame.percent = caption, word, name, percent
 	frame.hp, frame.power, frame.foot, frame.on = hp, power, foot, on
 	for _, fs in ipairs({ caption, word, name, percent, foot, on }) do UI.legible(fs) end
@@ -228,9 +260,10 @@ function Pet:PlacePlaque()
 	if not halo then
 		frame:SetPoint("CENTER", UIParent, "CENTER", -300, 120)
 	elseif Stoa:GetRole() == "HEALER" then
-		frame:SetPoint("TOPRIGHT", halo, "LEFT", -52, 24)
+		-- Clear of the watch block's buff tags above it.
+		frame:SetPoint("TOPRIGHT", halo, "LEFT", -52, frame.slab and -8 or 24)
 	else
-		frame:SetPoint("BOTTOMRIGHT", halo, "LEFT", -52, 30)
+		frame:SetPoint("BOTTOMRIGHT", halo, "LEFT", -52, frame.slab and 36 or 30)
 	end
 end
 

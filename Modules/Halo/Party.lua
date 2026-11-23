@@ -731,6 +731,12 @@ local WATCH_COIN_SPACE = UI.PLAQUE_MEDALLION_SPACE
 local WATCH_BAR_W = WATCH_WIDTH - WATCH_PAD - WATCH_COIN_SPACE
 local WATCH_BAR_H = 14
 local WATCH_POWER = { [1] = "text", [3] = "accent" }
+-- Matte: the watch is the target slab's twin (Halo.lua SLAB_*): no
+-- portrait, the name and health word on one line over a slim health line
+-- with its numbers at the right end; "WATCHING" stands on top of the
+-- block and your buffs on them hang just under it.
+local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 244, 50, 11
+local SLAB_BAR_W, SLAB_BAR_H, SLAB_NUM_W = SLAB_WIDTH - SLAB_PAD * 2, 8, 84
 local HURT_HEALTH = 0.7
 
 local function watchedUnit()
@@ -798,6 +804,36 @@ function Party:BuildWatch()
 	watch.name, watch.percent, watch.amount, watch.word, watch.hp = name, hp.percent, hp.amount, word, hp
 	watch.absorb, watch.buffs, watch.power = absorb, buffs, power
 	self.watch = watch
+	watch.slab = UI.slabCards()
+	if watch.slab then
+		local barW = SLAB_BAR_W - SLAB_NUM_W
+		watch:SetSize(SLAB_WIDTH, SLAB_HEIGHT)
+		plaque:SetPlain(true)
+		label:ClearAllPoints()
+		label:SetPoint("BOTTOMLEFT", watch, "TOPLEFT", SLAB_PAD, 5)
+		UI.legible(label)
+		word:ClearAllPoints()
+		word:SetPoint("TOPRIGHT", -SLAB_PAD, -10)
+		Stoa:SetFont(name, "serif", Stoa.typeSize.label)
+		name:ClearAllPoints()
+		name:SetPoint("TOPLEFT", SLAB_PAD, -9)
+		name:SetPoint("RIGHT", word, "LEFT", -8, 0)
+		hp:ClearAllPoints()
+		hp:SetPoint("TOPLEFT", SLAB_PAD, -29)
+		hp:SetSize(barW, SLAB_BAR_H)
+		if hp.rim then hp.rim:Hide() end
+		absorb:SetSize(barW, SLAB_BAR_H)
+		hp.percent:ClearAllPoints()
+		hp.percent:SetPoint("RIGHT", watch, "TOPRIGHT", -SLAB_PAD, -33)
+		hp.amount:ClearAllPoints()
+		hp.amount:SetPoint("RIGHT", hp.percent, "LEFT", -6, 0)
+		power:SetWidth(barW)
+		power:ClearAllPoints()
+		power:SetPoint("TOP", hp, "BOTTOM", 0, -3)
+		-- Under the block, clear of its foot.
+		buffs.pips[1]:ClearAllPoints()
+		buffs.pips[1]:SetPoint("TOPLEFT", watch, "BOTTOMLEFT", SLAB_PAD, -6)
+	end
 	Stoa:RegisterMover("tankwatch", watch, "Tank watch")
 	self:BuildWatchClicks(watch)
 end
@@ -852,7 +888,7 @@ function Party:PreviewWatch()
 	watch.name:SetTextColor(Stoa:Color("text"))
 	watch.percent:SetText("62%")
 	watch.amount:SetText("4,960")
-	watch.plaque:SetLevel("60")
+	watch.plaque:SetLevel(not watch.slab and "60" or nil)
 	watch.power:SetMinMaxValues(0, 100)
 	watch.power:SetValue(40)
 	watch.power:SetStatusBarColor(Stoa:Color("text"))
@@ -950,7 +986,7 @@ function Party:UpdateWatch()
 	watch.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
 	watch.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
 	local level = Stoa.safe.plain(UnitLevel(unit))
-	watch.plaque:SetLevel(level and (level < 0 and "??" or tostring(level)) or nil)
+	watch.plaque:SetLevel(not watch.slab and level and (level < 0 and "??" or tostring(level)) or nil)
 	self:UpdateWatchPower(unit)
 
 	watch.absorb:SetMinMaxValues(0, UnitHealthMax(unit))
