@@ -856,6 +856,7 @@ end
 local CARD_SLICE = 12
 -- The Matte small key's pieces (Tools/art/matte_key.py) slice at 5.
 local KEY_SLICE = 5
+UI.KEY_SLICE = KEY_SLICE
 
 local function sliced(parent, layer, file, outset, margin)
 	if not parent.CreateTexture then return nil end
@@ -1899,7 +1900,10 @@ end
 
 function UI.plaque(frame, coinSide, opts)
 	local plaque = {}
-	local fill = sliced(frame, "BACKGROUND", "CardFill.tga")
+	-- Matte: the small key's plate (2 pixel corner, fine light and shade
+	-- lines) instead of the rounded card with its edge and bevel.
+	local keyed = UI.matte()
+	local fill = sliced(frame, "BACKGROUND", keyed and "MatteKeyFill.tga" or "CardFill.tga", 0, keyed and KEY_SLICE or nil)
 	if not fill then
 		fill = frame:CreateTexture(nil, "BACKGROUND")
 		fill:SetAllPoints()
@@ -1920,9 +1924,16 @@ function UI.plaque(frame, coinSide, opts)
 	paintFill()
 
 	-- One fine edge.
-	local edge = sliced(frame, "BORDER", "CardEdge.tga")
-	plaque.lines = { edge }
-	UI.mould(frame)
+	local edge
+	if keyed and fill and fill.SetTextureSliceMargins then
+		-- Kept as the frame's mould, so docking and the bare style hide it.
+		frame.stoaMould = sliced(frame, "BORDER", "MatteKey.tga", 0, KEY_SLICE)
+		plaque.lines = {}
+	else
+		edge = sliced(frame, "BORDER", "CardEdge.tga")
+		plaque.lines = { edge }
+		UI.mould(frame)
+	end
 
 	-- The reaction strip along the top, inside the rounded corners.
 	local strip = frame:CreateTexture(nil, "ARTWORK")

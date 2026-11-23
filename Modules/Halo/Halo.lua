@@ -946,12 +946,15 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 	if not bare then
 		-- Matte: the same moulded block as the slab beside it.
 		local matte = UI.matte()
-		local fill = matte and UI.sliced(chip, "BACKGROUND", "CardFill.tga", 10) or UI.pillFill(chip, 10)
+		local fill = matte and UI.sliced(chip, "BACKGROUND", "MatteKeyFill.tga", 10, UI.KEY_SLICE) or UI.pillFill(chip, 10)
 		local alpha = matte and 0.97 or 0.9
 		UI.tint(fill, "panel", alpha)
 		local r, g, b = Stoa:Color("panel")
 		fill:SetVertexColor(r, g, b, alpha)
-		if matte then UI.mould(chip, 10) end
+		if matte then
+			local lines = UI.sliced(chip, "BACKGROUND", "MatteKey.tga", 10, UI.KEY_SLICE)
+			if lines then lines:SetDrawLayer("BACKGROUND", 1) end
+		end
 		local edge = UI.pillEdge(chip, 10)
 		if matte then edge:Clear() else edge:Set(Stoa:Color("hairline")) end
 		chip.fill, chip.edge = fill, edge
