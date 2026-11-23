@@ -36,6 +36,10 @@ local TARGETS = {
 	{ name = "PVEFrame" },
 	{ name = "LFDParentFrame" },
 	{ name = "FriendsFrame", parts = { "FriendsFrameInset", "WhoFrameListInset", "WhoFrameEditBoxInset" } },
+	-- Forever's friends window is the newer social window: the Battle.net
+	-- bar starts 22px down, so the strip stays short, and its tabs hang
+	-- down the right edge as icon tiles.
+	{ name = "SocialUIFrame", band = 24, after = "social" },
 	-- A slimmer band: the channel dropdown and online count start just
 	-- under the title, and the usual band reached halfway down them.
 	{ name = "CommunitiesFrame", band = 30, after = "communities" },
@@ -259,30 +263,59 @@ function dressInner(target, frame)
 	end
 end
 
--- Guild & Communities: the channel row, the chat and the member list
--- start a little lower, so the dropdowns sit clear of the header band with
--- room to breathe. Only top anchors move (the bottoms stay), and each is
--- moved once per placing: the game puts them back whenever it lays the
--- window out again (tab, maximise, minimise), and they follow.
+-- Guild & Communities (layout A, Tyler 2026-11-23): a bigger window, the
+-- guild's or community's name and who is online as the header's title,
+-- Chat, Roster, Perks and Info as words along the header's right, and the
+-- message of the day on its own row over the chat and member list.
+-- Blizzard sets the window's size and places its parts again whenever it
+-- lays the window out (club, tab, maximise, minimise), always ending in
+-- UpdateUIPanelPositions, where this runs again. Only top anchors of the
+-- parts move (the bottoms stay); minimised, the window keeps Blizzard's
+-- small size and only the old 10px drop.
+local GUILD_W, GUILD_H = 1100, 640
+local MOTD_ROW = 26
 local COMMUNITIES_DROP = 10
 local COMMUNITIES_PARTS = {
-	"StreamDropdown", "CommunitiesListDropdown", "GuildMemberListDropdown", "CommunityMemberListDropdown",
-	"VoiceChatHeadset", "Chat", "MemberList",
+	"StreamDropdown", "CommunitiesListDropdown", "VoiceChatHeadset", "Chat",
 }
+-- The roster's member list (wide, with column heads 60px above its top) and
+-- its two view dropdowns are placed by guildRoster instead.
+local ROSTER_DROPDOWNS = { "GuildMemberListDropdown", "CommunityMemberListDropdown" }
+local guildRoster
+-- The side tabs, in header order, with their words.
+local GUILD_TABS = {
+	{ "ChatTab", "Chat" }, { "RosterTab", "Roster" }, { "GuildBenefitsTab", "Perks" },
+	{ "GuildInfoTab", "Info" }, { "GuildPreferredPlaySettingsTab", "Settings" },
+}
+local TAB_GAP = 20
 
+-- Each part is moved once per placing: Blizzard puts it back whenever it
+-- lays the window out again, and the drop follows. A changed drop (the MOTD
+-- row comes and goes with the page) moves it by the difference.
 local function dropTops(part, amount)
 	amount = amount or COMMUNITIES_DROP
 	if not (part and part.GetNumPoints) or forbidden(part) then return end
 	part.stoaDropped = part.stoaDropped or {}
+	part.stoaDropBy = part.stoaDropBy or {}
 	local points = {}
 	for i = 1, part:GetNumPoints() do points[i] = { part:GetPoint(i) } end
 	local moved = false
 	for _, p in ipairs(points) do
 		local point, y = p[1], p[5] or 0
-		if type(point) == "string" and point:find("^TOP") and part.stoaDropped[point] ~= y then
-			p[5] = y - amount
-			part.stoaDropped[point] = p[5]
-			moved = true
+		if type(point) == "string" and point:find("^TOP") then
+			if part.stoaDropped[point] ~= y then
+				-- Blizzard's own placing: drop it by the whole amount.
+				p[5] = y - amount
+				moved = true
+			elseif part.stoaDropBy[point] ~= amount then
+				-- Already dropped: move by the change only.
+				p[5] = y - (amount - (part.stoaDropBy[point] or 0))
+				moved = true
+			end
+			if moved then
+				part.stoaDropped[point] = p[5]
+				part.stoaDropBy[point] = amount
+			end
 		end
 	end
 	if not moved then return end
@@ -290,11 +323,226 @@ local function dropTops(part, amount)
 	for _, p in ipairs(points) do part:SetPoint(p[1], p[2], p[3], p[4] or 0, p[5] or 0) end
 end
 
+local function guildMinimized(frame)
+	local modes = rawget(_G, "COMMUNITIES_FRAME_DISPLAY_MODES")
+	return modes and frame.GetDisplayMode and frame:GetDisplayMode() == modes.MINIMIZED
+end
+
+-- Chat and roster show the member list and channel row; the perks, info
+-- and finder pages fill the window their own way and get no MOTD row.
+local function guildListMode(frame)
+	local modes = rawget(_G, "COMMUNITIES_FRAME_DISPLAY_MODES")
+	if not (modes and frame.GetDisplayMode) then return false end
+	local mode = frame:GetDisplayMode()
+	return mode == modes.CHAT or mode == modes.ROSTER
+end
+
+local function selectedClub(frame)
+	local id = frame.GetSelectedClubId and frame:GetSelectedClubId()
+	return id and C_Club and C_Club.GetClubInfo and C_Club.GetClubInfo(id)
+end
+
+local function isGuild(info)
+	local guildType = Enum and Enum.ClubType and Enum.ClubType.Guild
+	return info and guildType ~= nil and info.clubType == guildType
+end
+
+local function paintGuildTab(tab)
+	local word = tab.stoaGuildWord
+	if not word then return end
+	local chosen = tab.GetChecked and tab:GetChecked()
+	word:SetTextColor(Stoa:Color(chosen and "text" or "muted"))
+	tab.stoaGuildLine:SetShown(chosen and true or false)
+end
+
+local function guildTabWord(tab, label)
+	if type(tab) ~= "table" or forbidden(tab) or tab.stoaGuildWord then return end
+	for _, region in ipairs({ tab:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
+	end
+	for _, key in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetCheckedTexture", "GetDisabledTexture" }) do
+		local tex = tab[key] and tab[key](tab)
+		if tex then tex:SetAlpha(0) end
+	end
+	local word = UI.text(tab, "sans", Stoa.typeSize.label, "muted", "CENTER")
+	word:SetPoint("CENTER", 0, 1)
+	word:SetText(label)
+	local line = tab:CreateTexture(nil, "OVERLAY")
+	line:SetTexture(UI.WHITE)
+	line:SetHeight(2)
+	line:SetPoint("TOPLEFT", word, "BOTTOMLEFT", 0, -4)
+	line:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -4)
+	UI.tint(line, "accent")
+	tab.stoaGuildWord, tab.stoaGuildLine = word, line
+	UI.applyTheme()
+	hooksecurefunc(tab, "SetChecked", paintGuildTab)
+	tab:HookScript("OnEnter", function(self) if not self:GetChecked() then self.stoaGuildWord:SetTextColor(Stoa:Color("accent")) end end)
+	tab:HookScript("OnLeave", paintGuildTab)
+	paintGuildTab(tab)
+end
+
+-- The words sit right to left from the minimise button, the shown ones
+-- only, level with the close cross.
+local function placeGuildTabs(frame)
+	if not frame.stoaHeader or InCombatLockdown() then return end
+	local anchor, gap = frame.MaximizeMinimizeFrame or frame.CloseButton, 12
+	frame.stoaFirstGuildTab = nil
+	for i = #GUILD_TABS, 1, -1 do
+		local tab = frame[GUILD_TABS[i][1]]
+		if type(tab) == "table" and not forbidden(tab) then
+			guildTabWord(tab, GUILD_TABS[i][2])
+			if tab:IsShown() and tab.stoaGuildWord and anchor then
+				-- Above every part of the window, so nothing Blizzard lays
+				-- out near the top can take the clicks.
+				tab:SetFrameLevel(frame:GetFrameLevel() + 120)
+				tab:SetSize(math.ceil(tab.stoaGuildWord:GetStringWidth()) + 8, 26)
+				tab:ClearAllPoints()
+				tab:SetPoint("RIGHT", anchor, "LEFT", -gap, 0)
+				anchor, gap = tab, TAB_GAP
+				frame.stoaFirstGuildTab = tab
+			end
+		end
+	end
+end
+
+-- The title: the club's name in the serif, who is online under it.
+local function guildTitle(frame)
+	local header = frame.stoaHeader
+	if not header then return end
+	if not frame.stoaGuildTitle then
+		frame.stoaOwnTitle = true
+		local blizzard = frame.TitleContainer and frame.TitleContainer.TitleText or frame.TitleText
+		if blizzard then blizzard:SetAlpha(0) end
+		local title = UI.text(frame, "serif", Stoa.typeSize.title, "text")
+		title:SetShadowColor(0, 0, 0, 0.9)
+		title:SetShadowOffset(1, -1)
+		title:SetWordWrap(false)
+		local sub = UI.text(frame, "sans", Stoa.typeSize.caption, "muted")
+		sub:SetWordWrap(false)
+		frame.stoaGuildTitle, frame.stoaGuildSub = title, sub
+	end
+	local title, sub = frame.stoaGuildTitle, frame.stoaGuildSub
+	local info = selectedClub(frame)
+	local name = info and info.name
+	if type(name) ~= "string" or name == "" then name = "Guild & Communities" end
+	title:SetText(name)
+	local line = "Guild & Communities"
+	if isGuild(info) and GetNumGuildMembers then
+		local total, online = GetNumGuildMembers()
+		if type(total) == "number" and total > 0 then
+			line = string.format("%d of %d online", tonumber(online) or 0, total)
+		end
+	elseif info and type(info.memberCount) == "number" then
+		line = string.format("Community · %d members", info.memberCount)
+	end
+	sub:SetText(line)
+	local small = guildMinimized(frame)
+	local right = frame.stoaFirstGuildTab or frame.MaximizeMinimizeFrame or header
+	title:ClearAllPoints()
+	sub:ClearAllPoints()
+	if small then
+		-- No room for two lines: the name alone.
+		title:SetPoint("LEFT", header, "LEFT", 18, 0)
+		title:SetPoint("RIGHT", frame.MaximizeMinimizeFrame or header, "LEFT", -8, 0)
+	else
+		title:SetPoint("BOTTOMLEFT", header, "LEFT", 18, 1)
+		title:SetPoint("RIGHT", right, "LEFT", -16, 0)
+		sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
+		sub:SetPoint("RIGHT", title, "RIGHT")
+	end
+	sub:SetShown(not small)
+end
+
+-- The message of the day (a guild's, or a community's broadcast) on its
+-- own row between the header and the channel row, from the club list's
+-- edge to the window's.
+local LIST_EDGE = 172
+local function guildMotd(frame, shown)
+	if not frame.stoaMotd then
+		local row = CreateFrame("Frame", nil, frame)
+		row:SetHeight(MOTD_ROW)
+		local fill = row:CreateTexture(nil, "BACKGROUND")
+		fill:SetAllPoints()
+		UI.tint(fill, "accent", 0.05)
+		local rule = UI.line(row, "hairline")
+		rule:SetPoint("BOTTOMLEFT")
+		rule:SetPoint("BOTTOMRIGHT")
+		local label = UI.text(row, "sans", Stoa.typeSize.micro, "accent")
+		label:SetPoint("LEFT", 14, 0)
+		label:SetText("MESSAGE OF THE DAY")
+		local text = UI.text(row, "sans", Stoa.typeSize.body, "text")
+		text:SetPoint("LEFT", label, "RIGHT", 10, 0)
+		text:SetPoint("RIGHT", -14, 0)
+		text:SetWordWrap(false)
+		row.text = text
+		frame.stoaMotd = row
+		UI.applyTheme()
+	end
+	local row = frame.stoaMotd
+	if shown then
+		local band = (frame.stoaHeader and frame.stoaHeader.stoaHeight) or 30
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", LIST_EDGE, -band - 2)
+		row:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -band - 2)
+		local info = selectedClub(frame)
+		local motd = info and info.broadcast
+		if isGuild(info) and GetGuildRosterMOTD then
+			local own = GetGuildRosterMOTD()
+			if type(own) == "string" and own ~= "" then motd = own end
+		end
+		if type(motd) ~= "string" or motd == "" then
+			row.text:SetText("None set")
+			row.text:SetTextColor(Stoa:Color("muted"))
+		else
+			row.text:SetText((motd:gsub("\n", " ")))
+			row.text:SetTextColor(Stoa:Color("text"))
+		end
+	end
+	row:SetShown(shown and true or false)
+end
+
+local function sizeGuild(frame)
+	if guildMinimized(frame) then return end
+	local w, h = frame:GetSize()
+	if math.abs(w - GUILD_W) > 0.5 or math.abs(h - GUILD_H) > 0.5 then frame:SetSize(GUILD_W, GUILD_H) end
+end
+
 local AFTER = {}
 local wardrobeTabs
 function AFTER.communities(frame)
+	-- Its minimise button was the last red one in the header.
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressMaxMin then windows.DressMaxMin(frame.MaximizeMinimizeFrame) end
+	if not frame.stoaGuildHooks then
+		frame.stoaGuildHooks = true
+		if frame.UpdateCommunitiesTabs then
+			hooksecurefunc(frame, "UpdateCommunitiesTabs", function(own)
+				if not InCombatLockdown() then
+					placeGuildTabs(own)
+					guildTitle(own)
+				end
+			end)
+		end
+		-- Who is online and the message change while the window is open.
+		for _, event in ipairs({ "GUILD_ROSTER_UPDATE", "GUILD_MOTD", "CLUB_UPDATED" }) do
+			Stoa:On(event, function()
+				if not (frame:IsShown() and frame.stoaGuildTitle) then return end
+				xpcall(guildTitle, Stoa.catch, frame)
+				if frame.stoaMotd and frame.stoaMotd:IsShown() then xpcall(guildMotd, Stoa.catch, frame, true) end
+			end)
+		end
+	end
 	if InCombatLockdown() or not frame:IsShown() then return end
-	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key]) end
+	sizeGuild(frame)
+	local small = guildMinimized(frame)
+	local listMode = not small and guildListMode(frame)
+	-- The MOTD row takes its room only on the chat and roster pages.
+	local drop = listMode and (COMMUNITIES_DROP + MOTD_ROW) or COMMUNITIES_DROP
+	for _, key in ipairs(COMMUNITIES_PARTS) do dropTops(frame[key], drop) end
+	guildRoster(frame, drop)
+	placeGuildTabs(frame)
+	guildTitle(frame)
+	guildMotd(frame, listMode)
 end
 
 local function dressMacroSlot(button)
@@ -399,6 +647,81 @@ local function dressField(button)
 	return glow
 end
 
+-- A WowStyle1 dropdown in STOA's dark field with a chevron.
+local function dressDropdownField(dropdown)
+	if dropdown.stoaField then return end
+	dropdown.stoaField = true
+	for _, key in ipairs({ "Background", "Arrow" }) do
+		if dropdown[key] and dropdown[key].SetAlpha then dropdown[key]:SetAlpha(0) end
+	end
+	dressField(dropdown)
+	local chevron = UI.glyph(dropdown, "Chevron", 12, "muted")
+	chevron:SetPoint("RIGHT", -6, 0)
+	chevron:SetRotation(-math.pi / 2)
+	local text = dropdown.Text
+	if text and text.SetTextColor then
+		Stoa:SetFont(text, "sans", Stoa.typeSize.body)
+		text:SetShadowOffset(0, 0)
+		text:SetTextColor(Stoa:Color("text"))
+	end
+	UI.applyTheme()
+end
+
+-- The roster page: Blizzard hangs the wide member list from the club
+-- list's top, with its column heads and "Show Offline Members" 60px above
+-- it, which put them over the MOTD row and the view dropdown up in the
+-- header (under the page words, taking their clicks). The list now hangs
+-- below the MOTD row, the dropdown sits level with the offline box.
+local ROSTER_HEAD = 64
+local function rosterTop(frame)
+	local band = (frame.stoaHeader and frame.stoaHeader.stoaHeight) or 30
+	return band + 2 + MOTD_ROW + ROSTER_HEAD
+end
+
+local function placeMemberList(frame, drop)
+	local list = frame.MemberList
+	if type(list) ~= "table" or forbidden(list) or InCombatLockdown() then return end
+	if list.expandedDisplay and not guildMinimized(frame) then
+		list:SetPoint("TOPLEFT", frame, "TOPLEFT", LIST_EDGE + 22, -rosterTop(frame))
+	else
+		dropTops(list, drop)
+	end
+end
+
+guildRoster = function(frame, drop)
+	local list = frame.MemberList
+	if type(list) == "table" and not forbidden(list) then
+		if not list.stoaRosterHook and list.RefreshLayout then
+			list.stoaRosterHook = true
+			-- Blizzard places the list again when the page changes, after
+			-- the window's own layout pass.
+			hooksecurefunc(list, "RefreshLayout", function()
+				local small = guildMinimized(frame)
+				local d = (not small and guildListMode(frame)) and (COMMUNITIES_DROP + MOTD_ROW) or COMMUNITIES_DROP
+				xpcall(placeMemberList, Stoa.catch, frame, d)
+			end)
+		end
+		placeMemberList(frame, drop)
+		local offline = list.ShowOfflineButton
+		if type(offline) == "table" and offline.Text and not offline.stoaWord then
+			offline.stoaWord = true
+			Stoa:SetFont(offline.Text, "sans", Stoa.typeSize.body)
+			offline.Text:SetShadowOffset(0, 0)
+			offline.Text:SetTextColor(Stoa:Color("muted"))
+		end
+	end
+	local y = rosterTop(frame) - 42
+	for _, key in ipairs(ROSTER_DROPDOWNS) do
+		local dropdown = frame[key]
+		if type(dropdown) == "table" and not forbidden(dropdown) then
+			dressDropdownField(dropdown)
+			dropdown:ClearAllPoints()
+			dropdown:SetPoint("RIGHT", frame, "TOPRIGHT", -30, -y)
+			dropdown:SetFrameLevel(frame:GetFrameLevel() + 20)
+		end
+	end
+end
+
 function AFTER.dressup(frame)
 	if InCombatLockdown() then return end
 	local dropdown, toggle = frame.CustomSetDropdown, frame.ToggleCustomSetDetailsButton
@@ -407,23 +730,7 @@ function AFTER.dressup(frame)
 		scene:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, DRESSUP_MODEL_TOP)
 	end
 	if type(dropdown) == "table" and not forbidden(dropdown) then
-		if not dropdown.stoaField then
-			dropdown.stoaField = true
-			for _, key in ipairs({ "Background", "Arrow" }) do
-				if dropdown[key] and dropdown[key].SetAlpha then dropdown[key]:SetAlpha(0) end
-			end
-			dressField(dropdown)
-			local chevron = UI.glyph(dropdown, "Chevron", 12, "muted")
-			chevron:SetPoint("RIGHT", -6, 0)
-			chevron:SetRotation(-math.pi / 2)
-			local text = dropdown.Text
-			if text and text.SetTextColor then
-				Stoa:SetFont(text, "sans", Stoa.typeSize.body)
-				text:SetShadowOffset(0, 0)
-				text:SetTextColor(Stoa:Color("text"))
-			end
-			UI.applyTheme()
-		end
+		dressDropdownField(dropdown)
 		dropdown:ClearAllPoints()
 		dropdown:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, DRESSUP_ROW_Y)
 		dropdown:SetHeight(DRESSUP_ROW_H)
@@ -490,7 +797,8 @@ local function paintSideTab(tab)
 	tab.stoaSideRim:SetVertexColor(Stoa:Color(chosen and "accent" or "hairline"))
 	local icon = tab.Icon
 	if icon and icon.SetDesaturated then
-		icon:SetDesaturated(false)
+		-- (Glyph tabs grey their icon themselves when the tab is unavailable.)
+		if not tab.stoaGlyphTab then icon:SetDesaturated(false) end
 		icon:SetAlpha(chosen and 1 or 0.7)
 	end
 end
@@ -501,23 +809,33 @@ end
 -- animation doesn't touch), the icon loses the mask and keeps Blizzard's
 -- placing, and a square tile with a hairline rim sits behind it.
 local SIDE_ART = { "Background", "SelectedTexture", "TabGlow", "HighlightTexture" }
-local function dressSideTab(tab)
+-- `glyph`: the icon is an atlas glyph that Blizzard sets again (at its own
+-- size) each time the tab is picked, as on the friends window; it keeps
+-- its size and the tile is a fixed square centred where the icon sits.
+local GLYPH_TILE = 40
+local function dressSideTab(tab, glyph)
 	if type(tab) ~= "table" or not tab.CreateTexture or forbidden(tab) or tab.stoaSideTab then return end
 	local icon = tab.Icon
 	if not icon then return end
 	tab.stoaSideTab = true
+	tab.stoaGlyphTab = glyph and true or nil
 	for _, key in ipairs(SIDE_ART) do
 		local part = tab[key]
 		if type(part) == "table" and part.SetVertexColor then part:SetVertexColor(1, 1, 1, 0) end
 	end
 	if tab.Mask and icon.RemoveMaskTexture then pcall(icon.RemoveMaskTexture, icon, tab.Mask) end
-	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	local size = 34
-	icon:SetSize(size, size)
 	local rim = tab:CreateTexture(nil, "BACKGROUND", nil, 1)
 	rim:SetTexture(UI.WHITE)
-	rim:SetPoint("TOPLEFT", icon, -4, 4)
-	rim:SetPoint("BOTTOMRIGHT", icon, 4, -4)
+	if glyph then
+		rim:SetSize(GLYPH_TILE, GLYPH_TILE)
+		rim:SetPoint("CENTER", -3, 0)
+	else
+		icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		local size = 34
+		icon:SetSize(size, size)
+		rim:SetPoint("TOPLEFT", icon, -4, 4)
+		rim:SetPoint("BOTTOMRIGHT", icon, 4, -4)
+	end
 	local fill = tab:CreateTexture(nil, "BACKGROUND", nil, 2)
 	fill:SetTexture(UI.WHITE)
 	fill:SetPoint("TOPLEFT", rim, 1, -1)
@@ -545,6 +863,50 @@ end
 function AFTER.professions(frame)
 	dressSideTab(frame.ProfessionsOverviewTab)
 	for _, tab in ipairs(frame.rightProfessionTabs or {}) do dressSideTab(tab) end
+end
+
+-- Friends (the social window): its tabs come from a pool when the window
+-- opens or its features change, so each new one is dressed as it turns up.
+-- The Battle.net bar's metal strip and the gold rules around the list go;
+-- the friend cards stay as Blizzard draws them.
+local function dressSocialTabs(frame)
+	local pool = frame.socialTabPool
+	if not (pool and pool.EnumerateActive) then return end
+	for tab in pool:EnumerateActive() do dressSideTab(tab, true) end
+end
+
+local SOCIAL_LISTS = { "FriendsList", "RecentAlliesList", "QuickJoinList", "FriendRequestsList", "RaidList", "RecruitAFriendList" }
+function AFTER.social(frame)
+	dressSocialTabs(frame)
+	if frame.stoaSocial then return end
+	frame.stoaSocial = true
+	if frame.RefreshTabs then
+		hooksecurefunc(frame, "RefreshTabs", function(own) dressSocialTabs(own) end)
+	end
+	local bar = frame.BattleNetBar
+	if bar then
+		hide(bar.Background)
+		hide(bar.ControlsContainer and bar.ControlsContainer.BattleNetBackground)
+	end
+	hide(frame.TopFade)
+	hide(frame.BottomFade)
+	local hr, hg, hb = Stoa:Color("hairline")
+	for _, key in ipairs(SOCIAL_LISTS) do
+		local list = frame[key]
+		if type(list) == "table" and not forbidden(list) then
+			for _, rule in ipairs({ list.TopDivider, list.BottomDivider }) do
+				if rule and rule.SetDesaturated then
+					rule:SetDesaturated(true)
+					rule:SetVertexColor(hr, hg, hb, 1)
+				end
+			end
+		end
+	end
+	local windows = Stoa.modules.Windows
+	-- The ignore list opens as its own small window beside it.
+	if windows and windows.Dress and frame.IgnoreListFrame and not forbidden(frame.IgnoreListFrame) then
+		windows:Dress(frame.IgnoreListFrame)
+	end
 end
 
 -- Appearances: its Items and Sets tabs sit inside the page under the title,

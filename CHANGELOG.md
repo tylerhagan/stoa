@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 1.6.1
 
+- **Loot rolls up off the bars**: the Need, Greed and Pass cards stack from their own spot, right of the middle of the screen, instead of over your action bars. Move them in unlock mode (Loot rolls). Under each card a list shows everyone in the group, one name a line in class colours, with what they chose (Need, Greed, Pass or still choosing). Once your own card goes, a small card keeps the same list with each roll, then the winner, for 6 seconds. `/stoa rolls` shows two samples; Settings > Loot turns it off.
 - **Heals halved**: for healers, when Mortal Strike (from a player or a monster) or Mortal Wound is on someone, red stripes fill the empty end of their health bar on the tank watch and the party cards, and the watch says HEALS HALF (a tag says it on the cards). Blizzard leaves these debuffs readable in a fight, so it works in combat. `/stoa test` shows it on the sample tank.
 - Buff and debuff timers at the top of the screen are a shade brighter and sit on a small dark plate under each icon, so they stay readable over sand, snow and bright sky.
 - The Halo's cast bar and its label sit on a soft dark haze, so the gold line shows over bright ground too. Over dark ground the haze can't be seen.
@@ -16,6 +17,14 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Fixed: gear with stats your role doesn't use (strength on a priest) was called an upgrade when its item level was higher. It now reads "Nothing for Ranged DPS, below your neck".
 - Dressing Room: the custom set field, Save and the item list switch are dressed and sit in one tidy row over the model.
 - `/stoa report` has a Chat line with the chat's size and place.
+- **Friends window dressed**: Forever's friends window (the newer one with its tabs down the right side) takes STOA's dress like the other windows: dark panel and header, its side tabs as dark tiles with an accent bar on the open one, the Battle.net bar's metal strip and the gold rules gone, and Add New Friend as a dark key. The ignore list beside it is dressed too. The friend cards stay as Blizzard draws them.
+- **Dropdown menus dressed**: every dropdown and right-click menu (the minimap's tracking list, the friends status, the chat and unit menus) opens on the same dark card as STOA's tooltips instead of Blizzard's gold-edged box. Submenus too.
+- The newer red buttons (three-part ones such as Add New Friend) are dressed as dark keys like the rest.
+- Window keys (Invite Member, Add New Friend, Apply and the like) have some depth: a hard dark lip under each key and a thin light rim along its top. Pressed, the key sinks onto its lip.
+- Talents and spellbook: the search field is a dark rounded field whose edge lights while you type, and the talents' search options arrow is a dark key with a quiet chevron instead of the yellow button.
+- Guild & Communities: its minimise button is a quiet minus like the map's, not a red button.
+- **Guild window, bigger and tidier**: Guild & Communities opens at 1100 by 640 instead of 814 by 426, so the chat and member list get far more room. The header carries your guild's (or community's) name with who is online under it, and Chat, Roster, Perks and Info are words along its right side instead of icon tabs hanging off the window. The message of the day has its own row above the chat and roster. Minimised, the window keeps the game's small size.
+- Fixed: on the guild Roster page the view dropdown sat hidden up in the header and took the clicks off the page words (only their top edge worked), and Show Offline Members sat over the message of the day. The roster now starts below the message row, with Show Offline Members and the dressed view dropdown on one line above the column heads.
 - **Switch layout from Ready**: click your role under Ready on the console (Healer, Ranged DPS...) and a small card lists STOA's four layouts: Tank, Healer, Melee DPS and Ranged DPS. Click one and this spec uses it from then on, the same as Settings > Roles. Once you have dual spec, your other talent spec sits below them with its tree split: click it to switch spec (the game's short cast, not in combat). Open talents goes to the talent window.
 - Releases now go to Wago Addons as well as CurseForge.
 

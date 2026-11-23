@@ -60,7 +60,10 @@ local function isPanelButton(button)
 	if parent and parent.tabTemplate then return false end
 	local name = button.GetName and button:GetName()
 	if type(name) == "string" and name:find("Tab%d+$") then return false end
-	return button.Left and button.Middle and button.Right
+	if button.Left and button.Middle and button.Right then return true end
+	-- The newer red buttons (Add New Friend and the like) are three-slice:
+	-- Left, Center and Right, set from an atlas kit on every state change.
+	return button.Left and button.Center and button.Right and button.atlasName ~= nil
 end
 
 local function plainTextures(button)
@@ -71,6 +74,52 @@ local function plainTextures(button)
 	end
 end
 
+-- Depth for the dark keys: a hard dark lip 2px under the key, a 1px light
+-- rim along its top and a faint light falling down the face. Pressed, the
+-- key sinks onto its lip and its words drop a pixel. Textures and hooked
+-- scripts only, so secure buttons are fine.
+local KEY_LIP = 2
+local function keyDepth(button, face)
+	local lip = UI.sliced(button, "BACKGROUND", "CardFill.tga")
+	if not (lip and face) then return end
+	if face.SetDrawLayer then face:SetDrawLayer("BACKGROUND", -6) end
+	lip:SetDrawLayer("BACKGROUND", -8)
+	lip:ClearAllPoints()
+	lip:SetPoint("TOPLEFT", 0, -KEY_LIP)
+	lip:SetPoint("BOTTOMRIGHT", 0, -KEY_LIP)
+	lip:SetVertexColor(0, 0, 0, 0.9)
+	local sheen = button:CreateTexture(nil, "BACKGROUND", nil, -5)
+	sheen:SetTexture(UI.WHITE)
+	sheen:SetHeight(1)
+	sheen:SetPoint("TOPLEFT", 5, -1)
+	sheen:SetPoint("TOPRIGHT", -5, -1)
+	sheen:SetVertexColor(1, 1, 1, 0.14)
+	local fall = button:CreateTexture(nil, "BACKGROUND", nil, -5)
+	fall:SetTexture(UI.WHITE)
+	fall:SetPoint("TOPLEFT", 2, -2)
+	fall:SetPoint("BOTTOMRIGHT", -2, 2)
+	if fall.SetGradient and CreateColor then
+		fall:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, 0.05))
+	else
+		fall:Hide()
+	end
+	if button.SetPushedTextOffset then button:SetPushedTextOffset(0, -1) end
+	local function press(down)
+		local enabled = not button.IsEnabled or button:IsEnabled()
+		down = down and enabled
+		lip:SetPoint("TOPLEFT", 0, down and -1 or -KEY_LIP)
+		lip:SetPoint("BOTTOMRIGHT", 0, down and -1 or -KEY_LIP)
+		sheen:SetAlpha(down and 0.4 or (enabled and 1 or 0.5))
+		fall:SetAlpha(down and 0 or 1)
+	end
+	button:HookScript("OnMouseDown", function() press(true) end)
+	button:HookScript("OnMouseUp", function() press(false) end)
+	button:HookScript("OnLeave", function() press(false) end)
+	button:HookScript("OnEnable", function() press(false) end)
+	button:HookScript("OnDisable", function() press(false) end)
+	press(false)
+end
+
 local function dressButton(button)
 	if not button or button.stoaDressed then return end
 	button.stoaDressed = true
@@ -79,7 +128,8 @@ local function dressButton(button)
 	button:HookScript("OnShow", plainTextures)
 	button:HookScript("OnEnable", plainTextures)
 	button:HookScript("OnDisable", plainTextures)
-	UI.roundPanel(button, 0.95)
+	local face = UI.roundPanel(button, 0.95)
+	keyDepth(button, face)
 	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
 	local text = button.GetFontString and button:GetFontString()
 	if text then
@@ -143,6 +193,59 @@ local function dressButtonsIn(frame, depth)
 	end
 end
 
+-- Search boxes (talents, spellbook): Blizzard's gold-rimmed field becomes
+-- a dark rounded well whose edge warms while you type in it. The magnifier
+-- and the grey hint stay.
+local function dressSearch(box)
+	if type(box) ~= "table" or not box.CreateTexture or forbidden(box) or box.stoaSearch then return end
+	box.stoaSearch = true
+	for _, key in ipairs({ "Left", "Middle", "Right", "Mid" }) do hide(box[key]) end
+	if box.NineSlice then hide(box.NineSlice) end
+	local fill = UI.sliced(box, "BACKGROUND", "CardFill.tga")
+	if fill then
+		-- The field's text sits 6px in from its frame on the left.
+		fill:SetPoint("TOPLEFT", -6, 0)
+		fill:SetDrawLayer("BACKGROUND", -8)
+		fill:SetVertexColor(0, 0, 0, 0.45)
+	end
+	local edge = UI.roundBorder(box, "CardEdge.tga", 1)
+	if edge.edges[1] then edge.edges[1]:SetPoint("TOPLEFT", -6, 0) end
+	local function paint()
+		if box:HasFocus() then edge:Set(Stoa:Color("accent")) else edge:Set(Stoa:Color("hairline")) end
+	end
+	box:HookScript("OnEditFocusGained", paint)
+	box:HookScript("OnEditFocusLost", paint)
+	paint()
+	UI.applyTheme()
+end
+
+-- The small square arrow buttons that open a menu (the talents' search
+-- options): a dark rounded key with a quiet down chevron instead of the
+-- yellow button. Blizzard sets the arrow's art on every press, so the art
+-- goes by alpha, which a new atlas keeps.
+local function dressArrowDropdown(button)
+	if type(button) ~= "table" or not button.CreateTexture or forbidden(button) or button.stoaArrow then return end
+	button.stoaArrow = true
+	for _, key in ipairs({ "Arrow", "Background", "Icon" }) do hide(button[key]) end
+	plainTextures(button)
+	UI.roundPanel(button, 0.95)
+	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
+	local chevron = UI.glyph(button, "Chevron", 12, "muted")
+	chevron:SetPoint("CENTER", 0, 0)
+	chevron:SetRotation(-math.pi / 2)
+	button:HookScript("OnEnter", function()
+		glow:Set(Stoa:Color("accent"))
+		chevron:SetVertexColor(Stoa:Color("accent"))
+	end)
+	button:HookScript("OnLeave", function()
+		glow:Clear()
+		chevron:SetVertexColor(Stoa:Color("muted"))
+	end)
+	UI.applyTheme()
+end
+
+Windows.DressSearch = dressSearch
+Windows.DressArrowDropdown = dressArrowDropdown
 Windows.DressButtonsIn = dressButtonsIn
 Windows.DressButton = dressButton
 Windows.DressClose = dressClose
@@ -255,7 +358,7 @@ end
 local FAMILY = {
 	MerchantFrame = "trade", MailFrame = "trade", OpenMailFrame = "trade",
 	AuctionHouseFrame = "trade", BankFrame = "trade",
-	FriendsFrame = "social", CommunitiesFrame = "social", GuildFrame = "social",
+	FriendsFrame = "social", SocialUIFrame = "social", CommunitiesFrame = "social", GuildFrame = "social",
 	PVEFrame = "social", LFDParentFrame = "social", RaidParentFrame = "social",
 }
 -- The rulebook's band is BAND tall on every window with room for it.
@@ -839,6 +942,55 @@ local function dressTooltip(tip)
 	tip:HookScript("OnShow", function(self) hide(self.NineSlice) end)
 end
 
+-- Dropdown menus (the minimap's tracking list, the friends status, every
+-- right-click menu): Blizzard's menus come from one shared pool and get
+-- their gold-edged background drawn again each time they open, so each
+-- menu, and each submenu, takes the tooltip's dark card when it opens.
+-- Only the menu's own background goes; its lines, ticks and icons stay.
+local function dressMenu(menu)
+	if type(menu) ~= "table" or not menu.GetRegions or forbidden(menu) then return end
+	if not menu.stoaMenuArt then
+		local before = {}
+		for _, region in ipairs({ menu:GetRegions() }) do before[region] = true end
+		UI.surface(menu, "card", { alpha = 0.96 })
+		-- Blizzard's menus keep 8px above their lines and 15 below (room
+		-- for its art's shadow); the card leaves the same air on each side.
+		local fill = menu.stoaSurface
+		if fill then fill:SetPoint("BOTTOMRIGHT", 0, 7) end
+		local edge = menu.stoaPanelEdge and menu.stoaPanelEdge.edges and menu.stoaPanelEdge.edges[1]
+		if edge then edge:SetPoint("BOTTOMRIGHT", 0, 7) end
+		local keep = {}
+		for _, region in ipairs({ menu:GetRegions() }) do
+			if not before[region] then keep[region] = true end
+		end
+		menu.stoaMenuArt = keep
+	end
+	for _, region in ipairs({ menu:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") and not menu.stoaMenuArt[region] then
+			region:SetAlpha(0)
+		end
+	end
+end
+
+local function dressMenus()
+	local manager = type(Menu) == "table" and type(Menu.GetManager) == "function" and Menu.GetManager()
+	if type(manager) ~= "table" then return end
+	-- A dropdown keeps its description between openings, so its submenu
+	-- callback is added once.
+	local watched = setmetatable({}, { __mode = "k" })
+	local function opened(own, _, description)
+		dressMenu(own:GetOpenMenu())
+		-- Submenus open later from the same description.
+		if type(description) == "table" and not watched[description] and description.AddMenuAcquiredCallback then
+			watched[description] = true
+			description:AddMenuAcquiredCallback(function(menu) xpcall(dressMenu, Stoa.catch, menu) end)
+		end
+	end
+	for _, method in ipairs({ "OpenMenu", "OpenContextMenu" }) do
+		if type(manager[method]) == "function" then hooksecurefunc(manager, method, opened) end
+	end
+end
+
 local function dressTooltips()
 	for _, name in ipairs(TOOLTIPS) do dressTooltip(_G[name]) end
 	local bar = GameTooltipStatusBar
@@ -904,6 +1056,7 @@ function Windows:OnEnable()
 	guarded(dressMerchant)
 	guarded(dressBags)
 	guarded(dressTooltips)
+	guarded(dressMenus)
 	guarded(dressReadyCheck)
 	-- The trainer window loads with its own addon the first time it opens.
 	-- Forever's trainer addon has a bootstrap part that loads at startup,

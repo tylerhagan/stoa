@@ -57,5 +57,6 @@ Stoa.commands.safe = function()
 	if m.Map then m.Map.db.enabled = false end
 	if m.Chat then m.Chat.db.enabled = false end
 	if m.QuestReward then m.QuestReward.db.enabled = false end
+	if m.Rolls then m.Rolls.db.enabled = false end
 	Stoa:Reload()
 end
