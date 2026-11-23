@@ -1031,9 +1031,9 @@ end
 -- of leather and stone. The grain is drawn one texel to the screen pixel.
 UI.GRAIN = UI.MEDIA .. "Textures\\MatteGrain"
 local GRAIN_SIZE = 128
--- Satin is the near-flat finish of a matte speaker: the grain is only
--- just there. A saved "rough" (dropped) reads as fine.
-local GRAIN_ALPHA = { satin = 0.028, smooth = 0.07, fine = 0.105 }
+-- Satin is the flat finish of a matte speaker: no grain at all (even a
+-- faint one read as speckle). A saved "rough" (dropped) reads as fine.
+local GRAIN_ALPHA = { satin = 0, smooth = 0.07, fine = 0.105 }
 
 function UI.matte()
 	return Stoa.db ~= nil and Stoa.db.material == "matte"
