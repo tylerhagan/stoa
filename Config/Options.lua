@@ -462,8 +462,8 @@ local function build()
 	group = "Nameplates"
 	local restyle = function() Stoa.modules.Plates:Restyle() end
 	toggle(plates, "enabled", "Restyle nameplates", "Flat bars coloured by what you can do: amber for enemies, pale gold for neutral, blue for friends, and grey only for tapped or dead.", true, { id = "platesOn", reload = true, words = "nameplates enemy health bars" })
-	choice(plates, "style", "Nameplate style", "STOA: a rounded track. Bold: a heavy dark frame with the health value in the bar. Inline: name and health inside the bar. Brass: a brass edge with a level badge. Slim: a thin bar under the name.", "stoa", {
-		{ "stoa", "STOA" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" },
+	choice(plates, "style", "Nameplate style", "STOA: a rounded track. Bold: a heavy dark frame with the health value in the bar. Inline: name and health inside the bar. Brass: a brass edge with a level badge. Slim: a thin bar under the name. Matte: a thin line with no frame, as on the Matte target.", "stoa", {
+		{ "stoa", "STOA" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" }, { "matte", "Matte" },
 	}, { id = "plateStyle", change = restyle })
 	choice(plates, "marker", "Mark your target's plate", "A bone edge round it, arrows either side, or a soft glow behind it.", "edge", {
 		{ "edge", "Edge" }, { "arrows", "Arrows" }, { "glow", "Glow" },
