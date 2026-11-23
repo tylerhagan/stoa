@@ -225,7 +225,57 @@ local function dressArrowDropdown(button)
 	UI.applyTheme()
 end
 
+-- Blizzard's minimal scroll bar (gold arrows, a bevelled thumb): the arrows
+-- and track go clear, and the thumb is a thin pill that lights in the
+-- accent under the mouse or while dragged. The arrows stay where they are
+-- and still click; only their art goes.
+local function paintThumb(thumb)
+	local pill = thumb.stoaPill
+	if not pill then return end
+	local lit = thumb.over or thumb.down
+	local r, g, b = Stoa:Color(lit and "accent" or "muted")
+	pill:SetVertexColor(r, g, b, lit and 0.9 or 0.4)
+end
+
+local function dressScrollBar(bar)
+	if type(bar) ~= "table" or forbidden(bar) or bar.stoaScroll then return end
+	bar.stoaScroll = true
+	for _, key in ipairs({ "Back", "Forward" }) do
+		local step = bar[key]
+		if type(step) == "table" and step.SetAlpha then step:SetAlpha(0) end
+	end
+	local track = bar.Track
+	if type(track) ~= "table" then return end
+	for _, key in ipairs({ "Begin", "Middle", "End" }) do
+		if track[key] and track[key].SetAlpha then track[key]:SetAlpha(0) end
+	end
+	local rail = track:CreateTexture(nil, "BACKGROUND")
+	rail:SetTexture(UI.WHITE)
+	rail:SetWidth(1)
+	UI.pixel(rail, "width")
+	rail:SetPoint("TOP", 0, 0)
+	rail:SetPoint("BOTTOM", 0, 0)
+	UI.tint(rail, "hairline", 0.6)
+	local thumb = track.Thumb
+	if type(thumb) ~= "table" or not thumb.CreateTexture then return end
+	for _, key in ipairs({ "Begin", "Middle", "End" }) do
+		if thumb[key] and thumb[key].SetAlpha then thumb[key]:SetAlpha(0) end
+	end
+	local pill = thumb:CreateTexture(nil, "OVERLAY")
+	pill:SetTexture(UI.WHITE)
+	pill:SetWidth(3)
+	pill:SetPoint("TOP", 0, -1)
+	pill:SetPoint("BOTTOM", 0, 1)
+	thumb.stoaPill = pill
+	if thumb.OnButtonStateChanged then hooksecurefunc(thumb, "OnButtonStateChanged", paintThumb) end
+	thumb:HookScript("OnEnter", paintThumb)
+	thumb:HookScript("OnLeave", paintThumb)
+	paintThumb(thumb)
+	UI.applyTheme()
+end
+
 Windows.DressSearch = dressSearch
+Windows.DressScrollBar = dressScrollBar
 Windows.DressArrowDropdown = dressArrowDropdown
 Windows.DressButtonsIn = dressButtonsIn
 Windows.DressButton = dressButton
