@@ -341,6 +341,12 @@ local SLAB_NUM_W = 76
 local SLAB_AURA_Y = 6
 local SLAB_CAST_Y = SLAB_AURA_Y + 22 + 6
 local SLAB_OVER = 5
+-- Rank on the slab: a diamond in the caption's own line of text.
+local SLAB_GOLD = { 0.87, 0.70, 0.36 }
+local function slabDiamond(color)
+	return ("|T%sTextures\\GlyphDiamond:9:9:0:0:32:32:0:32:0:32:%d:%d:%d|t "):format(
+		UI.MEDIA, math.floor(color[1] * 255), math.floor(color[2] * 255), math.floor(color[3] * 255))
+end
 
 -- Out of combat, on the full console with its art, the plaque docks on the
 -- gold rim on the mana side, beside the bars you read there: as tall as the
@@ -1118,10 +1124,11 @@ function Halo:UpdateTarget()
 	-- Docked there's no portrait, so the level leads the caption.
 	local slab = self.targetSlab and not target.plaque.docked
 	if slab then
-		-- The slab's line has room for the level alone: a plus for an
-		-- elite, and the caption's colour says elite or rare.
+		-- On the slab the level leads the line; rank is a small diamond
+		-- before it (gold elite, silver rare, both for a rare elite), and
+		-- the creature type takes the right end of the line.
 		target.plaque:SetLevel(nil)
-		words = { levelText and (levelText .. (#words > 0 and "+" or "")) or "" }
+		words = { levelText or "" }
 	elseif target.plaque.docked then
 		target.plaque:SetLevel(nil)
 		-- Just the number, as on tooltips: the word cost the room the
@@ -1140,13 +1147,22 @@ function Halo:UpdateTarget()
 	elseif kind and not unspecified then
 		words[#words + 1] = kind:upper()
 	end
-	if slab then words = { words[1] } end
+	local slabKind
+	if slab then
+		local marks = ""
+		if rank == "rare" or rank == "rareelite" then marks = marks .. slabDiamond(Stoa.silver) end
+		if rank == "elite" or rank == "rareelite" or rank == "worldboss" then marks = marks .. slabDiamond(SLAB_GOLD) end
+		slabKind = UI.join({ unpack(words, 2) })
+		words = { marks .. words[1] }
+	end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
 		or (rank == "elite" or rank == "worldboss") and "elite" or nil
 	target.plaque:SetRank(plaqueRank)
 	target.caption:SetTextColor(Stoa:Color(plaqueRank and "accent" or "muted"))
 	if plaqueRank == "rare" then target.caption:SetTextColor(unpack(Stoa.silver)) end
+	-- The slab's diamonds carry the rank; its level stays quiet.
+	if slab then target.caption:SetTextColor(Stoa:Color("muted")) end
 
 	-- A dead target says so in words and steps back, rather than reading as
 	-- a hostile at zero.
@@ -1157,9 +1173,9 @@ function Halo:UpdateTarget()
 	target.hp:SetStatusBarColor(Stoa:Color(hostile and "hostile" or "health"))
 	local cue = dead and "DEAD" or hostile and "HOSTILE" or ""
 	-- The slab's numbers stand where the cue would: only DEAD is said.
-	if slab and not dead then cue = "" end
+	if slab and not dead then cue = slabKind or "" end
 	target.cue:SetText(cue)
-	target.cue:SetTextColor(Stoa:Color(dead and "muted" or Stoa:StateToken(cue)))
+	target.cue:SetTextColor(Stoa:Color((dead or slab) and "muted" or Stoa:StateToken(cue)))
 	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "hostile" or nil) end
 	target.hp:SetShown(not dead)
 	target.power:SetShown(not dead and target.power.hasPower and not target.plaque.docked or false)
