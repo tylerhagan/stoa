@@ -371,7 +371,14 @@ local function liftPanel(frame, raise)
 	-- the raised strip shows the world through it.
 	local map = _G.WorldMapFrame
 	local mapFill = map and frame == map.BorderFrame and map.stoaMapFill
-	for _, tex in ipairs({ frame.stoaPanelBg, frame.stoaPanelEdge and frame.stoaPanelEdge.edges and frame.stoaPanelEdge.edges[1], mapFill }) do
+	-- (ipairs stops at a missing piece, so the parts are gathered first.
+	-- Matte's moulding rises too: left behind, its top light drew a second
+	-- header edge across the band.)
+	local parts = {}
+	for _, tex in pairs({ frame.stoaPanelBg, frame.stoaPanelEdge and frame.stoaPanelEdge.edges and frame.stoaPanelEdge.edges[1] or false, frame.stoaMould or false, mapFill or false }) do
+		if tex then parts[#parts + 1] = tex end
+	end
+	for _, tex in ipairs(parts) do
 		if tex and tex.SetTextureSliceMargins then
 			-- (The map's fill is drawn 2px outside its frame.)
 			if tex == mapFill then tex:SetPoint("TOPLEFT", -2, 2 + raise) else tex:SetPoint("TOPLEFT", 0, raise) end
