@@ -1177,10 +1177,8 @@ local function dressTooltips()
 		bar:SetStatusBarTexture(UI.WHITE)
 		bar:SetHeight(3)
 		bar:ClearAllPoints()
-		-- Set into the card's bottom edge, so it reads as part of the card
-		-- and not as a loose line under it.
-		bar:SetPoint("TOPLEFT", GameTooltip, "BOTTOMLEFT", 10, 2)
-		bar:SetPoint("TOPRIGHT", GameTooltip, "BOTTOMRIGHT", -10, 2)
+		bar:SetPoint("TOPLEFT", GameTooltip, "BOTTOMLEFT", 8, -3)
+		bar:SetPoint("TOPRIGHT", GameTooltip, "BOTTOMRIGHT", -8, -3)
 		UI.surface(bar, "well", { outset = 1 })
 		hooksecurefunc(bar, "SetStatusBarColor", function(self)
 			if self.stoaColouring then return end
