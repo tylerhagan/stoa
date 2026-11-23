@@ -1499,10 +1499,9 @@ local function dressLootRow(row)
 	end
 	if row.QualityText then Stoa:SetFont(row.QualityText, "sans", Stoa.typeSize.micro) end
 	if row.Init then hooksecurefunc(row, "Init", paintLootRow) end
-	row:HookScript("OnEnter", function(self) self.stoaOver = true paintLootRow(self) end)
-	row:HookScript("OnLeave", function(self) self.stoaOver = nil paintLootRow(self) end)
-	-- The item button covers the card (its hit rect runs the full width),
-	-- so the mouse lands there.
+	-- Only the item button takes the mouse (its hit rect runs the card's
+	-- full width). A script on the card itself would make the card take
+	-- the mouse too and could catch the click meant for the item.
 	local item = row.Item
 	if type(item) == "table" and item.HookScript then
 		item:HookScript("OnEnter", function() row.stoaOver = true paintLootRow(row) end)
