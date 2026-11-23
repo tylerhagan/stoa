@@ -74,7 +74,7 @@ for f in files:
 if os.environ.get("STOA_SIM_SETUP") == "slim":
     lua.execute("StoaDB = { modules = { Grimoire = { slim = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "matte":
-    lua.execute("StoaDB = { theme = 'Matte', material = 'matte', grain = 'rough', modules = { Halo = { arcStyle = 'visor' } } }")
+    lua.execute("StoaDB = { theme = 'Matte', material = 'matte', grain = 'satin', modules = { Halo = { arcStyle = 'visor' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "matteslim":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { slim = true }, Halo = { arcStyle = 'gauge' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "minimal":
