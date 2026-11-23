@@ -326,13 +326,16 @@ local TARGET_MARK = 16
 -- Matte: at the Halo the plaque is a slab, the same moulded block as the
 -- docked one: no portrait, the level, name and cue on one line over the
 -- bar, and the threat and KICK words on a line just under the block.
-local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 232, 52, 11
+-- The health is a slim line; its percent and amount sit at the right of
+-- the name line, so the hostile word steps out (the red line says it).
+local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 244, 46, 11
 local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
-local SLAB_NAME_W = 132
+local SLAB_BAR_H = 5
+local SLAB_NAME_W = 116
 -- Under the block: the aura icons first, close to it, then the line of
 -- words (from the bar's foot), then the cast.
 local SLAB_AURA_Y = 6
-local SLAB_UNDER = 14 + SLAB_AURA_Y + 22 + 5
+local SLAB_UNDER = 14 + SLAB_AURA_Y + 22 + 5 -- 14: the bar's foot to the block's
 local SLAB_CAST_Y = SLAB_AURA_Y + 22 + 5 + 14
 
 -- Out of combat, on the full console with its art, the plaque docks on the
@@ -459,8 +462,22 @@ function Halo:LayoutTarget(curve)
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
 	local barW = slab and SLAB_BAR_W or TARGET_BAR_W
 	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
-	target.hp:SetWidth(barW)
+	target.hp:SetSize(barW, slab and SLAB_BAR_H or TARGET_BAR_H)
+	if target.hp.rim then target.hp.rim:SetShown(not slab) end
 	target.power:SetWidth(barW - 16)
+	target.power:ClearAllPoints()
+	target.power:SetPoint("TOP", target.hp, "BOTTOM", 0, slab and -3 or -4)
+	-- The numbers: inside the bar, or beside the name over the slim one.
+	local percent, amount = target.hp.percent, target.hp.amount
+	percent:ClearAllPoints()
+	amount:ClearAllPoints()
+	if slab then
+		percent:SetPoint("RIGHT", target, "TOPRIGHT", -SLAB_PAD, -16)
+		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
+	else
+		percent:SetPoint("LEFT", 10, 0)
+		amount:SetPoint("LEFT", percent, "RIGHT", 8, 0)
+	end
 	local under = slab and SLAB_UNDER or 12
 	if target.threat and target.kick then
 		target.threat:ClearAllPoints()
@@ -483,7 +500,7 @@ function Halo:LayoutTarget(curve)
 		target.cue:SetPoint("TOPRIGHT", -SLAB_PAD, -10)
 		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
 		target.name:SetWidth(SLAB_NAME_W)
-		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -24)
+		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -27)
 	elseif docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
@@ -862,6 +879,7 @@ end
 -- target them. The game sends no events for the target's target, so both
 -- are read a few times a second while they show.
 local TOT_WIDTH = 124
+local TOT_TIGHT_W = 150
 local CHIP_HEIGHT = 38
 function Halo:BuildUnitChip(name, unit, caption, parent)
 	local chip = CreateFrame("Button", name, parent, "SecureUnitButtonTemplate")
@@ -912,9 +930,19 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 	-- Beside the Matte slab the chip is as tall as it, its rows closer.
 	function chip:SetTight(on)
 		who:ClearAllPoints()
-		who:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, on and -2 or -4)
 		hp:ClearAllPoints()
-		hp:SetPoint("TOPLEFT", who, "BOTTOMLEFT", 0, on and -3 or -4)
+		if on then
+			-- One line: the caption, then the name, over the health line.
+			who:SetPoint("LEFT", label, "RIGHT", 6, 0)
+			who:SetWidth(TOT_TIGHT_W - 68)
+			hp:SetPoint("TOPLEFT", chip, "TOPLEFT", 0, -20)
+			hp:SetWidth(TOT_TIGHT_W)
+		else
+			who:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+			who:SetWidth(TOT_WIDTH)
+			hp:SetPoint("TOPLEFT", who, "BOTTOMLEFT", 0, -4)
+			hp:SetWidth(TOT_WIDTH)
+		end
 	end
 	Stoa:NewTicker(0.2, function()
 		if chip:IsVisible() then self:UpdateUnitChip(chip) end
@@ -965,13 +993,14 @@ function Halo:PlaceTargetOfTarget(curve)
 		if self.targetSlab then
 			-- Its panel reaches 10 past each edge: level with the slab's
 			-- top and foot, a small gap between the two blocks.
-			chip:SetSize(TOT_WIDTH, SLAB_HEIGHT - 20)
+			chip:SetSize(TOT_TIGHT_W, SLAB_HEIGHT - 20)
 			chip:SetPoint("TOPLEFT", target, "TOPRIGHT", 16, -10)
+			chip.label:SetPoint("TOPLEFT", 0, -4)
 		else
 			chip:SetSize(TOT_WIDTH, CHIP_HEIGHT)
 			chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD)
+			chip.label:SetPoint("TOPLEFT")
 		end
-		chip.label:SetPoint("TOPLEFT")
 	end
 	chip:SetTight(not docked and self.targetSlab or false)
 	if chip.slab then chip.slab:SetShown(docked) end
@@ -1113,6 +1142,8 @@ function Halo:UpdateTarget()
 	if Stoa:IsSecret(hostile) then hostile = false end
 	target.hp:SetStatusBarColor(Stoa:Color(hostile and "hostile" or "health"))
 	local cue = dead and "DEAD" or hostile and "HOSTILE" or ""
+	-- The slab's numbers stand where the cue would: only DEAD is said.
+	if slab and not dead then cue = "" end
 	target.cue:SetText(cue)
 	target.cue:SetTextColor(Stoa:Color(dead and "muted" or Stoa:StateToken(cue)))
 	if target.plaque.SetReaction then target.plaque:SetReaction(hostile and "hostile" or nil) end

@@ -2117,7 +2117,7 @@ function UI.plaqueBar(frame, width, height)
 	amount:SetPoint("LEFT", percent, "RIGHT", 8, 0)
 	amount:SetAlpha(0.8)
 	UI.legible(amount)
-	hp.mask, hp.words, hp.percent, hp.amount = mask, words, percent, amount
+	hp.mask, hp.words, hp.percent, hp.amount, hp.rim = mask, words, percent, amount, rim
 	return hp
 end
 
