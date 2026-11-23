@@ -928,28 +928,34 @@ end
 -- their gold-edged background drawn again each time they open, so each
 -- menu, and each submenu, takes the tooltip's dark card when it opens.
 -- Only the menu's own background goes; its lines, ticks and icons stay.
+-- Forever's menus are guarded proxies: they refuse new textures (the
+-- card can't be drawn on them), so STOA's card is a frame of its own,
+-- a child of the menu at the menu's level (the lines sit above it), and
+-- the menu's own art is faded out each time it opens.
+local menuCards = setmetatable({}, { __mode = "k" })
+
+local function menuCard(menu)
+	local card = menuCards[menu]
+	if card then return card end
+	local ok, made = pcall(CreateFrame, "Frame", nil, menu)
+	if not (ok and made) then return nil end
+	card = made
+	card:SetPoint("TOPLEFT", menu, "TOPLEFT", 0, 0)
+	card:SetPoint("BOTTOMRIGHT", menu, "BOTTOMRIGHT", 0, 7)
+	card:EnableMouse(false)
+	UI.surface(card, "card", { alpha = 0.96 })
+	menuCards[menu] = card
+	return card
+end
+
 local function dressMenu(menu)
 	if type(menu) ~= "table" or not menu.GetRegions or forbidden(menu) then return end
-	if not menu.stoaMenuArt then
-		local before = {}
-		for _, region in ipairs({ menu:GetRegions() }) do before[region] = true end
-		UI.surface(menu, "card", { alpha = 0.96 })
-		-- Blizzard's menus keep 8px above their lines and 15 below (room
-		-- for its art's shadow); the card leaves the same air on each side.
-		local fill = menu.stoaSurface
-		if fill then fill:SetPoint("BOTTOMRIGHT", 0, 7) end
-		local edge = menu.stoaPanelEdge and menu.stoaPanelEdge.edges and menu.stoaPanelEdge.edges[1]
-		if edge then edge:SetPoint("BOTTOMRIGHT", 0, 7) end
-		local keep = {}
-		for _, region in ipairs({ menu:GetRegions() }) do
-			if not before[region] then keep[region] = true end
-		end
-		menu.stoaMenuArt = keep
-	end
+	local card = menuCard(menu)
+	if not card then return end
+	pcall(card.SetFrameLevel, card, menu:GetFrameLevel())
+	card:Show()
 	for _, region in ipairs({ menu:GetRegions() }) do
-		if region.IsObjectType and region:IsObjectType("Texture") and not menu.stoaMenuArt[region] then
-			region:SetAlpha(0)
-		end
+		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
 	end
 end
 
