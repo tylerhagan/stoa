@@ -329,9 +329,9 @@ local TARGET_MARK = 16
 -- The health is a slim line with its percent and amount at its right end,
 -- so the name has the whole line above; the hostile word steps out (the
 -- red line says it).
-local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 244, 46, 11
+local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 244, 50, 11
 local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
-local SLAB_BAR_H = 5
+local SLAB_BAR_H = 8
 local SLAB_NAME_W = SLAB_BAR_W - 30
 -- Room at the bar's right end for the numbers.
 local SLAB_NUM_W = 76
@@ -476,7 +476,7 @@ function Halo:LayoutTarget(curve)
 	percent:ClearAllPoints()
 	amount:ClearAllPoints()
 	if slab then
-		percent:SetPoint("RIGHT", target, "TOPRIGHT", -SLAB_PAD, -32)
+		percent:SetPoint("RIGHT", target, "TOPRIGHT", -SLAB_PAD, -33)
 		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
 	else
 		percent:SetPoint("LEFT", 10, 0)
@@ -513,7 +513,7 @@ function Halo:LayoutTarget(curve)
 		target.cue:SetPoint("TOPRIGHT", -SLAB_PAD, -10)
 		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
 		target.name:SetWidth(SLAB_NAME_W)
-		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -30)
+		target.hp:SetPoint("TOPLEFT", SLAB_PAD, -29)
 	elseif docked then
 		target:SetSize(curve + UI.PLAQUE_JOIN_SPAN, UI.plaqueDockHeight())
 		-- Set high, so the bar keeps clear of the console's gold rim.
@@ -948,7 +948,7 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 			-- One line: the caption, then the name, over the health line.
 			who:SetPoint("LEFT", label, "RIGHT", 6, 0)
 			who:SetWidth(TOT_TIGHT_W - 68)
-			hp:SetPoint("TOPLEFT", chip, "TOPLEFT", 0, -20)
+			hp:SetPoint("TOPLEFT", chip, "TOPLEFT", 0, -23)
 			hp:SetWidth(TOT_TIGHT_W)
 		else
 			who:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
@@ -1008,7 +1008,7 @@ function Halo:PlaceTargetOfTarget(curve)
 			-- top and foot, a small gap between the two blocks.
 			chip:SetSize(TOT_TIGHT_W, SLAB_HEIGHT - 20)
 			chip:SetPoint("TOPLEFT", target, "TOPRIGHT", 16, -10)
-			chip.label:SetPoint("TOPLEFT", 0, -4)
+			chip.label:SetPoint("TOPLEFT", 0, -5)
 		else
 			chip:SetSize(TOT_WIDTH, CHIP_HEIGHT)
 			chip:SetPoint("TOPLEFT", target, "TOPRIGHT", chip.gap, -TARGET_PAD)
