@@ -72,6 +72,14 @@ end
 
 -- Colours -----------------------------------------------------------------------
 
+-- The hostile red as text: lifted a third of the way to white. The bar's
+-- red is dark for small letters on a grey header, more so for readers who
+-- see red and green poorly.
+local function hostileText()
+	local r, g, b = Stoa:Color("hostile")
+	return r + (1 - r) * 0.34, g + (1 - g) * 0.34, b + (1 - b) * 0.34
+end
+
 -- A unit's colour: class for players (when the theme tints by class),
 -- otherwise the nameplates' reaction colours. Returns r, g, b.
 function Tooltip:UnitColour(unit)
@@ -81,7 +89,7 @@ function Tooltip:UnitColour(unit)
 		class = known(class)
 		local colour = class and Stoa:Theme().classTint and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
 		if colour then return colour.r, colour.g, colour.b end
-		if known(UnitCanAttack("player", unit)) then return Stoa:Color("hostile") end
+		if known(UnitCanAttack("player", unit)) then return hostileText() end
 		return Stoa:Color("text")
 	end
 	if known(UnitIsTapDenied(unit)) and not known(UnitPlayerControlled(unit)) then return Stoa:Color("muted") end
@@ -91,7 +99,7 @@ function Tooltip:UnitColour(unit)
 		if Stoa.NeutralColour then return Stoa:NeutralColour() end
 		return Stoa:Color("accent")
 	end
-	if reaction then return Stoa:Color("hostile") end
+	if reaction then return hostileText() end
 	return Stoa:Color("text")
 end
 
