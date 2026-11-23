@@ -334,7 +334,7 @@ local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
 local SLAB_BAR_H = 8
 local SLAB_NAME_W = SLAB_BAR_W - 30
 -- Room at the bar's right end for the numbers.
-local SLAB_NUM_W = 76
+local SLAB_NUM_W = 84
 -- Under the block: the aura icons, close to it, then the cast. The words
 -- (threat, KICK, a friend's tags) stand on top of the block instead, so
 -- nothing under it leaves a gap when there are no auras.
@@ -1159,6 +1159,10 @@ function Halo:UpdateTarget()
 	local words = {}
 	if rank == "elite" or rank == "worldboss" then words[#words + 1] = "ELITE" end
 	if rank == "rare" or rank == "rareelite" then words[#words + 1] = "RARE" end
+	-- Flagged for PvP while you are not: hitting it (or helping it) would
+	-- flag you too, so the plaque says so in the warning colour.
+	local flags = plain(UnitIsPVP("target")) and not plain(UnitIsPVP("player")) or false
+	local pvpWord = flags and slabWord("PVP", { Stoa:Color("danger") }) or nil
 	local levelText = level and (level < 0 and "??" or tostring(level)) or nil
 	-- Docked there's no portrait, so the level leads the caption.
 	local slab = self:TargetSlim()
@@ -1191,12 +1195,14 @@ function Halo:UpdateTarget()
 		if rank == "rare" or rank == "rareelite" then marks[#marks + 1] = slabWord("RARE", Stoa.silver) end
 		if rank == "elite" or rank == "rareelite" then marks[#marks + 1] = slabWord("ELITE", SLAB_GOLD) end
 		if rank == "worldboss" then marks[#marks + 1] = slabWord("BOSS", SLAB_GOLD) end
+		if pvpWord then marks[#marks + 1] = pvpWord end
 		-- The trailing gap keeps KICK, which follows it, a word away.
 		target.rankWord:SetText(#marks > 0 and table.concat(marks, " ") .. "   " or "")
 		slabKind = UI.join({ unpack(words, 2) })
 		words = { words[1] }
 	else
 		target.rankWord:SetText("")
+		if pvpWord then words[#words + 1] = pvpWord end
 	end
 	target.caption:SetText(UI.join(words))
 	local plaqueRank = (rank == "rare" or rank == "rareelite") and "rare"
@@ -1738,6 +1744,8 @@ function Halo:OnEnable()
 		self:UpdateTargetCast()
 	end)
 	Stoa:On("RAID_TARGET_UPDATE", function() self:UpdateTargetMark() end)
+	-- A PvP flag going up or down, yours or the target's.
+	Stoa:OnUnit("UNIT_FACTION", { "player", "target" }, function() self:UpdateTarget() end)
 	-- A creature not yet seen this session has no name until the game has
 	-- looked it up, a moment after targeting; fill it in when it arrives.
 	Stoa:OnUnit("UNIT_NAME_UPDATE", { "target" }, function(unit)
