@@ -999,9 +999,10 @@ local function dressMenus()
 		tryHook(variants, "CreateHighlight", function(frame)
 			local light = type(frame) == "table" and frame.highlight
 			if not (light and light.SetTexture) then return end
-			light:SetTexture(UI.WHITE)
+			-- The soft alpha lives in the colour itself, so a later
+			-- SetVertexColor(1, 1, 1) can't turn it into a bright bar.
+			light:SetColorTexture(1, 1, 1, 0.06)
 			light:SetBlendMode("BLEND")
-			light:SetVertexColor(1, 1, 1, 0.07)
 		end)
 	end
 	for _, method in ipairs({ "CreateCheckbox", "CreateRadio" }) do
