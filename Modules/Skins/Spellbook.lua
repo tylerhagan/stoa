@@ -878,7 +878,7 @@ function Spellbook.DressTrees(talents)
 	-- The window's stone rings fight the cards; the window is dressed after
 	-- the talents first show, so this runs again here.
 	local host = talents.GetParent and talents:GetParent()
-	if host and host.stoaStone and talents:IsVisible() then host.stoaStone:SetAlpha(0) end
+	if host and talents:IsVisible() then UI.stoneOn(host, false) end
 	local headers = talents.treeHeaders
 	for _, rule in ipairs(talents.stoaRules or {}) do rule:Hide() end
 	if not (headers and #headers > 0 and talents.EnumerateAllTalentButtons) then return end
@@ -1182,11 +1182,11 @@ local function dressTalents()
 		guarded(Spellbook.PaintWaiting, self)
 		guarded(Spellbook.DressTrees, self)
 		-- The window's stone rings fight the cards, so talents go without.
-		if frame.stoaStone then frame.stoaStone:SetAlpha(0) end
+		UI.stoneOn(frame, false)
 		guarded(Spellbook.FitWindow, self)
 	end)
 	talents:HookScript("OnHide", function(self)
-		if frame.stoaStone then frame.stoaStone:SetAlpha(1) end
+		UI.stoneOn(frame, true)
 		guarded(Spellbook.FitWindow, self)
 	end)
 	if talents.RefreshTreeHeaders then

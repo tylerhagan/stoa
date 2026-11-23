@@ -222,6 +222,9 @@ function Console:BuildTargetCone(frame)
 	lines:SetTexture(UI.MEDIA .. "Textures\\MatteTabLines")
 	lines:SetAllPoints()
 	lines:SetVertexColor(1, 1, 1, 0.05)
+	-- Unsnapped like the docked block that runs on from it.
+	UI.unsnap(tab)
+	UI.unsnap(lines)
 	-- The cone stands on its own frame above the docked target block (a
 	-- LOW button that starts under the cone's right edge), so the block
 	-- runs on beneath the bezel and never cuts it.

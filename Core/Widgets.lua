@@ -132,6 +132,13 @@ function UI.ornate()
 	return Stoa.db and Stoa.db.ornament == "painted" and Stoa.db.material ~= "matte"
 end
 
+-- Draws a texture exactly where it lies rather than on the nearest pixel,
+-- for pieces that must meet others edge to edge.
+function UI.unsnap(tex)
+	if tex.SetSnapToPixelGrid then tex:SetSnapToPixelGrid(false) end
+	if tex.SetTexelSnappingBias then tex:SetTexelSnappingBias(0) end
+end
+
 -- Matte: a block is shaped by its shading, so the edge round a panel, card
 -- or window is only a whisper (the console's rim wears the same), where
 -- the other materials draw the theme's hairline.
@@ -1082,6 +1089,14 @@ function UI.stone(frame, top, bottom)
 	stones[#stones + 1] = tex
 	if frame.HookScript then
 		pcall(frame.HookScript, frame, "OnSizeChanged", function() pcall(fitStone, tex) end)
+		-- A window dressed before it has a size is never fitted (the
+		-- texture then stretches once across the whole of it), and a
+		-- header that grows changes the stone's height without a resize.
+		pcall(frame.HookScript, frame, "OnShow", function()
+			pcall(fitStone, tex)
+			-- And once more when the game has laid the window out.
+			if C_Timer and C_Timer.After then C_Timer.After(0, function() pcall(fitStone, tex) end) end
+		end)
 	end
 	pcall(fitStone, tex)
 	tex:SetShown(Stoa.db == nil or Stoa.db.windowStone ~= false)
@@ -1333,8 +1348,18 @@ end
 -- The Grain setting, on every matte window.
 function UI.paintGrain()
 	for _, tex in ipairs(stones) do
-		if tex.stoaGrain then tex:SetVertexColor(1, 1, 1, UI.grainAlpha()) end
+		if tex.stoaGrain then tex:SetVertexColor(1, 1, 1, tex.stoaOff and 0 or UI.grainAlpha()) end
 	end
+end
+
+-- Hides or brings back one window's stone (the talents go without). A
+-- texture's alpha is its colour's alpha, so the grain goes back to its
+-- own strength, not to 1.
+function UI.stoneOn(frame, on)
+	local tex = frame and frame.stoaStone
+	if not tex then return end
+	tex:SetAlpha(on and (tex.stoaGrain and UI.grainAlpha() or 1) or 0)
+	tex.stoaOff = not on
 end
 
 function UI.showStone(on)
@@ -1710,6 +1735,10 @@ local function buildDock(frame, plaque)
 	dock.socket, dock.socketLines = socket, socketLines
 	plaque.dock = dock
 	if UI.matte() then
+		-- One block from the tab to its far end: every piece is drawn
+		-- where it lies, unsnapped, so the art's top edge and the plain
+		-- body's never land a pixel apart.
+		for _, part in pairs(dock) do UI.unsnap(part) end
 		-- The block comes out of the dial: its body grows from its dial
 		-- end while its far end rides out with it (plaque:PlayDock). The
 		-- end by the dial stays put, so nothing crosses the dial.
