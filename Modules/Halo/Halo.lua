@@ -345,6 +345,8 @@ local SLAB_OVER = 5
 -- line of level, name and creature type over the same slim health line,
 -- set in the taller block the dial's tab gives it.
 local DOCK_SLIM_NAME_Y, DOCK_SLIM_BAR_Y = -14, -34
+-- Its rows run a little longer than the old docked bar, so long names fit.
+local DOCK_SLIM_BAR_W = 256
 -- Rank on the slab: a coloured word standing on the block's top left
 -- (gold ELITE or BOSS, silver RARE). KICK steps in beside it.
 local SLAB_GOLD = { 0.87, 0.70, 0.36 }
@@ -446,7 +448,8 @@ function Halo:PlaceTarget()
 	end
 	-- Docked, the corner starts rounding just past the health bar: there's
 	-- no portrait to leave room for.
-	local barEnd = (self.targetTextLeft or TARGET_PAD) + TARGET_BAR_W
+	local docks = self.targetResting and self.targetDocks
+	local barEnd = (self.targetTextLeft or TARGET_PAD) + (docks and UI.matte() and DOCK_SLIM_BAR_W or TARGET_BAR_W)
 	local curve = barEnd + 14
 	if self.targetResting and self.targetDocks then curve = barEnd + 14 - UI.PLAQUE_JOIN_FLAT end
 	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
@@ -478,7 +481,7 @@ function Halo:LayoutTarget(curve)
 	-- Slim: the slab's rows, at the Halo or docked in Matte.
 	local slim = slab or docked and UI.matte() or false
 	local left = docked and self.targetTextLeft or SLAB_PAD
-	local barW = slab and SLAB_BAR_W or TARGET_BAR_W
+	local barW = slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
 	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
 	target.hp:SetSize(slim and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or TARGET_BAR_H)
 	if target.hp.rim then target.hp.rim:SetShown(not slim) end
@@ -975,7 +978,7 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 			-- One line: the caption, then the name, over the health line.
 			who:SetPoint("LEFT", label, "RIGHT", 6, 0)
 			who:SetWidth(TOT_TIGHT_W - 68)
-			hp:SetPoint("TOPLEFT", chip, "TOPLEFT", 0, -23)
+			hp:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -8)
 			hp:SetWidth(TOT_TIGHT_W)
 		else
 			who:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
@@ -1021,13 +1024,13 @@ function Halo:PlaceTargetOfTarget(curve)
 		-- Its corner starts rounding just past its words.
 		-- Matte ends are straight, so the words start just past the tuck.
 		local textLeft = UI.matte() and TOT_TUCK + 12 or TOT_DOCK_TEXT
-		local stepCurve = textLeft + TOT_WIDTH + 10 - UI.PLAQUE_STEP_FLAT
+		local stepCurve = textLeft + (UI.matte() and TOT_TIGHT_W or TOT_WIDTH) + 10 - UI.PLAQUE_STEP_FLAT
 		-- Behind the plaque: a lower strata than its LOW.
 		chip:SetFrameStrata("BACKGROUND")
 		chip:SetSize(stepCurve + UI.PLAQUE_STEP_SPAN, UI.PLAQUE_STEP_H)
 		chip:SetPoint("BOTTOMLEFT", target, "BOTTOMLEFT", left, 0)
 		chip.slab:Layout(stepCurve)
-		chip.label:SetPoint("TOPLEFT", textLeft, -6)
+		chip.label:SetPoint("TOPLEFT", textLeft, UI.matte() and -11 or -6)
 	else
 		chip:SetFrameStrata("LOW")
 		if self.targetSlab then
@@ -1042,7 +1045,8 @@ function Halo:PlaceTargetOfTarget(curve)
 			chip.label:SetPoint("TOPLEFT")
 		end
 	end
-	chip:SetTight(not docked and self.targetSlab or false)
+	-- Matte: one line over the health line, docked or beside the slab.
+	chip:SetTight(docked and UI.matte() or not docked and self.targetSlab or false)
 	if chip.slab then chip.slab:SetShown(docked) end
 	if chip.fill then
 		chip.fill:SetShown(not docked)
