@@ -433,10 +433,11 @@ local function guildTabWord(tab, label)
 	line:Hide()
 	tab.stoaGuildWord, tab.stoaGuildLine, tab.stoaGuildCover = word, line, cover
 	hooksecurefunc(tab, "SetChecked", paintGuildTab)
-	tab:HookScript("OnClick", function(self)
+	-- Painted from PreClick, not OnClick: when anything in Blizzard's page
+	-- switch errors, OnClick's hooks never run and the old word stayed lit.
+	-- The timer paints once the switch is done, whatever happened in it.
+	tab:HookScript("PreClick", function(self)
 		local frame = self:GetParent()
-		paintGuildTabs(frame)
-		-- Once more after Blizzard has finished switching the page.
 		C_Timer.After(0, function() paintGuildTabs(frame) end)
 	end)
 	tab:HookScript("OnEnter", function(self) if not self.stoaGuildLine:IsShown() then self.stoaGuildWord:SetTextColor(Stoa:Color("accent")) end end)
