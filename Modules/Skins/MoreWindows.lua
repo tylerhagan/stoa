@@ -284,7 +284,7 @@ local BLIZZARD_STRIP, CONTENT_AIR = 23, 8
 -- The roster's member list (wide, with column heads 60px above its top) and
 -- its two view dropdowns are placed by guildRoster instead.
 local ROSTER_DROPDOWNS = { "GuildMemberListDropdown", "CommunityMemberListDropdown" }
-local guildRoster, guildInner, guildChatRow
+local guildRoster, guildInner, guildChatRow, relayoutGuild
 -- The side tabs, in header order, with their words.
 local GUILD_TABS = {
 	{ "ChatTab", "Chat" }, { "RosterTab", "Roster" }, { "GuildBenefitsTab", "Perks" },
@@ -438,7 +438,12 @@ local function guildTabWord(tab, label)
 	-- The timer paints once the switch is done, whatever happened in it.
 	tab:HookScript("PreClick", function(self)
 		local frame = self:GetParent()
-		C_Timer.After(0, function() paintGuildTabs(frame) end)
+		C_Timer.After(0, function()
+			paintGuildTabs(frame)
+			-- The page's layout (the MOTD row, the drops) too, for the same
+			-- reason: Blizzard's own relayout may never have run.
+			if relayoutGuild then relayoutGuild(frame) end
+		end)
 	end)
 	tab:HookScript("OnEnter", function(self) if not self.stoaGuildLine:IsShown() then self.stoaGuildWord:SetTextColor(Stoa:Color("accent")) end end)
 	tab:HookScript("OnLeave", paintGuildTab)
@@ -642,6 +647,11 @@ function AFTER.communities(frame)
 	paintGuildTabs(frame)
 	guildTitle(frame)
 	guildMotd(frame, listMode)
+end
+
+relayoutGuild = function(frame)
+	if InCombatLockdown() or not frame:IsShown() then return end
+	xpcall(AFTER.communities, Stoa.catch, frame)
 end
 
 local function dressMacroSlot(button)
@@ -1009,8 +1019,58 @@ local function guildDetail(detail, windows)
 	end
 end
 
+-- The Info page (message of the day, guild information, challenges) and
+-- the news beside it: Blizzard's parchment, gold bars and header plates go,
+-- each column sits on a dark well, the headings are STOA's small caps and
+-- the page titles take the text colour.
+local function quietRegions(owner)
+	for _, region in ipairs({ owner:GetRegions() }) do
+		if region:IsObjectType("Texture") then
+			if not region.stoaOwn then region:SetAlpha(0) end
+		elseif region:IsObjectType("FontString") then
+			local key
+			for k, v in pairs(owner) do if v == region then key = k break end end
+			if key == "TitleText" then
+				Stoa:SetFont(region, "sans", Stoa.typeSize.label)
+				region:SetTextColor(Stoa:Color("text"))
+			elseif key ~= "NoNews" then
+				local words = region:GetText()
+				if type(words) == "string" and words ~= "" then
+					Stoa:SetFont(region, "sans", Stoa.typeSize.micro)
+					region:SetText(words:upper())
+					region:SetTextColor(Stoa:Color("accent"))
+				end
+			end
+		end
+	end
+end
+
+local function guildDetails(details, windows)
+	if type(details) ~= "table" or forbidden(details) or details.stoaDetails then return end
+	details.stoaDetails = true
+	quietRegions(details)
+	for _, key in ipairs({ "Info", "News" }) do
+		local part = details[key]
+		if type(part) == "table" and not forbidden(part) then
+			quietRegions(part)
+			local well = UI.well(part, 0)
+			if well then well.stoaOwn = true end
+		end
+	end
+	local filters = details.News and details.News.SetFiltersButton
+	local label = type(filters) == "table" and filters.GetFontString and filters:GetFontString()
+	if label then label:SetTextColor(Stoa:Color("muted")) end
+	if windows and windows.DressScrollBar then
+		local info, news = details.Info, details.News
+		for _, owner in ipairs({ info and info.MOTDScrollFrame, info and info.DetailsFrame, news }) do
+			if type(owner) == "table" then xpcall(windows.DressScrollBar, Stoa.catch, owner.ScrollBar) end
+		end
+	end
+end
+
 guildInner = function(frame)
 	local windows = Stoa.modules.Windows
+	xpcall(guildDetails, Stoa.catch, frame.GuildDetailsFrame, windows)
 	if windows and windows.DressScrollBar then
 		for _, owner in ipairs({ frame.CommunitiesList, frame.Chat, frame.MemberList }) do
 			if type(owner) == "table" then xpcall(windows.DressScrollBar, Stoa.catch, owner.ScrollBar) end
