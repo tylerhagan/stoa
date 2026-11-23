@@ -1155,8 +1155,8 @@ local function guildDetails(details, windows)
 	local label = type(filters) == "table" and filters.GetFontString and filters:GetFontString()
 	if label then label:SetTextColor(Stoa:Color("muted")) end
 	if windows and windows.DressScrollBar then
-		local info, news = details.Info, details.News
-		for _, owner in ipairs({ info and info.MOTDScrollFrame, info and info.DetailsFrame, news }) do
+		local pane, news = details.Info, details.News
+		for _, owner in ipairs({ pane and pane.MOTDScrollFrame, pane and pane.DetailsFrame, news }) do
 			if type(owner) == "table" then xpcall(windows.DressScrollBar, Stoa.catch, owner.ScrollBar) end
 		end
 	end
