@@ -1447,9 +1447,109 @@ local function dressRolls()
 	end
 end
 
+-- The loot window (a flat panel of item cards): STOA's card, the title in
+-- the serif over a hairline, and each item a dark tile with a short bar in
+-- the item's quality colour on its left. Blizzard tints its own card art by
+-- quality on every fill, so that art is faded out, never replaced; the
+-- item's name keeps Blizzard's quality colour.
+local function lootQualityColor(quality)
+	if type(quality) ~= "number" then return nil end
+	local colors = rawget(_G, "ITEM_QUALITY_COLORS")
+	local c = colors and colors[quality]
+	if c and c.r then return c.r, c.g, c.b end
+	if C_Item and C_Item.GetItemQualityColor then
+		local ok, r, g, b = pcall(C_Item.GetItemQualityColor, quality)
+		if ok and r then return r, g, b end
+	end
+end
+
+local function paintLootRow(row)
+	if not row.stoaLootFill then return end
+	for _, key in ipairs({ "NameFrame", "BorderFrame", "HighlightNameFrame", "PushedNameFrame", "QualityStripe" }) do alphaOff(row[key]) end
+	local data = row.GetElementData and row:GetElementData()
+	local r, g, b = lootQualityColor(type(data) == "table" and data.quality)
+	if r then
+		row.stoaLootBar:SetVertexColor(r, g, b, 1)
+		if row.QualityText then row.QualityText:SetTextColor(r, g, b) end
+	else
+		row.stoaLootBar:SetVertexColor(Stoa:Color("muted"))
+	end
+	local pr, pg, pb = Stoa:Color("panel")
+	local lift = row.stoaOver and 0.04 or 0
+	row.stoaLootFill:SetVertexColor(pr + lift, pg + lift, pb + lift, 0.9)
+end
+
+local function dressLootRow(row)
+	if type(row) ~= "table" or forbidden(row) or row.stoaLootFill or not row.NameFrame then return end
+	local fill = UI.sliced(row, "BACKGROUND", "CardFill.tga")
+	if not fill then return end
+	fill:ClearAllPoints()
+	fill:SetPoint("TOPLEFT", 0, 0)
+	fill:SetPoint("BOTTOMRIGHT", 0, 0)
+	fill:SetDrawLayer("BACKGROUND", -8)
+	local bar = row:CreateTexture(nil, "ARTWORK", nil, 7)
+	bar:SetTexture(UI.WHITE)
+	bar:SetWidth(2)
+	bar:SetPoint("TOPLEFT", 0, -10)
+	bar:SetPoint("BOTTOMLEFT", 0, 10)
+	row.stoaLootFill, row.stoaLootBar = fill, bar
+	if row.Text then
+		Stoa:SetFont(row.Text, "sans", Stoa.typeSize.body)
+		row.Text:SetShadowOffset(0, 0)
+	end
+	if row.QualityText then Stoa:SetFont(row.QualityText, "sans", Stoa.typeSize.micro) end
+	if row.Init then hooksecurefunc(row, "Init", paintLootRow) end
+	row:HookScript("OnEnter", function(self) self.stoaOver = true paintLootRow(self) end)
+	row:HookScript("OnLeave", function(self) self.stoaOver = nil paintLootRow(self) end)
+	-- The item button covers the card (its hit rect runs the full width),
+	-- so the mouse lands there.
+	local item = row.Item
+	if type(item) == "table" and item.HookScript then
+		item:HookScript("OnEnter", function() row.stoaOver = true paintLootRow(row) end)
+		item:HookScript("OnLeave", function() row.stoaOver = nil paintLootRow(row) end)
+	end
+	paintLootRow(row)
+end
+
+local function dressLoot(frame)
+	if type(frame) ~= "table" or forbidden(frame) or frame.stoaLootDressed then return end
+	frame.stoaLootDressed = true
+	hide(frame.NineSlice)
+	alphaOff(frame.Bg)
+	UI.surface(frame, "card", { alpha = 0.96 })
+	local strip = frame.TitleContainer
+	local title = strip and strip.TitleText
+	if title then
+		Stoa:SetFont(title, "serif", Stoa.typeSize.label)
+		title:SetTextColor(Stoa:Color("text"))
+		local rule = frame:CreateTexture(nil, "ARTWORK")
+		rule:SetTexture(UI.WHITE)
+		rule:SetHeight(1)
+		UI.pixel(rule, "height")
+		rule:SetPoint("TOPLEFT", 8, -22)
+		rule:SetPoint("TOPRIGHT", -8, -22)
+		UI.tint(rule, "hairline")
+	end
+	local windows = Stoa.modules.Windows
+	if windows then
+		if windows.DressClose then xpcall(windows.DressClose, Stoa.catch, frame.ClosePanelButton) end
+		if windows.DressScrollBar then xpcall(windows.DressScrollBar, Stoa.catch, frame.ScrollBar) end
+	end
+	local box = frame.ScrollBox
+	if type(box) == "table" then
+		for _, getter in ipairs({ "GetUpperShadowTexture", "GetLowerShadowTexture" }) do
+			local ok, shadow = pcall(function() return box[getter] and box[getter](box) end)
+			if ok and shadow then alphaOff(shadow) end
+		end
+		eachRow(box, "stoaLootRows", dressLootRow)
+	end
+	UI.applyTheme()
+end
+
 function More:OnEnable()
 	tryAll()
 	dressRolls()
+	xpcall(dressLoot, Stoa.catch, rawget(_G, "LootFrame"))
 	Stoa:On("STOA_THEME_CHANGED", function()
 		for i = 1, 4 do
 			local frame = _G["GroupLootFrame" .. i]
