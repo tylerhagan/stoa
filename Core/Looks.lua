@@ -201,6 +201,11 @@ local function stripDetails(instance)
 	call(instance, "HideStatusBar")
 	call(instance, "HideMainIcon", true)
 	call(instance, "SetAutoHideMenu", true, true)
+	-- The rows as STOA's look for Details draws them, said outright: a
+	-- window that wears another skin, or whose rows were changed by hand,
+	-- is in the console all the same.
+	call(instance, "SetBarSettings", 18, BAR, true, nil, BAR, false, { 0, 0, 0, 0 }, 0.35)
+	call(instance, "SetBarTextSettings", 11, FONT_UI, nil, nil, nil, true, true)
 	local r, g, b = Stoa:Color("muted")
 	-- Details hangs the title off the right of its header's corner art, a
 	-- gap that was the icon's; the title is pulled back flush with the
