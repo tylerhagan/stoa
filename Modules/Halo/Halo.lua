@@ -950,7 +950,12 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 	if not bare then
 		-- Matte: the same moulded block as the slab beside it.
 		local matte = UI.matte()
-		local fill = matte and UI.sliced(chip, "BACKGROUND", "MatteCardFill.tga", 10, UI.MATTE_SLICE) or UI.pillFill(chip, 10)
+		-- Leather beside its Compact target: the card's rounder corner,
+		-- so the two blocks match.
+		local card = not matte and self:SlabWanted()
+		local fill = matte and UI.sliced(chip, "BACKGROUND", "MatteCardFill.tga", 10, UI.MATTE_SLICE)
+			or card and UI.sliced(chip, "BACKGROUND", "CardFill.tga", 10)
+			or UI.pillFill(chip, 10)
 		local alpha = matte and 0.97 or 0.9
 		UI.tint(fill, "panel", alpha)
 		local r, g, b = Stoa:Color("panel")
@@ -964,6 +969,14 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 			end
 		end
 		local edge = UI.pillEdge(chip, 10)
+		local cardEdge = card and UI.sliced(chip, "BORDER", "CardEdge.tga", 10)
+		if cardEdge then
+			cardEdge:Hide()
+			edge = {
+				Set = function(_, r2, g2, b2, a2) cardEdge:SetVertexColor(r2, g2, b2, a2 or 1); cardEdge:Show() end,
+				Clear = function() cardEdge:Hide() end,
+			}
+		end
 		if matte then edge:Clear() else edge:Set(Stoa:Color("hairline")) end
 		chip.fill, chip.edge = fill, edge
 	end
