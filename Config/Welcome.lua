@@ -514,7 +514,7 @@ local function lookPreview(parent, matte)
 end
 
 local MATERIALS = {
-	{ "leather", "Brass", "Tooled leather and brass, round corners, stone behind windows." },
+	{ "leather", "Gilded", "Tooled leather and brass, round corners, stone behind windows." },
 	{ "matte", "Matte black", "Moulded black hardware: sharp corners, fine lines, no gloss." },
 }
 local GRAINS = { { "satin", "Satin" }, { "soft", "Soft" }, { "smooth", "Smooth" }, { "fine", "Fine" } }
@@ -1406,7 +1406,7 @@ function Welcome:Summary()
 		local role = slotRole(slot)
 		add(slot == 1 and "First spec" or "Second spec", Stoa.ROLE_LABELS[role] or role)
 	end
-	add("Look", Stoa.db.material == "matte" and "Matte black" or "Brass")
+	add("Look", Stoa.db.material == "matte" and "Matte black" or "Gilded")
 	add("Theme", themeWord(Stoa.db.theme or "Bone"))
 	if Stoa.db.material ~= "matte" then add("Ornament", Stoa.db.ornament == "painted" and "Painted" or "Plain") end
 	add("Colour vision", VISION_WORDS[Stoa.db.vision or "Standard"] or "Standard")

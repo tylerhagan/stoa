@@ -6,7 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 2.0.1
 
-- **Leather is now called Brass**: the original look is named Brass in Settings > Look > Material, the welcome page and the what's-new note. Only the name changed; the look and your saved settings are the same.
+- **Leather is now called Gilded**: the original look is named Gilded in Settings > Look > Material, the welcome page and the what's-new note. Only the name changed; the look and your saved settings are the same.
 
 ## 2.0.0
 

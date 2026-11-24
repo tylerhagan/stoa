@@ -280,7 +280,7 @@ local function build()
 		{ "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" },
 	}, { reload = true, words = "font size scale readable small big" })
 	group = "Material"
-	choice(db, "material", "Material", "Brass is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Brass" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather brass v2" })
+	choice(db, "material", "Material", "Gilded is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Gilded" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather gilded brass v2" })
 	-- Leather's own choice: Matte black has no painted pieces, so the
 	-- setting is only there under Leather.
 	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return db().material ~= "matte" end, words = "brass frame leather fancy" })
@@ -844,7 +844,7 @@ local function build()
 	})
 	-- Tucked under the target's shape. Each look keeps its own answer:
 	-- Matte starts Compact, Leather starts Full.
-	choice(nil, "targetSize", "Target size", "Compact is a small block: name, type and a slim health line. Full is the larger plaque with the target's portrait. Matte starts Compact and Brass starts Full; each look remembers its own.", "compact", {
+	choice(nil, "targetSize", "Target size", "Compact is a small block: name, type and a slim health line. Full is the larger plaque with the target's portrait. Matte starts Compact and Gilded starts Full; each look remembers its own.", "compact", {
 		{ "compact", "Compact" }, { "full", "Full" },
 	}, {
 		id = "targetSize", reload = true, under = "targetShape", words = "target frame plaque slab size big small portrait matte leather compact",
