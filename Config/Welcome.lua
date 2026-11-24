@@ -244,7 +244,7 @@ local builders = {}
 local START_WORDS = "A handful of choices and your screen is ready. Each can be changed later in settings, and /stoa welcome brings this back."
 local UPDATE_WORDS = "Version 2 brings a second look, Matte black, and a new setup. Your screen stays exactly as it is unless you choose otherwise."
 local UPDATE_OPTIONS = {
-	{ "keep", "Keep my setup", "Nothing changes. This closes, and /stoa welcome brings the setup back any time." },
+	{ "keep", "Keep my setup", "Nothing changes. This closes; /stoa welcome brings the setup back any time." },
 	{ "new", "Show me what's new", "Just the new parts: the two looks side by side, then finish." },
 	{ "guided", "Run the whole setup", "Every step, starting from what you have now." },
 }
@@ -286,9 +286,10 @@ function builders.start(self, step)
 	step.updateCards = {}
 	for i, option in ipairs(UPDATE_OPTIONS) do
 		local id = option[1]
+		-- Each card acts at once: no second button to find.
 		local button = card(step, BODY_W, 54, option[2], function()
 			self.start = id
-			self:Refresh()
+			if id == "keep" then self.page:Hide() else self:Move(1) end
 		end)
 		button.sub:SetText(option[3])
 		button:SetPoint("TOPLEFT", 0, -step.top - (i - 1) * (54 + GAP))
@@ -1082,7 +1083,7 @@ function Welcome:RefreshStart(step)
 	step.words:SetText(update and UPDATE_WORDS or START_WORDS)
 	for _, button in ipairs(step.updateCards) do
 		button:SetShown(update)
-		button:SetSelected(self.start == button.id)
+		button:SetSelected(false)
 	end
 	local y = step.top
 	for _, button in ipairs(step.cards) do
