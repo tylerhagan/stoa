@@ -116,13 +116,20 @@ end
 -- A docked row has no icon and starts at the window's left edge. Blizzard
 -- lays the row out again in UpdateStyle, which is hooked to come here.
 local function layoutEntry(entry)
-	local icon = entry.Icon
-	if not (icon and icon.SetAlpha) then return end
+	local holder = entry.Icon
+	if not (holder and holder.SetAlpha) then return end
 	local docked = isDocked(entry.stoaWindow)
-	icon:SetAlpha(docked and 0 or 1)
+	holder:SetAlpha(docked and 0 or 1)
 	if docked then
-		offIcon(entry.GetStatusBar and entry:GetStatusBar(), icon, entry)
-		offIcon(entry.GetName and entry:GetName(), icon, entry)
+		-- Blizzard hangs the bar off the art inside the icon's holder.
+		local bar = entry.GetStatusBar and entry:GetStatusBar()
+		local name = entry.GetName and entry:GetName()
+		for _, icon in ipairs({ holder, entry.GetIcon and entry:GetIcon() }) do
+			offIcon(bar, icon, entry)
+			offIcon(name, icon, entry)
+		end
+		-- The bar runs to the slot's right edge, under the hairline's end.
+		if bar then bar:SetPoint("BOTTOMRIGHT", entry, "BOTTOMRIGHT", 1, 1) end
 	end
 end
 
