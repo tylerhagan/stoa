@@ -36,7 +36,10 @@ def blade():
 # Halo, so they bow only a little: marks on a wide curved pane, not a
 # ring.
 VISOR_RADIUS = 230.0
-VISOR_HALF_HEIGHT = 100.0
+VISOR_HALF_HEIGHT = 123.0
+# The whole drawing is then squashed to this share of its height: the bow
+# stays as deep, the arcs end sooner.
+VISOR_SQUASH = 0.8
 
 
 def visor():
@@ -67,7 +70,7 @@ def tube():
     ]
 
 
-def draw(circle, parts):
+def draw(circle, parts, squash=1.0):
     """`circle` is the radius the parts are measured on; its outer edge
     always meets the Halo's own (OUTER) at the arc's middle."""
     n_x, n_y = W * SS, H * SS
@@ -76,6 +79,7 @@ def draw(circle, parts):
     y = (n_y / 2 - (np.arange(n_y) + 0.5)) * SHOWN / (n_x)
     xx, yy = np.meshgrid(x, y)
     xx = xx + (circle - OUTER)
+    yy = yy / squash
     radius = np.hypot(xx, yy)
     angle = np.degrees(np.arctan2(yy, xx))
     alpha = np.zeros((n_y, n_x))
@@ -86,7 +90,7 @@ def draw(circle, parts):
 
 
 for name, style in (("Blade", blade), ("Visor", visor), ("Gauge", gauge), ("Tube", tube)):
-    alpha = draw(*style())
+    alpha = draw(*style(), squash=VISOR_SQUASH if name == "Visor" else 1.0)
     img = np.full((H, W, 4), 255, dtype=np.uint8)
     img[..., 3] = np.round(alpha * 255).astype(np.uint8)
     Image.fromarray(img, "RGBA").save("%s/HaloArc%sLeft.tga" % (out_dir, name))
