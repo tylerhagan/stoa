@@ -348,7 +348,7 @@ local function lookPreview(parent, matte)
 
 	-- The console: leather under a brass line, or grained black under a
 	-- fine light.
-	local console = piece(10, 34, "BOTTOMLEFT")
+	local console = piece(10, 46, "BOTTOMLEFT")
 	console:SetPoint("BOTTOMRIGHT")
 	local hide = console:CreateTexture(nil, "BACKGROUND", nil, -6)
 	hide:SetAllPoints()
@@ -367,45 +367,50 @@ local function lookPreview(parent, matte)
 	else
 		hide:SetTexture(UI.MEDIA .. "Textures\\ConsoleLeather")
 		hide:SetTexCoord(0.2, 0.39, 0.3, 0.37)
-		rim:SetHeight(2)
-		rim:SetColorTexture(0.79, 0.64, 0.36, 1)
+		rim:SetHeight(1)
+		rim:SetColorTexture(palette.accent[1], palette.accent[2], palette.accent[3], 0.55)
 	end
 	for i = 1, 2 do
-		local well = piece(96, 20, i == 1 and "LEFT" or "RIGHT", console, i == 1 and "LEFT" or "RIGHT", i == 1 and 12 or -12, -1)
+		local well = piece(104, 26, i == 1 and "LEFT" or "RIGHT", console, i == 1 and "LEFT" or "RIGHT", i == 1 and 12 or -12, -2)
 		skin(well, "BACKGROUND", matte and "SharpPlateFill.tga" or "PlateFill.tga", 5, { 0, 0, 0 }, 0.45)
 	end
-	local coin = UI.circle(console, "ARTWORK", 1, 30)
-	coin:SetPoint("CENTER", 0, 4)
-	local face = UI.circle(console, "ARTWORK", 2, matte and 27 or 26)
-	face:SetPoint("CENTER", coin)
+	-- The seal: the console's own medallion with its brass line, or the
+	-- matte bezel.
 	if matte then
-		coin:SetColorTexture(0.2, 0.21, 0.22, 1)
-		face:SetColorTexture(0.04, 0.04, 0.045, 1)
+		local bezel = console:CreateTexture(nil, "ARTWORK", nil, 1)
+		bezel:SetSize(52, 52)
+		bezel:SetPoint("CENTER", console, "TOP", 0, -6)
+		bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
 	else
-		coin:SetColorTexture(0.79, 0.64, 0.36, 1)
-		face:SetColorTexture(0.13, 0.1, 0.08, 1)
+		for i, file in ipairs({ "ConsoleMedallion", "ConsoleMedallionLines" }) do
+			local art = console:CreateTexture(nil, "ARTWORK", nil, i)
+			art:SetSize(176, 88)
+			art:SetPoint("CENTER", console, "TOP", 0, -1)
+			art:SetTexture(UI.MEDIA .. "Textures\\" .. file)
+			if i == 2 then art:SetVertexColor(palette.accent[1], palette.accent[2], palette.accent[3], 1) end
+		end
 	end
 
 	-- A window with its title and two rows.
-	local window = piece(150, 64, "TOPLEFT", 12, -10)
+	local window = piece(172, 82, "TOPLEFT", 14, -12)
 	skin(window, "BACKGROUND", matte and "SharpWindowFill.tga" or "WindowFill.tga", 12, palette.panel, 1)
 	skin(window, "BORDER", matte and "SharpWindowEdge.tga" or "WindowEdge.tga", 12, palette.text, matte and 0.12 or 0.22)
-	local title = words(window, "serif", 12, "Character", palette.text)
-	title:SetPoint("TOPLEFT", 10, -8)
+	local title = words(window, "serif", 13, "Character", palette.text)
+	title:SetPoint("TOPLEFT", 12, -10)
 	for i = 1, 2 do
 		local row = window:CreateTexture(nil, "ARTWORK")
-		row:SetSize(i == 1 and 110 or 80, 3)
-		row:SetPoint("TOPLEFT", 10, -22 - i * 11)
+		row:SetSize(i == 1 and 124 or 90, 3)
+		row:SetPoint("TOPLEFT", 12, -28 - i * 13)
 		row:SetColorTexture(palette.muted[1], palette.muted[2], palette.muted[3], 0.45)
 	end
 
 	-- A target.
-	local target = piece(132, 38, "TOPRIGHT", -12, -22)
+	local target = piece(150, 44, "TOPRIGHT", -14, -30)
 	skin(target, "BACKGROUND", matte and "MatteCardFill.tga" or "CardFill.tga", matte and UI.MATTE_SLICE or nil, palette.panel, 0.97)
 	skin(target, "BORDER", matte and "MatteCard.tga" or "CardEdge.tga", matte and UI.MATTE_SLICE or nil, (not matte) and palette.accent or nil, 0.5)
 	local name = words(target, "sans", 10, "Plains Buzzard", palette.text)
-	name:SetPoint("TOPLEFT", 9, -7)
-	local bar = piece(92, 8, "BOTTOMLEFT", target, "BOTTOMLEFT", 9, 8)
+	name:SetPoint("TOPLEFT", 10, -8)
+	local bar = piece(108, 9, "BOTTOMLEFT", target, "BOTTOMLEFT", 10, 9)
 	if matte then
 		local fill = bar:CreateTexture(nil, "ARTWORK")
 		fill:SetAllPoints()
@@ -417,18 +422,18 @@ local function lookPreview(parent, matte)
 end
 
 local MATERIALS = {
-	{ "leather", "Leather", "Tooled leather and brass, round corners, stone behind windows. The look STOA launched with." },
-	{ "matte", "Matte black", "Moulded black hardware: sharp corners and fine lines, no gloss. Loads far less art." },
+	{ "leather", "Leather", "Tooled leather and brass, round corners, stone behind windows." },
+	{ "matte", "Matte black", "Moulded black hardware: sharp corners, fine lines, no gloss." },
 }
 local GRAINS = { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }
-local PREVIEW_H = 108
+local PREVIEW_H = 150
 
 function builders.look(self, step)
 	-- The two looks, always side by side.
 	local half = math.floor((BODY_W - GAP) / 2)
 	self.materialCards = {}
 	for i, entry in ipairs(MATERIALS) do
-		local button = card(step, half, PREVIEW_H + 66, entry[2], function()
+		local button = card(step, half, PREVIEW_H + 70, entry[2], function()
 			Stoa.db.material = entry[1]
 			-- Matte black hides the painted frames, and its own theme suits it.
 			if entry[1] == "matte" and WELCOME_THEME_SET[Stoa.db.theme] and Stoa.db.theme ~= "Class" then Stoa:SetTheme("Matte") end
@@ -446,7 +451,7 @@ function builders.look(self, step)
 		button.sub:SetText(entry[3])
 		self.materialCards[entry[1]] = button
 	end
-	local top = -(PREVIEW_H + 66 + 14)
+	local top = -(PREVIEW_H + 70 + 14)
 
 	local label = UI.caption(step, "Theme")
 	label:SetPoint("TOPLEFT", 0, top)
@@ -1155,11 +1160,11 @@ function Welcome:Refresh()
 		local matte = Stoa.db.material == "matte"
 		choose(self.materialCards, matte and "matte" or "leather")
 		choose(self.themeButtons, Stoa.db.theme)
-		self.finishLabel:SetText(matte and "Grain" or "Ornament")
+		self.finishLabel:SetText(matte and "GRAIN" or "ORNAMENT")
 		for _, button in pairs(self.ornamentButtons) do button:SetShown(not matte) end
 		for _, button in pairs(self.grainButtons) do button:SetShown(matte) end
 		choose(self.ornamentButtons, Stoa.db.ornament == "painted" and "painted" or "plain")
-		choose(self.grainButtons, Stoa.db.grain or "fine")
+		choose(self.grainButtons, self.grainButtons[Stoa.db.grain] and Stoa.db.grain or "fine")
 		choose(self.visionButtons, Stoa.db.vision or "Standard")
 	elseif current == "combat" then
 		self:RefreshCombat(step)
