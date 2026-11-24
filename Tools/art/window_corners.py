@@ -15,6 +15,9 @@ windows, cards and tooltips read as one family.
   on top (it tucks under the window's edge), 6px corners below, and its
   outline without the top line.
 
+Each is also cut as Sharp<Name>.tga with a 4 pixel corner (tabs 3), the
+Matte look's set.
+
 Usage: python window_corners.py <Media/Textures>
 """
 import sys
@@ -24,6 +27,7 @@ from PIL import Image
 
 SIZE, SCALE = 32, 8
 RADIUS = 7
+SHARP_RADIUS = 4
 
 
 def coverage(radius, inset=0.0, top=True, bottom=True):
@@ -50,22 +54,29 @@ def save(alpha, path):
     Image.fromarray(rgba, "RGBA").save(path)
 
 
-def main(out):
-    fill = coverage(RADIUS)
-    save(fill, f"{out}/WindowFill.tga")
-    save(np.clip(fill - coverage(RADIUS, 1), 0, 1), f"{out}/WindowEdge.tga")
-    save(coverage(RADIUS, bottom=False), f"{out}/WindowTop.tga")
-    save(coverage(RADIUS, top=False), f"{out}/WindowBottom.tga")
-    save(coverage(RADIUS, bottom=False), f"{out}/CardTop.tga")
-    save(fill, f"{out}/CardFill.tga")
-    save(np.clip(fill - coverage(RADIUS, 1.5), 0, 1), f"{out}/CardEdge.tga")
-    save(np.clip(fill - coverage(RADIUS, 2), 0, 1), f"{out}/CardState.tga")
-    tab = coverage(6, top=False)
-    save(tab, f"{out}/TabFill.tga")
-    edge = np.clip(tab - coverage(6, 1, top=False), 0, 1)
+def cut(out, prefix, radius, tab_radius):
+    fill = coverage(radius)
+    save(fill, f"{out}/{prefix}WindowFill.tga")
+    save(np.clip(fill - coverage(radius, 1), 0, 1), f"{out}/{prefix}WindowEdge.tga")
+    save(coverage(radius, bottom=False), f"{out}/{prefix}WindowTop.tga")
+    save(coverage(radius, top=False), f"{out}/{prefix}WindowBottom.tga")
+    save(coverage(radius, bottom=False), f"{out}/{prefix}CardTop.tga")
+    save(fill, f"{out}/{prefix}CardFill.tga")
+    save(np.clip(fill - coverage(radius, 1.5), 0, 1), f"{out}/{prefix}CardEdge.tga")
+    save(np.clip(fill - coverage(radius, 2), 0, 1), f"{out}/{prefix}CardState.tga")
+    tab = coverage(tab_radius, top=False)
+    save(tab, f"{out}/{prefix}TabFill.tga")
+    edge = np.clip(tab - coverage(tab_radius, 1, top=False), 0, 1)
     # The inset shape is also pulled down from the top; clear that top line.
     edge[0, :] = 0
-    save(edge, f"{out}/TabEdge.tga")
+    save(edge, f"{out}/{prefix}TabEdge.tga")
+
+
+def main(out):
+    cut(out, "", RADIUS, 6)
+    # The Matte look's set: the same pieces with a 4 pixel corner, swapped
+    # in by name (Core/Widgets.lua SHARP).
+    cut(out, "Sharp", SHARP_RADIUS, 3)
 
 
 if __name__ == "__main__":

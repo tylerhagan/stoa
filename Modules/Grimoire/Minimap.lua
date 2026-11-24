@@ -135,12 +135,13 @@ end
 -- shaded along its bottom (the block's own bevel), and a black lip down to
 -- the map.
 function MinimapStyle:MatteHousing(frame)
+	-- (The pieces keep the round corner: it follows the map's own mask.)
 	self.housing = HOUSING_RIM
-	local rim = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", HOUSING_RIM)
+	local rim = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", HOUSING_RIM, nil, true)
 	if rim then UI.tint(rim, "panel", 1) end
-	local mould = UI.sliced(frame, "BORDER", "MatteBlock.tga", HOUSING_RIM)
+	local mould = UI.sliced(frame, "BORDER", "MatteBlock.tga", HOUSING_RIM, nil, true)
 	if mould then mould:SetDrawLayer("BORDER", 1) end
-	local lip = UI.sliced(frame, "ARTWORK", "WindowFill.tga", HOUSING_LIP)
+	local lip = UI.sliced(frame, "ARTWORK", "WindowFill.tga", HOUSING_LIP, nil, true)
 	if lip then lip:SetVertexColor(0, 0, 0, 0.92) end
 end
 

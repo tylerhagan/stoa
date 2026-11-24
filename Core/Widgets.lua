@@ -861,8 +861,20 @@ UI.KEY_SLICE = KEY_SLICE
 local MATTE_SLICE = 8
 UI.MATTE_SLICE = MATTE_SLICE
 
-local function sliced(parent, layer, file, outset, margin)
+-- Matte: windows, tooltips, cards and tabs take the same pieces cut with a
+-- 4 pixel corner (Tools/art/window_corners.py, the Sharp set), and the
+-- block's soft bevel gives way to fine lines (Tools/art/matte_parts.py).
+-- The swap is by name, here, so every caller follows. `keep` asks for the
+-- named file as it is (a shape that has to match other art).
+local SHARP = {}
+for _, name in ipairs({ "WindowFill", "WindowEdge", "WindowTop", "WindowBottom", "CardTop", "CardFill", "CardEdge", "CardState", "TabFill", "TabEdge" }) do
+	SHARP[name .. ".tga"] = "Sharp" .. name .. ".tga"
+end
+SHARP["MatteBlock.tga"] = "SharpBlock.tga"
+
+local function sliced(parent, layer, file, outset, margin, keep)
 	if not parent.CreateTexture then return nil end
+	if not keep and SHARP[file] and UI.matte() then file = SHARP[file] end
 	local tex = parent:CreateTexture(nil, layer)
 	-- (A guarded proxy, such as a game menu, hands back nothing.)
 	if not tex then return nil end

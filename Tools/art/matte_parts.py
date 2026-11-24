@@ -9,9 +9,13 @@ are drawn untinted:
 - MatteBlock.tga: the shading laid over a card, plaque or window to make
   it a moulded block: light falling off its top, shade gathering at its
   bottom, clear in the middle and no lines.
-- MatteWell.tga: a recess sunk into the console's shell: a dark smooth
-  ground, deeper under its top lip and a shade lighter where its floor
-  rises to the bottom edge.
+- MatteWell.tga: a recess sunk into the console's shell, with a 4 pixel
+  corner: a flat dark ground, a dark line under its top lip and a line of
+  light where its bottom lip catches it.
+- SharpBlock.tga: MatteBlock's place on windows and tooltips, in the
+  language of the small key and the card: a 4 pixel corner, a line of
+  light along the top edge, a faint line down the sides and a dark line
+  two pixels deep along the foot. No gradients.
 """
 import sys
 
@@ -26,13 +30,16 @@ c = (np.arange(n) + 0.5) / SS
 x, y = np.meshgrid(c, c)
 
 
-def box(shift=0.0, bottom=SIZE):
+SHARP = 4
+
+
+def box(shift=0.0, bottom=SIZE, radius=RADIUS):
     """Signed distance to the rounded square, moved down by `shift`."""
     top = shift
     cx, cy = SIZE / 2, (top + bottom + shift) / 2
     half_w, half_h = SIZE / 2, (bottom + shift - top) / 2
-    qx, qy = np.abs(x - cx) - (half_w - RADIUS), np.abs(y - cy) - (half_h - RADIUS)
-    return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - RADIUS
+    qx, qy = np.abs(x - cx) - (half_w - radius), np.abs(y - cy) - (half_h - radius)
+    return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - radius
 
 
 def save(name, layers):
@@ -70,8 +77,20 @@ save("MatteBlock", [
     (inside & (y <= SIZE / 2), True, 0.09 * fall(y, 4.0)),
 ])
 
-well = box()
+well = box(radius=SHARP)
 inside = well <= 0
+rim = inside & (well > -1)
 save("MatteWell", [
-    (inside, False, 0.46 + 0.3 * fall(y, 6.0) - 0.14 * fall(SIZE - y, 5.0)),
+    (inside, False, 0.5),
+    (rim & (y < SHARP), False, 0.82),
+    (rim & (y > SIZE - SHARP), True, 0.10),
+])
+
+sharp = box(radius=SHARP)
+inside = sharp <= 0
+rim = inside & (sharp > -1)
+save("SharpBlock", [
+    (rim, True, 0.05),
+    (rim & (y < SHARP), True, 0.17),
+    (inside & (sharp > -2) & (y > SIZE - SHARP), False, 0.6),
 ])
