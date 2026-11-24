@@ -286,7 +286,7 @@ local function build()
 	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return db().material ~= "matte" end, words = "brass frame leather fancy" })
 	-- Part of the Material choice: tucked under it, there once Matte black
 	-- is picked (even before the reload that brings the material in).
-	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker.", "satin", { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
+	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker. Soft is a hint of texture.", "satin", { { "satin", "Satin" }, { "soft", "Soft" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
 		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth satin flat finish",
 		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
 	})
