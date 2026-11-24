@@ -374,38 +374,47 @@ local function lookPreview(parent, matte)
 		local well = piece(104, 26, i == 1 and "LEFT" or "RIGHT", console, i == 1 and "LEFT" or "RIGHT", i == 1 and 12 or -12, -2)
 		skin(well, "BACKGROUND", matte and "SharpPlateFill.tga" or "PlateFill.tga", 5, { 0, 0, 0 }, 0.45)
 	end
-	-- The seal: the console's own medallion with its brass line, or the
-	-- matte bezel.
+	-- The seal, kept simple: a ring in the look's metal around a coloured
+	-- disc with a head and shoulders.
+	local ring = UI.circle(console, "ARTWORK", 1, 38)
+	ring:SetPoint("CENTER", console, "TOP", 0, -4)
+	local disc = UI.circle(console, "ARTWORK", 2, matte and 32 or 34)
+	disc:SetPoint("CENTER", ring)
 	if matte then
-		local bezel = console:CreateTexture(nil, "ARTWORK", nil, 1)
-		bezel:SetSize(52, 52)
-		bezel:SetPoint("CENTER", console, "TOP", 0, -6)
-		bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
+		ring:SetColorTexture(0.2, 0.21, 0.22, 1)
+		disc:SetColorTexture(0.16, 0.24, 0.34, 1)
 	else
-		for i, file in ipairs({ "ConsoleMedallion", "ConsoleMedallionLines" }) do
-			local art = console:CreateTexture(nil, "ARTWORK", nil, i)
-			art:SetSize(176, 88)
-			art:SetPoint("CENTER", console, "TOP", 0, -1)
-			art:SetTexture(UI.MEDIA .. "Textures\\" .. file)
-			if i == 2 then art:SetVertexColor(palette.accent[1], palette.accent[2], palette.accent[3], 1) end
-		end
+		ring:SetColorTexture(palette.accent[1], palette.accent[2], palette.accent[3], 1)
+		disc:SetColorTexture(0.3, 0.2, 0.14, 1)
+	end
+	local head = UI.circle(console, "ARTWORK", 3, 11)
+	head:SetPoint("CENTER", disc, "CENTER", 0, 5)
+	local shoulders = UI.circle(console, "ARTWORK", 3, 24)
+	shoulders:SetPoint("CENTER", disc, "CENTER", 0, -14)
+	-- (The shoulders stay inside the disc.)
+	local inside = console:CreateMaskTexture()
+	inside:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	inside:SetAllPoints(disc)
+	shoulders:AddMaskTexture(inside)
+	for _, part in ipairs({ head, shoulders }) do
+		part:SetColorTexture(palette.text[1], palette.text[2], palette.text[3], 0.85)
 	end
 
 	-- A window with its title and two rows.
-	local window = piece(172, 82, "TOPLEFT", 14, -12)
+	local window = piece(150, 76, "TOPLEFT", 14, -12)
 	skin(window, "BACKGROUND", matte and "SharpWindowFill.tga" or "WindowFill.tga", 12, palette.panel, 1)
 	skin(window, "BORDER", matte and "SharpWindowEdge.tga" or "WindowEdge.tga", 12, palette.text, matte and 0.12 or 0.22)
 	local title = words(window, "serif", 13, "Character", palette.text)
 	title:SetPoint("TOPLEFT", 12, -10)
 	for i = 1, 2 do
 		local row = window:CreateTexture(nil, "ARTWORK")
-		row:SetSize(i == 1 and 124 or 90, 3)
+		row:SetSize(i == 1 and 104 or 76, 3)
 		row:SetPoint("TOPLEFT", 12, -28 - i * 13)
 		row:SetColorTexture(palette.muted[1], palette.muted[2], palette.muted[3], 0.45)
 	end
 
 	-- A target.
-	local target = piece(150, 44, "TOPRIGHT", -14, -30)
+	local target = piece(140, 44, "TOPRIGHT", -14, -28)
 	skin(target, "BACKGROUND", matte and "MatteCardFill.tga" or "CardFill.tga", matte and UI.MATTE_SLICE or nil, palette.panel, 0.97)
 	skin(target, "BORDER", matte and "MatteCard.tga" or "CardEdge.tga", matte and UI.MATTE_SLICE or nil, (not matte) and palette.accent or nil, 0.5)
 	local name = words(target, "sans", 10, "Plains Buzzard", palette.text)
@@ -464,6 +473,16 @@ function builders.look(self, step)
 		end)
 		button:SetHeight(28)
 		button:SetPoint("TOPLEFT", (i - 1) * (wide + 8), top - 18)
+		-- A dot of the theme's accent, as the class themes have.
+		local dot = UI.circle(button, "ARTWORK", 1, 8)
+		dot:SetPoint("LEFT", 12, 0)
+		local accent = Stoa.themes[name] and Stoa.themes[name].accent
+		if name == "Class" then
+			local _, class = UnitClass("player")
+			local colour = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+			accent = colour and { colour.r, colour.g, colour.b }
+		end
+		if accent then dot:SetColorTexture(accent[1], accent[2], accent[3], 1) else dot:Hide() end
 		self.themeButtons[name] = button
 	end
 	-- Every class theme, each with a dot of its own accent.
