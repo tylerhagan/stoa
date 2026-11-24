@@ -35,6 +35,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Fixed: the map showed a second, lighter border around its header.
 - Fixed: a click near Player vs Player on the character window could fold the window to its narrow size.
 - Fixed: quest turn-in text could stay in the parchment's dark brown after a quest had been open in the map's quest log.
+- Quest items at hand: taking a quest off the tracker also takes its item off the row beside your character, and tracking it again brings it back. If you track no quests at all, every quest's item shows as before.
 
 ## 1.6.1
 
