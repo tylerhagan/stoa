@@ -1114,7 +1114,7 @@ end
 UI.GRAIN = UI.MEDIA .. "Textures\\MatteGrain"
 local GRAIN_SIZE = 128
 -- Satin is the flat finish of a matte speaker: no grain at all (even a
--- faint one read as speckle). A saved "rough" (dropped) reads as fine.
+-- faint one read as speckle). A saved "rough" (dropped) reads as satin.
 local GRAIN_ALPHA = { satin = 0, smooth = 0.07, fine = 0.105 }
 
 function UI.matte()
@@ -1122,7 +1122,7 @@ function UI.matte()
 end
 
 function UI.grainAlpha()
-	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.fine
+	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.satin
 end
 
 function UI.fitGrain(tex)
@@ -1499,13 +1499,19 @@ function UI.button(parent, label, width, onClick, reloads)
 		if lit then
 			glow:Set(Stoa:Color("accent"))
 			-- The edge warms in rather than snapping on.
-			-- Only on a button in view: a fade started on a hidden one never
-			-- ran, and left the edge clear until the next hover.
-			if not button.lit and glow.edges and button:IsVisible() then
+			-- Only a hover on a button in view: a fade started on a hidden
+			-- one never ran, and left the edge clear until the next hover.
+			if not button.lit and glow.edges and button:IsVisible() and button:IsMouseOver() then
 				button.glowIn = button.glowIn or {}
 				for i, tex in ipairs(glow.edges) do
 					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, UI.MOTION.quick)
 					button.glowIn[i]:Play()
+				end
+			elseif not button:IsMouseOver() then
+				-- Selected: the edge is simply there. Only a hover warms in.
+				for i, group in ipairs(button.glowIn or {}) do
+					group:Stop()
+					glow.edges[i]:SetAlpha(glow.edges[i].stoaRestAlpha or 1)
 				end
 			end
 		else

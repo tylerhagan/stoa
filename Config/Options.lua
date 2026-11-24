@@ -283,7 +283,7 @@ local function build()
 	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
 	-- Part of the Material choice: tucked under it, there once Matte black
 	-- is picked (even before the reload that brings the material in).
-	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker.", "fine", { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
+	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker.", "satin", { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
 		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth satin flat finish",
 		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
 	})

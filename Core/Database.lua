@@ -41,7 +41,7 @@ local accountDefaults = {
 	-- "matte", moulded black hardware with a grain ("satin", "smooth",
 	-- "fine") on the console and windows.
 	material = "leather",
-	grain = "fine",
+	grain = "satin",
 	-- Items marked as junk, by itemID, sold with the greys.
 	junk = {},
 	modules = {},
