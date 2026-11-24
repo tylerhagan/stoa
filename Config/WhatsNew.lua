@@ -31,7 +31,7 @@ local NOTES = {
 		tour = true,
 		-- A word from the author, in a box of its own above the foot.
 		thanks = {
-			"Thank you to everyone who has stuck with STOA since the first release. It means a lot to me. If there is something you would like to see next, leave a comment on the CurseForge page and I will read it.",
+			"Thank you to everyone who has stuck with STOA. It means a lot to me. If there is something you would like to see next, leave a comment on the CurseForge page and I will read it.",
 			"curseforge.com/wow/addons/stoa",
 		},
 		lines = {
@@ -218,12 +218,6 @@ end
 
 function WhatsNew:Fit()
 	local page = self.page
-	local tallest = 0
-	for _, parts in ipairs(page.columns) do
-		local tall = 0
-		for i, part in ipairs(parts) do tall = tall + heightOf(part) + (i % 2 == 0 and 12 or 3) end
-		tallest = math.max(tallest, tall)
-	end
 	local box = 0
 	local thanks = page.thanks
 	if thanks:IsShown() then
@@ -231,6 +225,18 @@ function WhatsNew:Fit()
 		thanks:SetHeight(math.ceil(inner))
 		box = inner + 14
 	end
+	-- With two columns the thank-you stands at the foot of the last one,
+	-- so it counts toward that column's height; with one it has a band of
+	-- its own under the lines.
+	local inColumn = #page.columns > 1
+	local tallest = 0
+	for n, parts in ipairs(page.columns) do
+		local tall = 0
+		for i, part in ipairs(parts) do tall = tall + heightOf(part) + (i % 2 == 0 and 12 or 3) end
+		if inColumn and n == #page.columns then tall = tall + box + 6 end
+		tallest = math.max(tallest, tall)
+	end
+	if inColumn then box = 0 end
 	local tall = HEADER + 18 + tallest + 4 + box + heightOf(page.foot) + 12 + FOOTER
 	page:SetHeight(math.ceil(tall) + 10)
 end
@@ -253,7 +259,11 @@ function WhatsNew:Paint(index)
 	local thanks = page.thanks
 	thanks:SetShown(note.thanks ~= nil)
 	if note.thanks then
-		thanks.words:SetWidth(page:GetWidth() - PAD * 2 - THANKS_PAD * 2)
+		local left = columns > 1 and (columns - 1) * (COLUMN + GAP) or 0
+		thanks:ClearAllPoints()
+		thanks:SetPoint("BOTTOMLEFT", page.foot, "TOPLEFT", left, 14)
+		thanks:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+		thanks.words:SetWidth(page:GetWidth() - PAD * 2 - left - THANKS_PAD * 2)
 		UI.settleText(thanks.words, note.thanks[1])
 		UI.settleText(thanks.where, note.thanks[2] or "")
 	end
