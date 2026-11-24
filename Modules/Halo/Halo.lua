@@ -953,7 +953,11 @@ function Halo:BuildUnitChip(name, unit, caption, parent)
 		fill:SetVertexColor(r, g, b, alpha)
 		if matte then
 			local lines = UI.sliced(chip, "BACKGROUND", "MatteCard.tga", 10, UI.MATTE_SLICE)
-			if lines then lines:SetDrawLayer("BACKGROUND", 1) end
+			if lines then
+				lines:SetDrawLayer("BACKGROUND", 1)
+				-- Hidden with the fill when the chip docks on the console.
+				chip.stoaMould = lines
+			end
 		end
 		local edge = UI.pillEdge(chip, 10)
 		if matte then edge:Clear() else edge:Set(Stoa:Color("hairline")) end
