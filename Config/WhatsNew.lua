@@ -24,7 +24,11 @@ local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
 		edition = "2.0.0",
-		title = "New in STOA 2",
+		title = "STOA 2",
+		-- A big release: a line under the title, and a way to the page that
+		-- shows both looks side by side.
+		lead = "Two looks, a console you arrange, a shorter setup",
+		tour = true,
 		lines = {
 			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Material switches between them, or type /stoa welcome update to see both side by side." },
 			{ "Made for Matte", "A matte console with recesses for chat, the bars and the pages, a Compact or Full target, flat party cards and a Matte nameplate style. Leather keeps everything it had." },
@@ -126,6 +130,10 @@ function WhatsNew:Build()
 	local title = UI.text(page, "serif", Stoa.typeSize.title, "text", "LEFT")
 	title:SetPoint("TOPLEFT", PAD, -PAD + 4)
 	page.title = title
+	-- A big release says what it is about in one line under the title.
+	local lead = UI.text(page, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+	lead:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -5)
+	page.lead = lead
 	page.rows, page.tags, page.columns = {}, {}, {}
 
 	-- The foot runs the page's width above the buttons.
@@ -140,6 +148,12 @@ function WhatsNew:Build()
 		Stoa:OpenSettings()
 	end)
 	settings:SetPoint("BOTTOMLEFT", PAD, PAD - 10)
+	local tour = UI.button(page, "See both looks", 130, function()
+		page:Hide()
+		Stoa.commands.welcome("update")
+	end)
+	tour:SetPoint("LEFT", settings, "RIGHT", 10, 0)
+	page.tour = tour
 	local done = UI.button(page, "Got it", 110, function() page:Hide() end)
 	done:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
 	-- Earlier and Later page through the notes kept in NOTES.
@@ -196,6 +210,10 @@ function WhatsNew:Paint(index)
 	local perColumn = math.ceil(count / columns)
 	page:SetWidth(PAD * 2 + columns * COLUMN + (columns - 1) * GAP)
 	page.title:SetText(note.title)
+	page.title:SetPoint("TOPLEFT", PAD, -PAD + (note.lead and 10 or 4))
+	UI.settleText(page.lead, note.lead and note.lead:upper() or "")
+	page.lead:SetShown(note.lead ~= nil)
+	page.tour:SetShown(note.tour == true)
 	page.foot:SetText(note.foot or FOOT)
 	for _, tag in ipairs(page.tags) do tag:Hide() end
 	wipe(page.columns)
