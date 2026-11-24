@@ -2254,6 +2254,14 @@ function UI.plaqueBar(frame, width, height)
 		mask:SetPoint("TOPLEFT", 0, outset)
 		mask:SetPoint("BOTTOMRIGHT", 0, -outset)
 		hp:GetStatusBarTexture():AddMaskTexture(mask)
+		-- The mask's art is 8 to 1: set again when the bar changes size.
+		function hp:fitMask()
+			local w, h = self:GetSize()
+			local out = (w * 64 / 512 - h) / 2
+			mask:ClearAllPoints()
+			mask:SetPoint("TOPLEFT", 0, out)
+			mask:SetPoint("BOTTOMRIGHT", 0, -out)
+		end
 	end
 	-- A dark well rather than the usual faint track, so the words read.
 	hp.track:Hide()

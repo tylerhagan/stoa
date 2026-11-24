@@ -28,6 +28,8 @@ local NOTES = {
 		lines = {
 			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Material switches between them, or type /stoa welcome update to see both side by side." },
 			{ "Made for Matte", "A matte console with recesses for chat, the bars and the pages, a Compact or Full target, flat party cards and a Matte nameplate style. Leather keeps everything it had." },
+			{ "A console in slots", "The console's right side is now three slots. Put Ready, Journey or Company in any order, drop in the game's damage meter windows or a Details window, or leave one empty. Settings > Console." },
+			{ "Leather polish", "A Compact target for Leather, rank as coloured words on the target, and nameplates that never cut a name short, with casts as a thin line." },
 			{ "Halo arc styles", "Line, Blade, Visor, Gauge or Tube for the two arcs, under Settings > Halo." },
 			{ "A shorter setup", "The welcome page asks two things about how much STOA you want: the console (Full, Slim or None) and everything around it (Standard or Quiet). A new Target and frames step sets the target, party, nameplates and text size. /stoa welcome opens it." },
 			{ "Quiet does more", "Quiet now makes the target and party thin strips that fade out of combat, as well as putting away tooltip details, the quest line and At a glance." },

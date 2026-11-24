@@ -16,6 +16,8 @@ local Halo = Stoa:NewModule("Halo", {
 	-- Matte: the target as the full plaque with its portrait (the size of
 	-- the leather one) instead of the smaller slab.
 	targetFull = false,
+	-- Leather: the small block in place of the plaque.
+	targetCompact = false,
 	hidePlayerFrame = true,
 	hideTargetFrame = true,
 	-- Who your target is targeting, as a small line at the plaque's right.
@@ -453,7 +455,7 @@ function Halo:PlaceTarget()
 	-- Docked, the corner starts rounding just past the health bar: there's
 	-- no portrait to leave room for.
 	local docks = self.targetResting and self.targetDocks
-	local barEnd = (self.targetTextLeft or TARGET_PAD) + (docks and self:SlabWanted() and DOCK_SLIM_BAR_W or TARGET_BAR_W)
+	local barEnd = (self.targetTextLeft or TARGET_PAD) + (docks and self:DockSlim() and DOCK_SLIM_BAR_W or TARGET_BAR_W)
 	local curve = barEnd + 14
 	if self.targetResting and self.targetDocks then curve = barEnd + 14 - UI.PLAQUE_JOIN_FLAT end
 	target.plaque:SetDocked(self.targetResting and self.targetDocks, curve)
@@ -483,7 +485,7 @@ function Halo:LayoutTarget(curve)
 	target.laidDocked, target.laidCurve, target.laidSlab = docked, curve, slab
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
 	-- Slim: the slab's rows, at the Halo or docked in Matte.
-	local slim = slab or docked and self:SlabWanted() or false
+	local slim = slab or docked and self:DockSlim() or false
 	local left = docked and self.targetTextLeft or SLAB_PAD
 	local barW = slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
 	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
@@ -492,6 +494,8 @@ function Halo:LayoutTarget(curve)
 	local short = slim or beside
 	target.hp:SetSize(short and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or beside and FULL_MATTE_BAR_H or TARGET_BAR_H)
 	if target.hp.rim then target.hp.rim:SetShown(not slim) end
+	-- Leather's rounded bar: its ends keep their shape at either size.
+	if target.hp.fitMask then target.hp:fitMask() end
 	-- On the slab the power line runs the health line's full length.
 	target.power:SetWidth(short and barW - SLAB_NUM_W or barW - 16)
 	target.power:ClearAllPoints()
@@ -676,7 +680,7 @@ function Halo:BuildTarget(frame)
 	-- Matte: these stand on top of the slab, over the world.
 	local rankWord = UI.caption(target, "")
 	target.rankWord = rankWord
-	if UI.matte() then UI.legible(threat); UI.legible(kick); UI.legible(rankWord) end
+	if self:SlabWanted() then UI.legible(threat); UI.legible(kick); UI.legible(rankWord) end
 	if self.db.targetStrip then
 		plaque:SetBare(true)
 		for _, fs in ipairs({ caption, cue, name, threat, kick }) do UI.legible(fs) end
@@ -1137,13 +1141,22 @@ end
 -- The slab's rows: at the Halo in Matte, and on Matte's docked block.
 function Halo:TargetSlim()
 	local docked = self.target and self.target.plaque.docked
-	if docked then return self:SlabWanted() end
+	if docked then return self:DockSlim() end
 	return self.targetSlab or false
 end
 
--- Matte's smaller target, unless the full plaque or the words were chosen.
+-- The smaller target, unless the words were chosen: Matte's own unless
+-- its full plaque was picked, and Leather's when Compact was.
 function Halo:SlabWanted()
-	return UI.matte() and not self.db.targetStrip and not self.db.targetFull or false
+	if self.db.targetStrip then return false end
+	if UI.matte() then return not self.db.targetFull end
+	return self.db.targetCompact and true or false
+end
+
+-- Matte's docked block takes the slab's rows; Leather's docked plaque
+-- keeps its own.
+function Halo:DockSlim()
+	return UI.matte() and self:SlabWanted()
 end
 
 function Halo:ResetTargetName()
@@ -1181,9 +1194,9 @@ function Halo:UpdateTarget()
 	local rank = plain(UnitClassification("target"))
 	local level = plain(UnitLevel("target"))
 	local kind = plain(UnitCreatureType("target"))
-	-- Matte's full plaque keeps its rows but speaks like the slab: rank as
+	-- The full plaque keeps its rows but speaks like the slab: rank as
 	-- coloured words, the rest quiet, and no HOSTILE (the red bar says it).
-	local quiet = UI.matte() and not self:TargetSlim()
+	local quiet = not self:TargetSlim()
 	local words = {}
 	if quiet then
 		if rank == "rare" or rank == "rareelite" then words[#words + 1] = slabWord("RARE", Stoa.silver) end

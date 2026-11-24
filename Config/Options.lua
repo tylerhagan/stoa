@@ -303,6 +303,23 @@ local function build()
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "freeRight", "Leave the console's right side free", "Hides the Ready, Journey and Company pages together, leaving bare leather right of the action bars for a window of your own, such as another addon's damage meter. The full console only.", false, { words = "ready journey company hide empty space meter right pages", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
+	-- The right side's three slots. Choosing something another slot holds
+	-- swaps the two.
+	local function refit() local c = Stoa.modules.Grimoire; if c and c.FitPages then Stoa:AfterCombat(function() c:FitPages() end) end end
+	for n = 1, 3 do
+		local key = "slot" .. n
+		choice(console, key, ("Right side, slot %d"):format(n), n == 1 and "The console's right side is three slots, left to right. Each holds Ready, Journey or Company, a damage meter window, or nothing. Meter 1 to 3 are the game's own meter windows (open more from the meter's menu, for healing or interrupts, say). Details 1 and 2 are Details' windows, when you run it. Empty leaves bare console for anything else. On a narrow screen the right-hand slots drop first. The full console only." or "What the console's right side holds in this slot. Choosing something another slot holds swaps the two.", ({ "ready", "journey", "company" })[n], Stoa.modules.Grimoire.SLOT_KINDS, {
+			words = "slots modular right side meter details ready journey company empty arrange", change = refit,
+			set = function(v)
+				local c = console()
+				if not c then return end
+				for m = 1, 3 do
+					if m ~= n and v ~= "empty" and c["slot" .. m] == v then c["slot" .. m] = c[key] end
+				end
+				c[key] = v
+			end,
+		})
+	end
 	toggle(console, "dividers", "Lines between the console's sections", "A faint gold line with a small diamond between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	toggle(console, "daylight", "Light from the time of day", "The console's gold catches the sky's colour from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk, moonlit blue at night, with a faint glass reflection on your portrait. Off keeps the gold as it is. /stoa daylight 23 previews an hour.", true, { words = "time of day daylight night dusk dawn", change = function() local c = Stoa.modules.Grimoire; if c and c.UpdateDaylight then c:UpdateDaylight() end end })
 	toggle(console, "riding", "Travel line while riding", "On a mount or a flight, out of a fight, the console folds to a slim line with your speed, the zone, and how far the quest you follow is. Chat lifts above it and the action bars fade. A fight or getting off brings the full console back. Not on the Slim console. /stoa ride previews it.", true, { words = "mount mounted riding travel flight taxi speed", cmd = "/stoa ride", change = function() local c = Stoa.modules.Grimoire; if c and c.CheckRiding then c:CheckRiding() end end })
@@ -823,14 +840,23 @@ local function build()
 		get = function() local m = module("Halo"); return m and m.targetStrip and "words" or "plaque" end,
 		set = function(v) local m = module("Halo"); if m then m.targetStrip = v == "words" end end,
 	})
-	-- Matte only: tucked under the target's shape.
-	choice(nil, "targetSize", "Matte target size", "Compact is a small block: name, type and a slim health line. Full is the larger plaque with the target's portrait, the size of the Leather one.", "compact", {
+	-- Tucked under the target's shape. Each look keeps its own answer:
+	-- Matte starts Compact, Leather starts Full.
+	choice(nil, "targetSize", "Target size", "Compact is a small block: name, type and a slim health line. Full is the larger plaque with the target's portrait. Matte starts Compact and Leather starts Full; each look remembers its own.", "compact", {
 		{ "compact", "Compact" }, { "full", "Full" },
 	}, {
-		id = "targetSize", reload = true, under = "targetShape", words = "target frame plaque slab size big small portrait matte",
-		showWhen = function() local m = module("Halo"); return db().material == "matte" and not (m and m.targetStrip) end,
-		get = function() local m = module("Halo"); return m and m.targetFull and "full" or "compact" end,
-		set = function(v) local m = module("Halo"); if m then m.targetFull = v == "full" end end,
+		id = "targetSize", reload = true, under = "targetShape", words = "target frame plaque slab size big small portrait matte leather compact",
+		showWhen = function() local m = module("Halo"); return not (m and m.targetStrip) end,
+		get = function()
+			local m = module("Halo")
+			if db().material == "matte" then return m and m.targetFull and "full" or "compact" end
+			return m and m.targetCompact and "compact" or "full"
+		end,
+		set = function(v)
+			local m = module("Halo")
+			if not m then return end
+			if db().material == "matte" then m.targetFull = v == "full" else m.targetCompact = v == "compact" end
+		end,
 	})
 	choice(nil, "restFrames", "Target and party out of combat", "Faint rests them at half strength until a fight starts or the mouse is over them.", "full", {
 		{ "full", "Full strength" }, { "faint", "Faint" },

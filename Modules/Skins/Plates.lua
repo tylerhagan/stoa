@@ -47,12 +47,12 @@ local Plates = Stoa:NewModule("Plates", {
 
 -- Bar height (nil keeps Blizzard's), edge kind and what's written in it.
 local STYLES = {
-	stoa = { },
+	stoa = { freeName = true, lineCast = true },
 	bold = { height = 16, box = 3, bevel = true, value = "CENTER", nameSize = 2 },
 	inline = { height = 18, pill = true, value = "RIGHT", nameInside = true },
 	brass = { height = 12, brass = true, bevel = true, badge = true },
 	slim = { height = 5, pill = true },
-	matte = { height = 7, flush = true, quietLevel = true },
+	matte = { height = 7, flush = true, quietLevel = true, freeName = true, lineCast = true },
 }
 
 function Plates:Style()
@@ -378,18 +378,21 @@ local function applyStyle(frame)
 	if style.flush then
 		-- The game pins the bar to its container by two corners, so the
 		-- bar's own height is ignored: the line is made by the container.
-		-- The name is freed from the bar's width, so it is never cut short.
 		local box = frame.HealthBarsContainer
 		if type(box) == "table" and box.SetHeight and not (box.IsProtected and box:IsProtected()) then
 			box:SetHeight(style.height)
-			if frame.name and frame.name.ClearAllPoints then
-				frame.name:ClearAllPoints()
-				frame.name:SetPoint("BOTTOM", box, "TOP", 0, 3)
-				frame.name:SetJustifyH("CENTER")
-			end
 		end
 	end
-	slimCast(frame.CastBarsContainer and frame.CastBarsContainer.castBar, style.flush and true or false)
+	if style.freeName then
+		-- Freed from the bar's width, so a long name is never cut short.
+		local box = frame.HealthBarsContainer
+		if type(box) == "table" and box.GetHeight and frame.name and frame.name.ClearAllPoints then
+			frame.name:ClearAllPoints()
+			frame.name:SetPoint("BOTTOM", box, "TOP", 0, 3)
+			frame.name:SetJustifyH("CENTER")
+		end
+	end
+	slimCast(frame.CastBarsContainer and frame.CastBarsContainer.castBar, style.lineCast and true or false)
 	local pill = not style.box and not style.brass and not style.flush
 	parts.well:SetVertexColor(0, 0, 0, style.flush and 0.8 or UI.SURFACES.well.black)
 	-- The Matte line keeps a fine black rim, so it reads on bright ground
@@ -440,7 +443,7 @@ local function dressCast(cast)
 	cast.stoaPillEdge = edge
 end
 
--- The Matte line's cast: a thin line under the health line with the spell's
+-- The STOA and Matte styles' cast: a thin line under the health line with the spell's
 -- icon and name below it, in place of a tall bright bar with the name
 -- inside. The game lays the bar out again whenever plate options change
 -- (and applyStyle follows it), so this only needs to set it, not undo it.

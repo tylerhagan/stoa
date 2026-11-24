@@ -12,6 +12,11 @@ local Stoa = ns.Stoa
 
 local Console = Stoa:NewModule("Grimoire", {
 	height = 150,
+	-- The right side as three slots, left to right. Each holds one of
+	-- STOA's pages, a meter window, or nothing (Console:Slots).
+	slot1 = "ready",
+	slot2 = "journey",
+	slot3 = "company",
 	-- The slim console: one plain line, with the pages on a card that
 	-- opens over the readouts.
 	slim = false,
@@ -2165,6 +2170,53 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 	end
 end
 
+-- The right side's slots ---------------------------------------------------
+-- Three slots, left to right. A slot holds one of STOA's pages (ready,
+-- journey, company), a window that docks there (the game's damage meter
+-- windows, Details' windows), or "empty": bare console for anything else.
+local SLOT_KEYS = { "slot1", "slot2", "slot3" }
+local PAGE_KINDS = { ready = true, journey = true, company = true }
+local DOCK_WIDTH = 240
+Console.SLOT_KINDS = {
+	{ "ready", "Ready" }, { "journey", "Journey" }, { "company", "Company" },
+	{ "meter1", "Meter 1" }, { "meter2", "Meter 2" }, { "meter3", "Meter 3" },
+	{ "details1", "Details 1" }, { "details2", "Details 2" }, { "empty", "Empty" },
+}
+
+-- What the slots hold, in order. Something chosen twice counts once.
+function Console:Slots()
+	local list, seen = {}, {}
+	for i, key in ipairs(SLOT_KEYS) do
+		local kind = self.db[key]
+		if type(kind) ~= "string" or (kind ~= "empty" and seen[kind]) then kind = "empty" end
+		seen[kind] = true
+		list[i] = kind
+	end
+	return list
+end
+
+-- True while the slots are as STOA ships them.
+function Console:SlotsDefault()
+	local s = self:Slots()
+	return s[1] == "ready" and s[2] == "journey" and s[3] == "company"
+end
+
+local function slotWidth(kind)
+	return (PAGE_KINDS[kind] or kind == "empty") and COLUMN_WIDTH or DOCK_WIDTH
+end
+
+-- Hands each docking window its place, or nil when it has none. Places
+-- are from the screen's bottom right corner, since the console folds.
+function Console:PlaceDocks(spots)
+	local meters, looks = Stoa.modules.Meters, Stoa.Looks
+	for n = 1, 3 do
+		if meters and meters.Dock then xpcall(meters.Dock, Stoa.catch, meters, n, spots["meter" .. n]) end
+	end
+	for n = 1, 2 do
+		if looks and looks.DockDetails then xpcall(looks.DockDetails, Stoa.catch, looks, n, spots["details" .. n]) end
+	end
+end
+
 -- Which right-page columns fit, right to left. Company goes first; then
 -- Journey at the level cap, Ready while you level.
 local PAGE_GAPS = { COLUMN_GAP, 24 }
@@ -2190,25 +2242,49 @@ function Console:FitPages()
 	-- The player keeps the right side for something of their own (a meter
 	-- from another addon, say): no columns, on the full console only.
 	local free = self.db.freeRight and not self.slimCard
+	-- Slots the player arranged: as chosen, dropping from the right when
+	-- the screen is narrow. The slim card always holds the three pages.
+	if not self.slimCard and not self:SlotsDefault() then
+		local slots = self:Slots()
+		orders = {}
+		for n = #slots, 1, -1 do
+			local order = {}
+			for i = 1, n do order[i] = slots[i] end
+			orders[#orders + 1] = order
+		end
+	end
 	if free then orders = {} end
+	local function span(order, g)
+		local total = math.max(0, #order - 1) * g
+		for _, kind in ipairs(order) do total = total + slotWidth(kind) end
+		return total
+	end
 	for _, order in ipairs(orders) do
 		for _, g in ipairs(PAGE_GAPS) do
-			if #order * COLUMN_WIDTH + (#order - 1) * g <= room then
+			if span(order, g) <= room then
 				chosen, gap = order, g
 				break
 			end
 		end
 		if #chosen > 0 then break end
 	end
-	local shown = {}
-	for i, key in ipairs(chosen) do
-		shown[key] = true
-		local col = cols[key]
-		col:ClearAllPoints()
-		col:SetPoint("TOPLEFT", page, "TOPLEFT", (i - 1) * (COLUMN_WIDTH + gap), 0)
+	local total = span(chosen, gap)
+	local shown, docks, x = {}, {}, 0
+	local _, pageTop = self:PageInset()
+	for _, key in ipairs(chosen) do
+		local w = slotWidth(key)
+		if cols[key] then
+			shown[key] = true
+			cols[key]:ClearAllPoints()
+			cols[key]:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
+		elseif key ~= "empty" then
+			docks[key] = { right = inset + total - x - w, top = self:OpenHeight() + pageTop, width = w, height = page:GetHeight() }
+		end
+		x = x + w + gap
 	end
 	for key, col in pairs(cols) do col:SetShown(shown[key] == true) end
-	page:SetWidth(math.max(1, #chosen * COLUMN_WIDTH + math.max(0, #chosen - 1) * gap))
+	self:PlaceDocks(docks)
+	page:SetWidth(math.max(1, total))
 	if self.slimCard then self.slimCard:SetSize(page:GetWidth() + CARD_PAD * 2, page:GetHeight() + CARD_PAD * 2) end
 	if Stoa.modules.Tally and Stoa.modules.Tally.Fit then Stoa.modules.Tally:Fit() end
 	if self.ReplaceChat then self:ReplaceChat() end

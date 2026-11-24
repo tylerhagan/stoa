@@ -164,6 +164,26 @@ local function detailsInstances()
 	return list
 end
 
+-- A Details window in one of the console's slots (Console:PlaceDocks).
+-- `spot` is nil when it has none, and the window is then left where it is.
+-- Its title bar stands above the window's own frame, so the frame starts
+-- that much lower.
+local DETAILS_TITLE = 20
+function Looks:DockDetails(n, spot)
+	if not spot then return end
+	local addon = details()
+	if not addon or type(addon.GetInstance) ~= "function" then return end
+	local ok, instance = pcall(addon.GetInstance, addon, n)
+	local frame = ok and type(instance) == "table" and instance.baseframe
+	if type(frame) ~= "table" or not frame.SetPoint then return end
+	if InCombatLockdown() and frame.IsProtected and frame:IsProtected() then return end
+	frame:ClearAllPoints()
+	frame:SetPoint("TOPRIGHT", UIParent, "BOTTOMRIGHT", -spot.right, spot.top - DETAILS_TITLE)
+	frame:SetSize(spot.width, spot.height - DETAILS_TITLE)
+	-- Details keeps its own record of where each window is.
+	if type(instance.SaveMainWindowPosition) == "function" then pcall(instance.SaveMainWindowPosition, instance) end
+end
+
 -- RestedXP -------------------------------------------------------------------------
 -- RestedXP's guide window takes themes: colour tables it registers and lets
 -- you pick in its own settings. Stoa adds one built from the current Stoa

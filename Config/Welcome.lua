@@ -835,7 +835,9 @@ function builders.frames(self, step)
 			local halo = moduleDb("Halo")
 			if halo then
 				halo.targetStrip = entry[1] == "words"
-				if entry[1] ~= "words" then halo.targetFull = entry[1] == "full" end
+				if entry[1] ~= "words" then
+					if Stoa.db.material == "matte" then halo.targetFull = entry[1] == "full" else halo.targetCompact = entry[1] == "compact" end
+				end
 			end
 			self.touched = true
 			self:Refresh()
@@ -1413,7 +1415,8 @@ function Welcome:Summary()
 	add("Console", shape == "slim" and "Slim" or shape == "none" and "None" or "Full")
 	add("Around it", around == "quiet" and "Quiet" or "Standard")
 	local halo, party = moduleDb("Halo") or {}, moduleDb("Party") or {}
-	add("Target", halo.targetStrip and "Words only" or (halo.targetFull or Stoa.db.material ~= "matte") and "Full" or "Compact")
+	local fullTarget = Stoa.db.material == "matte" and halo.targetFull or Stoa.db.material ~= "matte" and not halo.targetCompact
+	add("Target", halo.targetStrip and "Words only" or fullTarget and "Full" or "Compact")
 	add("Party", party.strips and "Strips" or "Cards")
 	for i, row in ipairs(self.addonRows) do
 		if i <= MAX_ADDON_ROWS and row.options and #lines < 10 then
@@ -1487,11 +1490,10 @@ function Welcome:Refresh()
 	elseif current == "frames" then
 		local halo, party, plates = moduleDb("Halo") or {}, moduleDb("Party") or {}, moduleDb("Plates") or {}
 		local matte = Stoa.db.material == "matte"
-		-- Leather has one plaque; the small block is Matte's.
-		self.targetCards.compact:SetShown(matte)
-		self.targetCards.full.text:SetText(matte and "Full" or "Plaque")
-		self.targetNote:SetText(matte and "" or "The Compact target comes with the Matte black look.")
-		choose(self.targetCards, halo.targetStrip and "words" or ((halo.targetFull or not matte) and "full" or "compact"))
+		-- Each look keeps its own size: Matte starts Compact, Leather Full.
+		local full = not matte and not halo.targetCompact or matte and halo.targetFull
+		self.targetNote:SetText("")
+		choose(self.targetCards, halo.targetStrip and "words" or (full and "full" or "compact"))
 		choose(self.partyButtons, party.strips and "strips" or "cards")
 		choose(self.restButtons, (halo.restFade or party.restFade) and "fade" or "stay")
 		choose(self.plateButtons, plates.style or "stoa")

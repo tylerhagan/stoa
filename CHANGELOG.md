@@ -22,6 +22,11 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Columns in the guild window and scroll bar rails are divided by the console's seam instead of a white line.
 - Matte keeps its white accent under the colour vision settings.
 - Fixed: a selected button could show its border only after the mouse had been over it.
+- **The console's right side in slots**: Settings > Console has three slots, left to right. Each holds Ready, Journey or Company, one of the game's damage meter windows (Meter 1 to 3), a Details window (Details 1 or 2) or nothing. Choosing something another slot holds swaps the two. The full console only.
+- **Leather polish**:
+  - The target can be Compact on Leather too (Settings > Target size, and the welcome page's Target and frames step). Leather starts Full, Matte starts Compact, and each look remembers its own.
+  - The Leather target says RARE, ELITE or BOSS in colour and no longer says HOSTILE, as the red bar already does.
+  - The STOA nameplate style never cuts a name short and shows a cast as a thin line with the spell's icon and name under it, as the Matte style does.
 - **Halo arc styles**: Line, Blade, Visor, Gauge or Tube for the two arcs (Settings > Halo).
 - Elite, rare and boss tooltips carry one outline in the rank's colour instead of two, and hostile names are a lighter red that reads on the header.
 - The map's breadcrumbs start at the left edge.
