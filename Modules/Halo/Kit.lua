@@ -215,6 +215,7 @@ function Kit:UpdateConsole()
 		if rate then
 			self:RecordPace()
 			pace.spark:Set(self.history or {})
+			if pace.Chart then pace:Chart(#(self.history or {}) >= 2) end
 			pace.perHour:SetText(shortNumber(rate))
 			pace.perHourCap:SetText("xp an hour")
 			local left = self:SecondsToLevel()
