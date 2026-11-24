@@ -275,6 +275,9 @@ end
 function Console:FeedLine(text, r, g, b)
 	local feed = self.feed
 	if not (self.riding and feed) or type(text) ~= "string" or Stoa:IsSecret(text) then return end
+	-- A line two windows both show is listed once.
+	local last = feed.entries[#feed.entries]
+	if last and last.text == text and GetTime() - last.at < 0.5 then return end
 	table.insert(feed.entries, { text = text, r = tonumber(r) or 1, g = tonumber(g) or 1, b = tonumber(b) or 1, at = GetTime() })
 	while #feed.entries > FEED_LINES do table.remove(feed.entries, 1) end
 	self:RenderFeed()
@@ -321,11 +324,16 @@ Stoa:On("STOA_READY", function()
 	end
 	-- A fight takes the travel line away before anything else.
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Console:SetRiding(false) end)
-	-- The newest lines of the main chat window feed the travel line's list.
-	if ChatFrame1 and ChatFrame1.AddMessage then
-		hooksecurefunc(ChatFrame1, "AddMessage", function(_, text, r, g, b)
-			if Console.riding then xpcall(Console.FeedLine, Stoa.catch, Console, text, r, g, b) end
-		end)
+	-- The newest lines of every chat window feed the travel line's list
+	-- (whispers often live in a window of their own). The combat log's
+	-- window is left out.
+	for i = 1, (NUM_CHAT_WINDOWS or 10) do
+		local frame = _G["ChatFrame" .. i]
+		if frame and frame.AddMessage and i ~= 2 then
+			hooksecurefunc(frame, "AddMessage", function(_, text, r, g, b)
+				if Console.riding then xpcall(Console.FeedLine, Stoa.catch, Console, text, r, g, b) end
+			end)
+		end
 	end
 	-- Typing brings the chat back until you're done.
 	-- It stays a while after, so a conversation reads as one.
