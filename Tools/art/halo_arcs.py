@@ -60,6 +60,7 @@ GAUGE_HALF_HEIGHT = 104.0
 GAUGE_BRACKET_X = 145.0
 GAUGE_BRACKET_LINE = 2.0
 GAUGE_BRACKET_TIP = 18.0
+GAUGE_BRACKET_ALPHA = 0.5  # the bracket stands back; the bar is solid
 GAUGE_BAR = (7.0, 13.0)  # the bar's near and far edge, in from the bracket
 GAUGE_BAR_INSET = 8.0
 
@@ -67,9 +68,9 @@ GAUGE_BAR_INSET = 8.0
 def gauge():
     x, h, line, tip = GAUGE_BRACKET_X, GAUGE_HALF_HEIGHT, GAUGE_BRACKET_LINE, GAUGE_BRACKET_TIP
     boxes = [
-        (x - line, x, -h, h, 1.0),
-        (x - tip, x, h - line, h, 1.0),
-        (x - tip, x, -h, -h + line, 1.0),
+        (x - line, x, -h, h, GAUGE_BRACKET_ALPHA),
+        (x - tip, x, h - line, h, GAUGE_BRACKET_ALPHA),
+        (x - tip, x, -h, -h + line, GAUGE_BRACKET_ALPHA),
         (x - GAUGE_BAR[1], x - GAUGE_BAR[0], -h + GAUGE_BAR_INSET, h - GAUGE_BAR_INSET, 1.0),
     ]
     return OUTER, [], boxes
