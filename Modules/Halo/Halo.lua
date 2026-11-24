@@ -41,7 +41,9 @@ local Halo = Stoa:NewModule("Halo", {
 	restArcs = false,
 	restFade = false,
 	-- The arcs' drawing: an ARC_STYLES key.
-	arcStyle = "line",
+	arcStyle = "tube",
+	-- Set once the one-time move from Line to Tube (2.0) has been looked at.
+	arcTube = false,
 })
 
 -- The arc drawings (Tools/art/halo_arcs.py): `file` goes between HaloArc

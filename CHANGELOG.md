@@ -35,7 +35,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
   - The target can be Compact on Leather too (Settings > Target size, and the welcome page's Target and frames step). Leather starts Full, Matte starts Compact, and each look remembers its own.
   - The Leather target says RARE, ELITE or BOSS in colour and no longer says HOSTILE, as the red bar already does.
   - The STOA nameplate style never cuts a name short and shows a cast as a thin line with the spell's icon and name under it, as the Matte style does.
-- **Halo arc styles**: Line, Blade, Visor, Gauge or Tube for the two arcs (Settings > Halo).
+- **Halo arc styles**: Tube, Gauge, Line, Blade or Visor for the two arcs (Settings > Halo). Tube, a bright line on a wide faint band, is the new look: new installs start on it and everyone on Line is moved to it once with this update. Line is still in the list.
 - Elite, rare and boss tooltips carry one outline in the rank's colour instead of two, and hostile names are a lighter red that reads on the header.
 - The map's breadcrumbs start at the left edge.
 - Fixed: the map showed a second, lighter border around its header.

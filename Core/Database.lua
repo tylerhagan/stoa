@@ -99,6 +99,15 @@ function Stoa:InitializeDatabase()
 		module.db = StoaDB.modules[name]
 	end
 
+	-- 2.0, once per character: Tube is the Halo's arc drawing now, the
+	-- improved Line, so whoever still has Line is moved to it. A style
+	-- picked since is left alone.
+	local halo = StoaDB.modules.Halo
+	if halo and not halo.arcTube then
+		if halo.arcStyle == "line" then halo.arcStyle = "tube" end
+		halo.arcTube = true
+	end
+
 	self.db = StoaDB
 	self.char = StoaCharDB
 end
