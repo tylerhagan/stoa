@@ -1523,8 +1523,8 @@ function Welcome:Refresh()
 	self.back:SetShown(current ~= "start")
 	local index
 	for i, id in ipairs(order) do if id == current then index = i end end
-	local middle = #order - 2
-	self.counter:SetText((current ~= "start" and current ~= "ready") and ("Step %d of %d"):format(index - 1, middle) or "")
+	-- The same number the side list gives the step.
+	self.counter:SetText((current ~= "start" and current ~= "ready") and ("Step %d of %d"):format(index, #order) or "")
 	local word = "Next"
 	if current == "ready" then
 		word = "Finish and reload"
