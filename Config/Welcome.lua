@@ -382,6 +382,10 @@ local function lookPreview(parent, matte)
 		bezel:SetSize(46, 46)
 		bezel:SetPoint("CENTER", console, "TOP", 0, -5)
 		bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
+		-- Solid behind the bezel, so the world doesn't show through it.
+		local back = UI.circle(console, "ARTWORK", 0, 40)
+		back:SetPoint("CENTER", bezel)
+		back:SetColorTexture(0.085, 0.09, 0.095, 1)
 		disc = UI.circle(console, "ARTWORK", 2, 26)
 		disc:SetPoint("CENTER", bezel)
 		disc:SetColorTexture(0.16, 0.24, 0.34, 1)
@@ -413,25 +417,25 @@ local function lookPreview(parent, matte)
 	end
 
 	-- A window with its title and two rows.
-	local window = piece(150, 76, "TOPLEFT", 14, -12)
+	local window = piece(126, 76, "TOPLEFT", 12, -12)
 	skin(window, "BACKGROUND", matte and "SharpWindowFill.tga" or "WindowFill.tga", 12, palette.panel, 1)
 	skin(window, "BORDER", matte and "SharpWindowEdge.tga" or "WindowEdge.tga", 12, palette.text, matte and 0.12 or 0.22)
 	local title = words(window, "serif", 13, "Character", palette.text)
 	title:SetPoint("TOPLEFT", 12, -10)
 	for i = 1, 2 do
 		local row = window:CreateTexture(nil, "ARTWORK")
-		row:SetSize(i == 1 and 104 or 76, 3)
+		row:SetSize(i == 1 and 90 or 64, 3)
 		row:SetPoint("TOPLEFT", 12, -28 - i * 13)
 		row:SetColorTexture(palette.muted[1], palette.muted[2], palette.muted[3], 0.45)
 	end
 
 	-- A target.
-	local target = piece(140, 44, "TOPRIGHT", -14, -28)
+	local target = piece(126, 44, "TOPRIGHT", -12, -28)
 	skin(target, "BACKGROUND", matte and "MatteCardFill.tga" or "CardFill.tga", matte and UI.MATTE_SLICE or nil, palette.panel, 0.97)
 	skin(target, "BORDER", matte and "MatteCard.tga" or "CardEdge.tga", matte and UI.MATTE_SLICE or nil, (not matte) and palette.accent or nil, 0.5)
 	local name = words(target, "sans", 10, "Plains Buzzard", palette.text)
 	name:SetPoint("TOPLEFT", 10, -8)
-	local bar = piece(108, 9, "BOTTOMLEFT", target, "BOTTOMLEFT", 10, 9)
+	local bar = piece(98, 9, "BOTTOMLEFT", target, "BOTTOMLEFT", 10, 9)
 	if matte then
 		local fill = bar:CreateTexture(nil, "ARTWORK")
 		fill:SetAllPoints()
