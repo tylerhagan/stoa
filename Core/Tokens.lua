@@ -78,6 +78,7 @@ Stoa.themes = {
 		magic   = rgb("4C9BF5"),
 		disease = rgb("B9A2F2"),
 		classTint = false,
+		neutralAccent = true,
 	},
 
 	-- Class themes: the class colour as the accent, the panel and words
@@ -397,6 +398,11 @@ function Stoa:Theme()
 		local theme = {}
 		for token, value in pairs(self.themes[name]) do theme[token] = value end
 		for token, value in pairs(swaps) do theme[token] = value end
+		-- A theme whose accent is already white keeps it: white has no hue
+		-- to confuse, and it is that theme's whole character.
+		if self.themes[name].neutralAccent then
+			theme.accent, theme.shield = self.themes[name].accent, self.themes[name].shield
+		end
 		theme.classTint = false
 		blended[key] = theme
 	end
