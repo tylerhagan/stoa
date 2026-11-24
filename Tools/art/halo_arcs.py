@@ -53,36 +53,26 @@ def visor():
     ]
 
 
-# The gauge: a band in five segments on the curve, with a square bracket
-# standing just outside it. The bracket is straight, so it is given as boxes:
-# left, right, bottom, top (x leftwards from the Halo's centre, y up) and
-# alpha. Its lines are one texel thick and sit on the texel grid, the
-# thinnest a line can be and still be crisp.
-GAUGE_RADIUS = 134.0
+# The gauge: the square one. A straight slim bar standing inside a square
+# bracket, no curve at all. Straight shapes are given as boxes: left, right,
+# bottom, top (x leftwards from the Halo's centre, y up) and alpha.
 GAUGE_HALF_HEIGHT = 104.0
-GAUGE_BAND = 5.0
-GAUGE_SEGMENTS = 5
-GAUGE_BRACKET_X = 144.0
-GAUGE_BRACKET_TIP = 10.0
+GAUGE_BRACKET_X = 145.0
+GAUGE_BRACKET_LINE = 2.0
+GAUGE_BRACKET_TIP = 18.0
+GAUGE_BAR = (7.0, 13.0)  # the bar's near and far edge, in from the bracket
+GAUGE_BAR_INSET = 8.0
 
 
 def gauge():
-    span = float(np.degrees(np.arcsin(GAUGE_HALF_HEIGHT / GAUGE_RADIUS)))
-    step = 2 * span / GAUGE_SEGMENTS
-    parts = []
-    for i in range(GAUGE_SEGMENTS):
-        start = -span + i * step
-        parts.append((start + 0.6, start + step - 0.6, GAUGE_RADIUS, lambda a: GAUGE_BAND + 0 * a, 1.0))
-    texel = SHOWN / W
-    x = round(GAUGE_BRACKET_X / texel) * texel
-    h = round(GAUGE_HALF_HEIGHT / texel) * texel
-    tip = GAUGE_BRACKET_TIP
+    x, h, line, tip = GAUGE_BRACKET_X, GAUGE_HALF_HEIGHT, GAUGE_BRACKET_LINE, GAUGE_BRACKET_TIP
     boxes = [
-        (x - texel, x, -h, h, 1.0),
-        (x - tip, x, h - texel, h, 1.0),
-        (x - tip, x, -h, -h + texel, 1.0),
+        (x - line, x, -h, h, 1.0),
+        (x - tip, x, h - line, h, 1.0),
+        (x - tip, x, -h, -h + line, 1.0),
+        (x - GAUGE_BAR[1], x - GAUGE_BAR[0], -h + GAUGE_BAR_INSET, h - GAUGE_BAR_INSET, 1.0),
     ]
-    return OUTER, parts, boxes
+    return OUTER, [], boxes
 
 
 def tube():
