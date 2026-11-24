@@ -3,7 +3,8 @@
 -- words and faint bars with no panel behind it. Bars turn bone, your own
 -- bar turns to the accent, and only the names carry class colour. The
 -- windows sit side by side in the top-left corner, out of the way of the
--- console and the Halo in both states.
+-- console and the Halo in both states. A window in one of the console's
+-- slots is cut down further (see Docked).
 --
 -- Blizzard_DamageMeter loads on demand, so everything waits for it and is
 -- looked up by name and guarded.
@@ -43,21 +44,49 @@ local function font(fs, size, token)
 	if token then fs:SetTextColor(Stoa:Color(token)) end
 end
 
+-- Docked ---------------------------------------------------------------------
+-- A window in one of the console's slots is cut down as a docked Details
+-- window is (Core/Looks.lua): its title in STOA's quiet type on the line
+-- of the pages' headings with their hairline under it, its buttons only
+-- under the mouse, no icons on the rows, and every bar one faint colour
+-- with the class in the name.
+
+-- The rows start this far under the slot's top, the hairline this far.
+local DOCK_TITLE, DOCK_RULE = 20, 17
+-- Blizzard's header strip is this tall; the rows hang 2 under it.
+local HEADER_HEIGHT = 32
+
+local function windowNumber(window)
+	return tonumber((window:GetName() or ""):match("(%d+)$"))
+end
+
+local function isDocked(window)
+	local docks = Meters.docks
+	local n = docks and window and windowNumber(window)
+	return n and docks[n] ~= nil or false
+end
+
 -- Entries --------------------------------------------------------------------
 
 local function colourEntry(entry)
+	local docked = isDocked(entry.stoaWindow)
 	local bar = entry.GetStatusBarTexture and entry:GetStatusBarTexture()
 	if bar then
 		local mine = entry.isLocalPlayer == true
-		local r, g, b = Stoa:Color(mine and "accent" or "muted")
-		-- Faint enough that the white words over them keep their contrast;
-		-- at 0.55 your own bar washed the row out.
-		bar:SetVertexColor(r, g, b, mine and 0.3 or 0.18)
+		if docked then
+			local r, g, b = Stoa:Color("muted")
+			bar:SetVertexColor(r, g, b, 0.25)
+		else
+			local r, g, b = Stoa:Color(mine and "accent" or "muted")
+			-- Faint enough that the white words over them keep their contrast;
+			-- at 0.55 your own bar washed the row out.
+			bar:SetVertexColor(r, g, b, mine and 0.3 or 0.18)
+		end
 	end
 	local name = entry.GetName and entry:GetName()
 	if name and name.SetTextColor then
 		local class = entry.classFilename
-		local color = Stoa:Theme().classTint and class and not Stoa:IsSecret(class) and RAID_CLASS_COLORS[class]
+		local color = (docked or Stoa:Theme().classTint) and class and not Stoa:IsSecret(class) and RAID_CLASS_COLORS[class]
 		if color then
 			name:SetTextColor(color.r, color.g, color.b)
 		else
@@ -72,8 +101,39 @@ local function plainBackground(entry)
 	end
 end
 
-local function dressEntry(entry)
-	if not entry or entry.stoaDressed then return end
+-- Points hung off the row's icon are hung off the row's left edge.
+local function offIcon(region, icon, entry)
+	if not (region and region.GetNumPoints) then return end
+	for i = 1, region:GetNumPoints() do
+		local point, relativeTo = region:GetPoint(i)
+		if relativeTo == icon then
+			region:SetPoint(point, entry, "LEFT", 0, 0)
+			return
+		end
+	end
+end
+
+-- A docked row has no icon and starts at the window's left edge. Blizzard
+-- lays the row out again in UpdateStyle, which is hooked to come here.
+local function layoutEntry(entry)
+	local icon = entry.Icon
+	if not (icon and icon.SetAlpha) then return end
+	local docked = isDocked(entry.stoaWindow)
+	icon:SetAlpha(docked and 0 or 1)
+	if docked then
+		offIcon(entry.GetStatusBar and entry:GetStatusBar(), icon, entry)
+		offIcon(entry.GetName and entry:GetName(), icon, entry)
+	end
+end
+
+local function dressEntry(entry, window)
+	if not entry then return end
+	if window then entry.stoaWindow = window end
+	if entry.stoaDressed then
+		layoutEntry(entry)
+		colourEntry(entry)
+		return
+	end
 	entry.stoaDressed = true
 	local bar = entry.GetStatusBar and entry:GetStatusBar()
 	if bar then
@@ -87,23 +147,130 @@ local function dressEntry(entry)
 	hooksecurefunc(entry, "UpdateStatusBarColor", colourEntry)
 	hooksecurefunc(entry, "UpdateBackground", plainBackground)
 	if entry.UpdateName then hooksecurefunc(entry, "UpdateName", colourEntry) end
+	if entry.UpdateStyle then hooksecurefunc(entry, "UpdateStyle", layoutEntry) end
 	UI.applyTheme()
+	layoutEntry(entry)
 	colourEntry(entry)
 end
 
 -- Windows --------------------------------------------------------------------
+
+local function textures(frame, alpha)
+	if not (frame and frame.GetRegions) then return end
+	for _, region in ipairs({ frame:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(alpha) end
+	end
+end
+
+-- A docked window's buttons show under the mouse and are gone at rest.
+local function showButtons(window, over)
+	local docked = isDocked(window)
+	local state = not docked and 0 or (over and 1 or 2)
+	if window.stoaButtons == state then return end
+	window.stoaButtons = state
+	local seen = state ~= 2
+	textures(window.DamageMeterTypeDropdown, seen and 1 or 0)
+	if window.SessionDropdown then window.SessionDropdown:SetAlpha(seen and 1 or 0) end
+	if window.SettingsDropdown then window.SettingsDropdown:SetAlpha(seen and 0.6 or 0) end
+	if window.MinimizeButton then window.MinimizeButton:SetAlpha(seen and 1 or 0) end
+	-- The fight's clock has the buttons' place while they are away.
+	if window.SessionTimer then window.SessionTimer:SetAlpha((docked and over) and 0 or 1) end
+end
+
+-- The window's header row as it floats, or as it sits in a slot.
+local function layoutWindow(window)
+	local header = window.Header
+	if not header then return end
+	local docked = isDocked(window)
+	if window.stoaLaidOut == docked then return end
+	local was = window.stoaLaidOut
+	window.stoaLaidOut = docked
+	-- Out of a slot again: Blizzard's own layout puts the rows' icons back.
+	if was and not docked and window.ForEachEntryFrame then
+		window:ForEachEntryFrame(function(entry)
+			if entry.UpdateStyle then pcall(entry.UpdateStyle, entry) end
+		end)
+	end
+
+	header:ClearAllPoints()
+	if docked then
+		-- The rows hang 5 in and 2 under the header: flush with the slot's
+		-- left edge, DOCK_TITLE under its top.
+		local lift = HEADER_HEIGHT + 2 - DOCK_TITLE
+		header:SetPoint("TOPLEFT", -5, lift)
+		header:SetPoint("TOPRIGHT", 1, lift)
+	else
+		-- Inset the header row, and the bars hung under it, from the edges.
+		header:SetPoint("TOPLEFT", INSET, -2)
+		header:SetPoint("TOPRIGHT", -INSET + 4, -2)
+	end
+
+	local minimize, session, timer = window.MinimizeButton, window.SessionDropdown, window.SessionTimer
+	if minimize then
+		minimize:ClearAllPoints()
+		if docked then
+			minimize:SetPoint("TOPRIGHT", window, "TOPRIGHT", 0, 2)
+		else
+			minimize:SetPoint("TOPRIGHT", header, "TOPRIGHT", -3, -5)
+		end
+	end
+	if timer then
+		timer:ClearAllPoints()
+		if docked then
+			timer:SetPoint("TOPRIGHT", window, "TOPRIGHT", 0, -3)
+		else
+			timer:SetPoint("TOPLEFT", header, "TOPLEFT", 1, -9)
+		end
+		font(timer, docked and 11 or Stoa.typeSize.body, "muted")
+	end
+	local typeDropdown = window.DamageMeterTypeDropdown
+	local title = typeDropdown and typeDropdown.TypeName
+	if typeDropdown and session and timer then
+		typeDropdown:ClearAllPoints()
+		if docked then
+			-- The arrow that picks what is counted joins the other buttons.
+			typeDropdown:SetPoint("RIGHT", session, "LEFT", -2, -3)
+		else
+			typeDropdown:SetPoint("TOPLEFT", timer, "TOPRIGHT", 0, 6)
+		end
+	end
+	if title then
+		title:ClearAllPoints()
+		if docked then
+			title:SetPoint("TOPLEFT", window, "TOPLEFT", 0, -3)
+			Stoa:SetFont(title, "sans", 11)
+			title:SetTextColor(Stoa:Color("muted"))
+		else
+			if typeDropdown.Arrow then title:SetPoint("LEFT", typeDropdown.Arrow, "RIGHT", 0, 3) end
+			if session then title:SetPoint("RIGHT", session, "LEFT", -5, 0) end
+			Stoa:SetFont(title, "serif", Stoa.typeSize.label)
+			title:SetTextColor(Stoa:Color("text"))
+		end
+		UI.legible(title)
+	end
+
+	-- The hairline under the title, as under the pages' headings.
+	if docked and not window.stoaRule then
+		local rule = UI.line(window)
+		rule:SetPoint("TOPLEFT", window, "TOPLEFT", 0, -DOCK_RULE)
+		rule:SetPoint("TOPRIGHT", window, "TOPRIGHT", 0, -DOCK_RULE)
+		window.stoaRule = rule
+	end
+	if window.stoaRule then window.stoaRule:SetShown(docked) end
+
+	showButtons(window, docked and window:IsMouseOver() or false)
+	if window.ForEachEntryFrame then
+		window:ForEachEntryFrame(function(entry) guarded(dressEntry, entry, window) end)
+	end
+	local mine = window.GetLocalPlayerEntry and window:GetLocalPlayerEntry()
+	if mine then guarded(dressEntry, mine, window) end
+end
 
 local function dressWindow(window)
 	if not window or window.stoaDressed then return end
 	window.stoaDressed = true
 
 	hide(window.Header)
-	-- Inset the header row, and the bars hung under it, from the edges.
-	if window.Header then
-		window.Header:ClearAllPoints()
-		window.Header:SetPoint("TOPLEFT", INSET, -2)
-		window.Header:SetPoint("TOPRIGHT", -INSET + 4, -2)
-	end
 	local container = window.GetMinimizeContainer and window:GetMinimizeContainer() or window.MinimizeContainer
 	if container then
 		hide(container.Background)
@@ -114,13 +281,6 @@ local function dressWindow(window)
 
 
 	-- Header words: the meter's name in the display face, the rest quiet.
-	local typeDropdown = window.DamageMeterTypeDropdown
-	if typeDropdown and typeDropdown.TypeName then
-		Stoa:SetFont(typeDropdown.TypeName, "serif", Stoa.typeSize.label)
-		UI.legible(typeDropdown.TypeName)
-		typeDropdown.TypeName:SetTextColor(Stoa:Color("text"))
-	end
-	font(window.SessionTimer, Stoa.typeSize.body, "muted")
 	local sessionDropdown = window.SessionDropdown
 	if sessionDropdown then
 		strip(sessionDropdown)
@@ -135,12 +295,9 @@ local function dressWindow(window)
 	if window.SettingsDropdown then window.SettingsDropdown:SetAlpha(0.6) end
 
 	-- Bars, now and as the list makes new ones.
-	hooksecurefunc(window, "SetupEntry", function(_, entry) guarded(dressEntry, entry) end)
-	if window.ForEachEntryFrame then
-		window:ForEachEntryFrame(function(entry) guarded(dressEntry, entry) end)
-	end
-	local localEntry = window.GetLocalPlayerEntry and window:GetLocalPlayerEntry()
-	if localEntry then guarded(dressEntry, localEntry) end
+	hooksecurefunc(window, "SetupEntry", function(_, entry) guarded(dressEntry, entry, window) end)
+	-- The header row, and the bars there are, floating or in a slot.
+	layoutWindow(window)
 
 	-- The spell breakdown that opens beside a bar.
 	local source = window.GetSourceWindow and window:GetSourceWindow()
@@ -187,7 +344,24 @@ function Meters:Dock(n, spot)
 	if self.docks[n] == nil and spot == nil then return end
 	self.docks[n] = spot or nil
 	if self.dressed then self:Place() end
-	if spot then self:Remind(n) end
+	if spot then
+		self:Remind(n)
+		self:WatchMouse()
+	end
+end
+
+-- Docked windows' buttons follow the mouse; the watch runs only once a
+-- window has had a slot.
+function Meters:WatchMouse()
+	if self.watching then return end
+	self.watching = true
+	Stoa:NewTicker(0.15, function()
+		if not (self.docks and next(self.docks)) then return end
+		for n in pairs(self.docks) do
+			local window = _G["DamageMeterSessionWindow" .. n]
+			if window and window.stoaDressed and window:IsVisible() then showButtons(window, window:IsMouseOver()) end
+		end
+	end)
 end
 
 -- A slot whose window isn't there says so once a session, a few seconds
@@ -214,8 +388,9 @@ function Meters:Place()
 	local anchor = self.db.place and self:Anchor()
 	local x = 0
 	for _, window in ipairs(shownWindows()) do
-		local n = tonumber((window:GetName() or ""):match("(%d+)$"))
+		local n = windowNumber(window)
 		local spot = n and docks[n]
+		if window.stoaDressed then guarded(layoutWindow, window) end
 		if spot or anchor then
 			window:ClearAllPoints()
 			if spot then
