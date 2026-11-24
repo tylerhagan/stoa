@@ -34,9 +34,9 @@ def blade():
 
 # The visor's arcs are cut from a circle this wide, far wider than the
 # Halo, so they bow only a little: marks on a wide curved pane, not a
-# ring. They stand as tall as the other styles' arcs.
+# ring.
 VISOR_RADIUS = 230.0
-VISOR_HALF_HEIGHT = 123.0
+VISOR_HALF_HEIGHT = 100.0
 
 
 def visor():
