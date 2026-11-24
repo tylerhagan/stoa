@@ -17,7 +17,9 @@ local RAIL = 190
 local PAD = Stoa.space.xl
 local STEP_ORDER = { "start", "specs", "look", "combat", "preset", "addons", "ready" }
 local CLASS_DEFAULT_WORD = "  (class default)"
-local WELCOME_THEMES = { "Bone", "Tide", "Graphite", "Class" }
+local WELCOME_THEMES = { "Bone", "Tide", "Graphite", "Matte", "Class" }
+local WELCOME_THEME_SET = {}
+for _, name in ipairs(WELCOME_THEMES) do WELCOME_THEME_SET[name] = true end
 
 local function slotRole(slot)
 	local chosen = Stoa.char.roles["slot" .. slot]
@@ -316,18 +318,147 @@ function builders.specs(self, step)
 	Stoa:SetFont(hint, "sans", Stoa.typeSize.body)
 end
 
+-- A look drawn small from the art STOA already ships (no screenshot): a
+-- window, a target and a strip of console in Leather or in Matte black.
+-- Its colours are the look's own, whatever theme is on.
+local function lookPreview(parent, matte)
+	local view = CreateFrame("Frame", nil, parent)
+	local palette = Stoa.themes[matte and "Matte" or "Bone"]
+	local function piece(width, height, ...)
+		local frame = CreateFrame("Frame", nil, view)
+		frame:SetSize(width, height)
+		frame:SetPoint(...)
+		return frame
+	end
+	local function skin(frame, layer, file, margin, colour, alpha)
+		local tex = UI.sliced(frame, layer, file, 0, margin, true)
+		if tex and colour then tex:SetVertexColor(colour[1], colour[2], colour[3], alpha or 1) end
+		return tex
+	end
+	local function words(frame, face, size, text, colour)
+		local fs = frame:CreateFontString(nil, "OVERLAY")
+		Stoa:SetFont(fs, face, size)
+		fs:SetText(text)
+		fs:SetTextColor(colour[1], colour[2], colour[3])
+		return fs
+	end
+	local world = view:CreateTexture(nil, "BACKGROUND", nil, -8)
+	world:SetAllPoints()
+	world:SetColorTexture(0.17, 0.20, 0.21, 1)
+
+	-- The console: leather under a brass line, or grained black under a
+	-- fine light.
+	local console = piece(10, 34, "BOTTOMLEFT")
+	console:SetPoint("BOTTOMRIGHT")
+	local hide = console:CreateTexture(nil, "BACKGROUND", nil, -6)
+	hide:SetAllPoints()
+	local rim = console:CreateTexture(nil, "ARTWORK")
+	rim:SetPoint("TOPLEFT")
+	rim:SetPoint("TOPRIGHT")
+	if matte then
+		hide:SetColorTexture(0.085, 0.09, 0.095, 1)
+		local grain = console:CreateTexture(nil, "BACKGROUND", nil, -5)
+		grain:SetAllPoints()
+		grain:SetTexture(UI.GRAIN, "REPEAT", "REPEAT")
+		grain:SetTexCoord(0, 3, 0, 0.3)
+		grain:SetAlpha(0.105)
+		rim:SetHeight(1)
+		rim:SetColorTexture(1, 1, 1, 0.2)
+	else
+		hide:SetTexture(UI.MEDIA .. "Textures\\ConsoleLeather")
+		hide:SetTexCoord(0.2, 0.39, 0.3, 0.37)
+		rim:SetHeight(2)
+		rim:SetColorTexture(0.79, 0.64, 0.36, 1)
+	end
+	for i = 1, 2 do
+		local well = piece(96, 20, i == 1 and "LEFT" or "RIGHT", console, i == 1 and "LEFT" or "RIGHT", i == 1 and 12 or -12, -1)
+		skin(well, "BACKGROUND", matte and "SharpPlateFill.tga" or "PlateFill.tga", 5, { 0, 0, 0 }, 0.45)
+	end
+	local coin = UI.circle(console, "ARTWORK", 1, 30)
+	coin:SetPoint("CENTER", 0, 4)
+	local face = UI.circle(console, "ARTWORK", 2, matte and 27 or 26)
+	face:SetPoint("CENTER", coin)
+	if matte then
+		coin:SetColorTexture(0.2, 0.21, 0.22, 1)
+		face:SetColorTexture(0.04, 0.04, 0.045, 1)
+	else
+		coin:SetColorTexture(0.79, 0.64, 0.36, 1)
+		face:SetColorTexture(0.13, 0.1, 0.08, 1)
+	end
+
+	-- A window with its title and two rows.
+	local window = piece(150, 64, "TOPLEFT", 12, -10)
+	skin(window, "BACKGROUND", matte and "SharpWindowFill.tga" or "WindowFill.tga", 12, palette.panel, 1)
+	skin(window, "BORDER", matte and "SharpWindowEdge.tga" or "WindowEdge.tga", 12, palette.text, matte and 0.12 or 0.22)
+	local title = words(window, "serif", 12, "Character", palette.text)
+	title:SetPoint("TOPLEFT", 10, -8)
+	for i = 1, 2 do
+		local row = window:CreateTexture(nil, "ARTWORK")
+		row:SetSize(i == 1 and 110 or 80, 3)
+		row:SetPoint("TOPLEFT", 10, -22 - i * 11)
+		row:SetColorTexture(palette.muted[1], palette.muted[2], palette.muted[3], 0.45)
+	end
+
+	-- A target.
+	local target = piece(132, 38, "TOPRIGHT", -12, -22)
+	skin(target, "BACKGROUND", matte and "MatteCardFill.tga" or "CardFill.tga", matte and UI.MATTE_SLICE or nil, palette.panel, 0.97)
+	skin(target, "BORDER", matte and "MatteCard.tga" or "CardEdge.tga", matte and UI.MATTE_SLICE or nil, (not matte) and palette.accent or nil, 0.5)
+	local name = words(target, "sans", 10, "Plains Buzzard", palette.text)
+	name:SetPoint("TOPLEFT", 9, -7)
+	local bar = piece(92, 8, "BOTTOMLEFT", target, "BOTTOMLEFT", 9, 8)
+	if matte then
+		local fill = bar:CreateTexture(nil, "ARTWORK")
+		fill:SetAllPoints()
+		fill:SetColorTexture(palette.hostile[1], palette.hostile[2], palette.hostile[3], 1)
+	else
+		skin(bar, "ARTWORK", "PlateFill.tga", 5, palette.hostile, 1)
+	end
+	return view
+end
+
+local MATERIALS = {
+	{ "leather", "Leather", "Tooled leather and brass, round corners, stone behind windows. The look STOA launched with." },
+	{ "matte", "Matte black", "Moulded black hardware: sharp corners and fine lines, no gloss. Loads far less art." },
+}
+local GRAINS = { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }
+local PREVIEW_H = 108
+
 function builders.look(self, step)
+	-- The two looks, always side by side.
+	local half = math.floor((BODY_W - GAP) / 2)
+	self.materialCards = {}
+	for i, entry in ipairs(MATERIALS) do
+		local button = card(step, half, PREVIEW_H + 66, entry[2], function()
+			Stoa.db.material = entry[1]
+			-- Matte black hides the painted frames, and its own theme suits it.
+			if entry[1] == "matte" and WELCOME_THEME_SET[Stoa.db.theme] and Stoa.db.theme ~= "Class" then Stoa:SetTheme("Matte") end
+			if entry[1] == "leather" and Stoa.db.theme == "Matte" then Stoa:SetTheme("Bone") end
+			self:Refresh()
+		end)
+		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), 0)
+		local view = lookPreview(button, entry[1] == "matte")
+		view:SetPoint("TOPLEFT", 8, -8)
+		view:SetPoint("TOPRIGHT", -8, -8)
+		view:SetHeight(PREVIEW_H)
+		button.text:ClearAllPoints()
+		button.text:SetPoint("TOPLEFT", 14, -(PREVIEW_H + 16))
+		button.text:SetPoint("RIGHT", -14, 0)
+		button.sub:SetText(entry[3])
+		self.materialCards[entry[1]] = button
+	end
+	local top = -(PREVIEW_H + 66 + 14)
+
 	local label = UI.caption(step, "Theme")
-	label:SetPoint("TOPLEFT")
+	label:SetPoint("TOPLEFT", 0, top)
 	self.themeButtons = {}
-	local wide = math.floor((BODY_W - 3 * 8) / 4)
+	local wide = math.floor((BODY_W - (#WELCOME_THEMES - 1) * 8) / #WELCOME_THEMES)
 	for i, name in ipairs(WELCOME_THEMES) do
 		local button = UI.button(step, themeWord(name), wide, function()
 			Stoa:SetTheme(name)
 			self:Refresh()
 		end)
-		button:SetHeight(30)
-		button:SetPoint("TOPLEFT", (i - 1) * (wide + 8), -18)
+		button:SetHeight(28)
+		button:SetPoint("TOPLEFT", (i - 1) * (wide + 8), top - 18)
 		self.themeButtons[name] = button
 	end
 	-- Every class theme, each with a dot of its own accent.
@@ -338,52 +469,55 @@ function builders.look(self, step)
 			self:Refresh()
 		end)
 		local column, line = (i - 1) % 5, math.floor((i - 1) / 5)
-		button:SetPoint("TOPLEFT", column * (small + 6), -56 - line * 32)
+		button:SetPoint("TOPLEFT", column * (small + 6), top - 52 - line * 30)
 		local dot = UI.circle(button, "ARTWORK", 1, 8)
 		dot:SetPoint("LEFT", 12, 0)
 		local accent = Stoa.themes[name] and Stoa.themes[name].accent
 		if accent then dot:SetColorTexture(accent[1], accent[2], accent[3], 1) end
 		self.themeButtons[name] = button
 	end
-	local note = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
-	note:SetPoint("TOPLEFT", 0, -126)
-	note:SetWidth(BODY_W)
-	note:SetText("Your class follows whichever character you log in on; a named class keeps that theme on this character.")
+	top = top - 52 - 60 - 12
 
-	local ornament = UI.caption(step, "Ornament")
-	ornament:SetPoint("TOPLEFT", 0, -156)
-	self.ornamentCards = {}
-	local half = math.floor((BODY_W - GAP) / 2)
-	local ORNAMENTS = {
-		{ "plain", "Plain", "Fine lines around the minimap and portrait coins." },
-		{ "painted", "Painted", "Brass frames on the one-of-a-kind pieces." },
-	}
-	for i, entry in ipairs(ORNAMENTS) do
-		local button = card(step, half, 50, entry[2], function()
+	-- One row, two short lists: the finish that goes with the look picked
+	-- above (Leather's ornament, Matte's grain), and colour vision.
+	local third = math.floor((BODY_W - 2 * GAP) / 3)
+	local quarter = math.floor((third - 2 * 6) / 3)
+	self.finishLabel = UI.caption(step, "Ornament")
+	self.finishLabel:SetPoint("TOPLEFT", 0, top)
+	self.ornamentButtons, self.grainButtons = {}, {}
+	for i, entry in ipairs({ { "plain", "Plain" }, { "painted", "Painted" } }) do
+		local button = UI.button(step, entry[2], quarter, function()
 			Stoa.db.ornament = entry[1]
 			self:Refresh()
 		end)
-		button.sub:SetText(entry[3])
-		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), -174)
-		self.ornamentCards[entry[1]] = button
+		button:SetHeight(28)
+		button:SetPoint("TOPLEFT", (i - 1) * (quarter + 6), top - 18)
+		self.ornamentButtons[entry[1]] = button
 	end
-
+	for i, entry in ipairs(GRAINS) do
+		local button = UI.button(step, entry[2], quarter, function()
+			Stoa.db.grain = entry[1]
+			UI.paintGrain()
+			self:Refresh()
+		end)
+		button:SetHeight(28)
+		button:SetPoint("TOPLEFT", (i - 1) * (quarter + 6), top - 18)
+		self.grainButtons[entry[1]] = button
+	end
 	local vision = UI.caption(step, "Colour vision")
-	vision:SetPoint("TOPLEFT", 0, -240)
+	vision:SetPoint("TOPLEFT", third + 2 * GAP, top)
 	self.visionButtons = {}
+	local count = #Stoa.visionOrder
+	local each = math.floor((BODY_W - third - 2 * GAP - (count - 1) * 6) / count)
 	for i, name in ipairs(Stoa.visionOrder) do
-		local button = UI.button(step, VISION_WORDS[name] or name, wide, function()
+		local button = UI.button(step, VISION_WORDS[name] or name, each, function()
 			Stoa:SetVision(name)
 			self:Refresh()
 		end)
-		button:SetHeight(30)
-		button:SetPoint("TOPLEFT", (i - 1) * (wide + 8), -258)
+		button:SetHeight(28)
+		button:SetPoint("TOPLEFT", third + 2 * GAP + (i - 1) * (each + 6), top - 18)
 		self.visionButtons[name] = button
 	end
-	local visionNote = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
-	visionNote:SetPoint("TOPLEFT", 0, -296)
-	visionNote:SetWidth(BODY_W)
-	visionNote:SetText("Swaps only the colours that carry meaning (warnings, dispels, health), over any theme.")
 end
 
 function builders.combat(self, step)
@@ -791,6 +925,7 @@ function Welcome:NeedsReload()
 	if self.applied then return true end
 	if not self.opened then return false end
 	if Stoa.db.ornament ~= self.opened.ornament then return true end
+	if (Stoa.db.material or "leather") ~= self.opened.material then return true end
 	local db = halo()
 	if db and (db.enabled ~= false) ~= self.opened.halo then return true end
 	for i, row in ipairs(self.addonRows) do
@@ -955,8 +1090,9 @@ function Welcome:Summary()
 		local role = slotRole(slot)
 		add(slot == 1 and "First spec" or "Second spec", Stoa.ROLE_LABELS[role] or role)
 	end
+	add("Look", Stoa.db.material == "matte" and "Matte black" or "Leather")
 	add("Theme", themeWord(Stoa.db.theme or "Bone"))
-	add("Ornament", Stoa.db.ornament == "painted" and "Painted" or "Plain")
+	if Stoa.db.material ~= "matte" then add("Ornament", Stoa.db.ornament == "painted" and "Painted" or "Plain") end
 	add("Colour vision", VISION_WORDS[Stoa.db.vision or "Standard"] or "Standard")
 	local choice = combatChoice()
 	add("In combat", choice == "fold" and ("Fold, " .. (Stoa.db.calm or "5") .. " s" .. (Stoa.db.calmGroup ~= false and ", waits for group" or ""))
@@ -1016,8 +1152,14 @@ function Welcome:Refresh()
 			row.note:SetText(isDefault and CLASS_DEFAULT_WORD or "")
 		end
 	elseif current == "look" then
+		local matte = Stoa.db.material == "matte"
+		choose(self.materialCards, matte and "matte" or "leather")
 		choose(self.themeButtons, Stoa.db.theme)
-		choose(self.ornamentCards, Stoa.db.ornament == "painted" and "painted" or "plain")
+		self.finishLabel:SetText(matte and "Grain" or "Ornament")
+		for _, button in pairs(self.ornamentButtons) do button:SetShown(not matte) end
+		for _, button in pairs(self.grainButtons) do button:SetShown(matte) end
+		choose(self.ornamentButtons, Stoa.db.ornament == "painted" and "painted" or "plain")
+		choose(self.grainButtons, Stoa.db.grain or "fine")
 		choose(self.visionButtons, Stoa.db.vision or "Standard")
 	elseif current == "combat" then
 		self:RefreshCombat(step)
@@ -1077,7 +1219,7 @@ function Welcome:Show()
 	end
 	if Stoa.char.welcomed and not escapes then table.insert(UISpecialFrames, "StoaWelcomePage") end
 	local db = halo()
-	self.opened = { ornament = Stoa.db.ornament, halo = not (db and db.enabled == false) }
+	self.opened = { ornament = Stoa.db.ornament, material = Stoa.db.material or "leather", halo = not (db and db.enabled == false) }
 	self.applied = nil
 	self.finished = nil
 	self.trying = nil
