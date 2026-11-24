@@ -389,8 +389,8 @@ end
 -- Bags and the game menu leave the action bar row for the console's top
 -- edge on the right, mirroring the chat tabs on the left: the menu, a gap,
 -- then the bags in the corner, a size down. At rest each row is hidden
--- behind a word on the rim, MENU and BAGS, and shows while the mouse is
--- over the word or the row. They ride the console's top, so they come down
+-- behind a word on the rim, MENU and BAGS, and opens in the word's place
+-- while the mouse is over the word or the row. They ride the console's top, so they come down
 -- with it when it folds.
 local MENU_SCALE = 0.8
 local MENU_LIFT = 4
@@ -420,8 +420,6 @@ local function placeMenuNow()
 	if Console.frame and Console.docked then
 		edge, point, lift = UIParent, "BOTTOMRIGHT", Console:OpenHeight() + MENU_LIFT
 	end
-	-- Room under the rows for their words.
-	lift = lift + MENU_WORD_ROOM
 	-- Bags take the corner, where every hand already goes for the backpack;
 	-- the menu sits inward of them.
 	if bags then
@@ -667,7 +665,7 @@ local function liftBags()
 	local row = bagsBar or menu
 	if Console.db.houseMenu and row and row:IsShown() then
 		local height = Stoa:PlainNumber(row:GetHeight())
-		if height then floor = floor + MENU_LIFT + MENU_WORD_ROOM + height * MENU_SCALE end
+		if height then floor = floor + MENU_LIFT + height * MENU_SCALE end
 	end
 	local frames = { ContainerFrameCombinedBags }
 	for i = 1, 13 do frames[#frames + 1] = _G["ContainerFrame" .. i] end
@@ -682,17 +680,20 @@ local function liftBags()
 	end
 end
 
--- Each row rests unseen behind its word and shows while the mouse is over
--- the word or the row. The words are Stoa's own frames hung under the
--- game's rows, so they follow wherever the rows are put. BAGS opens the
--- bags on a click, as the backpack does.
+-- Each row rests unseen behind its word and opens in the word's place
+-- while the mouse is over the word or the row, so the hand only moves
+-- across to its button; the word steps out while the row is up. The words
+-- are Stoa's own frames laid on the game's rows' near corners, so they
+-- follow wherever the rows are put. BAGS opens the bags on a click, as the
+-- backpack does; MENU takes no clicks, so the button under it has them.
 local function menuWord(row, label, click)
 	local word = CreateFrame("Button", nil, UIParent)
 	local text = UI.caption(word, label)
 	text:SetPoint("RIGHT")
 	word.text = text
 	word:SetSize(math.max(text:GetStringWidth() or 0, 24) + 4, MENU_WORD_ROOM - 4)
-	word:SetPoint("TOPRIGHT", row, "BOTTOMRIGHT", 0, -2)
+	word:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+	word:EnableMouse(click ~= nil)
 	if click then word:SetScript("OnClick", click) end
 	return word
 end
@@ -713,14 +714,13 @@ local function watchMenu()
 			local row, word = entry.row, entry.word
 			local seen = row:IsVisible()
 			word:SetShown(seen)
-			-- The row's own reach runs down over its word.
-			local over = seen and (row:IsMouseOver(0, -MENU_WORD_ROOM / MENU_SCALE, 0, 0) or word:IsMouseOver())
+			local over = seen and (row:IsMouseOver() or word:IsMouseOver())
 			local state = over and 1 or (fight and 2 or 3)
 			if state ~= entry.state then
 				entry.state = state
 				row:SetAlpha(over and 1 or 0)
 				word.text:SetTextColor(Stoa:Color(over and "accent" or "muted"))
-				word:SetAlpha(over and 1 or (fight and MENU_WORD_FIGHT or MENU_WORD_REST))
+				word:SetAlpha(over and 0 or (fight and MENU_WORD_FIGHT or MENU_WORD_REST))
 			end
 		end
 	end
