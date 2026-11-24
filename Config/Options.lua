@@ -48,7 +48,8 @@ end
 -- pages below under a plain name, with what you get and what Off leaves.
 -- { setting id, group, name, what it is }
 local PARTS = {
-	{ "preset", "Step 1: pick a starting set", "How much STOA", "Six ready-made sets of the parts below. Pick the closest, then switch parts on or off. Full is everything. Slim makes the console one line. Minimal has no console. Quiet folds more away. Classic feel keeps the game's own windows, bags, tooltips and nameplates. Same as Designer is how STOA's designer plays." },
+	{ "preset", "Step 1: pick a starting set", "How much STOA: console", "The first of two answers that set the parts below in one go: Full, Slim (one line) or None. Then switch parts on or off." },
+	{ "around", "Step 1: pick a starting set", "How much STOA: everything around it", "The second answer. Standard shows everything. Quiet makes the target and party thin strips that fade out of combat and puts the extras away." },
 	{ "consoleShape", "Step 2: choose your parts, out of a fight", "Console", "The leather panel along the bottom of the screen that holds chat, your action bars and the Ready, Journey and Company pages. Slim is one thin line with chat and bars standing above it. None takes the console away." },
 	{ "houseChat", "Step 2: choose your parts, out of a fight", "Chat on the console", "Chat sits on the console's left page. Off leaves the chat window where the game puts it." },
 	{ "glanceOn", "Step 2: choose your parts, out of a fight", "At a glance", "Up to eight numbers you choose, such as gold, gear and stats, beside the chat on the console. Off takes them away." },
@@ -763,12 +764,31 @@ local function build()
 	page = "setup"
 	group = "Start"
 	button("welcome", "Welcome page", "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of STOA, and other addons.", "Open", function() Stoa.Welcome:Show() end, { cmd = "/stoa welcome", words = "wizard first time" })
-	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps STOA's console, Halo and frames, and leaves the game's windows, bags, tooltips and nameplates as Blizzard draws them. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
-		{ "full", "Full" }, { "slim", "Slim" }, { "minimal", "Minimal" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Same as Designer" },
+	-- The wizard's two answers. Each sets several settings at once.
+	local function mixTo(shape, around)
+		local welcome = Stoa.Welcome
+		local nowShape, nowAround = welcome:Mix()
+		welcome:ApplyMix(shape or nowShape, around or nowAround)
+		welcome:FollowLayout()
+	end
+	choice(nil, "preset", "How much STOA: console", "Full is the console along the bottom of the screen. Slim makes it one line, with chat and the bars standing above it. None takes it away: two faint arcs for health and mana, and the Halo in a fight. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
+		{ "full", "Full" }, { "slim", "Slim" }, { "none", "None" },
 	}, {
-		reload = true, cmd = "/stoa preset", words = "preset minimal",
-		set = function(v) if Stoa.Welcome:ApplyPreset(v) then Stoa.Welcome:FollowLayout() end end,
+		id = "preset", reload = true, cmd = "/stoa preset", words = "preset minimal slim starting set",
+		get = function() return (Stoa.Welcome:Mix()) end,
+		set = function(v) mixTo(v, nil) end,
 	})
+	choice(nil, "around", "How much STOA: everything around it", "Standard shows the target and party as panels, with tooltip details, the quest line and At a glance. Quiet makes the target and party thin strips that fade out of combat, and puts away tooltip details, the quest line, At a glance and the Cooldown Manager rows.", "standard", {
+		{ "standard", "Standard" }, { "quiet", "Quiet" },
+	}, {
+		id = "around", reload = true, words = "preset quiet less starting set",
+		get = function() return select(2, Stoa.Welcome:Mix()) end,
+		set = function(v) mixTo(nil, v) end,
+	})
+	actions("otherSets", "Other starting sets", "Classic feel keeps STOA's console, Halo and frames, and leaves the game's windows, bags, tooltips and nameplates as Blizzard draws them. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Type /reload after choosing one.", {
+		{ "Classic feel", function() Stoa.Welcome:ApplyPreset("classic") end, "Classic feel set. Type /reload to finish." },
+		{ "Same as Designer", function() if Stoa.Welcome:ApplyPreset("taer") then Stoa.Welcome:FollowLayout() end end, "Same as Designer set. Type /reload to finish." },
+	}, { words = "preset classic designer" })
 	-- One place to mix the parts the presets above set together.
 	group = "Your own mix"
 	local function grimoire() return module("Grimoire") end
