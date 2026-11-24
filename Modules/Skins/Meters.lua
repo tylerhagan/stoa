@@ -101,35 +101,25 @@ local function plainBackground(entry)
 	end
 end
 
--- Points hung off the row's icon are hung off the row's left edge.
-local function offIcon(region, icon, entry)
-	if not (region and region.GetNumPoints) then return end
-	for i = 1, region:GetNumPoints() do
-		local point, relativeTo = region:GetPoint(i)
-		if relativeTo == icon then
-			region:SetPoint(point, entry, "LEFT", 0, 0)
-			return
-		end
-	end
-end
-
--- A docked row has no icon and starts at the window's left edge. Blizzard
--- lays the row out again in UpdateStyle, which is hooked to come here.
+-- A docked row has no icon and runs from the window's left edge to its
+-- right. Blizzard lays the row out again in UpdateStyle, which is hooked
+-- to come here. The points are set outright, not read first: reading a
+-- meter row's points back can fail.
 local function layoutEntry(entry)
 	local holder = entry.Icon
 	if not (holder and holder.SetAlpha) then return end
 	local docked = isDocked(entry.stoaWindow)
 	holder:SetAlpha(docked and 0 or 1)
-	if docked then
-		-- Blizzard hangs the bar off the art inside the icon's holder.
-		local bar = entry.GetStatusBar and entry:GetStatusBar()
-		local name = entry.GetName and entry:GetName()
-		for _, icon in ipairs({ holder, entry.GetIcon and entry:GetIcon() }) do
-			offIcon(bar, icon, entry)
-			offIcon(name, icon, entry)
-		end
-		-- The bar runs to the slot's right edge, under the hairline's end.
-		if bar then bar:SetPoint("BOTTOMRIGHT", entry, "BOTTOMRIGHT", 1, 1) end
+	if not docked then return end
+	local bar = entry.GetStatusBar and entry:GetStatusBar()
+	if not bar then return end
+	pcall(bar.SetPoint, bar, "LEFT", entry, "LEFT", 0, 0)
+	pcall(bar.SetPoint, bar, "BOTTOMRIGHT", entry, "BOTTOMRIGHT", 1, 1)
+	-- The thin style hangs the name off the icon too.
+	local thin = Enum and Enum.DamageMeterStyle and Enum.DamageMeterStyle.Thin
+	local name = entry.GetName and entry:GetName()
+	if thin and name and entry.GetStyle and entry:GetStyle() == thin then
+		pcall(name.SetPoint, name, "LEFT", entry, "LEFT", 0, 0)
 	end
 end
 
@@ -137,8 +127,8 @@ local function dressEntry(entry, window)
 	if not entry then return end
 	if window then entry.stoaWindow = window end
 	if entry.stoaDressed then
-		layoutEntry(entry)
 		colourEntry(entry)
+		layoutEntry(entry)
 		return
 	end
 	entry.stoaDressed = true
@@ -156,8 +146,8 @@ local function dressEntry(entry, window)
 	if entry.UpdateName then hooksecurefunc(entry, "UpdateName", colourEntry) end
 	if entry.UpdateStyle then hooksecurefunc(entry, "UpdateStyle", layoutEntry) end
 	UI.applyTheme()
-	layoutEntry(entry)
 	colourEntry(entry)
+	layoutEntry(entry)
 end
 
 -- Windows --------------------------------------------------------------------
@@ -176,7 +166,7 @@ local function showButtons(window, over)
 	if window.stoaButtons == state then return end
 	window.stoaButtons = state
 	local seen = state ~= 2
-	textures(window.DamageMeterTypeDropdown, seen and 1 or 0)
+	if window.stoaChevron then window.stoaChevron:SetAlpha(seen and 1 or 0) end
 	if window.SessionDropdown then window.SessionDropdown:SetAlpha(seen and 1 or 0) end
 	if window.SettingsDropdown then window.SettingsDropdown:SetAlpha(seen and 0.6 or 0) end
 	if window.MinimizeButton then window.MinimizeButton:SetAlpha(seen and 1 or 0) end
@@ -299,7 +289,31 @@ local function dressWindow(window)
 		hooksecurefunc(window, "SetMinimized", update)
 		update()
 	end
-	if window.SettingsDropdown then window.SettingsDropdown:SetAlpha(0.6) end
+	-- The arrow that picks what is counted: STOA's chevron for the game's
+	-- gold button.
+	local typeDropdown = window.DamageMeterTypeDropdown
+	if typeDropdown then
+		textures(typeDropdown, 0)
+		local chevron = UI.glyph(typeDropdown, "Chevron", 12, "muted")
+		chevron:SetPoint("CENTER", 0, 0)
+		chevron:SetRotation(-math.pi / 2)
+		typeDropdown:HookScript("OnEnter", function() chevron:SetVertexColor(Stoa:Color("accent")) end)
+		typeDropdown:HookScript("OnLeave", function() chevron:SetVertexColor(Stoa:Color("muted")) end)
+		window.stoaChevron = chevron
+	end
+	-- The cog keeps its shape and loses its gold.
+	local settings = window.SettingsDropdown
+	if settings then
+		settings:SetAlpha(0.6)
+		local function quiet()
+			local icon = settings.Icon
+			if not (icon and icon.SetDesaturated) then return end
+			icon:SetDesaturated(true)
+			icon:SetVertexColor(Stoa:Color("text"))
+		end
+		if settings.OnButtonStateChanged then hooksecurefunc(settings, "OnButtonStateChanged", quiet) end
+		quiet()
+	end
 
 	-- Bars, now and as the list makes new ones.
 	hooksecurefunc(window, "SetupEntry", function(_, entry) guarded(dressEntry, entry, window) end)
