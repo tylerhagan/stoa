@@ -29,6 +29,7 @@ local NOTES = {
 		-- shows both looks side by side.
 		lead = "Two looks, a console you arrange, a shorter setup",
 		tour = true,
+		foot = "Thank you to everyone who has stuck with STOA since the first release. It means a lot to me. If there is something you would like to see, leave a comment on the CurseForge page: curseforge.com/wow/addons/stoa\n\n" .. FOOT,
 		lines = {
 			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Material switches between them, or type /stoa welcome update to see both side by side." },
 			{ "Made for Matte", "A matte console with recesses for chat, the bars and the pages, a Compact or Full target, flat party cards and a Matte nameplate style. Leather keeps everything it had." },
