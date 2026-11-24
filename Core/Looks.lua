@@ -145,8 +145,12 @@ local function registerDetails()
 	rows.font_face, rows.font_face_file, rows.font_size = FONT_UI, FONT_UI_FILE, 11
 	rows.height = 18
 	rows.texture, rows.texture_file = BAR, BAR_FILE
-	rows.texture_class_colors = true
-	rows.alpha = 0.35
+	-- Class-coloured bars ignore the row's alpha in Details, so the bars
+	-- are one quiet colour and the class shows in the name.
+	rows.texture_class_colors = false
+	rows.fixed_texture_color = { 0.6, 0.6, 0.6 }
+	rows.textL_class_colors = true
+	rows.alpha = 0.25
 	rows.textL_outline, rows.textR_outline = true, true
 	rows.texture_background, rows.texture_background_file = BAR, BAR_FILE
 	rows.fixed_texture_background_color = { 0, 0, 0, 0 }
@@ -204,9 +208,12 @@ local function stripDetails(instance)
 	-- The rows as STOA's look for Details draws them, said outright: a
 	-- window that wears another skin, or whose rows were changed by hand,
 	-- is in the console all the same.
-	call(instance, "SetBarSettings", 18, BAR, true, nil, BAR, false, { 0, 0, 0, 0 }, 0.35)
-	call(instance, "SetBarTextSettings", 11, FONT_UI, nil, nil, nil, true, true)
+	-- Details draws class-coloured bars at full strength whatever the
+	-- row's alpha says, so the bars are one quiet colour, as STOA's own
+	-- meter rows are, and the class shows in the name.
 	local r, g, b = Stoa:Color("muted")
+	call(instance, "SetBarSettings", 18, BAR, false, { r, g, b }, BAR, false, { 0, 0, 0, 0 }, 0.25)
+	call(instance, "SetBarTextSettings", 11, FONT_UI, nil, true, false, true, true)
 	-- Details hangs the title off the right of its header's corner art, a
 	-- gap that was the icon's; the title is pulled back flush with the
 	-- window's left edge.
