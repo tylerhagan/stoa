@@ -172,7 +172,22 @@ end
 -- mouse, and the title in STOA's type on the line of the pages' headings.
 -- Its title stands above the window's own frame, so the frame starts that
 -- much lower.
-local DETAILS_TITLE = 14
+local DETAILS_TITLE = 20
+local DETAILS_RULE = 3
+local detailsRules = setmetatable({}, { __mode = "k" })
+
+-- The hairline under the title, as under the pages' headings.
+local function detailsRule(frame, shown)
+	local rule = detailsRules[frame]
+	if not rule then
+		if not shown then return end
+		rule = UI.line(frame)
+		rule:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, DETAILS_RULE)
+		rule:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, DETAILS_RULE)
+		detailsRules[frame] = rule
+	end
+	rule:SetShown(shown)
+end
 
 local function call(instance, method, ...)
 	local fn = instance[method]
@@ -187,7 +202,7 @@ local function stripDetails(instance)
 	call(instance, "HideMainIcon", true)
 	call(instance, "SetAutoHideMenu", true, true)
 	local r, g, b = Stoa:Color("muted")
-	call(instance, "AttributeMenu", true, 0, 2, FONT_UI, 11, { r, g, b, 1 }, 1, false)
+	call(instance, "AttributeMenu", true, 0, 8, FONT_UI, 11, { r, g, b, 1 }, 1, false)
 end
 
 -- Out of a slot again: the window's skin is put back on as Details ships
@@ -214,6 +229,7 @@ function Looks:DockDetails(n, spot)
 	if InCombatLockdown() and frame.IsProtected and frame:IsProtected() then return end
 	if not spot then
 		docked[n] = nil
+		detailsRule(frame, false)
 		unstripDetails(instance)
 		return
 	end
@@ -228,6 +244,7 @@ function Looks:DockDetails(n, spot)
 	end
 	docked[n] = true
 	stripDetails(instance)
+	detailsRule(frame, true)
 end
 
 -- RestedXP -------------------------------------------------------------------------
