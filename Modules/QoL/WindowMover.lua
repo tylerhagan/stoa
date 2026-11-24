@@ -96,6 +96,7 @@ function WindowMover:Hook(name)
 	end
 	frame:HookScript("OnMouseDown", down)
 	frame:HookScript("OnMouseUp", up)
+	frame.stoaMoveDown, frame.stoaMoveUp = down, up
 	-- The header is often a frame of its own that takes the mouse (the
 	-- title bar), so a drag there never reached the window: hand it on.
 	self:HookHeader(frame, down, up)
@@ -138,6 +139,35 @@ function WindowMover:HookHeader(frame, down, up)
 			end
 		end
 	end
+end
+
+-- A page that rises into its window's header after the window is laid out
+-- (the talents) brings frames of its own up there, which took the press
+-- before the window saw it. Its frames along the header hand a Shift-drag
+-- on to the window too. `page` is searched a few levels down.
+function WindowMover:HookRaised(frame, page)
+	local down, up = frame and frame.stoaMoveDown, frame and frame.stoaMoveUp
+	if not (down and up and page) then return end
+	local okTop, top = pcall(frame.GetTop, frame)
+	if not okTop or not top then return end
+	local function look(parent, depth)
+		for _, child in ipairs({ parent:GetChildren() }) do
+			if not (child.IsForbidden and child:IsForbidden()) then
+				local ok, childTop, mouse, button = pcall(function()
+					return child:GetTop(), child.IsMouseEnabled and child:IsMouseEnabled(), child.IsObjectType and child:IsObjectType("Button")
+				end)
+				if ok and childTop and top - childTop <= HEADER_REACH * 1.5 then
+					if mouse and not button and not child.stoaHeaderHooked and child.HookScript then
+						child.stoaHeaderHooked = true
+						child:HookScript("OnMouseDown", function(_, which) down(frame, which) end)
+						child:HookScript("OnMouseUp", function() up(frame) end)
+					end
+					if depth < 3 then look(child, depth + 1) end
+				end
+			end
+		end
+	end
+	pcall(look, page, 1)
 end
 
 function WindowMover:HookAll()

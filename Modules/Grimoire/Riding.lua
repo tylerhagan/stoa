@@ -159,15 +159,44 @@ local function chatParts()
 		local frame = _G["ChatFrame" .. i]
 		if frame then parts[#parts + 1] = frame end
 	end
-	for _, name in ipairs({ "StoaChatRail", "StoaChatTabs", "ChatFrame1EditBox" }) do
+	for i = 1, (NUM_CHAT_WINDOWS or 10) do
+		local box = _G["ChatFrame" .. i .. "EditBox"]
+		if box then parts[#parts + 1] = box end
+	end
+	for _, name in ipairs({ "StoaChatRail", "StoaChatTabs" }) do
 		if _G[name] then parts[#parts + 1] = _G[name] end
 	end
 	return parts
 end
 
 local function typing()
+	if ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow() then return true end
 	local box = ChatFrame1EditBox
 	return box and box.HasFocus and box:HasFocus()
+end
+
+-- How long the chat stays after you stop typing, for the answer to come.
+local CHAT_LINGER = 12
+
+-- Enter (or anything that opens a chat box) brings the whole chat back with
+-- the lines already said: the game had faded those out while it was clear.
+function Console:WakeChat()
+	if not self.riding then return end
+	self.chatWake = (self.chatWake or 0) + 1
+	self:ClearChat(false)
+	for i = 1, (NUM_CHAT_WINDOWS or 10) do
+		local frame = _G["ChatFrame" .. i]
+		if frame and frame.ResetAllFadeTimes and frame.IsShown and frame:IsShown() then frame:ResetAllFadeTimes() end
+	end
+end
+
+function Console:RestChat()
+	if not self.riding then return end
+	self.chatWake = (self.chatWake or 0) + 1
+	local wake = self.chatWake
+	C_Timer.After(CHAT_LINGER, function()
+		if self.riding and self.chatWake == wake and not typing() then self:ClearChat(true) end
+	end)
 end
 
 function Console:ClearChat(clear)
@@ -246,6 +275,9 @@ end
 function Console:FeedLine(text, r, g, b)
 	local feed = self.feed
 	if not (self.riding and feed) or type(text) ~= "string" or Stoa:IsSecret(text) then return end
+	-- A line two windows both show is listed once.
+	local last = feed.entries[#feed.entries]
+	if last and last.text == text and GetTime() - last.at < 0.5 then return end
 	table.insert(feed.entries, { text = text, r = tonumber(r) or 1, g = tonumber(g) or 1, b = tonumber(b) or 1, at = GetTime() })
 	while #feed.entries > FEED_LINES do table.remove(feed.entries, 1) end
 	self:RenderFeed()
@@ -292,17 +324,30 @@ Stoa:On("STOA_READY", function()
 	end
 	-- A fight takes the travel line away before anything else.
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Console:SetRiding(false) end)
-	-- The newest lines of the main chat window feed the travel line's list.
-	if ChatFrame1 and ChatFrame1.AddMessage then
-		hooksecurefunc(ChatFrame1, "AddMessage", function(_, text, r, g, b)
-			if Console.riding then xpcall(Console.FeedLine, Stoa.catch, Console, text, r, g, b) end
-		end)
+	-- The newest lines of every chat window feed the travel line's list
+	-- (whispers often live in a window of their own). The combat log's
+	-- window is left out.
+	for i = 1, (NUM_CHAT_WINDOWS or 10) do
+		local frame = _G["ChatFrame" .. i]
+		if frame and frame.AddMessage and i ~= 2 then
+			hooksecurefunc(frame, "AddMessage", function(_, text, r, g, b)
+				if Console.riding then xpcall(Console.FeedLine, Stoa.catch, Console, text, r, g, b) end
+			end)
+		end
 	end
 	-- Typing brings the chat back until you're done.
-	local box = ChatFrame1EditBox
-	if box and box.HookScript then
-		box:HookScript("OnEditFocusGained", function() if Console.riding then Console:ClearChat(false) end end)
-		box:HookScript("OnEditFocusLost", function() if Console.riding then Console:ClearChat(true) end end)
+	-- It stays a while after, so a conversation reads as one.
+	local function wake() xpcall(Console.WakeChat, Stoa.catch, Console) end
+	local function rest() xpcall(Console.RestChat, Stoa.catch, Console) end
+	if ChatEdit_ActivateChat and ChatEdit_DeactivateChat then
+		hooksecurefunc("ChatEdit_ActivateChat", wake)
+		hooksecurefunc("ChatEdit_DeactivateChat", rest)
+	else
+		local box = ChatFrame1EditBox
+		if box and box.HookScript then
+			box:HookScript("OnEditFocusGained", wake)
+			box:HookScript("OnEditFocusLost", rest)
+		end
 	end
 	Console:CheckRiding()
 end)

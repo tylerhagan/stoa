@@ -24,7 +24,7 @@ local LAYOUT_PREFIX = "STOA-LAYOUT1:"
 -- What a shared layout carries besides positions: { module or false for
 -- Stoa.db, key, type }.
 local LOOK = {
-	{ false, "theme", "string" }, { false, "ornament", "string" }, { false, "windowStone", "boolean" },
+	{ false, "theme", "string" }, { false, "ornament", "string" }, { false, "material", "string" }, { false, "grain", "string" }, { false, "windowStone", "boolean" },
 	{ false, "smoothBars", "boolean" }, { false, "combatConsole", "string" }, { false, "calm", "string" },
 	{ "Minimap", "shape", "string" }, { "Plates", "style", "string" }, { "Plates", "marker", "string" },
 	{ "CombatBar", "rows", "string" }, { "CombatBar", "healerRows", "string" },

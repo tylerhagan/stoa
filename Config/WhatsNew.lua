@@ -23,6 +23,21 @@ Stoa.WhatsNew = WhatsNew
 local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
+		edition = "2.0.0",
+		title = "New in STOA 2",
+		lines = {
+			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Material switches between them, or type /stoa welcome update to see both side by side." },
+			{ "Made for Matte", "A matte console with recesses for chat, the bars and the pages, a Compact or Full target, flat party cards and a Matte nameplate style. Leather keeps everything it had." },
+			{ "A console in slots", "The console's right side is now three slots. Put Ready, Journey or Company in any order, drop in the game's damage meter windows or a Details window, or leave one empty. A Details window in a slot is cut down to its title and rows. Settings > Console." },
+			{ "Menu and bags as words", "The game menu and the bag row now rest behind two small words on the console's edge, MENU and BAGS. Put the mouse on a word and its row shows. A click on BAGS opens your bags." },
+			{ "Leather polish", "A Compact target for Leather, rank as coloured words on the target, and nameplates that never cut a name short, with casts as a thin line." },
+			{ "Halo arc styles", "Line, Blade, Visor, Gauge or Tube for the two arcs, under Settings > Halo." },
+			{ "A shorter setup", "The welcome page asks two things about how much STOA you want: the console (Full, Slim or None) and everything around it (Standard or Quiet). A new Target and frames step sets the target, party, nameplates and text size. /stoa welcome opens it." },
+			{ "Quiet does more", "Quiet now makes the target and party thin strips that fade out of combat, as well as putting away tooltip details, the quest line and At a glance." },
+			{ "Chat on a ride", "On a mount or a flight the chat comes back while you type and for a few seconds after, and whispers from any chat window show in the feed." },
+		},
+	},
+	{
 		edition = "1.6.1",
 		title = "New in STOA 1.6.1",
 		lines = {
@@ -65,17 +80,6 @@ local NOTES = {
 			{ "Daylight's chat in the console", "Keep Daylight UI's chat and it sits in the console's chat place, with its tabs along the top edge." },
 			{ "Other chat addons", "Chat from another addon now stands above the console instead of behind it." },
 			{ "Changing your mind", "Settings > Setup > Other addons lists each shared job, so any answer can be changed later." },
-		},
-	},
-	{
-		edition = "1.5.0",
-		title = "New in STOA 1.5",
-		lines = {
-			{ "Raid target marks", "A skull, star or any other mark shows beside the name on the target plaque, and on the corner of party and raid cards." },
-			{ "Help on its way", "A dead group member's card says RES while someone raises them, and SUMMON while a summon waits on their answer." },
-			{ "Loot rolls", "The need, greed and pass cards wear STOA's dark card, with a thin timer along the foot." },
-			{ "Other languages", "Seals, shields, creature types, zone levels on the map and herb nodes now work on clients that aren't English." },
-			{ "Lighter in groups", "STOA listens only to the players it draws, so it does less work in a full raid." },
 		},
 	},
 }

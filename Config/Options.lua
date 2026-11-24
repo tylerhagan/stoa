@@ -48,7 +48,8 @@ end
 -- pages below under a plain name, with what you get and what Off leaves.
 -- { setting id, group, name, what it is }
 local PARTS = {
-	{ "preset", "Step 1: pick a starting set", "How much STOA", "Six ready-made sets of the parts below. Pick the closest, then switch parts on or off. Full is everything. Slim makes the console one line. Minimal has no console. Quiet folds more away. Classic feel keeps the game's own windows, bags, tooltips and nameplates. Same as Designer is how STOA's designer plays." },
+	{ "preset", "Step 1: pick a starting set", "How much STOA: console", "The first of two answers that set the parts below in one go: Full, Slim (one line) or None. Then switch parts on or off." },
+	{ "around", "Step 1: pick a starting set", "How much STOA: everything around it", "The second answer. Standard shows everything. Quiet makes the target and party thin strips that fade out of combat and puts the extras away." },
 	{ "consoleShape", "Step 2: choose your parts, out of a fight", "Console", "The leather panel along the bottom of the screen that holds chat, your action bars and the Ready, Journey and Company pages. Slim is one thin line with chat and bars standing above it. None takes the console away." },
 	{ "houseChat", "Step 2: choose your parts, out of a fight", "Chat on the console", "Chat sits on the console's left page. Off leaves the chat window where the game puts it." },
 	{ "glanceOn", "Step 2: choose your parts, out of a fight", "At a glance", "Up to eight numbers you choose, such as gold, gear and stats, beside the chat on the console. Off takes them away." },
@@ -157,6 +158,10 @@ local function add(entry)
 	entry.id = entry.id or entry.key
 	entry.quiet = QUIET[entry.name] or nil
 	entry.more = not (entry.everyday or EVERYDAY[entry.name]) or nil
+	-- A setting that belongs to another (`under` = its id) is drawn tucked
+	-- beneath it, so it folds away with it too.
+	local parent = entry.under and Options.byId[entry.under]
+	if parent then entry.more = parent.more end
 	if Options.byId[entry.id] then entry.id = entry.id .. #Options.list end
 	Options.list[#Options.list + 1] = entry
 	Options.byId[entry.id] = entry
@@ -261,7 +266,7 @@ local function build()
 	for _, name in ipairs(Stoa.themeOrder) do
 		themes[#themes + 1] = { name, name == "Class" and "Your class" or name, swatch = name }
 	end
-	choice(db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Each class has its own, and Your class follows whoever you log in.", "Bone", themes, {
+	choice(db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Matte is black hardware with white print. Each class has its own, and Your class follows whoever you log in.", "Bone", themes, {
 		list = true, words = "colour color palette class skin",
 		change = function(_, v) Stoa:SetTheme(v) end,
 	})
@@ -276,6 +281,13 @@ local function build()
 	}, { reload = true, words = "font size scale readable small big" })
 	group = "Painted pieces"
 	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, words = "brass frame leather fancy" })
+	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
+	-- Part of the Material choice: tucked under it, there once Matte black
+	-- is picked (even before the reload that brings the material in).
+	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker.", "satin", { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
+		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth satin flat finish",
+		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
+	})
 	toggle(db, "windowStone", "Stone behind windows", "Faint rings and grain in the theme's colour behind windows and STOA's own pages. The console keeps its leather.", true, {
 		words = "texture background granite", change = function() Stoa.UI.showStone(Stoa.db.windowStone) end,
 	})
@@ -291,6 +303,23 @@ local function build()
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "freeRight", "Leave the console's right side free", "Hides the Ready, Journey and Company pages together, leaving bare leather right of the action bars for a window of your own, such as another addon's damage meter. The full console only.", false, { words = "ready journey company hide empty space meter right pages", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
+	-- The right side's three slots. Choosing something another slot holds
+	-- swaps the two.
+	local function refit() local c = Stoa.modules.Grimoire; if c and c.FitPages then Stoa:AfterCombat(function() c:FitPages() end) end end
+	for n = 1, 3 do
+		local key = "slot" .. n
+		choice(console, key, ("Right side, slot %d"):format(n), n == 1 and "The console's right side is three slots, left to right. Each holds Ready, Journey or Company, a damage meter window, or nothing. Meter 1 to 3 are the game's own meter windows (open more from the meter's menu, for healing or interrupts, say). Details 1 and 2 are Details' windows, when you run it. Empty leaves bare console for anything else. On a narrow screen the right-hand slots drop first. The full console only." or "What the console's right side holds in this slot. Choosing something another slot holds swaps the two.", ({ "ready", "journey", "company" })[n], Stoa.modules.Grimoire.SLOT_KINDS, {
+			words = "slots modular right side meter details ready journey company empty arrange", change = refit,
+			set = function(v)
+				local c = console()
+				if not c then return end
+				for m = 1, 3 do
+					if m ~= n and v ~= "empty" and c["slot" .. m] == v then c["slot" .. m] = c[key] end
+				end
+				c[key] = v
+			end,
+		})
+	end
 	toggle(console, "dividers", "Lines between the console's sections", "A faint gold line with a small diamond between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	toggle(console, "daylight", "Light from the time of day", "The console's gold catches the sky's colour from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk, moonlit blue at night, with a faint glass reflection on your portrait. Off keeps the gold as it is. /stoa daylight 23 previews an hour.", true, { words = "time of day daylight night dusk dawn", change = function() local c = Stoa.modules.Grimoire; if c and c.UpdateDaylight then c:UpdateDaylight() end end })
 	toggle(console, "riding", "Travel line while riding", "On a mount or a flight, out of a fight, the console folds to a slim line with your speed, the zone, and how far the quest you follow is. Chat lifts above it and the action bars fade. A fight or getting off brings the full console back. Not on the Slim console. /stoa ride previews it.", true, { words = "mount mounted riding travel flight taxi speed", cmd = "/stoa ride", change = function() local c = Stoa.modules.Grimoire; if c and c.CheckRiding then c:CheckRiding() end end })
@@ -326,6 +355,7 @@ local function build()
 	toggle(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar.", true, { reload = true, words = "unit frame" })
 	toggle(halo, "targetOfTarget", "Target of target", "Who your target is targeting: a name and a thin health line to the right of the target plaque. Says YOU when it is you. Click it to target them.", true, { reload = true, words = "tot assist aggro" })
 	toggle(halo, "focusFrame", "Focus", "Your focus as a small block under the target of target, with or without a target. Off brings back Blizzard's focus frame. Move it with /stoa move.", true, { reload = true, words = "focus unit frame" })
+	choice(halo, "arcStyle", "Arc style", "How the Halo's health and power arcs are drawn. Line is the even half circle. Blade swells in the middle and thins to points. Visor bends as if on curved glass, with a gloss line inside. Gauge is ten segments with quarter ticks. Tube is a bright line on a wide faint band.", "line", { { "line", "Line" }, { "blade", "Blade" }, { "visor", "Visor" }, { "gauge", "Gauge" }, { "tube", "Tube" } }, { reload = true, words = "arc arcs shape style health mana ring" })
 	toggle(halo, "shield", "Your shield", "A silver shield whose fill drains as it soaks up damage: under the Halo's health number, and left of the medallion while the console is open.", true, { id = "haloShield", reload = true, words = "absorb power word shield bubble" })
 	toggle(halo, "classMark", "Your class mark", "The buff your class keeps up, drawn like the shield and emptying as it runs out: Battle Shout (warrior), Slice and Dice (rogue), your seal (paladin), Lightning or Water Shield and Inner Fire by their charges (shaman, priest). Under the Halo's power number, and beside the shield left of the medallion.", true, { id = "haloClassMark", reload = true, words = "battle shout slice dice seal inner fire lightning water shield" })
 	toggle(halo, "hideTargetFrame", "Hide Blizzard's target frame", "STOA shows your target beside the Halo.", true, { reload = true, words = "unit frame" })
@@ -450,8 +480,8 @@ local function build()
 	group = "Nameplates"
 	local restyle = function() Stoa.modules.Plates:Restyle() end
 	toggle(plates, "enabled", "Restyle nameplates", "Flat bars coloured by what you can do: amber for enemies, pale gold for neutral, blue for friends, and grey only for tapped or dead.", true, { id = "platesOn", reload = true, words = "nameplates enemy health bars" })
-	choice(plates, "style", "Nameplate style", "STOA: a rounded track. Bold: a heavy dark frame with the health value in the bar. Inline: name and health inside the bar. Brass: a brass edge with a level badge. Slim: a thin bar under the name.", "stoa", {
-		{ "stoa", "STOA" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" },
+	choice(plates, "style", "Nameplate style", "STOA: a rounded track. Bold: a heavy dark frame with the health value in the bar. Inline: name and health inside the bar. Brass: a brass edge with a level badge. Slim: a thin bar under the name. Matte: a thin line with no frame, as on the Matte target.", "stoa", {
+		{ "stoa", "STOA" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" }, { "matte", "Matte" },
 	}, { id = "plateStyle", change = restyle })
 	choice(plates, "marker", "Mark your target's plate", "A bone edge round it, arrows either side, or a soft glow behind it.", "edge", {
 		{ "edge", "Edge" }, { "arrows", "Arrows" }, { "glow", "Glow" },
@@ -751,12 +781,31 @@ local function build()
 	page = "setup"
 	group = "Start"
 	button("welcome", "Welcome page", "The step-by-step setup: where to start, your specs, the look, what a fight does, how much of STOA, and other addons.", "Open", function() Stoa.Welcome:Show() end, { cmd = "/stoa welcome", words = "wizard first time" })
-	choice(function() return Stoa.db end, "preset", "How much STOA", "Full is everything. Slim makes the console one line. Minimal has no console: two faint arcs for health and mana, and the Halo in a fight. Quiet folds more away. Classic feel keeps STOA's console, Halo and frames, and leaves the game's windows, bags, tooltips and nameplates as Blizzard draws them. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
-		{ "full", "Full" }, { "slim", "Slim" }, { "minimal", "Minimal" }, { "quiet", "Quiet" }, { "classic", "Classic feel" }, { "taer", "Same as Designer" },
+	-- The wizard's two answers. Each sets several settings at once.
+	local function mixTo(shape, around)
+		local welcome = Stoa.Welcome
+		local nowShape, nowAround = welcome:Mix()
+		welcome:ApplyMix(shape or nowShape, around or nowAround)
+		welcome:FollowLayout()
+	end
+	choice(nil, "preset", "How much STOA: console", "Full is the console along the bottom of the screen. Slim makes it one line, with chat and the bars standing above it. None takes it away: two faint arcs for health and mana, and the Halo in a fight. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
+		{ "full", "Full" }, { "slim", "Slim" }, { "none", "None" },
 	}, {
-		reload = true, cmd = "/stoa preset", words = "preset minimal",
-		set = function(v) if Stoa.Welcome:ApplyPreset(v) then Stoa.Welcome:FollowLayout() end end,
+		id = "preset", reload = true, cmd = "/stoa preset", words = "preset minimal slim starting set",
+		get = function() return (Stoa.Welcome:Mix()) end,
+		set = function(v) mixTo(v, nil) end,
 	})
+	choice(nil, "around", "How much STOA: everything around it", "Standard shows the target and party as panels, with tooltip details, the quest line and At a glance. Quiet makes the target and party thin strips that fade out of combat, and puts away tooltip details, the quest line, At a glance and the Cooldown Manager rows.", "standard", {
+		{ "standard", "Standard" }, { "quiet", "Quiet" },
+	}, {
+		id = "around", reload = true, words = "preset quiet less starting set",
+		get = function() return select(2, Stoa.Welcome:Mix()) end,
+		set = function(v) mixTo(nil, v) end,
+	})
+	actions("otherSets", "Other starting sets", "Classic feel keeps STOA's console, Halo and frames, and leaves the game's windows, bags, tooltips and nameplates as Blizzard draws them. Same as Designer is Full as its designer plays it, with the designer's Edit Mode layout. Type /reload after choosing one.", {
+		{ "Classic feel", function() Stoa.Welcome:ApplyPreset("classic") end, "Classic feel set. Type /reload to finish." },
+		{ "Same as Designer", function() if Stoa.Welcome:ApplyPreset("taer") then Stoa.Welcome:FollowLayout() end end, "Same as Designer set. Type /reload to finish." },
+	}, { words = "preset classic designer" })
 	-- One place to mix the parts the presets above set together.
 	group = "Your own mix"
 	local function grimoire() return module("Grimoire") end
@@ -790,6 +839,24 @@ local function build()
 		id = "targetShape", reload = true, words = "target frame plaque strip panel slim minimal layout",
 		get = function() local m = module("Halo"); return m and m.targetStrip and "words" or "plaque" end,
 		set = function(v) local m = module("Halo"); if m then m.targetStrip = v == "words" end end,
+	})
+	-- Tucked under the target's shape. Each look keeps its own answer:
+	-- Matte starts Compact, Leather starts Full.
+	choice(nil, "targetSize", "Target size", "Compact is a small block: name, type and a slim health line. Full is the larger plaque with the target's portrait. Matte starts Compact and Leather starts Full; each look remembers its own.", "compact", {
+		{ "compact", "Compact" }, { "full", "Full" },
+	}, {
+		id = "targetSize", reload = true, under = "targetShape", words = "target frame plaque slab size big small portrait matte leather compact",
+		showWhen = function() local m = module("Halo"); return not (m and m.targetStrip) end,
+		get = function()
+			local m = module("Halo")
+			if db().material == "matte" then return m and m.targetFull and "full" or "compact" end
+			return m and m.targetCompact and "compact" or "full"
+		end,
+		set = function(v)
+			local m = module("Halo")
+			if not m then return end
+			if db().material == "matte" then m.targetFull = v == "full" else m.targetCompact = v == "compact" end
+		end,
 	})
 	choice(nil, "restFrames", "Target and party out of combat", "Faint rests them at half strength until a fight starts or the mouse is over them.", "full", {
 		{ "full", "Full strength" }, { "faint", "Faint" },
@@ -916,6 +983,11 @@ function Options.search(query)
 end
 
 -- A page's settings: the everyday ones, and those under More.
+-- False for a setting that only matters under another's choice (showWhen).
+function Options.shown(entry)
+	return not entry.showWhen or entry.showWhen() and true or false
+end
+
 function Options.onPage(id)
 	local out, more = {}, {}
 	for _, entry in ipairs(Options.list) do

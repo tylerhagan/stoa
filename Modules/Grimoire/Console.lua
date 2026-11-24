@@ -12,6 +12,11 @@ local Stoa = ns.Stoa
 
 local Console = Stoa:NewModule("Grimoire", {
 	height = 150,
+	-- The right side as three slots, left to right. Each holds one of
+	-- STOA's pages, a meter window, or nothing (Console:Slots).
+	slot1 = "ready",
+	slot2 = "journey",
+	slot3 = "company",
 	-- The slim console: one plain line, with the pages on a card that
 	-- opens over the readouts.
 	slim = false,
@@ -35,6 +40,33 @@ local SPINE_HEIGHT = 22
 local SLIM_HEIGHT = 44
 local SLIM_SEAL = 36
 local ARCH_SIZE = 220
+-- The matte console's arch: a boss just wider than the portrait's recess.
+-- Matte has no arch: the bezel stands half out of the shell on its own
+-- round body, like a thumbstick, centred MATTE_SEAL_Y above the top edge.
+-- The body runs a few units past the bezel's rim, so the rim's shadow
+-- falls on solid shell and not as a see-through band over the world.
+local MATTE_ARCH = 116
+-- The matte seal: a little smaller than the plain one and set higher, so
+-- its bezel ends above the bars' well. The bezel's texture is drawn
+-- BEZEL_SCALE times the portrait's width (128 for the 76 it was drawn at).
+local MATTE_SEAL, MATTE_SEAL_Y = 68, 20
+-- Matte: the shield sits in a socket left of the bezel, at the head of the
+-- health row, and the class mark in one on the right, at the head of mana.
+-- From the portrait's centre.
+local CREST_SOCKET_MARK, CREST_SOCKET_X, CREST_SOCKET_Y = 18, 68, -32 - MATTE_SEAL_Y
+local BEZEL_SCALE = 128 / 76
+-- Matte: health and mana sit down in the shell either side of the bezel,
+-- as in the leather, over the bars' well: RESOURCE_OUT from the console's
+-- centre and RESOURCE_DROP under its rim, each bar in a thin slot.
+local MATTE_RESOURCE_W, MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP = 170, 94, -32
+-- A tab always stands on the rim beside the dial, a quarter lower than
+-- it, with a cone for the target's portrait (BuildTargetCone; art from
+-- Tools/art/matte_dock.py). The docked target starts under the tab's
+-- rounded corner and runs on from it, its words just past the cone.
+local MATTE_TAB_W, MATTE_TAB_H, MATTE_TAB_END = 128, 59, 122
+local CONE_X, CONE_Y, CONE_R = 86, 28, 17
+Console.MATTE_DOCK_X = MATTE_TAB_END - 16
+Console.MATTE_DOCK_TEXT = 18
 local SEAL_SIZE = 76
 local ART_SEAL_SIZE = 110
 
@@ -71,7 +103,11 @@ local setUnitBar, classColor = UI.setUnitBar, UI.classColor
 
 -- The slim console is always plain: the leather is cut for the full height.
 function Console:Art()
-	return self.db.art and not self.db.slim
+	return self.db.art and not self.db.slim and not self:Matte()
+end
+
+function Console:Matte()
+	return UI.matte()
 end
 
 function Console:Build()
@@ -79,7 +115,11 @@ function Console:Build()
 	local space = Stoa.space
 	local slim = db.slim
 	-- The slim console has no arch, so its top line runs straight across.
-	local archGap = slim and 0 or ARCH_SIZE / 2
+	local matte = self:Matte()
+	local archSize = matte and MATTE_ARCH or ARCH_SIZE
+	local archY = matte and MATTE_SEAL_Y or 0
+	-- Where the arch's circle crosses the top edge.
+	local archGap = slim and 0 or math.sqrt((archSize / 2) ^ 2 - archY ^ 2)
 
 	local frame = CreateFrame("Frame", "StoaConsole", UIParent)
 	frame:SetFrameStrata("BACKGROUND")
@@ -99,17 +139,18 @@ function Console:Build()
 	leftEdge:SetPoint("TOPRIGHT", frame, "TOP", -archGap, 0)
 	local rightEdge = line(frame)
 	rightEdge:SetPoint("TOPRIGHT")
-	rightEdge:SetPoint("TOPLEFT", frame, "TOP", archGap, 0)
+	-- Matte: the right half starts past the tab beside the dial.
+	rightEdge:SetPoint("TOPLEFT", frame, "TOP", matte and not slim and MATTE_TAB_END or archGap, 0)
 	local inner = line(frame, "hairline", 0.1)
 	inner:SetPoint("TOPLEFT", 0, -5)
 	inner:SetPoint("TOPRIGHT", 0, -5)
 
 	-- The arch: a hairline circle behind a panel circle, both centred on the
 	-- console's top edge; the panel hides their lower halves.
-	local archRing = circle(frame, "BACKGROUND", -8, ARCH_SIZE + 2, "hairline")
-	archRing:SetPoint("CENTER", frame, "TOP")
-	local arch = circle(frame, "BACKGROUND", -7, ARCH_SIZE, "panel")
-	arch:SetPoint("CENTER", frame, "TOP")
+	local archRing = circle(frame, "BACKGROUND", -8, archSize + 2, "hairline")
+	archRing:SetPoint("CENTER", frame, "TOP", 0, archY)
+	local arch = circle(frame, "BACKGROUND", -7, archSize, "panel")
+	arch:SetPoint("CENTER", frame, "TOP", 0, archY)
 
 	-- When folded the arch fades away and this hairline closes the gap, so the
 	-- spine reads as one clean line.
@@ -136,8 +177,11 @@ function Console:Build()
 		arch:Hide()
 		self.archParts = self:BuildArt(frame)
 		self.flatParts = { bg, leftEdge, rightEdge, inner }
+	elseif self:Matte() then
+		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch, archSize, archY)
 	end
 
+	if matte and not slim then self:BuildTargetCone(frame) end
 	self:BuildSeal(frame)
 	self:BuildNotes(frame, space)
 	self:BuildFellowship(frame, space)
@@ -160,6 +204,192 @@ end
 function Console:OpenHeight()
 	if self.db.slim then return SLIM_HEIGHT end
 	return self:Art() and ART_HEIGHT or self.db.height
+end
+
+-- The matte console: the drawn panel made near solid, a grain over it one
+-- texel to the pixel, a little light along the top and quiet edges, as one
+-- moulded piece of black hardware. Uses the plain console's layout.
+-- Matte: the tab beside the dial and the cone set in it. The cone is dark
+-- and empty until you have a target, then holds its portrait, wherever the
+-- target's own plaque is showing. It fades with the arch when the console
+-- folds.
+function Console:BuildTargetCone(frame)
+	local holder = CreateFrame("Frame", nil, frame)
+	holder:SetSize(MATTE_TAB_W, MATTE_TAB_H)
+	holder:SetPoint("BOTTOMLEFT", frame, "TOP", 0, -1)
+	local tab = holder:CreateTexture(nil, "BACKGROUND")
+	tab:SetTexture(UI.MEDIA .. "Textures\\MatteTab")
+	tab:SetAllPoints()
+	tab:SetVertexColor(Stoa:Color("panel"))
+	UI.tint(tab, "panel", 1)
+	-- The same faint light along its top as the docked plaque's.
+	local lines = holder:CreateTexture(nil, "BACKGROUND", nil, 1)
+	lines:SetTexture(UI.MEDIA .. "Textures\\MatteTabLines")
+	lines:SetAllPoints()
+	lines:SetVertexColor(1, 1, 1, 0.05)
+	-- Unsnapped like the docked block that runs on from it.
+	UI.unsnap(tab)
+	UI.unsnap(lines)
+	-- The cone stands on its own frame above the docked target block (a
+	-- LOW button that starts under the cone's right edge), so the block
+	-- runs on beneath the bezel and never cuts it.
+	local face = CreateFrame("Frame", nil, holder)
+	face:SetAllPoints()
+	face:SetFrameStrata("LOW")
+	face:SetFrameLevel(30)
+	local size = CONE_R * 2
+	local bezel = face:CreateTexture(nil, "BORDER")
+	bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
+	bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
+	bezel:SetPoint("CENTER", holder, "BOTTOMLEFT", CONE_X, CONE_Y + 1)
+	local pit = circle(face, "BORDER", 1, size + 4)
+	pit:SetColorTexture(0, 0, 0, 0.55)
+	pit:SetPoint("CENTER", bezel)
+	local rim = circle(face, "ARTWORK", 0, size + 3, "text")
+	rim:SetPoint("CENTER", bezel)
+	local portrait = face:CreateTexture(nil, "ARTWORK", nil, 1)
+	portrait:SetSize(size, size)
+	portrait:SetPoint("CENTER", bezel)
+	local round = face:CreateMaskTexture()
+	round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	round:SetAllPoints(portrait)
+	portrait:AddMaskTexture(round)
+	self.cone = { holder = holder, portrait = portrait, rim = rim }
+	table.insert(self.archParts, holder)
+	local function update() self:UpdateTargetCone() end
+	Stoa:On("PLAYER_TARGET_CHANGED", update)
+	Stoa:On("PLAYER_ENTERING_WORLD", update)
+	Stoa:OnUnit("UNIT_PORTRAIT_UPDATE", { "target" }, update)
+	update()
+end
+
+-- `dead` (from the Halo, which knows) greys the portrait out.
+function Console:UpdateTargetCone(dead)
+	local cone = self.cone
+	if not cone then return end
+	local has = UnitExists("target") and true or false
+	if has and dead == nil then SetPortraitTexture(cone.portrait, "target") end
+	if dead ~= nil then cone.dead = dead and true or false end
+	if not has then cone.dead = false end
+	cone.portrait:SetDesaturated(cone.dead or false)
+	cone.portrait:SetAlpha(cone.dead and 0.5 or 1)
+	cone.rim:SetAlpha(cone.dead and 0.4 or 1)
+	cone.portrait:SetShown(has)
+	cone.rim:SetShown(has)
+end
+
+function Console:BuildMatte(frame, bg, edges, inner, arch, archSize, archY)
+	local slim = self.db.slim
+	UI.unpaint(bg)
+	paint(bg, "panel", 0.98)
+	UI.unpaint(arch)
+	paint(arch, "panel", 0.98)
+	inner:Hide()
+	for _, edge in ipairs(edges) do
+		UI.unpaint(edge)
+		paint(edge, "hairline", 0.07)
+	end
+
+	-- The top edge is rounded over, not cut: no line, only light that
+	-- falls off a few units down each half of the face.
+	for i = 1, 2 do
+		local bevel = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
+		bevel:SetPoint("TOPLEFT", edges[i], "BOTTOMLEFT")
+		bevel:SetPoint("TOPRIGHT", edges[i], "BOTTOMRIGHT")
+		bevel:SetHeight(7)
+		bevel:SetColorTexture(1, 1, 1, 1)
+		UI.setGradient(bevel, { "VERTICAL", 0, 1 }, 1, 1, 1, 0.06)
+	end
+
+	local light = frame:CreateTexture(nil, "BACKGROUND", nil, -5)
+	light:SetPoint("TOPLEFT")
+	light:SetPoint("BOTTOMRIGHT")
+	light:SetColorTexture(1, 1, 1, 1)
+	-- Lit from above: the shell is a shade lighter at its top edge.
+	UI.setGradient(light, { "VERTICAL", 0, 1 }, 1, 1, 1, 0.075)
+
+	local grains = {}
+	local function grain(sublevel)
+		local tex = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel)
+		tex:SetTexture(UI.GRAIN, "REPEAT", "REPEAT")
+		grains[#grains + 1] = tex
+		return tex
+	end
+	local body = grain(-4)
+	body:SetAllPoints()
+	if not slim then
+		-- The arch's own grain: the half of its circle above the top edge.
+		local cap = grain(-4)
+		cap:SetSize(archSize, archSize / 2 + archY)
+		cap:SetPoint("BOTTOM", frame, "TOP")
+		local round = frame:CreateMaskTexture()
+		round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		round:SetSize(archSize, archSize)
+		round:SetPoint("CENTER", frame, "TOP", 0, archY)
+		cap:AddMaskTexture(round)
+		-- Fades with the arch inside its own strength (see the fold).
+		cap.stoaGrainCap = true
+		table.insert(self.archParts, cap)
+	end
+	self.grains = grains
+	if not slim then self:BuildWells(frame) end
+
+	local function tile()
+		for _, tex in ipairs(grains) do UI.fitGrain(tex) end
+	end
+	tile()
+	frame:HookScript("OnSizeChanged", tile)
+	for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED" }) do
+		Stoa:On(event, tile)
+	end
+	self:PaintMatte()
+end
+
+-- Wells: each of the console's zones (chat, At a glance, the bars, the
+-- pages) sits in a smooth rounded recess sunk into the rough shell: a
+-- darker ground, a shadow under its top lip and a lit line under its
+-- bottom edge, all in one sliced piece (Tools/art/matte_parts.py) that
+-- fades with the pages. Placed by PlaceDividers.
+function Console:BuildWells(frame)
+	self.wells = {}
+	for i = 1, 4 do
+		local fill = frame:CreateTexture(nil, "BACKGROUND", nil, -3)
+		fill:SetTexture(UI.MEDIA .. "Textures\\MatteWell")
+		if fill.SetTextureSliceMargins then
+			fill:SetTextureSliceMargins(12, 12, 12, 12)
+			if fill.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
+				fill:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+			end
+		end
+		fill:Hide()
+		self:AddPage(fill)
+		self.wells[i] = { fill }
+	end
+end
+
+-- `zones` is up to four { left, right } spans from the console's left.
+local WELL_PAD, WELL_BOTTOM = 12, 8
+-- The bars' well starts lower, under the bezel's foot.
+local WELL_BARS, WELL_BARS_TOP = 3, -48
+function Console:PlaceWells(zones, top)
+	if not self.wells then return end
+	for i, well in ipairs(self.wells) do
+		local zone = zones[i]
+		local on = zone and zone[2] - zone[1] > 40
+		if on then
+			local fill = well[1]
+			fill:ClearAllPoints()
+			fill:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - WELL_PAD + 0.5), i == WELL_BARS and WELL_BARS_TOP or top + 8)
+			fill:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + WELL_PAD + 0.5), WELL_BOTTOM)
+		end
+		for _, part in ipairs(well) do part:SetShown(on and true or false) end
+	end
+end
+
+-- The grain's strength (the Grain setting).
+function Console:PaintMatte()
+	local alpha = UI.grainAlpha()
+	for _, tex in ipairs(self.grains or {}) do tex:SetVertexColor(1, 1, 1, alpha * (tex.stoaCapFade or 1)) end
 end
 
 -- Lays the leather along the console: the tile repeating edge to edge
@@ -267,11 +497,12 @@ function Console:BuildSeal(frame)
 	-- With the leather art the seal sits in the art's arch, a size larger,
 	-- and the arch's own gold ring stands in for the seal's outer rings.
 	local art, slim = self:Art(), self.db.slim
-	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or SEAL_SIZE
+	local matteSeal = self:Matte() and not slim
+	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or matteSeal and MATTE_SEAL or SEAL_SIZE
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
 	-- Slim: the seal sits in the line, its head just over the top edge.
-	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or 6
+	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or 6
 	seal:SetPoint("CENTER", frame, "TOP", 0, sealY)
 	self.seal = seal
 
@@ -306,10 +537,29 @@ function Console:BuildSeal(frame)
 	RegisterStateDriver(button, "visibility", "[combat] hide; show")
 
 	if not art then
-		local outer = circle(seal, "BORDER", 0, size + 12, "hairline")
-		outer:SetPoint("CENTER")
-		local gap = circle(seal, "BORDER", 1, size + 10, "panel")
-		gap:SetPoint("CENTER")
+		-- Matte: the portrait sits in a moulded bezel (slim: a dark recess)
+		-- in place of the hairline.
+		local matte = self:Matte()
+		if matte and not slim then
+			-- A moulded bezel (Tools/art/matte_bezel.py): a deep lip, a
+			-- smooth channel for the level ring's ticks, a raised rim.
+			-- The medallion is its own solid body: a full disc under the
+			-- bezel, above the console and the tab, so none of the shell's
+			-- edges, grain or light reads through the bezel's shading.
+			seal:SetFrameLevel(frame:GetFrameLevel() + 3)
+			local body = circle(seal, "BACKGROUND", -2, MATTE_ARCH, "panel", 1)
+			body:SetPoint("CENTER")
+			local bezel = seal:CreateTexture(nil, "BORDER", nil, 0)
+			bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
+			bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
+			bezel:SetPoint("CENTER")
+		else
+			local outer = circle(seal, "BORDER", 0, size + (matte and 14 or 12), not matte and "hairline" or nil)
+			if matte then outer:SetColorTexture(0, 0, 0, 0.85) end
+			outer:SetPoint("CENTER")
+			local gap = circle(seal, "BORDER", 1, size + 10, "panel")
+			gap:SetPoint("CENTER")
+		end
 	end
 	local ring = circle(seal, "BORDER", 2, size + 4)
 	ring:SetPoint("CENTER")
@@ -330,8 +580,17 @@ function Console:BuildSeal(frame)
 	-- Halo's settings; slim leaves them to the Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db then
-		local crest = art and 29 or 22
+		local crest = art and 29 or matteSeal and CREST_SOCKET_MARK or 22
 		self.crestSize, self.crestPortrait = crest, portrait
+		if matteSeal then
+			-- A small round socket for each, set in the shell between the
+			-- bezel and the bars: dark when its mark is out.
+			for _, sign in ipairs({ -1, 1 }) do
+				local socket = circle(seal, "BACKGROUND", 0, CREST_SOCKET_MARK + 8)
+				socket:SetColorTexture(0, 0, 0, 0.45)
+				socket:SetPoint("CENTER", portrait, "CENTER", sign * CREST_SOCKET_X, CREST_SOCKET_Y)
+			end
+		end
 		if halo.db.shield then
 			local shield = UI.shieldGauge(seal, crest)
 			shield:SetFrameLevel(seal:GetFrameLevel() + 6)
@@ -359,7 +618,7 @@ function Console:BuildSeal(frame)
 	-- nothing floats over the world.
 	local role = text(seal, "italic", Stoa.typeSize.label, "accent", "CENTER")
 	role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
-	role:SetShown(not art and not slim)
+	role:SetShown(not art and not slim and not self:Matte())
 	self.roleText = role
 
 	if slim then
@@ -376,24 +635,46 @@ function Console:BuildSeal(frame)
 	end
 
 	-- Health on the left, filling towards the seal; mana on the right.
-	local health = bar(frame, 150, 3, "health")
+	local matte = self:Matte()
+	local health = bar(frame, matte and MATTE_RESOURCE_W or 150, 3, "health")
 	health:SetReverseFill(true)
-	health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
-	local healthText = text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 4)
+	-- Matte: the values are as small as their captions, one line over the bar.
+	local valueFont, valueSize = matte and "sans" or "serif", matte and Stoa.typeSize.caption or Stoa.typeSize.title
+	local healthText = text(frame, valueFont, valueSize, "text", "RIGHT")
+	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, matte and 5 or 4)
 	local healthCap = caption(frame, "Health")
-	healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
 
-	local mana = bar(frame, 150, 3, "mana")
-	mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
-	local manaText = text(frame, "serif", Stoa.typeSize.title, "mana")
-	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 4)
+	local mana = bar(frame, matte and MATTE_RESOURCE_W or 150, 3, "mana")
+	local manaText = text(frame, valueFont, valueSize, "mana")
+	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, matte and 5 or 4)
 	local manaCap = caption(frame, "Mana")
-	manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
 
 	self.health, self.healthText = health, healthText
 	self.mana, self.manaText = mana, manaText
 	self.resourceParts = { health, healthText, healthCap, mana, manaText, manaCap }
+	if matte then
+		-- The caption over the bar's outer end, the value over its seal
+		-- end, and a slot under each bar: a dark groove with a faint lit
+		-- lower lip, like a meter set into the shell.
+		health:SetPoint("RIGHT", frame, "TOP", -MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP)
+		healthCap:SetPoint("BOTTOMLEFT", health, "TOPLEFT", 0, 5)
+		mana:SetPoint("LEFT", frame, "TOP", MATTE_RESOURCE_OUT, MATTE_RESOURCE_DROP)
+		manaCap:SetPoint("BOTTOMRIGHT", mana, "TOPRIGHT", 0, 5)
+		for _, meter in ipairs({ health, mana }) do
+			-- One dark groove the bar fills: no lighter track inside it,
+			-- which read as an outline round an empty bar.
+			if meter.track then meter.track:Hide() end
+			local slot = frame:CreateTexture(nil, "BACKGROUND", nil, -3)
+			slot:SetAllPoints(meter)
+			slot:SetColorTexture(0, 0, 0, 0.6)
+			table.insert(self.resourceParts, slot)
+		end
+	else
+		health:SetPoint("RIGHT", seal, "LEFT", -24, -4)
+		healthCap:SetPoint("TOPRIGHT", health, "BOTTOMRIGHT", 0, -5)
+		mana:SetPoint("LEFT", seal, "RIGHT", 24, -4)
+		manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
+	end
 	self:BuildManaPlay(mana, manaCap)
 end
 
@@ -1026,6 +1307,11 @@ function Console:PlaceCrest()
 		end
 		return
 	end
+	if self:Matte() then
+		if shield then shield:SetPoint("CENTER", self.crestPortrait, "CENTER", -CREST_SOCKET_X + nudge, CREST_SOCKET_Y - nudge) end
+		if mark then mark:SetPoint("CENTER", self.crestPortrait, "CENTER", CREST_SOCKET_X + nudge, CREST_SOCKET_Y - nudge) end
+		return
+	end
 	local lift = math.floor(CREST_FOOT + (size - drop) / 2 - drop / 2 + 0.5)
 	local apart = (shield and mark and shield:IsShown() and mark:IsShown()) and math.floor(size * 0.6 + 0.5) or 0
 	if shield then shield:SetPoint("CENTER", self.crestPortrait, "TOP", nudge - apart, lift) end
@@ -1642,6 +1928,10 @@ function Console:SetOpen(open, instant)
 			if part.stoaDaylit then
 				part.stoaGoldFade = fade
 				self:PaintDaylitPart(part.stoaDaylit)
+			elseif part.stoaGrainCap then
+				-- A plain alpha would write over the grain's strength.
+				part.stoaCapFade = fade
+				part:SetVertexColor(1, 1, 1, UI.grainAlpha() * fade)
 			else
 				UI.fadeTo(part, fade)
 			end
@@ -1800,28 +2090,34 @@ end
 function Console:PaintDividers()
 	if not self.dividers then return end
 	local r, g, b = Stoa:Color("accent")
+	-- Matte: a moulded seam, a dark line with a faint lit edge and no diamond.
+	local matte = self:Matte()
+	local lineAlpha, creaseAlpha = 0.4, 0.5
+	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, 0.04, 0.6 end
 	for _, div in ipairs(self.dividers) do
 		div.upper:SetColorTexture(1, 1, 1, 1)
 		div.lower:SetColorTexture(1, 1, 1, 1)
 		-- Clear at the ends, strongest at the diamond.
 		if CreateColor and div.upper.SetGradient then
-			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, 0.4)
+			local clear, solid = CreateColor(r, g, b, 0), CreateColor(r, g, b, lineAlpha)
 			pcall(div.upper.SetGradient, div.upper, "VERTICAL", solid, clear)
 			pcall(div.lower.SetGradient, div.lower, "VERTICAL", clear, solid)
 		else
-			div.upper:SetColorTexture(r, g, b, 0.3)
-			div.lower:SetColorTexture(r, g, b, 0.3)
+			div.upper:SetColorTexture(r, g, b, lineAlpha * 0.75)
+			div.lower:SetColorTexture(r, g, b, lineAlpha * 0.75)
 		end
-		div.mark:SetColorTexture(r, g, b, 0.7)
-		div.seat:SetColorTexture(0, 0, 0, 0.55)
+		div.creaseUp:SetWidth(matte and 2 or 1)
+		div.creaseDown:SetWidth(matte and 2 or 1)
+		div.mark:SetColorTexture(r, g, b, matte and 0 or 0.7)
+		div.seat:SetColorTexture(0, 0, 0, matte and 0 or 0.55)
 		for _, crease in ipairs({ div.creaseUp, div.creaseDown }) do
 			crease:SetColorTexture(1, 1, 1, 1)
 			if CreateColor and crease.SetGradient then
-				local clear, dark = CreateColor(0, 0, 0, 0), CreateColor(0, 0, 0, 0.5)
+				local clear, dark = CreateColor(0, 0, 0, 0), CreateColor(0, 0, 0, creaseAlpha)
 				local top, bottom = crease == div.creaseUp and dark or clear, crease == div.creaseUp and clear or dark
 				pcall(crease.SetGradient, crease, "VERTICAL", top, bottom)
 			else
-				crease:SetColorTexture(0, 0, 0, 0.35)
+				crease:SetColorTexture(0, 0, 0, creaseAlpha * 0.7)
 			end
 		end
 	end
@@ -1852,6 +2148,14 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 	end
 	local pageWidth = Stoa:PlainNumber(self.rightPage:GetWidth()) or 0
 	if not self.db.freeRight then spots[3] = { barsRight, width - inset - pageWidth } end
+	if self.wells then
+		self:PlaceWells({
+			chatRight and { inset, chatRight },
+			glanceShown and { inset + 484, inset + 484 + (Stoa:PlainNumber(glance:GetWidth()) or 0) },
+			{ barsLeft, barsRight },
+			not self.db.freeRight and pageWidth > 1 and { width - inset - pageWidth, width - inset },
+		}, top)
+	end
 	local on = self.db.dividers ~= false
 	for i, div in ipairs(dividers) do
 		local spot = spots[i]
@@ -1863,6 +2167,58 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 		else
 			div:Hide()
 		end
+	end
+end
+
+-- The right side's slots ---------------------------------------------------
+-- Three slots, left to right. A slot holds one of STOA's pages (ready,
+-- journey, company), a window that docks there (the game's damage meter
+-- windows, Details' windows), or "empty": bare console for anything else.
+local SLOT_KEYS = { "slot1", "slot2", "slot3" }
+local PAGE_KINDS = { ready = true, journey = true, company = true }
+local DOCK_WIDTH = 240
+Console.SLOT_KINDS = {
+	{ "ready", "Ready" }, { "journey", "Journey" }, { "company", "Company" },
+	{ "meter1", "Meter 1" }, { "meter2", "Meter 2" }, { "meter3", "Meter 3" },
+	{ "details1", "Details 1" }, { "details2", "Details 2" }, { "empty", "Empty" },
+}
+
+-- What the slots hold, in order. Something chosen twice counts once.
+function Console:Slots()
+	local list, seen = {}, {}
+	for i, key in ipairs(SLOT_KEYS) do
+		local kind = self.db[key]
+		if type(kind) ~= "string" or (kind ~= "empty" and seen[kind]) then kind = "empty" end
+		seen[kind] = true
+		list[i] = kind
+	end
+	return list
+end
+
+-- True while the slots are as STOA ships them.
+function Console:SlotsDefault()
+	local s = self:Slots()
+	return s[1] == "ready" and s[2] == "journey" and s[3] == "company"
+end
+
+local function slotWidth(kind)
+	return (PAGE_KINDS[kind] or kind == "empty") and COLUMN_WIDTH or DOCK_WIDTH
+end
+
+-- Hands each docking window its place, or nil when it has none. Places
+-- are from the screen's bottom right corner, since the console folds.
+function Console:PlaceDocks(spots)
+	local docked = next(spots) ~= nil
+	if docked ~= (self.docked or false) then
+		self.docked = docked
+		if self.ReplaceMenu then self:ReplaceMenu() end
+	end
+	local meters, looks = Stoa.modules.Meters, Stoa.Looks
+	for n = 1, 3 do
+		if meters and meters.Dock then xpcall(meters.Dock, Stoa.catch, meters, n, spots["meter" .. n]) end
+	end
+	for n = 1, 2 do
+		if looks and looks.DockDetails then xpcall(looks.DockDetails, Stoa.catch, looks, n, spots["details" .. n]) end
 	end
 end
 
@@ -1891,25 +2247,49 @@ function Console:FitPages()
 	-- The player keeps the right side for something of their own (a meter
 	-- from another addon, say): no columns, on the full console only.
 	local free = self.db.freeRight and not self.slimCard
+	-- Slots the player arranged: as chosen, dropping from the right when
+	-- the screen is narrow. The slim card always holds the three pages.
+	if not self.slimCard and not self:SlotsDefault() then
+		local slots = self:Slots()
+		orders = {}
+		for n = #slots, 1, -1 do
+			local order = {}
+			for i = 1, n do order[i] = slots[i] end
+			orders[#orders + 1] = order
+		end
+	end
 	if free then orders = {} end
+	local function span(order, g)
+		local total = math.max(0, #order - 1) * g
+		for _, kind in ipairs(order) do total = total + slotWidth(kind) end
+		return total
+	end
 	for _, order in ipairs(orders) do
 		for _, g in ipairs(PAGE_GAPS) do
-			if #order * COLUMN_WIDTH + (#order - 1) * g <= room then
+			if span(order, g) <= room then
 				chosen, gap = order, g
 				break
 			end
 		end
 		if #chosen > 0 then break end
 	end
-	local shown = {}
-	for i, key in ipairs(chosen) do
-		shown[key] = true
-		local col = cols[key]
-		col:ClearAllPoints()
-		col:SetPoint("TOPLEFT", page, "TOPLEFT", (i - 1) * (COLUMN_WIDTH + gap), 0)
+	local total = span(chosen, gap)
+	local shown, docks, x = {}, {}, 0
+	local _, pageTop = self:PageInset()
+	for _, key in ipairs(chosen) do
+		local w = slotWidth(key)
+		if cols[key] then
+			shown[key] = true
+			cols[key]:ClearAllPoints()
+			cols[key]:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
+		elseif key ~= "empty" then
+			docks[key] = { right = inset + total - x - w, top = self:OpenHeight() + pageTop, width = w, height = page:GetHeight() }
+		end
+		x = x + w + gap
 	end
 	for key, col in pairs(cols) do col:SetShown(shown[key] == true) end
-	page:SetWidth(math.max(1, #chosen * COLUMN_WIDTH + math.max(0, #chosen - 1) * gap))
+	self:PlaceDocks(docks)
+	page:SetWidth(math.max(1, total))
 	if self.slimCard then self.slimCard:SetSize(page:GetWidth() + CARD_PAD * 2, page:GetHeight() + CARD_PAD * 2) end
 	if Stoa.modules.Tally and Stoa.modules.Tally.Fit then Stoa.modules.Tally:Fit() end
 	if self.ReplaceChat then self:ReplaceChat() end

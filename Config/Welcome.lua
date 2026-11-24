@@ -15,9 +15,11 @@ local WIDTH, HEIGHT = 860, 600
 local HEADER, FOOTER = 64, 62
 local RAIL = 190
 local PAD = Stoa.space.xl
-local STEP_ORDER = { "start", "specs", "look", "combat", "preset", "addons", "ready" }
+local STEP_ORDER = { "start", "specs", "look", "combat", "preset", "frames", "addons", "ready" }
 local CLASS_DEFAULT_WORD = "  (class default)"
-local WELCOME_THEMES = { "Bone", "Tide", "Graphite", "Class" }
+local WELCOME_THEMES = { "Bone", "Tide", "Graphite", "Matte", "Class" }
+local WELCOME_THEME_SET = {}
+for _, name in ipairs(WELCOME_THEMES) do WELCOME_THEME_SET[name] = true end
 
 local function slotRole(slot)
 	local chosen = Stoa.char.roles["slot" .. slot]
@@ -30,7 +32,6 @@ end
 -- touches back to their defaults, then applies its own changes, so picking
 -- one after another never leaves leftovers. Skins and the like only change
 -- after /reload.
-local PRESET_ORDER = { "full", "slim", "minimal", "quiet", "classic", "taer" }
 -- Full is how Stoa ships; the other two are described against it, so the
 -- page says exactly what a choice takes away.
 local PRESET_WORDS = {
@@ -150,12 +151,55 @@ function Welcome:ApplyPreset(name)
 	end
 	for _, change in ipairs(changesFor(name)) do setValue(change[1], change[2], change[3]) end
 	Stoa.db.preset = name
+	-- (How much, below, sets this again after a preset.)
+	Stoa.db.around = nil
 	-- Until the next reload the page asks for one.
 	self.applied = name
 	-- The settings these change are read when the UI loads.
 	local party = Stoa.modules.Party
 	if party and party.SetGridMode and party.db then party:SetGridMode(party.db.clickGrid) end
 	return true
+end
+
+-- How much, as two answers ------------------------------------------------------
+-- The console (full, slim or none) and everything around it (standard or
+-- quiet). Each pair starts from the preset that carries its Edit Mode
+-- layout, then sets the parts Quiet means, so any console goes with either.
+local QUIET_ON = {
+	{ "Party", "strips", true }, { "Halo", "targetStrip", true },
+	{ "Halo", "restFade", true }, { "Party", "restFade", true },
+	{ "Tooltip", "unitDetails", false }, { "Kit", "questLine", false },
+	{ "Tally", "enabled", false },
+}
+
+function Welcome:Mix()
+	local console = Stoa.modules.Grimoire
+	local db = console and console.db
+	local shape = "full"
+	if db and db.enabled == false then shape = "none" elseif db and db.slim then shape = "slim" end
+	local around = Stoa.db.around
+	if around ~= "standard" and around ~= "quiet" then
+		local party = Stoa.modules.Party
+		around = ((party and party.db and party.db.strips) or Stoa.db.preset == "quiet") and "quiet" or "standard"
+	end
+	return shape, around
+end
+
+function Welcome:ApplyMix(shape, around)
+	local base = shape == "slim" and "slim" or shape == "none" and "minimal" or (around == "quiet" and "quiet" or "full")
+	self:ApplyPreset(base)
+	for _, entry in ipairs(QUIET_ON) do
+		if around == "quiet" then
+			setValue(entry[1], entry[2], entry[3])
+		else
+			setValue(entry[1], entry[2], defaultOf(entry[1], entry[2]))
+		end
+	end
+	-- The grid only matters to healers, who keep it folded when quiet.
+	setValue("Party", "clickGrid", around == "quiet" and (playsHealer() and "fold" or "hidden") or defaultOf("Party", "clickGrid"))
+	Stoa.db.around = around
+	local party = Stoa.modules.Party
+	if party and party.SetGridMode and party.db then party:SetGridMode(party.db.clickGrid) end
 end
 
 -- The wizard ------------------------------------------------------------------
@@ -173,7 +217,7 @@ local GAP = 10
 
 local STEP_TITLES = {
 	start = "Welcome", specs = "Your specs", look = "Look", combat = "In combat",
-	preset = "How much", addons = "Other addons", ready = "Ready",
+	preset = "How much", frames = "Target and frames", addons = "Other addons", ready = "Ready",
 }
 local CLASS_THEME_ORDER = { "Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Shaman", "Mage", "Warlock", "Druid" }
 local VISION_WORDS = { Standard = "Standard", RedGreen = "Red-green", BlueYellow = "Blue-yellow", NoColour = "No colour" }
@@ -239,12 +283,19 @@ end
 
 local builders = {}
 
+local START_WORDS = "A handful of choices and your screen is ready. Each can be changed later in settings, and /stoa welcome brings this back."
+local UPDATE_WORDS = "Version 2 brings a second look. Here are both; yours is marked. Nothing changes unless you pick the other."
+-- The two look cards with their pictures (built further down).
+local materialCards
+
 function builders.start(self, step)
 	local hello = UI.text(step, "serif", Stoa.typeSize.display, "text")
 	hello:SetPoint("TOPLEFT")
 	hello:SetText("Welcome to STOA")
-	local words = lede(step, "A handful of choices and your screen is ready. Each can be changed later in settings, and /stoa welcome brings this back.")
+	step.hello = hello
+	local words = lede(step, START_WORDS)
 	words:SetPoint("TOPLEFT", hello, "BOTTOMLEFT", 0, -10)
+	step.words = words
 	step.top = 92
 	if Stoa:MediaMissing() then
 		local warn = lede(step, Stoa.RESTART_NOTE)
@@ -269,6 +320,23 @@ function builders.start(self, step)
 		button.id = id
 		step.cards[#step.cards + 1] = button
 	end
+	-- Version 2, for someone who already plays with STOA: both looks are
+	-- on the first page, so the new one is seen before anything is closed.
+	-- Nothing changes unless the other look is picked.
+	step.materialCards = materialCards(self, step, -step.top, function(material)
+		local same = material == self.opened.material
+		self.start = same and "keep" or "new"
+		-- Back on their own look, their own theme too.
+		if same and self.opened.theme and Stoa.db.theme ~= self.opened.theme then Stoa:SetTheme(self.opened.theme) end
+	end)
+	step.whole = UI.button(step, "Run the whole setup", 190, function()
+		self.start = "guided"
+		self:Move(1)
+	end)
+	step.whole:SetHeight(30)
+	step.wholeNote = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
+	step.wholeNote:SetPoint("LEFT", step.whole, "RIGHT", 12, 0)
+	step.wholeNote:SetText("Every step, starting from what you have now.")
 	step.setupRows = {}
 	for i = 1, MAX_SETUPS do
 		local row = UI.button(step, "", BODY_W - 32, function(button)
@@ -316,18 +384,198 @@ function builders.specs(self, step)
 	Stoa:SetFont(hint, "sans", Stoa.typeSize.body)
 end
 
+-- A look drawn small from the art STOA already ships (no screenshot): a
+-- window, a target and a strip of console in Leather or in Matte black.
+-- Its colours are the look's own, whatever theme is on.
+local function lookPreview(parent, matte)
+	local view = CreateFrame("Frame", nil, parent)
+	local palette = Stoa.themes[matte and "Matte" or "Bone"]
+	local function piece(width, height, ...)
+		local frame = CreateFrame("Frame", nil, view)
+		frame:SetSize(width, height)
+		frame:SetPoint(...)
+		return frame
+	end
+	local function skin(frame, layer, file, margin, colour, alpha)
+		local tex = UI.sliced(frame, layer, file, 0, margin, true)
+		if tex and colour then tex:SetVertexColor(colour[1], colour[2], colour[3], alpha or 1) end
+		return tex
+	end
+	local function words(frame, face, size, text, colour)
+		local fs = frame:CreateFontString(nil, "OVERLAY")
+		Stoa:SetFont(fs, face, size)
+		fs:SetText(text)
+		fs:SetTextColor(colour[1], colour[2], colour[3])
+		return fs
+	end
+	local world = view:CreateTexture(nil, "BACKGROUND", nil, -8)
+	world:SetAllPoints()
+	world:SetColorTexture(0.17, 0.20, 0.21, 1)
+
+	-- The console: leather under a brass line, or grained black under a
+	-- fine light.
+	local console = piece(10, 46, "BOTTOMLEFT")
+	console:SetPoint("BOTTOMRIGHT")
+	local hide = console:CreateTexture(nil, "BACKGROUND", nil, -6)
+	hide:SetAllPoints()
+	local rim = console:CreateTexture(nil, "ARTWORK")
+	rim:SetPoint("TOPLEFT")
+	rim:SetPoint("TOPRIGHT")
+	if matte then
+		hide:SetColorTexture(0.085, 0.09, 0.095, 1)
+		local grain = console:CreateTexture(nil, "BACKGROUND", nil, -5)
+		grain:SetAllPoints()
+		grain:SetTexture(UI.GRAIN, "REPEAT", "REPEAT")
+		-- The Smooth finish, one texel to the pixel near enough.
+		grain:SetTexCoord(0, 2.3, 0, 0.36)
+		grain:SetAlpha(0.07)
+		rim:SetHeight(1)
+		rim:SetColorTexture(1, 1, 1, 0.2)
+	else
+		hide:SetTexture(UI.MEDIA .. "Textures\\ConsoleLeather")
+		hide:SetTexCoord(0.2, 0.39, 0.3, 0.37)
+		rim:SetHeight(1)
+		rim:SetColorTexture(palette.accent[1], palette.accent[2], palette.accent[3], 0.55)
+	end
+	for i = 1, 2 do
+		local well = piece(104, 26, i == 1 and "LEFT" or "RIGHT", console, i == 1 and "LEFT" or "RIGHT", i == 1 and 12 or -12, -2)
+		skin(well, "BACKGROUND", matte and "SharpPlateFill.tga" or "PlateFill.tga", 5, { 0, 0, 0 }, 0.45)
+	end
+	-- The seal: the console's own medallion with its brass line, or the
+	-- matte bezel, each around a coloured disc with a head and shoulders.
+	local disc
+	if matte then
+		local bezel = console:CreateTexture(nil, "ARTWORK", nil, 1)
+		bezel:SetSize(46, 46)
+		bezel:SetPoint("CENTER", console, "TOP", 0, -5)
+		bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
+		-- Solid behind the bezel, so the world doesn't show through it.
+		local back = UI.circle(console, "ARTWORK", 0, 40)
+		back:SetPoint("CENTER", bezel)
+		back:SetColorTexture(0.085, 0.09, 0.095, 1)
+		disc = UI.circle(console, "ARTWORK", 2, 26)
+		disc:SetPoint("CENTER", bezel)
+		disc:SetColorTexture(0.16, 0.24, 0.34, 1)
+	else
+		local seat
+		for i, file in ipairs({ "ConsoleMedallion", "ConsoleMedallionLines" }) do
+			local art = console:CreateTexture(nil, "ARTWORK", nil, i)
+			art:SetSize(136, 68)
+			art:SetPoint("CENTER", console, "TOP", 0, -1)
+			art:SetTexture(UI.MEDIA .. "Textures\\" .. file)
+			if i == 2 then art:SetVertexColor(palette.accent[1], palette.accent[2], palette.accent[3], 1) end
+			seat = art
+		end
+		disc = UI.circle(console, "ARTWORK", 3, 28)
+		disc:SetPoint("CENTER", seat, "CENTER", 0, -1)
+		disc:SetColorTexture(0.3, 0.2, 0.14, 1)
+	end
+	local head = UI.circle(console, "ARTWORK", 4, 9)
+	head:SetPoint("CENTER", disc, "CENTER", 0, 4)
+	local shoulders = UI.circle(console, "ARTWORK", 4, 20)
+	shoulders:SetPoint("CENTER", disc, "CENTER", 0, -12)
+	-- (The shoulders stay inside the disc.)
+	local inside = console:CreateMaskTexture()
+	inside:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	inside:SetAllPoints(disc)
+	shoulders:AddMaskTexture(inside)
+	for _, part in ipairs({ head, shoulders }) do
+		part:SetColorTexture(palette.text[1], palette.text[2], palette.text[3], 0.85)
+	end
+
+	-- A window with its title and two rows.
+	local window = piece(126, 76, "TOPLEFT", 12, -12)
+	skin(window, "BACKGROUND", matte and "SharpWindowFill.tga" or "WindowFill.tga", 12, palette.panel, 1)
+	skin(window, "BORDER", matte and "SharpWindowEdge.tga" or "WindowEdge.tga", 12, palette.text, matte and 0.12 or 0.22)
+	local title = words(window, "serif", 13, "Character", palette.text)
+	title:SetPoint("TOPLEFT", 12, -10)
+	for i = 1, 2 do
+		local row = window:CreateTexture(nil, "ARTWORK")
+		row:SetSize(i == 1 and 90 or 64, 3)
+		row:SetPoint("TOPLEFT", 12, -28 - i * 13)
+		row:SetColorTexture(palette.muted[1], palette.muted[2], palette.muted[3], 0.45)
+	end
+
+	-- A target.
+	local target = piece(126, 44, "TOPRIGHT", -12, -28)
+	skin(target, "BACKGROUND", matte and "MatteCardFill.tga" or "CardFill.tga", matte and UI.MATTE_SLICE or nil, palette.panel, 0.97)
+	skin(target, "BORDER", matte and "MatteCard.tga" or "CardEdge.tga", matte and UI.MATTE_SLICE or nil, (not matte) and palette.accent or nil, 0.5)
+	local name = words(target, "sans", 10, "Plains Buzzard", palette.text)
+	name:SetPoint("TOPLEFT", 10, -8)
+	local bar = piece(98, 9, "BOTTOMLEFT", target, "BOTTOMLEFT", 10, 9)
+	if matte then
+		local fill = bar:CreateTexture(nil, "ARTWORK")
+		fill:SetAllPoints()
+		fill:SetColorTexture(palette.hostile[1], palette.hostile[2], palette.hostile[3], 1)
+	else
+		skin(bar, "ARTWORK", "PlateFill.tga", 5, palette.hostile, 1)
+	end
+	return view
+end
+
+local MATERIALS = {
+	{ "leather", "Leather", "Tooled leather and brass, round corners, stone behind windows." },
+	{ "matte", "Matte black", "Moulded black hardware: sharp corners, fine lines, no gloss." },
+}
+local GRAINS = { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }
+local PREVIEW_H = 150
+
+-- `picked(material)` runs after a card sets the look.
+materialCards = function(self, step, top, picked)
+	local half = math.floor((BODY_W - GAP) / 2)
+	local cards = {}
+	for i, entry in ipairs(MATERIALS) do
+		local button = card(step, half, PREVIEW_H + 70, entry[2], function()
+			Stoa.db.material = entry[1]
+			-- Matte black hides the painted frames, and its own theme suits it.
+			if entry[1] == "matte" and WELCOME_THEME_SET[Stoa.db.theme] and Stoa.db.theme ~= "Class" then Stoa:SetTheme("Matte") end
+			if entry[1] == "leather" and Stoa.db.theme == "Matte" then Stoa:SetTheme("Bone") end
+			if picked then picked(entry[1]) end
+			self:Refresh()
+		end)
+		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), top)
+		local view = lookPreview(button, entry[1] == "matte")
+		view:SetPoint("TOPLEFT", 8, -8)
+		view:SetPoint("TOPRIGHT", -8, -8)
+		view:SetHeight(PREVIEW_H)
+		button.text:ClearAllPoints()
+		button.text:SetPoint("TOPLEFT", 14, -(PREVIEW_H + 16))
+		button.text:SetPoint("RIGHT", -14, 0)
+		button.sub:SetText(entry[3])
+		-- "Yours now", on the first page of version 2.
+		button.tag = UI.text(button, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+		button.tag:SetPoint("TOPRIGHT", -14, -(PREVIEW_H + 18))
+		cards[entry[1]] = button
+	end
+	return cards
+end
+
 function builders.look(self, step)
+	-- The two looks, always side by side.
+	self.materialCards = materialCards(self, step, 0)
+	local top = -(PREVIEW_H + 70 + 14)
+
 	local label = UI.caption(step, "Theme")
-	label:SetPoint("TOPLEFT")
+	label:SetPoint("TOPLEFT", 0, top)
 	self.themeButtons = {}
-	local wide = math.floor((BODY_W - 3 * 8) / 4)
+	local wide = math.floor((BODY_W - (#WELCOME_THEMES - 1) * 8) / #WELCOME_THEMES)
 	for i, name in ipairs(WELCOME_THEMES) do
 		local button = UI.button(step, themeWord(name), wide, function()
 			Stoa:SetTheme(name)
 			self:Refresh()
 		end)
-		button:SetHeight(30)
-		button:SetPoint("TOPLEFT", (i - 1) * (wide + 8), -18)
+		button:SetHeight(28)
+		button:SetPoint("TOPLEFT", (i - 1) * (wide + 8), top - 18)
+		-- A dot of the theme's accent, as the class themes have.
+		local dot = UI.circle(button, "ARTWORK", 1, 8)
+		dot:SetPoint("LEFT", 12, 0)
+		local accent = Stoa.themes[name] and Stoa.themes[name].accent
+		if name == "Class" then
+			local _, class = UnitClass("player")
+			local colour = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+			accent = colour and { colour.r, colour.g, colour.b }
+		end
+		if accent then dot:SetColorTexture(accent[1], accent[2], accent[3], 1) else dot:Hide() end
 		self.themeButtons[name] = button
 	end
 	-- Every class theme, each with a dot of its own accent.
@@ -338,52 +586,55 @@ function builders.look(self, step)
 			self:Refresh()
 		end)
 		local column, line = (i - 1) % 5, math.floor((i - 1) / 5)
-		button:SetPoint("TOPLEFT", column * (small + 6), -56 - line * 32)
+		button:SetPoint("TOPLEFT", column * (small + 6), top - 52 - line * 30)
 		local dot = UI.circle(button, "ARTWORK", 1, 8)
 		dot:SetPoint("LEFT", 12, 0)
 		local accent = Stoa.themes[name] and Stoa.themes[name].accent
 		if accent then dot:SetColorTexture(accent[1], accent[2], accent[3], 1) end
 		self.themeButtons[name] = button
 	end
-	local note = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
-	note:SetPoint("TOPLEFT", 0, -126)
-	note:SetWidth(BODY_W)
-	note:SetText("Your class follows whichever character you log in on; a named class keeps that theme on this character.")
+	top = top - 52 - 60 - 12
 
-	local ornament = UI.caption(step, "Ornament")
-	ornament:SetPoint("TOPLEFT", 0, -156)
-	self.ornamentCards = {}
-	local half = math.floor((BODY_W - GAP) / 2)
-	local ORNAMENTS = {
-		{ "plain", "Plain", "Fine lines around the minimap and portrait coins." },
-		{ "painted", "Painted", "Brass frames on the one-of-a-kind pieces." },
-	}
-	for i, entry in ipairs(ORNAMENTS) do
-		local button = card(step, half, 50, entry[2], function()
+	-- One row, two short lists: the finish that goes with the look picked
+	-- above (Leather's ornament, Matte's grain), and colour vision.
+	local third = math.floor((BODY_W - 2 * GAP) / 3)
+	local quarter = math.floor((third - 2 * 6) / 3)
+	self.finishLabel = UI.caption(step, "Ornament")
+	self.finishLabel:SetPoint("TOPLEFT", 0, top)
+	self.ornamentButtons, self.grainButtons = {}, {}
+	for i, entry in ipairs({ { "plain", "Plain" }, { "painted", "Painted" } }) do
+		local button = UI.button(step, entry[2], quarter, function()
 			Stoa.db.ornament = entry[1]
 			self:Refresh()
 		end)
-		button.sub:SetText(entry[3])
-		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), -174)
-		self.ornamentCards[entry[1]] = button
+		button:SetHeight(28)
+		button:SetPoint("TOPLEFT", (i - 1) * (quarter + 6), top - 18)
+		self.ornamentButtons[entry[1]] = button
 	end
-
+	for i, entry in ipairs(GRAINS) do
+		local button = UI.button(step, entry[2], quarter, function()
+			Stoa.db.grain = entry[1]
+			UI.paintGrain()
+			self:Refresh()
+		end)
+		button:SetHeight(28)
+		button:SetPoint("TOPLEFT", (i - 1) * (quarter + 6), top - 18)
+		self.grainButtons[entry[1]] = button
+	end
 	local vision = UI.caption(step, "Colour vision")
-	vision:SetPoint("TOPLEFT", 0, -240)
+	vision:SetPoint("TOPLEFT", third + 2 * GAP, top)
 	self.visionButtons = {}
+	local count = #Stoa.visionOrder
+	local each = math.floor((BODY_W - third - 2 * GAP - (count - 1) * 6) / count)
 	for i, name in ipairs(Stoa.visionOrder) do
-		local button = UI.button(step, VISION_WORDS[name] or name, wide, function()
+		local button = UI.button(step, VISION_WORDS[name] or name, each, function()
 			Stoa:SetVision(name)
 			self:Refresh()
 		end)
-		button:SetHeight(30)
-		button:SetPoint("TOPLEFT", (i - 1) * (wide + 8), -258)
+		button:SetHeight(28)
+		button:SetPoint("TOPLEFT", third + 2 * GAP + (i - 1) * (each + 6), top - 18)
 		self.visionButtons[name] = button
 	end
-	local visionNote = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
-	visionNote:SetPoint("TOPLEFT", 0, -296)
-	visionNote:SetWidth(BODY_W)
-	visionNote:SetText("Swaps only the colours that carry meaning (warnings, dispels, health), over any theme.")
 end
 
 function builders.combat(self, step)
@@ -433,38 +684,217 @@ function builders.combat(self, step)
 end
 
 -- Six cards share the step, so each is a little shorter than the others'.
-local PRESET_CARD = 60
+
+local CONSOLES = {
+	{ "full", "Full", "The whole console with its pages." },
+	{ "slim", "Slim", "The console as one line." },
+	{ "none", "None", "No console; health and mana as two faint arcs." },
+}
+local AROUNDS = {
+	{ "standard", "Standard", "Target and party as cards, tooltip details, the quest line and At a glance." },
+	{ "quiet", "Quiet", "The slim version of everything: target and party as strips that fade at rest, and fewer words on tooltips and the console." },
+}
+local SHAPE_H = 62
+
+-- A small drawing of the screen for a console choice.
+local function shapeView(parent, shape)
+	local view = CreateFrame("Frame", nil, parent)
+	local world = view:CreateTexture(nil, "BACKGROUND")
+	world:SetAllPoints()
+	world:SetColorTexture(0.17, 0.20, 0.21, 1)
+	local height = shape == "full" and 22 or shape == "slim" and 7 or 0
+	if height > 0 then
+		local band = view:CreateTexture(nil, "ARTWORK")
+		band:SetPoint("BOTTOMLEFT")
+		band:SetPoint("BOTTOMRIGHT")
+		band:SetHeight(height)
+		band:SetColorTexture(0.07, 0.075, 0.08, 1)
+		local rim = view:CreateTexture(nil, "OVERLAY")
+		rim:SetPoint("BOTTOMLEFT", band, "TOPLEFT")
+		rim:SetPoint("BOTTOMRIGHT", band, "TOPRIGHT")
+		rim:SetHeight(1)
+		rim:SetColorTexture(1, 1, 1, 0.25)
+	end
+	-- The character, with health and mana beside it where there's no console.
+	local figure = UI.circle(view, "ARTWORK", 1, 8)
+	figure:SetPoint("CENTER", 0, 10)
+	figure:SetColorTexture(1, 1, 1, 0.5)
+	if shape == "none" then
+		for side = -1, 1, 2 do
+			local arc = view:CreateTexture(nil, "ARTWORK")
+			arc:SetSize(2, 20)
+			arc:SetPoint("CENTER", figure, "CENTER", side * 12, 0)
+			if side < 0 then arc:SetColorTexture(0.9, 0.87, 0.8, 0.8) else arc:SetColorTexture(0.44, 0.61, 1, 0.8) end
+		end
+	end
+	return view
+end
 
 function builders.preset(self, step)
-	local words = lede(step, "How much STOA does. Full is how it ships; the others say exactly what they take away.")
-	words:SetPoint("TOPLEFT")
-	-- The presets set the layout's parts together; the settings change them
-	-- one by one. The page stays up behind the settings window.
-	local MIX_W = 150
-	words:SetWidth(BODY_W - MIX_W - 24)
-	local mix = UI.button(step, "Mix your own", MIX_W, function()
+	local third = math.floor((BODY_W - 2 * GAP) / 3)
+	local half = math.floor((BODY_W - GAP) / 2)
+	local label = UI.caption(step, "The console")
+	label:SetPoint("TOPLEFT")
+	self.consoleCards, self.aroundCards = {}, {}
+	for i, entry in ipairs(CONSOLES) do
+		local button = card(step, third, SHAPE_H + 70, entry[2], function()
+			local _, around = self:Mix()
+			self:ApplyMix(entry[1], around)
+			self:Refresh()
+		end)
+		button:SetPoint("TOPLEFT", (i - 1) * (third + GAP), -18)
+		local view = shapeView(button, entry[1])
+		view:SetPoint("TOPLEFT", 8, -8)
+		view:SetPoint("TOPRIGHT", -8, -8)
+		view:SetHeight(SHAPE_H)
+		button.text:ClearAllPoints()
+		button.text:SetPoint("TOPLEFT", 14, -(SHAPE_H + 16))
+		button.text:SetPoint("RIGHT", -14, 0)
+		button.sub:SetText(entry[3])
+		self.consoleCards[entry[1]] = button
+	end
+	local top = -(18 + SHAPE_H + 70 + 16)
+	local second = UI.caption(step, "Everything around it")
+	second:SetPoint("TOPLEFT", 0, top)
+	for i, entry in ipairs(AROUNDS) do
+		local button = card(step, half, 84, entry[2], function()
+			local shape = self:Mix()
+			self:ApplyMix(shape, entry[1])
+			self:Refresh()
+		end)
+		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), top - 18)
+		button.sub:SetText(entry[3])
+		self.aroundCards[entry[1]] = button
+	end
+	top = top - 18 - 84 - 14
+	-- The parts one by one live in settings. The page stays up behind the
+	-- settings window.
+	local mix = UI.button(step, "Mix your own", 150, function()
 		Stoa:OpenSettings("setup")
 		local window = Stoa.SettingsWindow and Stoa.SettingsWindow.page
 		if window and window:IsShown() then window:Raise() end
 	end)
-	mix:SetPoint("TOPRIGHT", 0, 2)
-	mix:HookScript("OnEnter", function(button)
-		GameTooltip:SetOwner(button, "ANCHOR_BOTTOMRIGHT")
-		GameTooltip:SetText("Mix your own")
-		GameTooltip:AddLine("Opens Settings, Setup, where Your own mix sets the console, party, target and resting look one by one. Pick a card here first as a starting point, or go straight there.", 1, 1, 1, true)
-		GameTooltip:Show()
-	end)
-	mix:HookScript("OnLeave", GameTooltip_Hide)
-	self.presetCards = {}
-	for i, name in ipairs(PRESET_ORDER) do
-		local button = card(step, BODY_W, PRESET_CARD, PRESET_WORDS[name][1], function()
-			self:ApplyPreset(name)
+	mix:SetPoint("TOPLEFT", 0, top)
+	local note = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
+	note:SetPoint("LEFT", mix, "RIGHT", 12, 0)
+	note:SetPoint("RIGHT", step, "RIGHT", 0, 0)
+	note:SetText("Opens Settings, Setup, to switch the parts one by one. Classic feel and Same as Designer are there too.")
+end
+
+-- Target and frames: the things most people change in their first hour.
+-- Every one is read when the UI loads, so Finish's reload settles them.
+local TARGETS = { { "compact", "Compact" }, { "full", "Full" }, { "words", "Words only" } }
+local TARGET_SUBS = {
+	compact = "A small block: name, type and a slim health line.",
+	full = "The larger plaque, with the target's portrait.",
+	words = "No panel: a name and a bar over the world.",
+}
+local PLATE_STYLES = { { "stoa", "STOA" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" }, { "matte", "Matte" } }
+local TEXT_SIZES = { { "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" } }
+local TARGET_H = 46
+
+-- A target drawn small: the block, the plaque or bare words.
+local function targetView(parent, kind)
+	local view = CreateFrame("Frame", nil, parent)
+	local world = view:CreateTexture(nil, "BACKGROUND")
+	world:SetAllPoints()
+	world:SetColorTexture(0.17, 0.20, 0.21, 1)
+	local width, height = kind == "full" and 104 or 84, kind == "full" and 32 or 22
+	local panel = view:CreateTexture(nil, "BORDER")
+	panel:SetSize(width, height)
+	panel:SetPoint("CENTER")
+	panel:SetColorTexture(0.07, 0.075, 0.08, kind == "words" and 0 or 1)
+	local name = view:CreateTexture(nil, "ARTWORK")
+	name:SetSize(kind == "full" and 52 or 44, 3)
+	name:SetPoint("TOPLEFT", panel, "TOPLEFT", kind == "full" and 30 or 8, kind == "full" and -9 or -6)
+	name:SetColorTexture(1, 1, 1, 0.75)
+	local bar = view:CreateTexture(nil, "ARTWORK")
+	bar:SetSize(kind == "full" and 64 or 68, kind == "full" and 6 or 3)
+	bar:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, kind == "full" and -5 or -4)
+	bar:SetColorTexture(0.88, 0.27, 0.23, 1)
+	if kind == "full" then
+		local portrait = UI.circle(view, "ARTWORK", 1, 20)
+		portrait:SetPoint("LEFT", panel, "LEFT", 6, 0)
+		portrait:SetColorTexture(1, 1, 1, 0.3)
+	end
+	return view
+end
+
+local function moduleDb(name)
+	local m = Stoa.modules[name]
+	return m and m.db
+end
+
+function builders.frames(self, step)
+	local third = math.floor((BODY_W - 2 * GAP) / 3)
+	local label = UI.caption(step, "Target")
+	label:SetPoint("TOPLEFT")
+	self.targetCards = {}
+	for i, entry in ipairs(TARGETS) do
+		local button = card(step, third, TARGET_H + 66, entry[2], function()
+			local halo = moduleDb("Halo")
+			if halo then
+				halo.targetStrip = entry[1] == "words"
+				if entry[1] ~= "words" then
+					if Stoa.db.material == "matte" then halo.targetFull = entry[1] == "full" else halo.targetCompact = entry[1] == "compact" end
+				end
+			end
+			self.touched = true
 			self:Refresh()
 		end)
-		button.sub:SetText(PRESET_WORDS[name][2])
-		button:SetPoint("TOPLEFT", 0, -44 - (i - 1) * (PRESET_CARD + 6))
-		self.presetCards[name] = button
+		button:SetPoint("TOPLEFT", (i - 1) * (third + GAP), -18)
+		local view = targetView(button, entry[1])
+		view:SetPoint("TOPLEFT", 8, -8)
+		view:SetPoint("TOPRIGHT", -8, -8)
+		view:SetHeight(TARGET_H)
+		button.text:ClearAllPoints()
+		button.text:SetPoint("TOPLEFT", 14, -(TARGET_H + 14))
+		button.text:SetPoint("RIGHT", -14, 0)
+		button.sub:SetText(TARGET_SUBS[entry[1]])
+		self.targetCards[entry[1]] = button
 	end
+	self.targetNote = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
+	self.targetNote:SetPoint("TOPLEFT", 0, -(18 + TARGET_H + 66 + 6))
+	local top = -(18 + TARGET_H + 66 + 30)
+
+	-- A row of small buttons under a caption; returns the buttons by value.
+	local function row(caption, entries, y, onPick, x, width)
+		local heading = UI.caption(step, caption)
+		heading:SetPoint("TOPLEFT", x or 0, y)
+		local buttons = {}
+		local room = width or BODY_W
+		local each = math.floor((room - (#entries - 1) * 6) / #entries)
+		for i, entry in ipairs(entries) do
+			local button = UI.button(step, entry[2], each, function()
+				onPick(entry[1])
+				self.touched = true
+				self:Refresh()
+			end)
+			button:SetHeight(28)
+			button:SetPoint("TOPLEFT", (x or 0) + (i - 1) * (each + 6), y - 18)
+			buttons[entry[1]] = button
+		end
+		return buttons
+	end
+	local half = math.floor((BODY_W - 2 * GAP) / 2)
+	self.partyButtons = row("Party", { { "cards", "Cards" }, { "strips", "Strips" } }, top, function(value)
+		local party = moduleDb("Party")
+		if party then party.strips = value == "strips" end
+	end, 0, half)
+	self.restButtons = row("Out of combat, target and party", { { "stay", "Stay" }, { "fade", "Fade" } }, top, function(value)
+		local halo, party = moduleDb("Halo"), moduleDb("Party")
+		if halo then halo.restFade = value == "fade" end
+		if party then party.restFade = value == "fade" end
+	end, half + 2 * GAP, half)
+	top = top - 60
+	self.plateButtons = row("Nameplates", PLATE_STYLES, top, function(value)
+		local plates = moduleDb("Plates")
+		if plates then plates.style = value end
+	end)
+	top = top - 60
+	self.sizeButtons = row("Text size", TEXT_SIZES, top, function(value)
+		Stoa.db.textSize = value
+	end, 0, half)
 end
 
 function builders.addons(self, step)
@@ -604,6 +1034,8 @@ end
 
 -- The steps in play: Other addons only when Stoa found some.
 function Welcome:Order()
+	-- "Show me what's new" walks only the new parts.
+	if self.start == "new" then return { "start", "look", "frames", "ready" } end
 	local list = {}
 	for _, id in ipairs(STEP_ORDER) do
 		if id ~= "addons" or #self.addonRows > 0 then list[#list + 1] = id end
@@ -630,7 +1062,11 @@ function Welcome:Move(by)
 	for i, id in ipairs(order) do if id == self.current then index = i end end
 	if by > 0 and self.current == "ready" then return self:Finish() end
 	-- A saved setup or Stoa as it ships has nothing in between.
-	if self.start ~= "guided" and (self.current == "start" or self.current == "ready") then
+	if self.start == "keep" and by > 0 then
+		self.page:Hide()
+		return
+	end
+	if self.start ~= "guided" and self.start ~= "new" and (self.current == "start" or self.current == "ready") then
 		return self:Go(by > 0 and "ready" or "start")
 	end
 	self:Go(order[math.max(1, math.min(#order, index + by))])
@@ -788,9 +1224,10 @@ end
 
 function Welcome:NeedsReload()
 	if self.start == "saved" and self.setup then return true end
-	if self.applied then return true end
+	if self.applied or self.touched then return true end
 	if not self.opened then return false end
 	if Stoa.db.ornament ~= self.opened.ornament then return true end
+	if (Stoa.db.material or "leather") ~= self.opened.material then return true end
 	local db = halo()
 	if db and (db.enabled ~= false) ~= self.opened.halo then return true end
 	for i, row in ipairs(self.addonRows) do
@@ -871,9 +1308,21 @@ local function choose(map, chosen)
 end
 
 function Welcome:RefreshStart(step)
+	local update = self.mode == "update"
+	step.hello:SetText(update and "Welcome to STOA 2" or "Welcome to STOA")
+	step.words:SetText(update and UPDATE_WORDS or START_WORDS)
+	for name, button in pairs(step.materialCards) do
+		button:SetShown(update)
+		button:SetSelected(update and (Stoa.db.material or "leather") == name)
+		button.tag:SetText(self.opened.material == name and "YOURS NOW" or "NEW")
+	end
+	step.whole:SetShown(update)
+	step.wholeNote:SetShown(update)
+	step.whole:ClearAllPoints()
+	step.whole:SetPoint("TOPLEFT", 0, -(step.top + PREVIEW_H + 70 + 16))
 	local y = step.top
 	for _, button in ipairs(step.cards) do
-		local shown = button.id ~= "saved" or #self.setups > 0
+		local shown = (not update) and (button.id ~= "saved" or #self.setups > 0)
 		button:SetShown(shown)
 		if shown then
 			button:ClearAllPoints()
@@ -882,7 +1331,7 @@ function Welcome:RefreshStart(step)
 			y = y + button:GetHeight() + GAP
 			if button.id == "saved" then
 				for i, row in ipairs(step.setupRows) do
-					local entry = self.start == "saved" and self.setups[i]
+					local entry = (not update) and self.start == "saved" and self.setups[i]
 					row:SetShown(entry and true or false)
 					if entry then
 						local setup = entry.setup
@@ -955,13 +1404,20 @@ function Welcome:Summary()
 		local role = slotRole(slot)
 		add(slot == 1 and "First spec" or "Second spec", Stoa.ROLE_LABELS[role] or role)
 	end
+	add("Look", Stoa.db.material == "matte" and "Matte black" or "Leather")
 	add("Theme", themeWord(Stoa.db.theme or "Bone"))
-	add("Ornament", Stoa.db.ornament == "painted" and "Painted" or "Plain")
+	if Stoa.db.material ~= "matte" then add("Ornament", Stoa.db.ornament == "painted" and "Painted" or "Plain") end
 	add("Colour vision", VISION_WORDS[Stoa.db.vision or "Standard"] or "Standard")
 	local choice = combatChoice()
 	add("In combat", choice == "fold" and ("Fold, " .. (Stoa.db.calm or "5") .. " s" .. (Stoa.db.calmGroup ~= false and ", waits for group" or ""))
 		or choice == "open" and "Console open, Halo" or "Console open, no Halo")
-	add("How much", PRESET_WORDS[Stoa.db.preset or "full"][1])
+	local shape, around = self:Mix()
+	add("Console", shape == "slim" and "Slim" or shape == "none" and "None" or "Full")
+	add("Around it", around == "quiet" and "Quiet" or "Standard")
+	local halo, party = moduleDb("Halo") or {}, moduleDb("Party") or {}
+	local fullTarget = Stoa.db.material == "matte" and halo.targetFull or Stoa.db.material ~= "matte" and not halo.targetCompact
+	add("Target", halo.targetStrip and "Words only" or fullTarget and "Full" or "Compact")
+	add("Party", party.strips and "Strips" or "Cards")
 	for i, row in ipairs(self.addonRows) do
 		if i <= MAX_ADDON_ROWS and row.options and #lines < 10 then
 			for _, option in ipairs(row.options) do
@@ -1016,13 +1472,32 @@ function Welcome:Refresh()
 			row.note:SetText(isDefault and CLASS_DEFAULT_WORD or "")
 		end
 	elseif current == "look" then
+		local matte = Stoa.db.material == "matte"
+		choose(self.materialCards, matte and "matte" or "leather")
 		choose(self.themeButtons, Stoa.db.theme)
-		choose(self.ornamentCards, Stoa.db.ornament == "painted" and "painted" or "plain")
+		self.finishLabel:SetText(matte and "GRAIN" or "ORNAMENT")
+		for _, button in pairs(self.ornamentButtons) do button:SetShown(not matte) end
+		for _, button in pairs(self.grainButtons) do button:SetShown(matte) end
+		choose(self.ornamentButtons, Stoa.db.ornament == "painted" and "painted" or "plain")
+		choose(self.grainButtons, self.grainButtons[Stoa.db.grain] and Stoa.db.grain or "satin")
 		choose(self.visionButtons, Stoa.db.vision or "Standard")
 	elseif current == "combat" then
 		self:RefreshCombat(step)
 	elseif current == "preset" then
-		choose(self.presetCards, Stoa.db.preset or "full")
+		local shape, around = self:Mix()
+		choose(self.consoleCards, shape)
+		choose(self.aroundCards, around)
+	elseif current == "frames" then
+		local halo, party, plates = moduleDb("Halo") or {}, moduleDb("Party") or {}, moduleDb("Plates") or {}
+		local matte = Stoa.db.material == "matte"
+		-- Each look keeps its own size: Matte starts Compact, Leather Full.
+		local full = not matte and not halo.targetCompact or matte and halo.targetFull
+		self.targetNote:SetText("")
+		choose(self.targetCards, halo.targetStrip and "words" or (full and "full" or "compact"))
+		choose(self.partyButtons, party.strips and "strips" or "cards")
+		choose(self.restButtons, (halo.restFade or party.restFade) and "fade" or "stay")
+		choose(self.plateButtons, plates.style or "stoa")
+		choose(self.sizeButtons, Stoa.db.textSize or "standard")
 	elseif current == "addons" then
 		for _, frame in ipairs(step.rows) do
 			if frame:IsShown() and frame.row then
@@ -1042,7 +1517,7 @@ function Welcome:Refresh()
 	end
 
 	-- Header and footer.
-	self.skip:SetShown(current ~= "start" and current ~= "ready" and self.start == "guided")
+	self.skip:SetShown(current ~= "start" and current ~= "ready" and (self.start == "guided" or self.start == "new"))
 	self.back:SetShown(current ~= "start")
 	local index
 	for i, id in ipairs(order) do if id == current then index = i end end
@@ -1051,7 +1526,9 @@ function Welcome:Refresh()
 	local word = "Next"
 	if current == "ready" then
 		word = "Finish and reload"
-	elseif current == "start" and self.start ~= "guided" then
+	elseif current == "start" and self.start == "keep" then
+		word = "Keep my setup"
+	elseif current == "start" and self.start ~= "guided" and self.start ~= "new" then
 		word = "Continue"
 	end
 	self.next:SetReloads(current == "ready")
@@ -1060,11 +1537,15 @@ function Welcome:Refresh()
 	self.next:SetSelected(true)
 end
 
-function Welcome:Show()
+-- `mode` "update": the version 2 card for someone who already plays with
+-- STOA (shown once per account).
+function Welcome:Show(mode)
 	if InCombatLockdown() then
-		Stoa:AfterCombat(function() Welcome:Show() end)
+		Stoa:AfterCombat(function() Welcome:Show(mode) end)
 		return
 	end
+	self.mode = mode
+	Stoa.db.v2Offered = true
 	if not self.page then self:Build() end
 	-- The first showing on a character ignores Escape, so a key pressed to
 	-- clear a quest window or a cinematic at login can't close it unseen;
@@ -1077,11 +1558,12 @@ function Welcome:Show()
 	end
 	if Stoa.char.welcomed and not escapes then table.insert(UISpecialFrames, "StoaWelcomePage") end
 	local db = halo()
-	self.opened = { ornament = Stoa.db.ornament, halo = not (db and db.enabled == false) }
+	self.opened = { ornament = Stoa.db.ornament, material = Stoa.db.material or "leather", theme = Stoa.db.theme, halo = not (db and db.enabled == false) }
 	self.applied = nil
+	self.touched = nil
 	self.finished = nil
 	self.trying = nil
-	self.start = "guided"
+	self.start = mode == "update" and "keep" or "guided"
 	self.setups = Stoa.Setups and Stoa.Setups:List() or {}
 	while #self.setups > MAX_SETUPS do table.remove(self.setups) end
 	self.setup = nil
@@ -1101,7 +1583,9 @@ function Welcome:Pending()
 	return Stoa.char ~= nil and not Stoa.char.welcomed
 end
 
-Stoa.commands.welcome = function() Welcome:Show() end
+Stoa.commands.welcome = function(rest)
+	Welcome:Show(strtrim(rest or ""):lower() == "update" and "update" or nil)
+end
 
 -- Back from practice combat: the page again, at its last step, as it was.
 function Welcome:Resume()
@@ -1120,11 +1604,17 @@ Stoa:On("STOA_PRACTICE", function(on)
 end)
 
 Stoa:On("STOA_READY", function()
-	if Stoa.char.welcomed then return end
+	-- A character already set up, on an account that hasn't been offered
+	-- version 2 yet, gets its card once; a new character gets the setup.
+	local mode
+	if Stoa.char.welcomed then
+		if Stoa.db.v2Offered then return end
+		mode = "update"
+	end
 	-- Let the world and the rest of the UI settle first.
 	-- A companion's own welcome page (Core/Companions.lua) goes first.
 	C_Timer.After(5, function()
-		Stoa.Companions:AfterWelcomes(function() Welcome:Show() end)
+		Stoa.Companions:AfterWelcomes(function() Welcome:Show(mode) end)
 	end)
 end)
 

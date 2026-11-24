@@ -180,17 +180,55 @@ function Meters:Anchor()
 	return anchor
 end
 
+-- A window given a slot on the console (Console:PlaceDocks) sits there;
+-- `spot` is nil when it has none. The rest stay in the strip.
+function Meters:Dock(n, spot)
+	self.docks = self.docks or {}
+	if self.docks[n] == nil and spot == nil then return end
+	self.docks[n] = spot or nil
+	if self.dressed then self:Place() end
+	if spot then self:Remind(n) end
+end
+
+-- A slot whose window isn't there says so once a session, a few seconds
+-- on (the game sets its windows up after login). STOA doesn't open the
+-- window itself: that would write the game's own saved window list.
+function Meters:Remind(n)
+	self.reminded = self.reminded or {}
+	if self.reminded[n] then return end
+	self.reminded[n] = true
+	C_Timer.After(6, function()
+		if not (self.docks and self.docks[n]) then self.reminded[n] = nil return end
+		local window = _G["DamageMeterSessionWindow" .. n]
+		if window and window:IsShown() then self.reminded[n] = nil return end
+		if n == 1 then
+			Stoa:Print("Meter 1 has a slot on the console, but the game's damage meter isn't showing. Turn it on in the game's options and it will sit there.")
+		else
+			Stoa:Print(("Meter %d has a slot on the console, but that window doesn't exist yet. Open the cog on a meter window and choose to show a new window: it will sit in its slot."):format(n))
+		end
+	end)
+end
+
 function Meters:Place()
-	if not self.db.place then return end
-	local anchor = self:Anchor()
+	local docks = self.docks or {}
+	local anchor = self.db.place and self:Anchor()
 	local x = 0
 	for _, window in ipairs(shownWindows()) do
-		window:ClearAllPoints()
-		window:SetPoint("TOPLEFT", anchor, "TOPLEFT", x, 0)
-		window:SetSize(WIDTH, HEIGHT)
-		-- Keep Blizzard's position cache from saving over the strip.
-		if window.SetUserPlaced and window:IsMovable() then pcall(window.SetUserPlaced, window, false) end
-		x = x + WIDTH
+		local n = tonumber((window:GetName() or ""):match("(%d+)$"))
+		local spot = n and docks[n]
+		if spot or anchor then
+			window:ClearAllPoints()
+			if spot then
+				window:SetPoint("TOPRIGHT", UIParent, "BOTTOMRIGHT", -spot.right, spot.top)
+				window:SetSize(spot.width, spot.height)
+			else
+				window:SetPoint("TOPLEFT", anchor, "TOPLEFT", x, 0)
+				window:SetSize(WIDTH, HEIGHT)
+				x = x + WIDTH
+			end
+			-- Keep Blizzard's position cache from saving over the place.
+			if window.SetUserPlaced and window:IsMovable() then pcall(window.SetUserPlaced, window, false) end
+		end
 	end
 end
 

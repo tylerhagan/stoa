@@ -26,6 +26,7 @@ local UPDATE = 0.1
 -- How long the skull's bar is; the skull starts sliding in at its own width
 -- short of lethal (under 1% of the health).
 local SLIDE = 4000
+local PLATE_SKULL = 11
 local SKULL = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8"
 -- Damage on its way reads as dark diagonal stripes over that stretch of the
 -- bar, with a fine dark line where the health will land.
@@ -120,6 +121,25 @@ function Lethal:Build()
 	skull:SetDesaturated(true)
 	self.window, self.slide, self.skull = window, slide, skull
 
+	-- The slim Matte target has no portrait: there a small plain skull
+	-- stands between the health line and its numbers, as on nameplates.
+	local slimWindow = CreateFrame("Frame", nil, target)
+	slimWindow:SetSize(PLATE_SKULL, PLATE_SKULL)
+	slimWindow:SetPoint("LEFT", hp, "RIGHT", 5, 0)
+	slimWindow:SetClipsChildren(true)
+	slimWindow:SetFrameLevel(hp:GetFrameLevel() + 4)
+	local slimSlide = CreateFrame("StatusBar", nil, slimWindow)
+	slimSlide:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	slimSlide:SetStatusBarColor(0, 0, 0, 0)
+	slimSlide:SetSize(SLIDE, PLATE_SKULL)
+	slimSlide:SetPoint("RIGHT", slimWindow, "RIGHT")
+	local slimSkull = slimSlide:CreateTexture(nil, "OVERLAY")
+	slimSkull:SetSize(PLATE_SKULL, PLATE_SKULL)
+	slimSkull:SetPoint("RIGHT", slimSlide:GetStatusBarTexture(), "RIGHT")
+	slimSkull:SetTexture(SKULL)
+	slimSkull:SetDesaturated(true)
+	self.slimWindow, self.slimSlide, self.slimSkull = slimWindow, slimSlide, slimSkull
+
 	self:Paint()
 	Stoa:On("STOA_THEME_CHANGED", function() self:Paint() end)
 	self:Hide()
@@ -129,12 +149,14 @@ end
 function Lethal:Paint()
 	paintHatch(self.marker, self.markerEdge)
 	self.skull:SetVertexColor(Stoa:Color("danger"))
+	self.slimSkull:SetVertexColor(Stoa:Color("danger"))
 end
 
 function Lethal:Hide()
 	if not self.clip then return end
 	self.clip:Hide()
 	self.window:Hide()
+	self.slimWindow:Hide()
 end
 
 function Lethal:Update()
@@ -151,15 +173,18 @@ function Lethal:Update()
 		self.marker:SetValue(damage)
 		self.slide:SetMinMaxValues(0, UnitHealth("target"))
 		self.slide:SetValue(damage)
+		self.slimSlide:SetMinMaxValues(0, UnitHealth("target"))
+		self.slimSlide:SetValue(damage)
 	end)
 	if not drawn then return self:Hide() end
 	self.clip:SetShown(self.db.marker)
 	self.window:SetShown(self.db.skull)
+	local halo = Stoa.modules.Halo
+	self.slimWindow:SetShown(self.db.skull and halo.TargetSlim and halo:TargetSlim() or false)
 end
 
 -- Nameplates -------------------------------------------------------------------
 
-local PLATE_SKULL = 11
 local plateMarks = {} -- health bar -> its marks
 
 local function platesWanted()

@@ -4,6 +4,38 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
 
+## 2.0.0
+
+- **Matte, a second look**: Settings > Look > Material switches STOA from Leather to Matte black, a plain dark design after moulded matte hardware. Off by default; leather stays as it is. It needs a reload.
+  - The console is a matte shell with flat recesses for chat, At a glance, the bars and the pages, and a choice of grain (satin, smooth or fine).
+  - Windows, tooltips, tabs and dropdowns take a sharp 4 pixel corner and fine lines of light and shade instead of round corners and soft gloss.
+  - Party cards and the target, tank watch, pet and target-of-target blocks are flat plates with the same corner; health bars are square-cut with their numbers beside them.
+  - The target comes Compact or Full (Matte target size). Compact is a small block with a slim health line and a small skull beside it when the target is deadly; Full is the larger block with rank words (RARE, ELITE, BOSS) in colour above it.
+  - A Matte nameplate style: a thin health line with a fine dark rim, the name never cut short, and casts as a thin line with the spell's icon and name under it. Matte picks it once; the other styles stay available.
+  - The Game Menu's buttons are flat keys with a 2 pixel corner (in leather too).
+- **A new setup**: the welcome page's Look step shows Leather and Matte side by side as small drawn pictures, with the theme, grain or ornament and colour vision under them.
+  - Players already set up see a version 2 page once per account with both looks; Keep my setup changes nothing. `/stoa welcome update` shows it again.
+  - How much is two answers: the console (Full, Slim or None) and everything around it (Standard or Quiet). Settings > Setup asks the same two; Classic feel and Same as Designer are under Other starting sets and `/stoa preset`.
+  - Quiet now also makes the target and party thin strips that fade out of combat, and folds the click grid for healers (hidden for everyone else).
+  - A new Target and frames step: target (Compact, Full or Words only), party cards or strips, stay or fade out of combat, nameplate style and text size.
+- On a mount or a flight the chat comes back when you open the chat box and stays for 12 seconds after, and the feed shows messages from every chat window, not only the first.
+- Columns in the guild window and scroll bar rails are divided by the console's seam instead of a white line.
+- Matte keeps its white accent under the colour vision settings.
+- Fixed: a selected button could show its border only after the mouse had been over it.
+- **The console's right side in slots**: Settings > Console has three slots, left to right. Each holds Ready, Journey or Company, one of the game's damage meter windows (Meter 1 to 3), a Details window (Details 1 or 2) or nothing. Choosing something another slot holds swaps the two. The full console only.
+- **Details in a slot**: a Details window in a slot loses its backdrop, header art, icon and status bar. Its title sits on the line of the pages' headings with the same hairline under it, its buttons show only under the mouse, and its rows are STOA's type over quiet one-colour bars with the class in the name. Taking it out of the slot puts its skin back.
+- **Menu and bags as words**: the game menu and the bag row rest unseen behind two words on the console's edge, MENU and BAGS, and show while the mouse is over the word or the row. A click on BAGS opens the bags. In a fight the words dim. With a window docked in a slot the rows hold their place instead of dropping onto it.
+- **Leather polish**:
+  - The target can be Compact on Leather too (Settings > Target size, and the welcome page's Target and frames step). Leather starts Full, Matte starts Compact, and each look remembers its own.
+  - The Leather target says RARE, ELITE or BOSS in colour and no longer says HOSTILE, as the red bar already does.
+  - The STOA nameplate style never cuts a name short and shows a cast as a thin line with the spell's icon and name under it, as the Matte style does.
+- **Halo arc styles**: Line, Blade, Visor, Gauge or Tube for the two arcs (Settings > Halo).
+- Elite, rare and boss tooltips carry one outline in the rank's colour instead of two, and hostile names are a lighter red that reads on the header.
+- The map's breadcrumbs start at the left edge.
+- Fixed: the map showed a second, lighter border around its header.
+- Fixed: a click near Player vs Player on the character window could fold the window to its narrow size.
+- Fixed: quest turn-in text could stay in the parchment's dark brown after a quest had been open in the map's quest log.
+
 ## 1.6.1
 
 - **Loot rolls up off the bars**: the Need, Greed and Pass cards stack from their own spot, right of the middle of the screen, instead of over your action bars. Move them in unlock mode (Loot rolls). Under each card a list shows everyone in the group, one name a line in class colours, with what they chose (Need, Greed, Pass or still choosing). Once your own card goes, a small card keeps the same list with each roll, then the winner, for 6 seconds. `/stoa rolls` shows two samples; Settings > Loot turns it off.

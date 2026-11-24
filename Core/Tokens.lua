@@ -62,6 +62,24 @@ Stoa.themes = {
 		disease = rgb("EDEDED"),
 		classTint = false,
 	},
+	-- Black hardware with white legends: neutral and near solid, colour kept
+	-- for what means something. Made for the matte console.
+	Matte = {
+		text    = rgb("E6E8EA"),
+		muted   = rgb("8B929A"),
+		panel   = rgb("0D0E10", 0.96),
+		hairline = rgb("FFFFFF", 0.12),
+		health  = rgb("D5D8DC"),
+		mana    = rgb("4C9BF5"),
+		danger  = rgb("FFC24B"),
+		hostile = rgb("E0443A"),
+		shield  = rgb("FFFFFF", 0.8),
+		accent  = rgb("F2F4F6"),
+		magic   = rgb("4C9BF5"),
+		disease = rgb("B9A2F2"),
+		classTint = false,
+		neutralAccent = true,
+	},
 
 	-- Class themes: the class colour as the accent, the panel and words
 	-- tinted toward it. "Class" in the theme list follows whoever you log in.
@@ -203,7 +221,7 @@ Stoa.themes = {
 }
 
 Stoa.themeOrder = {
-	"Bone", "Tide", "Graphite", "Class",
+	"Bone", "Tide", "Graphite", "Matte", "Class",
 	"Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior",
 }
 
@@ -380,6 +398,11 @@ function Stoa:Theme()
 		local theme = {}
 		for token, value in pairs(self.themes[name]) do theme[token] = value end
 		for token, value in pairs(swaps) do theme[token] = value end
+		-- A theme whose accent is already white keeps it: white has no hue
+		-- to confuse, and it is that theme's whole character.
+		if self.themes[name].neutralAccent then
+			theme.accent, theme.shield = self.themes[name].accent, self.themes[name].shield
+		end
 		theme.classTint = false
 		blended[key] = theme
 	end

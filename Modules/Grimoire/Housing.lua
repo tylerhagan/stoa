@@ -27,8 +27,14 @@ local ART_CHAT_GAP = 24
 local TAB_ART = { size = 128, x0 = 32, top = 24, foot = 70, cap = 52 }
 local TAB_TEXT_PAD = 26
 
+-- The tabs stand on the console's top edge with the leather art and on
+-- the matte console (its own tab art, Tools/art/matte_tabs.py).
 local function artOn()
-	return Console:Art()
+	return Console:Art() or (Console:Matte() and not Console.db.slim)
+end
+
+local function tabFile(kind)
+	return UI.MEDIA .. "Textures\\ChatTab" .. (Console:Matte() and "Matte" or "") .. kind
 end
 
 local function tabRise()
@@ -217,11 +223,12 @@ local function showsWhispers(chatFrame)
 end
 
 local function paintTab(tab)
-	local kind = tab.selected and "Open" or "Closed"
+	-- Matte: a key under a click goes down like the selected one.
+	local kind = (tab.selected or tab.down) and "Open" or "Closed"
 	if tab.kind ~= kind then
 		tab.kind = kind
-		for _, tex in ipairs(tab.base) do tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind) end
-		for _, tex in ipairs(tab.lines) do tex:SetTexture(UI.MEDIA .. "Textures\\ChatTab" .. kind .. "Lines") end
+		for _, tex in ipairs(tab.base) do tex:SetTexture(tabFile(kind)) end
+		for _, tex in ipairs(tab.lines) do tex:SetTexture(tabFile(kind .. "Lines")) end
 	end
 	-- The open tab sits in front, so its border reads over its neighbours'.
 	tab:SetFrameLevel(strip:GetFrameLevel() + (tab.selected and 3 or 1))
@@ -276,6 +283,10 @@ local function makeTab()
 		local blizzard = blizzardTab(self.chatFrame)
 		if blizzard then blizzard:Click(button) end
 	end)
+	if Console:Matte() then
+		tab:SetScript("OnMouseDown", function(self) self.down = true paintTab(self) end)
+		tab:SetScript("OnMouseUp", function(self) self.down = nil paintTab(self) end)
+	end
 	tab:SetScript("OnEnter", paintTab)
 	tab:SetScript("OnLeave", paintTab)
 	return tab
@@ -321,7 +332,8 @@ local function refreshTabs()
 		tab:SetWidth(width + TAB_TEXT_PAD * 2)
 		tab:ClearAllPoints()
 		tab:SetPoint("BOTTOMLEFT", strip, "BOTTOMLEFT", x, 0)
-		x = x + tab:GetWidth() + TAB_GAP
+		-- The matte keys stand in one bank, side against side.
+		x = x + tab:GetWidth() + (Console:Matte() and 0 or TAB_GAP)
 		tab.selected = chatFrame == selected
 		paintTab(tab)
 		tab:Show()
@@ -376,13 +388,15 @@ end
 
 -- Bags and the game menu leave the action bar row for the console's top
 -- edge on the right, mirroring the chat tabs on the left: the menu, a gap,
--- then the bags in the corner, a size down and quiet until the mouse is
--- over them. They ride the console's top, so they come down with it when
--- it folds.
+-- then the bags in the corner, a size down. At rest each row is hidden
+-- behind a word on the rim, MENU and BAGS, and shows while the mouse is
+-- over the word or the row. They ride the console's top, so they come down
+-- with it when it folds.
 local MENU_SCALE = 0.8
 local MENU_LIFT = 4
 local MENU_GAP = 14
-local MENU_REST_ALPHA = 0.55
+local MENU_WORD_ROOM = 16
+local MENU_WORD_REST, MENU_WORD_FIGHT = 0.6, 0.3
 local BAG_SLOTS = {
 	"MainMenuBarBackpackButton", "CharacterBag0Slot", "CharacterBag1Slot",
 	"CharacterBag2Slot", "CharacterBag3Slot", "CharacterReagentBag0Slot",
@@ -400,6 +414,14 @@ local function placeMenuNow()
 	local edge = Console.frame or UIParent
 	local point = Console.frame and "TOPRIGHT" or "BOTTOMRIGHT"
 	local lift = (Console.frame or Console.bare) and MENU_LIFT or Console:OpenHeight()
+	-- With a window docked on the right (Console:PlaceDocks), the rows hold
+	-- the open console's height on the screen instead of riding its top
+	-- down in a fight, where they would land on that window.
+	if Console.frame and Console.docked then
+		edge, point, lift = UIParent, "BOTTOMRIGHT", Console:OpenHeight() + MENU_LIFT
+	end
+	-- Room under the rows for their words.
+	lift = lift + MENU_WORD_ROOM
 	-- Bags take the corner, where every hand already goes for the backpack;
 	-- the menu sits inward of them.
 	if bags then
@@ -576,6 +598,12 @@ local function placeMenu()
 	if not ok then error(err, 0) end
 end
 
+-- For the console's slots: places the rows again, out of a fight.
+function Console:ReplaceMenu()
+	if not self.db.houseMenu then return end
+	Stoa:AfterCombat(function() xpcall(placeMenu, Stoa.catch) end)
+end
+
 -- Blizzard puts the menu and bags back now and then: Edit Mode re-applies
 -- their anchors (layout updates, the action bar showing again after a
 -- vehicle or a cinematic), and the bottom frame manager re-stacks them.
@@ -639,7 +667,7 @@ local function liftBags()
 	local row = bagsBar or menu
 	if Console.db.houseMenu and row and row:IsShown() then
 		local height = Stoa:PlainNumber(row:GetHeight())
-		if height then floor = floor + MENU_LIFT + height * MENU_SCALE end
+		if height then floor = floor + MENU_LIFT + MENU_WORD_ROOM + height * MENU_SCALE end
 	end
 	local frames = { ContainerFrameCombinedBags }
 	for i = 1, 13 do frames[#frames + 1] = _G["ContainerFrame" .. i] end
@@ -654,19 +682,47 @@ local function liftBags()
 	end
 end
 
--- Rests dim, brightens while the mouse is over either row.
+-- Each row rests unseen behind its word and shows while the mouse is over
+-- the word or the row. The words are Stoa's own frames hung under the
+-- game's rows, so they follow wherever the rows are put. BAGS opens the
+-- bags on a click, as the backpack does.
+local function menuWord(row, label, click)
+	local word = CreateFrame("Button", nil, UIParent)
+	local text = UI.caption(word, label)
+	text:SetPoint("RIGHT")
+	word.text = text
+	word:SetSize(math.max(text:GetStringWidth() or 0, 24) + 4, MENU_WORD_ROOM - 4)
+	word:SetPoint("TOPRIGHT", row, "BOTTOMRIGHT", 0, -2)
+	if click then word:SetScript("OnClick", click) end
+	return word
+end
+
 local function watchMenu()
 	local menu, bags = menuFrames()
 	if not (menu or bags) then return end
-	local lit
+	local rows = {}
+	if menu then rows[#rows + 1] = { row = menu, word = menuWord(menu, "Menu") } end
+	if bags then
+		rows[#rows + 1] = { row = bags, word = menuWord(bags, "Bags", function()
+			if ToggleAllBags then ToggleAllBags() end
+		end) }
+	end
 	local function update()
-		local over = (menu and menu:IsVisible() and menu:IsMouseOver())
-			or (bags and bags:IsVisible() and bags:IsMouseOver())
-		if over == lit then return end
-		lit = over
-		local alpha = over and 1 or MENU_REST_ALPHA
-		if menu then menu:SetAlpha(alpha) end
-		if bags then bags:SetAlpha(alpha) end
+		local fight = InCombatLockdown()
+		for _, entry in ipairs(rows) do
+			local row, word = entry.row, entry.word
+			local seen = row:IsVisible()
+			word:SetShown(seen)
+			-- The row's own reach runs down over its word.
+			local over = seen and (row:IsMouseOver(0, -MENU_WORD_ROOM / MENU_SCALE, 0, 0) or word:IsMouseOver())
+			local state = over and 1 or (fight and 2 or 3)
+			if state ~= entry.state then
+				entry.state = state
+				row:SetAlpha(over and 1 or 0)
+				word.text:SetTextColor(Stoa:Color(over and "accent" or "muted"))
+				word:SetAlpha(over and 1 or (fight and MENU_WORD_FIGHT or MENU_WORD_REST))
+			end
+		end
 	end
 	update()
 	Stoa:NewTicker(0.15, update)

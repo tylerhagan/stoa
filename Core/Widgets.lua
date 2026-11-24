@@ -128,7 +128,23 @@ end
 -- The Painted ornament (Stoa.db.ornament): leather and brass frames on the
 -- few one-of-a-kind pieces instead of fine lines.
 function UI.ornate()
-	return Stoa.db and Stoa.db.ornament == "painted"
+	-- Matte has no leather or brass: it wears its own moulded pieces.
+	return Stoa.db and Stoa.db.ornament == "painted" and Stoa.db.material ~= "matte"
+end
+
+-- Draws a texture exactly where it lies rather than on the nearest pixel,
+-- for pieces that must meet others edge to edge.
+function UI.unsnap(tex)
+	if tex.SetSnapToPixelGrid then tex:SetSnapToPixelGrid(false) end
+	if tex.SetTexelSnappingBias then tex:SetTexelSnappingBias(0) end
+end
+
+-- Matte: a block is shaped by its shading, so the edge round a panel, card
+-- or window is only a whisper (the console's rim wears the same), where
+-- the other materials draw the theme's hairline.
+local MATTE_EDGE = 0.07
+function UI.edgeAlpha()
+	return Stoa.db ~= nil and Stoa.db.material == "matte" and MATTE_EDGE or nil
 end
 
 -- A small leather and brass ring (Tools/art/coin_frame.py) round a circle
@@ -194,6 +210,67 @@ function UI.line(parent, token, alpha)
 	UI.paint(tex, token or "hairline", alpha)
 	return tex
 end
+
+-- An upright seam like the console's own: a line strongest in the middle
+-- and clear at both ends, a dark crease to its left for depth. Leather
+-- draws it in the accent; Matte as a moulded groove with a faint lit edge.
+-- `quiet` is for scroll rails, which sit beside their own thumb.
+local seams = setmetatable({}, { __mode = "k" })
+
+local function paintSeam(seam)
+	local matte = Stoa.db ~= nil and Stoa.db.material == "matte"
+	local r, g, b = Stoa:Color("accent")
+	local lineAlpha, creaseAlpha = seam.quiet and 0.22 or 0.4, seam.quiet and 0.3 or 0.5
+	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, seam.quiet and 0.04 or 0.06, seam.quiet and 0.45 or 0.6 end
+	seam.creaseUp:SetWidth(matte and 2 or 1)
+	seam.creaseDown:SetWidth(matte and 2 or 1)
+	local gradient = CreateColor and seam.upper.SetGradient
+	for _, part in ipairs({ seam.upper, seam.lower, seam.creaseUp, seam.creaseDown }) do
+		local dark = part == seam.creaseUp or part == seam.creaseDown
+		local pr, pg, pb, pa = r, g, b, lineAlpha
+		if dark then pr, pg, pb, pa = 0, 0, 0, creaseAlpha end
+		local up = part == seam.upper or part == seam.creaseUp
+		part:SetColorTexture(1, 1, 1, 1)
+		if gradient then
+			local clear, solid = CreateColor(pr, pg, pb, 0), CreateColor(pr, pg, pb, pa)
+			-- (A vertical gradient runs from the bottom colour to the top one.)
+			pcall(part.SetGradient, part, "VERTICAL", up and solid or clear, up and clear or solid)
+		else
+			part:SetColorTexture(pr, pg, pb, pa * 0.7)
+		end
+	end
+end
+
+function UI.seam(parent, quiet)
+	local seam = CreateFrame("Frame", nil, parent)
+	seam:SetWidth(3)
+	seam.quiet = quiet
+	local function half(layer, up)
+		local tex = seam:CreateTexture(nil, layer)
+		tex:SetWidth(1)
+		if up then
+			tex:SetPoint("TOP")
+			tex:SetPoint("BOTTOM", seam, "CENTER")
+		else
+			tex:SetPoint("TOP", seam, "CENTER")
+			tex:SetPoint("BOTTOM")
+		end
+		return tex
+	end
+	seam.upper, seam.lower = half("ARTWORK", true), half("ARTWORK", false)
+	seam.creaseUp, seam.creaseDown = seam:CreateTexture(nil, "BORDER"), seam:CreateTexture(nil, "BORDER")
+	seam.creaseUp:SetPoint("TOPRIGHT", seam.upper, "TOPLEFT")
+	seam.creaseUp:SetPoint("BOTTOMRIGHT", seam.upper, "BOTTOMLEFT")
+	seam.creaseDown:SetPoint("TOPRIGHT", seam.lower, "TOPLEFT")
+	seam.creaseDown:SetPoint("BOTTOMRIGHT", seam.lower, "BOTTOMLEFT")
+	seams[seam] = true
+	paintSeam(seam)
+	return seam
+end
+
+Stoa:On("STOA_THEME_CHANGED", function()
+	for seam in pairs(seams) do paintSeam(seam) end
+end)
 
 function UI.text(parent, kind, size, token, justify)
 	local fs = parent:CreateFontString(nil, "OVERLAY")
@@ -313,7 +390,13 @@ function UI.bar(parent, width, height, token)
 	UI.paint(sb, token)
 	local track = sb:CreateTexture(nil, "BACKGROUND")
 	track:SetAllPoints()
-	UI.paint(track, "text", 0.08)
+	if UI.matte() then
+		-- Matte: the bar runs in a dark groove, a shade under the shell,
+		-- not a lighter strip that reads as an outline when it is empty.
+		track:SetColorTexture(0, 0, 0, 0.5)
+	else
+		UI.paint(track, "text", 0.08)
+	end
 	sb.track = track
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
@@ -832,9 +915,28 @@ end
 -- Rounded card pieces: one small image each, nine-sliced so the corners
 -- keep their shape at any size. Clients without slicing get square ones.
 local CARD_SLICE = 12
+-- The Matte small key's pieces (Tools/art/matte_key.py) slice at 5.
+local KEY_SLICE = 5
+UI.KEY_SLICE = KEY_SLICE
+-- The Matte card plate (4 pixel corner) is nine-sliced at 8.
+local MATTE_SLICE = 8
+UI.MATTE_SLICE = MATTE_SLICE
 
-local function sliced(parent, layer, file, outset, margin)
+-- Matte: windows, tooltips, cards and tabs take the same pieces cut with a
+-- 4 pixel corner (Tools/art/window_corners.py, the Sharp set), the small
+-- pills a 2 pixel one (Tools/art/plate_corners.py), and the
+-- block's soft bevel gives way to fine lines (Tools/art/matte_parts.py).
+-- The swap is by name, here, so every caller follows. `keep` asks for the
+-- named file as it is (a shape that has to match other art).
+local SHARP = {}
+for _, name in ipairs({ "WindowFill", "WindowEdge", "WindowTop", "WindowBottom", "CardTop", "CardFill", "CardEdge", "CardState", "TabFill", "TabEdge", "PlateFill", "PlateEdge" }) do
+	SHARP[name .. ".tga"] = "Sharp" .. name .. ".tga"
+end
+SHARP["MatteBlock.tga"] = "SharpBlock.tga"
+
+local function sliced(parent, layer, file, outset, margin, keep)
 	if not parent.CreateTexture then return nil end
+	if not keep and SHARP[file] and UI.matte() then file = SHARP[file] end
 	local tex = parent:CreateTexture(nil, layer)
 	-- (A guarded proxy, such as a game menu, hands back nothing.)
 	if not tex then return nil end
@@ -875,10 +977,12 @@ end
 -- Small rounded pieces for thin bars (nameplates): a filled pill behind
 -- the bar and a 1px rounded outline that can be set and cleared like
 -- UI.border. Square where slicing isn't available.
+-- `keep`: the round pill even in Matte (the nameplate styles a player
+-- picks by name).
 local PLATE_SLICE = 5
 
-function UI.pillFill(frame, outset)
-	local tex = sliced(frame, "BACKGROUND", "PlateFill.tga", outset, PLATE_SLICE)
+function UI.pillFill(frame, outset, keep)
+	local tex = sliced(frame, "BACKGROUND", "PlateFill.tga", outset, PLATE_SLICE, keep)
 	if not tex then
 		tex = frame:CreateTexture(nil, "BACKGROUND")
 		tex:SetColorTexture(1, 1, 1)
@@ -889,8 +993,8 @@ function UI.pillFill(frame, outset)
 	return tex
 end
 
-function UI.pillEdge(frame, outset)
-	local tex = sliced(frame, "OVERLAY", "PlateEdge.tga", outset, PLATE_SLICE)
+function UI.pillEdge(frame, outset, keep)
+	local tex = sliced(frame, "OVERLAY", "PlateEdge.tga", outset, PLATE_SLICE, keep)
 	if not tex then return UI.border(frame, 1, outset) end
 	tex:Hide()
 	return {
@@ -922,6 +1026,18 @@ function UI.foldGlyph(button)
 	end
 end
 
+-- Matte: the bevel that makes a card, plaque or window a moulded block
+-- (Tools/art/matte_parts.py): lit along the top, dark along the bottom.
+-- It carries its own black and white, so it is never tinted.
+function UI.mould(frame, outset)
+	if not UI.matte() or not frame or frame.stoaMould then return end
+	local tex = sliced(frame, "BORDER", "MatteBlock.tga", outset)
+	if not tex then return end
+	tex:SetDrawLayer("BORDER", 1)
+	frame.stoaMould = tex
+	return tex
+end
+
 -- A rounded panel with a hairline edge behind a whole frame, for windows
 -- Stoa restyles. `kind` "window" takes the window corners (10px) instead
 -- of the card ones. Square where slicing isn't available.
@@ -940,11 +1056,12 @@ function UI.roundPanel(frame, alpha, kind)
 	end
 	local edge = UI.roundBorder(frame, edgeFile, 1)
 	for _, tex in ipairs(edge.edges) do
-		UI.tint(tex, "hairline")
+		UI.tint(tex, "hairline", UI.edgeAlpha())
 		tex:Show()
 	end
 	frame.stoaPanelEdge = edge
 	frame.stoaPanelBg = bg
+	UI.mould(frame)
 	UI.applyTheme()
 	return bg
 end
@@ -991,6 +1108,35 @@ end
 -- a slice of it at its natural size rather than stretching it, and it
 -- fades out towards the top, where titles and text start.
 
+-- The Matte material (Stoa.db.material): the console and windows as
+-- moulded black hardware, a fine grain (Tools/art/matte_grain.py) in place
+-- of leather and stone. The grain is drawn one texel to the screen pixel.
+UI.GRAIN = UI.MEDIA .. "Textures\\MatteGrain"
+local GRAIN_SIZE = 128
+-- Satin is the flat finish of a matte speaker: no grain at all (even a
+-- faint one read as speckle). A saved "rough" (dropped) reads as satin.
+local GRAIN_ALPHA = { satin = 0, smooth = 0.07, fine = 0.105 }
+
+function UI.matte()
+	return Stoa.db ~= nil and Stoa.db.material == "matte"
+end
+
+function UI.grainAlpha()
+	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.satin
+end
+
+function UI.fitGrain(tex)
+	local width, height = tex:GetWidth(), tex:GetHeight()
+	if Stoa:IsSecret(width) or Stoa:IsSecret(height) or not width or width <= 0 then return end
+	local perUnit = 1
+	local screenHeight = GetPhysicalScreenSize and select(2, GetPhysicalScreenSize())
+	local scale = tex:GetEffectiveScale()
+	if screenHeight and screenHeight > 0 and scale and scale > 0 then
+		perUnit = scale * screenHeight / 768
+	end
+	tex:SetTexCoord(0, width * perUnit / GRAIN_SIZE, 0, height * perUnit / GRAIN_SIZE)
+end
+
 local STONE = UI.MEDIA .. "Textures\\WindowStone"
 local STONE_SIZE = 1024
 local STONE_INSET = 2
@@ -1000,6 +1146,7 @@ local STONE_TOP = 0.3
 local stones = {}
 
 local function fitStone(tex)
+	if tex.stoaGrain then return UI.fitGrain(tex) end
 	local width, height = tex:GetWidth(), tex:GetHeight()
 	if Stoa:IsSecret(width) or Stoa:IsSecret(height) or not width or width <= 0 then return end
 	tex:SetTexCoord(0, width / STONE_SIZE, 0, height / STONE_SIZE)
@@ -1010,7 +1157,9 @@ end
 function UI.stone(frame, top, bottom)
 	if not frame or not frame.CreateTexture or frame.stoaStone then return end
 	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
-	tex:SetTexture(STONE, "REPEAT", "REPEAT")
+	-- Matte windows wear the grain where the others wear the stone.
+	tex.stoaGrain = UI.matte()
+	tex:SetTexture(tex.stoaGrain and UI.GRAIN or STONE, "REPEAT", "REPEAT")
 	if top then
 		tex:SetPoint("TOPLEFT", top, "BOTTOMLEFT")
 		tex:SetPoint("TOPRIGHT", top, "BOTTOMRIGHT")
@@ -1023,11 +1172,23 @@ function UI.stone(frame, top, bottom)
 	else
 		tex:SetPoint("BOTTOM", 0, STONE_INSET)
 	end
-	UI.gradient(tex, "text", UI.STONE_STRENGTH, "VERTICAL", 1, STONE_TOP)
+	if tex.stoaGrain then
+		tex:SetVertexColor(1, 1, 1, UI.grainAlpha())
+	else
+		UI.gradient(tex, "text", UI.STONE_STRENGTH, "VERTICAL", 1, STONE_TOP)
+	end
 	frame.stoaStone = tex
 	stones[#stones + 1] = tex
 	if frame.HookScript then
 		pcall(frame.HookScript, frame, "OnSizeChanged", function() pcall(fitStone, tex) end)
+		-- A window dressed before it has a size is never fitted (the
+		-- texture then stretches once across the whole of it), and a
+		-- header that grows changes the stone's height without a resize.
+		pcall(frame.HookScript, frame, "OnShow", function()
+			pcall(fitStone, tex)
+			-- And once more when the game has laid the window out.
+			if C_Timer and C_Timer.After then C_Timer.After(0, function() pcall(fitStone, tex) end) end
+		end)
 	end
 	pcall(fitStone, tex)
 	tex:SetShown(Stoa.db == nil or Stoa.db.windowStone ~= false)
@@ -1127,7 +1288,9 @@ function UI.emboss(frame, header)
 	UI.pixel(top, "height")
 	top:SetPoint("TOPLEFT", header, "TOPLEFT", EMBOSS_INSET, -1)
 	top:SetPoint("TOPRIGHT", header, "TOPRIGHT", -EMBOSS_INSET, -1)
-	UI.tint(top, "text", 0.22)
+	-- Matte: the header's top light is the block's own bevel, so the line
+	-- stays only as a trace.
+	UI.tint(top, "text", UI.edgeAlpha() or 0.22)
 	local lip = frame:CreateTexture(nil, "BORDER", nil, 3)
 	lip:SetTexture(UI.WHITE)
 	UI.pixel(lip, "height")
@@ -1189,10 +1352,11 @@ function UI.surface(frame, kind, opts)
 	if spec.edge then
 		local edge = UI.roundBorder(frame, "WindowEdge.tga", 1, outset)
 		for _, tex in ipairs(edge.edges) do
-			UI.tint(tex, "hairline")
+			UI.tint(tex, "hairline", UI.edgeAlpha())
 			tex:Show()
 		end
 		frame.stoaPanelEdge = edge
+		UI.mould(frame, outset)
 	end
 	if spec.stone and not opts.noStone then UI.stone(frame, frame.stoaHeader, frame.stoaFooter) end
 	frame.stoaSurface = fill
@@ -1273,6 +1437,32 @@ function UI.badge(parent, word, token)
 	return badge
 end
 
+-- Matte's compact cards: the target slab and the tank watch and pet
+-- blocks that match it, unless the full plaques were chosen (Halo's
+-- targetFull). Read at build time; the choice reloads.
+function UI.slabCards()
+	if not UI.matte() then return false end
+	local halo = Stoa.modules and Stoa.modules.Halo
+	return not (halo and halo.db and halo.db.targetFull)
+end
+
+-- The Grain setting, on every matte window.
+function UI.paintGrain()
+	for _, tex in ipairs(stones) do
+		if tex.stoaGrain then tex:SetVertexColor(1, 1, 1, tex.stoaOff and 0 or UI.grainAlpha()) end
+	end
+end
+
+-- Hides or brings back one window's stone (the talents go without). A
+-- texture's alpha is its colour's alpha, so the grain goes back to its
+-- own strength, not to 1.
+function UI.stoneOn(frame, on)
+	local tex = frame and frame.stoaStone
+	if not tex then return end
+	tex:SetAlpha(on and (tex.stoaGrain and UI.grainAlpha() or 1) or 0)
+	tex.stoaOff = not on
+end
+
 function UI.showStone(on)
 	Stoa.db.windowStone = on and true or false
 	for _, tex in ipairs(stones) do tex:SetShown(on and true or false) end
@@ -1309,11 +1499,19 @@ function UI.button(parent, label, width, onClick, reloads)
 		if lit then
 			glow:Set(Stoa:Color("accent"))
 			-- The edge warms in rather than snapping on.
-			if not button.lit and glow.edges then
+			-- Only a hover on a button in view: a fade started on a hidden
+			-- one never ran, and left the edge clear until the next hover.
+			if not button.lit and glow.edges and button:IsVisible() and button:IsMouseOver() then
 				button.glowIn = button.glowIn or {}
 				for i, tex in ipairs(glow.edges) do
 					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, UI.MOTION.quick)
 					button.glowIn[i]:Play()
+				end
+			elseif not button:IsMouseOver() then
+				-- Selected: the edge is simply there. Only a hover warms in.
+				for i, group in ipairs(button.glowIn or {}) do
+					group:Stop()
+					glow.edges[i]:SetAlpha(glow.edges[i].stoaRestAlpha or 1)
 				end
 			end
 		else
@@ -1327,6 +1525,11 @@ function UI.button(parent, label, width, onClick, reloads)
 	end
 	button:SetScript("OnEnter", colour)
 	button:SetScript("OnLeave", colour)
+	-- Coming into view, any fade cut short by the hide is put to rest.
+	button:HookScript("OnShow", function()
+		for _, group in ipairs(button.glowIn or {}) do group:Stop() end
+		colour()
+	end)
 	button:SetScript("OnMouseDown", function(self)
 		if self:IsEnabled() then text:SetPoint("CENTER", 1, -1) end
 	end)
@@ -1452,12 +1655,47 @@ function UI.raidMark(parent, size)
 	return mark
 end
 
+-- Matte: takes the hard corners off a square health bar. The corners are
+-- covered in the card's own colour (MatteBarCorners.tga, a 2 pixel
+-- corner), which costs one texture and no mask.
+function UI.softCorners(bar)
+	local corners = sliced(bar, "OVERLAY", "MatteBarCorners.tga", 0, 3)
+	if not corners then return end
+	corners:SetDrawLayer("OVERLAY", 7)
+	UI.tint(corners, "panel", 1)
+	bar.corners = corners
+	return corners
+end
+
 function UI.unitCard(card, styleName)
 	-- The rulebook's card surface: panel fill and one hairline edge, as on
 	-- tooltips and plaques. A stronger border shows states (a dispel, low
 	-- health or your target); dispels also get a soft halo outside.
-	UI.surface(card, "card", { alpha = 0.96 })
-	card.state = UI.roundBorder(card, "CardState.tga", 2)
+	-- Matte: the card plate instead (Tools/art/matte_key.py): a
+	-- 4 pixel corner, light caught on the top edge, shade along the foot
+	-- and a dark line under it, with a crisp state outline to match.
+	local plate = UI.matte() and sliced(card, "BACKGROUND", "MatteCardFill.tga", 0, MATTE_SLICE)
+	if plate then
+		plate:SetDrawLayer("BACKGROUND", -8)
+		UI.tint(plate, "panel", 0.97)
+		local lines = sliced(card, "BACKGROUND", "MatteCard.tga", 0, MATTE_SLICE)
+		lines:SetDrawLayer("BACKGROUND", -7)
+		card.stoaSurface, card.stoaSurfaceKind, card.stoaKeyLines = plate, "card", lines
+		local ring = sliced(card, "OVERLAY", "MatteCardState.tga", 0, MATTE_SLICE)
+		ring:Hide()
+		card.state = {
+			edges = { ring },
+			Set = function(_, r, g, b, a)
+				ring:SetVertexColor(r, g, b, a or 1)
+				ring:Show()
+			end,
+			Clear = function() ring:Hide() end,
+		}
+		UI.applyTheme()
+	else
+		UI.surface(card, "card", { alpha = 0.96 })
+		card.state = UI.roundBorder(card, "CardState.tga", 2)
+	end
 	card.glow = UI.roundBorder(card, "CardGlow.tga", 3, 3)
 	-- Kept for older callers: a dispel border is the state border.
 	card.dispel = card.state
@@ -1473,6 +1711,7 @@ function UI.unitCard(card, styleName)
 
 	local hp = UI.bar(card, 10, 10, "health")
 	card.hp = hp
+	if plate then UI.softCorners(hp) end
 	UI.halvedStripes(hp)
 
 	-- Shields sit on the empty end of the health bar, starting where health
@@ -1599,34 +1838,88 @@ local SHADOW_W = JOIN_W + 8
 -- The socket art: 56x70, its left edge 24 right of the medallion's centre.
 local SOCKET_W, SOCKET_ART_H = 56, 70
 UI.PLAQUE_JOIN_H = JOIN_H
+-- Matte: the docked plaque is as tall as the tab beside the console's
+-- dial, which it comes out of (Tools/art/matte_dock.py DOCK_TOP, DOCK_ART_H).
+local MATTE_DOCK_H, MATTE_DOCK_ART_H = 57, 59
+function UI.plaqueDockHeight()
+	return UI.matte() and MATTE_DOCK_H or JOIN_H
+end
 UI.PLAQUE_SOCKET_X = 24
 -- From where the curve starts to the plaque's right end.
 UI.PLAQUE_JOIN_SPAN = JOIN_CX - JOIN_LEAD + JOIN_R
 -- From where the curve starts to where its corner begins to round.
 UI.PLAQUE_JOIN_FLAT = JOIN_CX - JOIN_LEAD
+-- Matte: the same pieces as square hardware (Tools/art/matte_dock.py): a
+-- block standing on the rim, a faint lit bevel inside its top edge in place
+-- of the gold line, and no shadow.
+local DOCK_BEVEL_A = 0.05
+-- Matte: how long the docked block takes to come out of the dial, and how
+-- much of its body is out when it starts.
+UI.DOCK_OUT = 0.26
+local DOCK_OUT_FROM = 0.1
+local function dockArt(name)
+	return UI.MEDIA .. "Textures\\" .. name .. (UI.matte() and "Matte" or "")
+end
 local function buildDock(frame, plaque)
 	local dock = {}
 	local body = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 	body:SetColorTexture(1, 1, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 1)
 	top:SetColorTexture(1, 1, 1)
-	top:SetHeight(2)
+	top:SetHeight(UI.matte() and 3 or 2)
 	local join = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-	join:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoin")
-	join:SetSize(JOIN_W, JOIN_ART_H)
+	join:SetTexture(dockArt("PlaqueJoin"))
+	local artH = UI.matte() and MATTE_DOCK_ART_H or JOIN_ART_H
+	join:SetSize(JOIN_W, artH)
 	local lines = frame:CreateTexture(nil, "BORDER", nil, 1)
-	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinLines")
+	lines:SetTexture(dockArt("PlaqueJoin") .. "Lines")
 	lines:SetAllPoints(join)
 	local socket = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-	socket:SetTexture(UI.MEDIA .. "Textures\\PlaqueSocket")
-	socket:SetSize(SOCKET_W, SOCKET_ART_H)
+	socket:SetTexture(dockArt("PlaqueSocket"))
+	socket:SetSize(SOCKET_W, UI.matte() and MATTE_DOCK_ART_H or SOCKET_ART_H)
 	socket:SetPoint("BOTTOMLEFT")
 	local socketLines = frame:CreateTexture(nil, "BORDER", nil, 1)
-	socketLines:SetTexture(UI.MEDIA .. "Textures\\PlaqueSocketLines")
+	socketLines:SetTexture(dockArt("PlaqueSocket") .. "Lines")
 	socketLines:SetAllPoints(socket)
 	dock.body, dock.top, dock.join, dock.lines = body, top, join, lines
 	dock.socket, dock.socketLines = socket, socketLines
 	plaque.dock = dock
+	if UI.matte() then
+		-- One block from the tab to its far end: every piece is drawn
+		-- where it lies, unsnapped, so the art's top edge and the plain
+		-- body's never land a pixel apart.
+		for _, part in pairs(dock) do UI.unsnap(part) end
+		-- The block comes out of the dial: its body grows from its dial
+		-- end while its far end rides out with it (plaque:PlayDock). The
+		-- end by the dial stays put, so nothing crosses the dial.
+		local function group(region)
+			local g = region:CreateAnimationGroup()
+			plaque.dockMotion = plaque.dockMotion or {}
+			table.insert(plaque.dockMotion, g)
+			return g
+		end
+		for _, region in ipairs({ body, top }) do
+			local grow = group(region):CreateAnimation("Scale")
+			grow:SetScaleFrom(DOCK_OUT_FROM, 1)
+			grow:SetScaleTo(1, 1)
+			grow:SetOrigin("LEFT", 0, 0)
+			grow:SetDuration(UI.DOCK_OUT)
+			grow:SetSmoothing("OUT")
+		end
+		plaque.dockRides = {}
+		for _, region in ipairs({ join, lines }) do
+			local g = group(region)
+			local from = g:CreateAnimation("Translation")
+			from:SetDuration(0)
+			from:SetOrder(1)
+			local ride = g:CreateAnimation("Translation")
+			ride:SetDuration(UI.DOCK_OUT)
+			ride:SetOrder(2)
+			ride:SetSmoothing("OUT")
+			table.insert(plaque.dockRides, { from, ride })
+		end
+		return dock
+	end
 	-- Shown only while something sits behind the sweep (SetShadow).
 	local shadow = frame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	shadow:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinShadow")
@@ -1656,13 +1949,14 @@ function UI.plaqueStep(frame)
 	local body = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 	body:SetColorTexture(1, 1, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 1)
+	local matte = UI.matte()
 	top:SetColorTexture(1, 1, 1)
-	top:SetHeight(2)
+	top:SetHeight(matte and 3 or 2)
 	local step = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-	step:SetTexture(UI.MEDIA .. "Textures\\PlaqueStep")
+	step:SetTexture(dockArt("PlaqueStep"))
 	step:SetSize(STEP_W, STEP_ART_H)
 	local lines = frame:CreateTexture(nil, "BORDER", nil, 1)
-	lines:SetTexture(UI.MEDIA .. "Textures\\PlaqueStepLines")
+	lines:SetTexture(dockArt("PlaqueStep") .. "Lines")
 	lines:SetAllPoints(step)
 	local parts = { body, top, step, lines }
 	-- The plain line is drawn on whole pixels and the art's line is not, so
@@ -1677,24 +1971,30 @@ function UI.plaqueStep(frame)
 		UI.tint(part, "panel", 1)
 	end
 	for _, part in ipairs({ top, lines }) do
-		local r, g, b = Stoa:Color("accent")
-		part:SetVertexColor(r, g, b, STEP_LINE_A)
-		UI.tint(part, "accent", STEP_LINE_A)
+		if matte then
+			part:SetVertexColor(1, 1, 1, DOCK_BEVEL_A)
+		else
+			local r, g, b = Stoa:Color("accent")
+			part:SetVertexColor(r, g, b, STEP_LINE_A)
+			UI.tint(part, "accent", STEP_LINE_A)
+		end
 	end
+	-- The plain line: centred on the top edge, or (matte) just inside it.
+	local lift = matte and 0 or 1
 	function slab:Layout(curve)
 		body:ClearAllPoints()
 		body:SetPoint("BOTTOMLEFT")
 		body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
 		top:ClearAllPoints()
-		top:SetPoint("TOPLEFT", 0, 1)
+		top:SetPoint("TOPLEFT", 0, lift)
 		-- Up to where the art's own line starts: the line is see-through,
 		-- so an overlap would show as a brighter spot.
-		top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - STEP_LEAD, 1)
+		top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - STEP_LEAD, lift)
 		-- The art hangs from the plain line, not from the frame's bottom:
 		-- measured from two edges, the two lines rounded to different
 		-- pixels and showed a small bump where they met.
 		step:ClearAllPoints()
-		step:SetPoint("TOPLEFT", top, "TOPRIGHT", 0, 1)
+		step:SetPoint("TOPLEFT", top, "TOPRIGHT", 0, 2 - lift)
 	end
 	function slab:SetShown(on)
 		for _, part in ipairs(parts) do part:SetShown(on) end
@@ -1705,7 +2005,10 @@ end
 
 function UI.plaque(frame, coinSide, opts)
 	local plaque = {}
-	local fill = sliced(frame, "BACKGROUND", "CardFill.tga")
+	-- Matte: the card plate (4 pixel corner, fine light and shade
+	-- lines) instead of the rounded card with its edge and bevel.
+	local keyed = UI.matte()
+	local fill = sliced(frame, "BACKGROUND", keyed and "MatteCardFill.tga" or "CardFill.tga", 0, keyed and MATTE_SLICE or nil)
 	if not fill then
 		fill = frame:CreateTexture(nil, "BACKGROUND")
 		fill:SetAllPoints()
@@ -1726,8 +2029,16 @@ function UI.plaque(frame, coinSide, opts)
 	paintFill()
 
 	-- One fine edge.
-	local edge = sliced(frame, "BORDER", "CardEdge.tga")
-	plaque.lines = { edge }
+	local edge
+	if keyed and fill and fill.SetTextureSliceMargins then
+		-- Kept as the frame's mould, so docking and the bare style hide it.
+		frame.stoaMould = sliced(frame, "BORDER", "MatteCard.tga", 0, MATTE_SLICE)
+		plaque.lines = {}
+	else
+		edge = sliced(frame, "BORDER", "CardEdge.tga")
+		plaque.lines = { edge }
+		UI.mould(frame)
+	end
 
 	-- The reaction strip along the top, inside the rounded corners.
 	local strip = frame:CreateTexture(nil, "ARTWORK")
@@ -1777,7 +2088,7 @@ function UI.plaque(frame, coinSide, opts)
 	function plaque:SetRank(rank)
 		plaque.rank = rank
 		local r, g, b = Stoa:Color("text")
-		local a = 0.16
+		local a = UI.edgeAlpha() or 0.16
 		if rank == "elite" then r, g, b = Stoa:Color("accent"); a = 0.9 end
 		if rank == "rare" then r, g, b = unpack(SILVER); a = 0.9 end
 		if edge then edge:SetVertexColor(r, g, b, a) end
@@ -1794,10 +2105,12 @@ function UI.plaque(frame, coinSide, opts)
 		if plaque.dock then
 			-- The console's gold; silver for a rare.
 			local dr, dg, db = Stoa:Color("accent")
+			local da = 1
 			if rank == "rare" then dr, dg, db = unpack(SILVER) end
-			plaque.dock.top:SetVertexColor(dr, dg, db, 1)
-			plaque.dock.lines:SetVertexColor(dr, dg, db, 1)
-			plaque.dock.socketLines:SetVertexColor(dr, dg, db, 1)
+			if UI.matte() then dr, dg, db, da = 1, 1, 1, DOCK_BEVEL_A end
+			plaque.dock.top:SetVertexColor(dr, dg, db, da)
+			plaque.dock.lines:SetVertexColor(dr, dg, db, da)
+			plaque.dock.socketLines:SetVertexColor(dr, dg, db, da)
 		end
 	end
 
@@ -1812,7 +2125,8 @@ function UI.plaque(frame, coinSide, opts)
 		local dock = plaque.dock or (on and buildDock(frame, plaque))
 		fill:SetShown(not on)
 		if edge then edge:SetShown(not on) end
-		for _, part in ipairs(plaque.medallionParts) do part:SetShown(not on) end
+		if frame.stoaMould then frame.stoaMould:SetShown(not on) end
+		for _, part in ipairs(plaque.medallionParts) do part:SetShown(not on and not plaque.plain) end
 		if dock then
 			for _, part in pairs(dock) do part:SetShown(on) end
 		end
@@ -1821,20 +2135,38 @@ function UI.plaque(frame, coinSide, opts)
 			dock.body:SetPoint("BOTTOMLEFT", SOCKET_W, 0)
 			dock.body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
 			-- Centred on the top edge, as the art draws its line.
+			local lift = UI.matte() and 0 or 1
 			dock.top:ClearAllPoints()
-			dock.top:SetPoint("TOPLEFT", SOCKET_W, 1)
-			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 1)
+			dock.top:SetPoint("TOPLEFT", SOCKET_W, lift)
+			-- Up to where the join's own line starts.
+			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - (UI.matte() and JOIN_LEAD or 0), lift)
 			dock.join:ClearAllPoints()
 			dock.join:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - JOIN_LEAD, 0)
 		else
 			plaque.placeCoin(plaque.bare and 0.75 or 1)
 		end
 		-- Docked, there is no portrait: callers put the level in words.
-		coin:SetShown(not on)
+		coin:SetShown(not on and not plaque.plain)
 		if plaque.shadow then plaque.shadow:SetShown(on and plaque.shadowWanted or false) end
 		paintFill()
 		plaque:SetRank(plaque.rank)
 		plaque:SetReaction(plaque.reaction)
+	end
+
+	-- Matte: plays the docked block coming out of the dial. Its far end
+	-- starts where the shorter body ends.
+	function plaque:PlayDock()
+		if not (plaque.docked and plaque.dockMotion) then return end
+		local back = (plaque.curve - SOCKET_W) * (1 - DOCK_OUT_FROM)
+		for _, pair in ipairs(plaque.dockRides) do
+			pair[1]:SetOffset(-back, 0)
+			pair[2]:SetOffset(back, 0)
+		end
+		for _, g in ipairs(plaque.dockMotion) do
+			g:Stop()
+			g:Play()
+		end
+		return true
 	end
 
 	-- The docked sweep's shadow, for when something stands behind it.
@@ -1846,13 +2178,27 @@ function UI.plaque(frame, coinSide, opts)
 	-- The strip: a colour token, or nil to hide it.
 	function plaque:SetReaction(token)
 		plaque.reaction = token
-		if token and not plaque.bare and not plaque.docked then
+		-- (Matte leaves the strip out: the bar's colour already says it.)
+		if token and not plaque.bare and not plaque.docked and not plaque.plain and not UI.matte() then
 			local r, g, b = Stoa:Color(token)
 			strip:SetVertexColor(r, g, b, 0.9)
 			strip:Show()
 		else
 			strip:Hide()
 		end
+	end
+	-- Plain (the Matte slab): the moulded block alone, with no portrait and
+	-- no reaction strip. Callers put the level in words.
+	function plaque:SetPlain(on)
+		on = on and true or false
+		if on == (plaque.plain or false) then return end
+		plaque.plain = on
+		local show = not on and not plaque.docked
+		if plaque.medallionParts then
+			for _, part in ipairs(plaque.medallionParts) do part:SetShown(show) end
+		end
+		coin:SetShown(show)
+		plaque:SetReaction(plaque.reaction)
 	end
 	-- Bare: no panel, edge or reaction strip, and a smaller portrait, so
 	-- the words stand over the world like the party strips. Callers make
@@ -1862,6 +2208,7 @@ function UI.plaque(frame, coinSide, opts)
 		fill:SetShown(not on)
 		if edge then edge:SetShown(not on) end
 		if on then plaque:SetDocked(false) end
+		if frame.stoaMould then frame.stoaMould:SetShown(not on) end
 		if plaque.medallion then
 			plaque.placeCoin(on and 0.75 or 1)
 			plaque:SetReaction(plaque.reaction)
@@ -1896,26 +2243,43 @@ function UI.plaqueBar(frame, width, height)
 	-- Coloured by its owner (hostile, low), so a theme pass mustn't turn it
 	-- back to the health colour.
 	UI.unpaint(hp)
-	local outset = (width * 64 / 512 - height) / 2
-	local mask = hp:CreateMaskTexture()
-	mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-	mask:SetPoint("TOPLEFT", 0, outset)
-	mask:SetPoint("BOTTOMRIGHT", 0, -outset)
-	hp:GetStatusBarTexture():AddMaskTexture(mask)
+	-- Matte: a square bar like the party cards', with no pill and no rim;
+	-- its owner sets the numbers beside it (UI.numbersBeside).
+	local square = UI.matte()
+	local mask
+	if not square then
+		local outset = (width * 64 / 512 - height) / 2
+		mask = hp:CreateMaskTexture()
+		mask:SetTexture(UI.MEDIA .. "Textures\\TargetBar", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		mask:SetPoint("TOPLEFT", 0, outset)
+		mask:SetPoint("BOTTOMRIGHT", 0, -outset)
+		hp:GetStatusBarTexture():AddMaskTexture(mask)
+		-- The mask's art is 8 to 1: set again when the bar changes size.
+		function hp:fitMask()
+			local w, h = self:GetSize()
+			local out = (w * 64 / 512 - h) / 2
+			mask:ClearAllPoints()
+			mask:SetPoint("TOPLEFT", 0, out)
+			mask:SetPoint("BOTTOMRIGHT", 0, -out)
+		end
+	end
 	-- A dark well rather than the usual faint track, so the words read.
 	hp.track:Hide()
 	local well = hp:CreateTexture(nil, "BACKGROUND")
 	well:SetAllPoints()
 	well:SetColorTexture(0, 0, 0, 0.6)
-	well:AddMaskTexture(mask)
+	if mask then well:AddMaskTexture(mask) end
 	-- Its words sit above anything drawn over the bar (Lethal.lua).
 	local words = CreateFrame("Frame", nil, hp)
 	words:SetAllPoints()
 	words:SetFrameLevel(hp:GetFrameLevel() + 6)
-	local rim = words:CreateTexture(nil, "BORDER")
-	rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
-	rim:SetAllPoints(mask)
-	UI.tint(rim, "text", 0.18)
+	local rim
+	if mask then
+		rim = words:CreateTexture(nil, "BORDER")
+		rim:SetTexture(UI.MEDIA .. "Textures\\TargetBarEdge")
+		rim:SetAllPoints(mask)
+		UI.tint(rim, "text", UI.edgeAlpha() or 0.18)
+	end
 	local percent = UI.text(words, "sans", Stoa.typeSize.body, "text", "LEFT")
 	percent:SetPoint("LEFT", 10, 0)
 	UI.legible(percent)
@@ -1923,8 +2287,19 @@ function UI.plaqueBar(frame, width, height)
 	amount:SetPoint("LEFT", percent, "RIGHT", 8, 0)
 	amount:SetAlpha(0.8)
 	UI.legible(amount)
-	hp.mask, hp.words, hp.percent, hp.amount = mask, words, percent, amount
+	hp.mask, hp.words, hp.percent, hp.amount, hp.rim = mask, words, percent, amount, rim
+	hp.square = square
+	if square then UI.softCorners(hp) end
 	return hp
+end
+
+-- Sets a plaque bar's numbers in the room to its right (`room` wide),
+-- right-aligned, instead of inside it.
+function UI.numbersBeside(hp, room)
+	hp.percent:ClearAllPoints()
+	hp.percent:SetPoint("RIGHT", hp, "RIGHT", room, 0)
+	hp.amount:ClearAllPoints()
+	hp.amount:SetPoint("RIGHT", hp.percent, "LEFT", -6, 0)
 end
 
 -- Heals halved (Mortal Strike and the like): red stripes over the empty end
@@ -2010,6 +2385,7 @@ function UI.styleCard(card, styleName)
 	local pad = style.pad
 	-- A strip has no panel or edge; every other style gets them back.
 	if card.stoaSurface then card.stoaSurface:SetShown(not style.strip) end
+	if card.stoaKeyLines then card.stoaKeyLines:SetShown(not style.strip) end
 	if card.stoaPanelEdge then
 		for _, tex in ipairs(card.stoaPanelEdge.edges or {}) do tex:SetShown(not style.strip) end
 	end

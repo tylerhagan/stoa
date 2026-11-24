@@ -20,6 +20,8 @@
 --   Inline : name at the bar's left and health at its right, inside it
 --   Brass  : a brass edge and a level badge on the bar's end
 --   Slim   : a thin bar under the name, for busy pulls
+--   Matte  : the Matte slab's health line: a slim line in a black track
+--            with a fine black rim, and the level kept quiet
 -- The target can be marked by its edge, by arrows either side, or by a soft
 -- glow behind it; plates you aren't targeting can fade, and the target can
 -- grow a little (the game's own scale setting).
@@ -45,11 +47,12 @@ local Plates = Stoa:NewModule("Plates", {
 
 -- Bar height (nil keeps Blizzard's), edge kind and what's written in it.
 local STYLES = {
-	stoa = { },
+	stoa = { freeName = true, lineCast = true },
 	bold = { height = 16, box = 3, bevel = true, value = "CENTER", nameSize = 2 },
 	inline = { height = 18, pill = true, value = "RIGHT", nameInside = true },
 	brass = { height = 12, brass = true, bevel = true, badge = true },
 	slim = { height = 5, pill = true },
+	matte = { height = 7, flush = true, quietLevel = true, freeName = true, lineCast = true },
 }
 
 function Plates:Style()
@@ -200,6 +203,8 @@ local function colourLevel(frame)
 	local mine = known(UnitEffectiveLevel("player"))
 	if not (theirs and mine) or theirs <= 0 then return end
 	local token = known(UnitCanAttack("player", frame.unit)) and levelToken(theirs - mine) or "muted"
+	-- The Matte line keeps the level quiet unless the fight is above you.
+	if Plates:Style().quietLevel and token ~= "danger" then token = "muted" end
 	text:SetText(theirs)
 	text:SetTextColor(Stoa:Color(token))
 end
@@ -258,13 +263,13 @@ local function buildParts(frame)
 	-- A dark well behind the bar in every style, so the missing health
 	-- reads against the fill even over the target glow or bright ground.
 	-- (The rulebook's well, in the plates' small corner.)
-	local well = UI.pillFill(bar, 0)
+	local well = UI.pillFill(bar, 0, true)
 	well:SetDrawLayer("BACKGROUND", -6)
 	well:SetVertexColor(0, 0, 0, UI.SURFACES.well.black)
 	parts.well = well
 
 	-- Bold: a dark box well past the bar's edges.
-	local box = UI.pillFill(bar, 3)
+	local box = UI.pillFill(bar, 3, true)
 	box:SetDrawLayer("BACKGROUND", -7)
 	box:SetVertexColor(0, 0, 0, 0.92)
 	parts.box = box
@@ -281,7 +286,7 @@ local function buildParts(frame)
 
 	-- Brass: an accent edge and a small level badge on the right.
 	-- Two fine rounded lines make the 2px brass edge.
-	local brassOuter, brassInner = UI.pillEdge(holder, 2), UI.pillEdge(holder, 1)
+	local brassOuter, brassInner = UI.pillEdge(holder, 2, true), UI.pillEdge(holder, 1, true)
 	parts.brass = {
 		Set = function(_, r, g, b, a)
 			brassOuter:Set(r, g, b, a)
@@ -295,9 +300,9 @@ local function buildParts(frame)
 	local badge = CreateFrame("Frame", nil, holder)
 	badge:SetSize(26, 18)
 	badge:SetPoint("LEFT", bar, "RIGHT", 3, 0)
-	local badgeFill = UI.pillFill(badge, 0)
+	local badgeFill = UI.pillFill(badge, 0, true)
 	badgeFill:SetVertexColor(0, 0, 0, 0.85)
-	badge.edge = UI.pillEdge(badge, 0)
+	badge.edge = UI.pillEdge(badge, 0, true)
 	badge.text = UI.text(badge, "sans", Stoa.typeSize.caption, "accent", "CENTER")
 	badge.text:SetPoint("CENTER", 0, 0)
 	parts.badge = badge
@@ -361,6 +366,8 @@ local function plateName(frame)
 	pcall(function() parts.name:SetText(UnitName(frame.unit)) end)
 end
 
+local slimCast
+
 -- Shows the chosen style's parts and sizes the bar.
 local function applyStyle(frame)
 	if not frame.stoaDressed or not isPlate(frame) then return end
@@ -368,7 +375,34 @@ local function applyStyle(frame)
 	local parts = frame.stoaParts or buildParts(frame)
 	local bar = frame.healthBar
 	if style.height and not (bar.IsProtected and bar:IsProtected()) then bar:SetHeight(style.height) end
-	local pill = not style.box and not style.brass
+	if style.flush then
+		-- The game pins the bar to its container by two corners, so the
+		-- bar's own height is ignored: the line is made by the container.
+		local box = frame.HealthBarsContainer
+		if type(box) == "table" and box.SetHeight and not (box.IsProtected and box:IsProtected()) then
+			box:SetHeight(style.height)
+		end
+	end
+	if style.freeName then
+		-- Freed from the bar's width, so a long name is never cut short.
+		local box = frame.HealthBarsContainer
+		if type(box) == "table" and box.GetHeight and frame.name and frame.name.ClearAllPoints then
+			frame.name:ClearAllPoints()
+			frame.name:SetPoint("BOTTOM", box, "TOP", 0, 3)
+			frame.name:SetJustifyH("CENTER")
+		end
+	end
+	slimCast(frame.CastBarsContainer and frame.CastBarsContainer.castBar, style.lineCast and true or false)
+	local pill = not style.box and not style.brass and not style.flush
+	parts.well:SetVertexColor(0, 0, 0, style.flush and 0.8 or UI.SURFACES.well.black)
+	-- The Matte line keeps a fine black rim, so it reads on bright ground
+	-- and dark alike.
+	if style.flush and not parts.rim then
+		parts.rim = UI.pillFill(bar, 1)
+		parts.rim:SetDrawLayer("BACKGROUND", -7)
+		parts.rim:SetVertexColor(0, 0, 0, 0.95)
+	end
+	if parts.rim then parts.rim:SetShown(style.flush and true or false) end
 	frame.stoaPillFill:SetShown(pill)
 	frame.stoaPillEdge:SetShown(pill)
 	parts.box:SetShown(style.box and true or false)
@@ -383,6 +417,7 @@ local function applyStyle(frame)
 		parts.value:SetPoint("CENTER", bar, "CENTER", 0, 0)
 	end
 	parts.value:SetShown(style.value and true or false)
+	guarded(colourLevel, frame)
 	parts.name:SetShown(style.nameInside and true or false)
 	if frame.name then frame.name:SetAlpha(style.nameInside and 0 or 1) end
 	-- The level sits on the badge in the brass style.
@@ -402,8 +437,47 @@ local function dressCast(cast)
 	if cast.Background then cast.Background:SetAlpha(0) end
 	if cast.Border then cast.Border:SetAlpha(0) end
 	if cast.Icon then cast.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
-	UI.tint(UI.pillFill(cast, PAD), "panel", 0.85)
-	UI.pillEdge(cast, PAD):Set(0, 0, 0, 0.9)
+	cast.stoaPill = UI.tint(UI.pillFill(cast, PAD, true), "panel", 0.85)
+	local edge = UI.pillEdge(cast, PAD, true)
+	edge:Set(0, 0, 0, 0.9)
+	cast.stoaPillEdge = edge
+end
+
+-- The STOA and Matte styles' cast: a thin line under the health line with the spell's
+-- icon and name below it, in place of a tall bright bar with the name
+-- inside. The game lays the bar out again whenever plate options change
+-- (and applyStyle follows it), so this only needs to set it, not undo it.
+local CAST_LINE = 4
+function slimCast(cast, slim)
+	if not cast or not cast.stoaDressed then return end
+	if cast.stoaPill then cast.stoaPill:SetShown(not slim) end
+	if cast.stoaPillEdge then
+		if slim then cast.stoaPillEdge:Clear() else cast.stoaPillEdge:Set(0, 0, 0, 0.9) end
+	end
+	if cast.stoaRim then cast.stoaRim:SetShown(slim) end
+	-- The glows round the bar (an important cast, a cast at you) are drawn
+	-- for a tall bar.
+	for _, key in ipairs({ "ImportantCastIndicator", "CastTargetIndicator" }) do
+		if cast[key] then cast[key]:SetAlpha(slim and 0 or 1) end
+	end
+	if not slim or (cast.IsProtected and cast:IsProtected()) then return end
+	local box = cast:GetParent()
+	if not box then return end
+	if not cast.stoaRim then
+		cast.stoaRim = UI.pillFill(cast, 1)
+		cast.stoaRim:SetDrawLayer("BACKGROUND", -7)
+		cast.stoaRim:SetVertexColor(0, 0, 0, 0.95)
+	end
+	cast:ClearAllPoints()
+	cast:SetPoint("TOPLEFT", box, "TOPLEFT", 0, 0)
+	cast:SetPoint("TOPRIGHT", box, "TOPRIGHT", 0, 0)
+	cast:SetHeight(CAST_LINE)
+	if cast.Spark then cast.Spark:SetHeight(CAST_LINE + 2) end
+	if cast.Icon then
+		cast.Icon:ClearAllPoints()
+		cast.Icon:SetPoint("TOPLEFT", cast, "BOTTOMLEFT", 0, -3)
+		cast.Icon:SetSize(11, 11)
+	end
 end
 
 local function dress(frame)
@@ -419,11 +493,11 @@ local function dress(frame)
 		if bar.bgTexture then bar.bgTexture:SetAlpha(0) end
 		if bar.selectedBorder then bar.selectedBorder:SetAlpha(0) end
 		-- A rounded dark track a little larger than the bar sits behind it.
-		frame.stoaPillFill = UI.tint(UI.pillFill(bar, PAD), "panel", 0.85)
-		local edge = UI.pillEdge(bar, PAD)
+		frame.stoaPillFill = UI.tint(UI.pillFill(bar, PAD, true), "panel", 0.85)
+		local edge = UI.pillEdge(bar, PAD, true)
 		edge:Set(0, 0, 0, 0.9)
 		frame.stoaPillEdge = { SetShown = function(_, shown) if shown then edge:Set(0, 0, 0, 0.9) else edge:Clear() end end }
-		frame.stoaTargetEdge = UI.pillEdge(bar, PAD + 1)
+		frame.stoaTargetEdge = UI.pillEdge(bar, PAD + 1, true)
 		if bar.SetIsTarget then hooksecurefunc(bar, "SetIsTarget", function() targetEdge(frame) end) end
 	end
 	dressCast(frame.CastBarsContainer and frame.CastBarsContainer.castBar)
@@ -501,6 +575,12 @@ function Plates:DamageText()
 end
 
 function Plates:OnEnable()
+	-- The Matte look takes its own line style the first time it meets the
+	-- plates, unless another style was already chosen.
+	if UI.matte() and not self.db.matteOffered then
+		self.db.matteOffered = true
+		if self.db.style == "stoa" then self.db.style = "matte" end
+	end
 	if not (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return end
 	if CompactUnitFrame_UpdateHealth then
 		hooksecurefunc("CompactUnitFrame_UpdateHealth", function(frame)

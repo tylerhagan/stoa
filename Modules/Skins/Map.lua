@@ -178,10 +178,25 @@ function Map:ShowMapLevels()
 	end
 end
 
+-- The windowed map leaves room on the left of its breadcrumbs for the
+-- round portrait. A dressed map has no portrait, so the breadcrumbs start
+-- at the left edge, where the game itself puts them on the full-screen map.
+function Map:SeatCrumbs()
+	local map = WorldMapFrame
+	local bar, spacer = map and map.NavBar, map and map.TitleCanvasSpacerFrame
+	if not (bar and spacer and map.BorderFrame and map.BorderFrame.stoaHeader) then return end
+	if bar.IsForbidden and bar:IsForbidden() then return end
+	bar:SetPoint("TOPLEFT", spacer, "TOPLEFT", 8, -25)
+end
+
 function Map:SetupLevels()
 	if not WorldMapFrame then return end
 	if self.levelsHooked then return end
 	self.levelsHooked = true
+	WorldMapFrame:HookScript("OnShow", Stoa:Guard(function() Map:SeatCrumbs() end, "Map"))
+	if WorldMapFrame.Minimize then
+		hooksecurefunc(WorldMapFrame, "Minimize", function() Map:SeatCrumbs() end)
+	end
 	if WorldMapFrame.OnMapChanged then
 		hooksecurefunc(WorldMapFrame, "OnMapChanged", function() Map:ShowMapLevels() end)
 	end

@@ -881,7 +881,7 @@ function Spellbook.DressTrees(talents)
 	-- The window's stone rings fight the cards; the window is dressed after
 	-- the talents first show, so this runs again here.
 	local host = talents.GetParent and talents:GetParent()
-	if host and host.stoaStone and talents:IsVisible() then host.stoaStone:SetAlpha(0) end
+	if host and talents:IsVisible() then UI.stoneOn(host, false) end
 	local headers = talents.treeHeaders
 	for _, rule in ipairs(talents.stoaRules or {}) do rule:Hide() end
 	if not (headers and #headers > 0 and talents.EnumerateAllTalentButtons) then return end
@@ -1163,6 +1163,12 @@ function Spellbook.FitWindow(talents)
 	-- The lifted page reaches up over the header, where it caught the
 	-- Shift-drag that moves the window: its top no longer takes the mouse.
 	if talents.SetHitRectInsets then talents:SetHitRectInsets(0, 0, talents:IsShown() and TALENTS_LIFT or 0, 0) end
+	-- Its own frames up there (the tree heads) still took the press, so
+	-- they hand a Shift-drag on to the window once laid out.
+	local mover = Stoa.modules.WindowMover
+	if talents:IsShown() and mover and mover.HookRaised then
+		C_Timer.After(0, function() guarded(mover.HookRaised, mover, frame, talents) end)
+	end
 	-- The spec's Activate button sat in that band: it joins the row.
 	local active, search = talents.ActiveSpec, talents.SearchBox
 	if talents:IsShown() and active and search and not active.stoaMoved then
@@ -1170,6 +1176,17 @@ function Spellbook.FitWindow(talents)
 		active:ClearAllPoints()
 		active:SetPoint("RIGHT", search, "LEFT", -28, 0)
 	end
+end
+
+-- The options arrow is a square key as tall as the search field beside it.
+function Spellbook.FitSearchArrow(talents)
+	local search, arrow = talents.SearchBox, talents.SearchOptionsDropdown
+	if not (search and arrow and arrow.SetSize) then return end
+	local height = search:GetHeight()
+	if not height or height < 8 then return end
+	arrow:SetSize(height, height)
+	arrow:ClearAllPoints()
+	arrow:SetPoint("LEFT", search, "RIGHT", 6, 0)
 end
 
 local function dressTalents()
@@ -1185,11 +1202,12 @@ local function dressTalents()
 		guarded(Spellbook.PaintWaiting, self)
 		guarded(Spellbook.DressTrees, self)
 		-- The window's stone rings fight the cards, so talents go without.
-		if frame.stoaStone then frame.stoaStone:SetAlpha(0) end
+		UI.stoneOn(frame, false)
 		guarded(Spellbook.FitWindow, self)
+		guarded(Spellbook.FitSearchArrow, self)
 	end)
 	talents:HookScript("OnHide", function(self)
-		if frame.stoaStone then frame.stoaStone:SetAlpha(1) end
+		UI.stoneOn(frame, true)
 		guarded(Spellbook.FitWindow, self)
 	end)
 	if talents.RefreshTreeHeaders then
@@ -1227,6 +1245,7 @@ local function dressTalents()
 	if windows and windows.DressSearch then
 		guarded(windows.DressSearch, talents.SearchBox)
 		guarded(windows.DressArrowDropdown, talents.SearchOptionsDropdown)
+		guarded(Spellbook.FitSearchArrow, talents)
 	end
 	Spellbook.DressTreeHeaders(talents)
 	Spellbook.PaintTalentTabs(talents)

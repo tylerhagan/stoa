@@ -73,6 +73,10 @@ for f in files:
 # saved account would), so those builds are exercised too.
 if os.environ.get("STOA_SIM_SETUP") == "slim":
     lua.execute("StoaDB = { modules = { Grimoire = { slim = true } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "matte":
+    lua.execute("StoaDB = { theme = 'Matte', material = 'matte', grain = 'satin', modules = { Halo = { arcStyle = 'visor' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "matteslim":
+    lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { slim = true }, Halo = { arcStyle = 'gauge' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "minimal":
     lua.execute("StoaDB = { modules = { Grimoire = { enabled = false }, Halo = { restArcs = true, restFade = true }, Party = { restFade = true } } }")
 
@@ -807,7 +811,8 @@ do
 		UnitExists = function(u) return u == "player" or u == "target" end
 		UnitIsPlayer = function(u) return u == "player" or u == "target" end
 		halo:UpdateTarget()
-		local words = halo.target.caption:GetText() or ""
+		-- Matte's slab rows put them at the line's far end, in the cue.
+		local words = (halo.target.caption:GetText() or "") .. " " .. (halo.target.cue:GetText() or "")
 		if not words:find("HUMAN") then SIM_ERRORS[#SIM_ERRORS + 1] = "Target caption: no race for a player (" .. words .. ")" end
 		UnitExists, UnitIsPlayer = realExists, realPlayer
 	end
@@ -1639,17 +1644,19 @@ do
 		if not (plaque.medallion and plaque.SetLevel) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: no medallion" end
 		plaque:SetLevel("15")
 		if not plaque.badge:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: level badge hidden" end
-		if (halo.targetResting and true or false) ~= (plaque.docked and true or false) then
+		if (halo.targetResting and halo.targetDocks and true or false) ~= (plaque.docked and true or false) then
 			SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: docked doesn't follow resting"
 		end
-		if not plaque.bare then
+		-- The plaque docks on the leather console only.
+		if not plaque.bare and halo.targetDocks then
 			plaque:SetDocked(true, 302)
 			if not (plaque.dock and plaque.dock.join:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: join missing when docked" end
 			halo:LayoutTarget(302)
 			if not target.laidDocked then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: not laid out docked" end
 			if plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait shows when docked" end
 			plaque:SetShadow(true)
-			if not plaque.shadow:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: no shadow behind the sweep" end
+			-- Matte ends are straight and cast no shadow.
+			if not Stoa.UI.matte() and not plaque.shadow:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: no shadow behind the sweep" end
 			if target.tot then
 				halo:PlaceTargetOfTarget(302)
 				if target.tot.fill and target.tot.fill:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target of target: panel shows when docked" end
@@ -1660,8 +1667,10 @@ do
 			halo:LayoutTarget(nil)
 			if plaque.dock and plaque.dock.join:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: join stays undocked" end
 			if target.laidDocked then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: still laid out docked" end
-			if not plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait missing undocked" end
-			if plaque.shadow:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: shadow stays undocked" end
+			-- The Matte slab has no portrait; the leather plaque keeps its own.
+			if not plaque.plain and not plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait missing undocked" end
+			if plaque.plain and plaque.coin:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: portrait shows on the slab" end
+			if plaque.shadow and plaque.shadow:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Target plaque: shadow stays undocked" end
 			halo:PlaceTarget()
 		end
 		local realCasting, realExists = UnitCastingInfo, UnitExists

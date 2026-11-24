@@ -171,7 +171,9 @@ local function dressTarget(target, frame)
 		-- draw under the canvas and the quest log, so only the margins
 		-- around them (and the gap between) show it.
 		if not frame.stoaMapFill then
-			local fill = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", 2)
+			-- (Flush with the border frame's edge: drawn larger, it showed as a
+			-- second, lighter border around the header.)
+			local fill = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", 0)
 			if fill then
 				fill:SetDrawLayer("BACKGROUND", -8)
 				UI.tint(fill, "panel")
@@ -876,14 +878,11 @@ local function column(owner, alpha, side)
 	fill:SetTexture(UI.WHITE)
 	fill:SetAllPoints()
 	fill:SetVertexColor(0, 0, 0, alpha)
-	local rule = owner:CreateTexture(nil, "BORDER")
-	rule:SetTexture(UI.WHITE)
-	UI.pixel(rule, "width")
+	-- The console's own seam between the columns, not a plain white line.
+	local rule = UI.seam(owner)
 	rule:SetPoint("TOP" .. side)
 	rule:SetPoint("BOTTOM" .. side)
-	UI.tint(rule, "hairline")
 	owner.stoaColumn = fill
-	UI.applyTheme()
 end
 
 -- Each scroll list builds its rows as they scroll into view.
@@ -1155,8 +1154,8 @@ local function guildDetails(details, windows)
 	local label = type(filters) == "table" and filters.GetFontString and filters:GetFontString()
 	if label then label:SetTextColor(Stoa:Color("muted")) end
 	if windows and windows.DressScrollBar then
-		local info, news = details.Info, details.News
-		for _, owner in ipairs({ info and info.MOTDScrollFrame, info and info.DetailsFrame, news }) do
+		local pane, news = details.Info, details.News
+		for _, owner in ipairs({ pane and pane.MOTDScrollFrame, pane and pane.DetailsFrame, news }) do
 			if type(owner) == "table" then xpcall(windows.DressScrollBar, Stoa.catch, owner.ScrollBar) end
 		end
 	end

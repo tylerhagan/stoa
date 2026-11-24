@@ -145,8 +145,12 @@ local function registerDetails()
 	rows.font_face, rows.font_face_file, rows.font_size = FONT_UI, FONT_UI_FILE, 11
 	rows.height = 18
 	rows.texture, rows.texture_file = BAR, BAR_FILE
-	rows.texture_class_colors = true
-	rows.alpha = 0.35
+	-- Class-coloured bars ignore the row's alpha in Details, so the bars
+	-- are one quiet colour and the class shows in the name.
+	rows.texture_class_colors = false
+	rows.fixed_texture_color = { 0.6, 0.6, 0.6 }
+	rows.textL_class_colors = true
+	rows.alpha = 0.25
 	rows.textL_outline, rows.textR_outline = true, true
 	rows.texture_background, rows.texture_background_file = BAR, BAR_FILE
 	rows.fixed_texture_background_color = { 0, 0, 0, 0 }
@@ -162,6 +166,107 @@ local function detailsInstances()
 		if ok and type(instance) == "table" and type(instance.ChangeSkin) == "function" then list[#list + 1] = { id = id, instance = instance } end
 	end
 	return list
+end
+
+-- A Details window in one of the console's slots (Console:PlaceDocks).
+-- `spot` is nil when it has none, and the window is then left where it is.
+-- Docked, the window is cut down to its title and rows, through Details'
+-- own setters (each saves on the window, so it holds through a reload):
+-- no backdrop or header art, no icon, the title buttons only under the
+-- mouse, and the title in STOA's type on the line of the pages' headings.
+-- Its title stands above the window's own frame, so the frame starts that
+-- much lower.
+local DETAILS_TITLE = 20
+local DETAILS_RULE = 3
+local detailsRules = setmetatable({}, { __mode = "k" })
+
+-- The hairline under the title, as under the pages' headings.
+local function detailsRule(frame, shown)
+	local rule = detailsRules[frame]
+	if not rule then
+		if not shown then return end
+		rule = UI.line(frame)
+		rule:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, DETAILS_RULE)
+		rule:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, DETAILS_RULE)
+		detailsRules[frame] = rule
+	end
+	rule:SetShown(shown)
+end
+
+local function call(instance, method, ...)
+	local fn = instance[method]
+	if type(fn) == "function" then pcall(fn, instance, ...) end
+end
+
+local function stripDetails(instance)
+	call(instance, "SetBackdropTexture", "None")
+	call(instance, "SetBackgroundAlpha", 0)
+	call(instance, "InstanceColor", 0, 0, 0, 0)
+	call(instance, "HideStatusBar")
+	call(instance, "HideMainIcon", true)
+	call(instance, "SetAutoHideMenu", true, true)
+	-- The rows as STOA's look for Details draws them, said outright: a
+	-- window that wears another skin, or whose rows were changed by hand,
+	-- is in the console all the same.
+	-- Details draws class-coloured bars at full strength whatever the
+	-- row's alpha says, so the bars are one quiet colour, as STOA's own
+	-- meter rows are, and the class shows in the name.
+	local r, g, b = Stoa:Color("muted")
+	call(instance, "SetBarSettings", 18, BAR, false, { r, g, b }, BAR, false, { 0, 0, 0, 0 }, 0.25)
+	call(instance, "SetBarTextSettings", 11, FONT_UI, nil, true, false, true, true)
+	-- Details hangs the title off the right of its header's corner art, a
+	-- gap that was the icon's; the title is pulled back flush with the
+	-- window's left edge.
+	local x = 0
+	local frame = instance.baseframe
+	local ball = frame and frame.cabecalho and frame.cabecalho.ball
+	if ball and ball.GetRight then
+		local right, left = Stoa:PlainNumber(ball:GetRight()), Stoa:PlainNumber(frame:GetLeft())
+		if right and left then x = left - right end
+	end
+	call(instance, "AttributeMenu", true, x, 8, FONT_UI, 11, { r, g, b, 1 }, 1, false)
+end
+
+-- Out of a slot again: the window's skin is put back on as Details ships
+-- it (or STOA's, when that look is worn), with its icon and buttons.
+local function unstripDetails(instance)
+	call(instance, "SetAutoHideMenu", false, false)
+	call(instance, "HideMainIcon", false)
+	local skin = instance.skin
+	if type(skin) == "string" and type(instance.ChangeSkin) == "function" then
+		-- Another skin first: Details only resets a window on a change.
+		pcall(instance.ChangeSkin, instance, skin == "Minimalistic" and "Minimalistic v2" or "Minimalistic")
+		pcall(instance.ChangeSkin, instance, skin)
+	end
+end
+
+function Looks:DockDetails(n, spot)
+	local docked = Stoa.db.detailsDocked
+	if not spot and not (docked and docked[n]) then return end
+	local addon = details()
+	if not addon or type(addon.GetInstance) ~= "function" then return end
+	local ok, instance = pcall(addon.GetInstance, addon, n)
+	local frame = ok and type(instance) == "table" and instance.baseframe
+	if type(frame) ~= "table" or not frame.SetPoint then return end
+	if InCombatLockdown() and frame.IsProtected and frame:IsProtected() then return end
+	if not spot then
+		docked[n] = nil
+		detailsRule(frame, false)
+		unstripDetails(instance)
+		return
+	end
+	frame:ClearAllPoints()
+	frame:SetPoint("TOPRIGHT", UIParent, "BOTTOMRIGHT", -spot.right, spot.top - DETAILS_TITLE)
+	frame:SetSize(spot.width, spot.height - DETAILS_TITLE)
+	-- Details keeps its own record of where each window is.
+	if type(instance.SaveMainWindowPosition) == "function" then pcall(instance.SaveMainWindowPosition, instance) end
+	if not docked then
+		docked = {}
+		Stoa.db.detailsDocked = docked
+	end
+	docked[n] = true
+	stripDetails(instance)
+	detailsRule(frame, true)
 end
 
 -- RestedXP -------------------------------------------------------------------------

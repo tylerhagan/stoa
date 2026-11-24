@@ -249,13 +249,11 @@ local function dressScrollBar(bar)
 	for _, key in ipairs({ "Begin", "Middle", "End" }) do
 		if track[key] and track[key].SetAlpha then track[key]:SetAlpha(0) end
 	end
-	local rail = track:CreateTexture(nil, "BACKGROUND")
-	rail:SetTexture(UI.WHITE)
-	rail:SetWidth(1)
-	UI.pixel(rail, "width")
+	-- The rail: a quiet seam, clear at both ends, under the thumb.
+	local rail = UI.seam(track, true)
+	rail:SetFrameLevel(track:GetFrameLevel())
 	rail:SetPoint("TOP", 0, 0)
 	rail:SetPoint("BOTTOM", 0, 0)
-	UI.tint(rail, "hairline", 0.6)
 	local thumb = track.Thumb
 	if type(thumb) ~= "table" or not thumb.CreateTexture then return end
 	for _, key in ipairs({ "Begin", "Middle", "End" }) do
@@ -322,7 +320,7 @@ local function tabArt(tab)
 	local edge = UI.sliced(tab, "BORDER", "TabEdge.tga")
 	if edge then
 		edge:SetPoint("TOPLEFT", 0, 3)
-		UI.tint(edge, "hairline")
+		UI.tint(edge, "hairline", UI.edgeAlpha())
 	end
 	local underline = tab:CreateTexture(nil, "ARTWORK")
 	underline:SetHeight(2)
@@ -505,10 +503,16 @@ local function liftPanel(frame, raise)
 	-- the raised strip shows the world through it.
 	local map = _G.WorldMapFrame
 	local mapFill = map and frame == map.BorderFrame and map.stoaMapFill
-	for _, tex in ipairs({ frame.stoaPanelBg, frame.stoaPanelEdge and frame.stoaPanelEdge.edges and frame.stoaPanelEdge.edges[1], mapFill }) do
+	-- (ipairs stops at a missing piece, so the parts are gathered first.
+	-- Matte's moulding rises too: left behind, its top light drew a second
+	-- header edge across the band.)
+	local parts = {}
+	for _, tex in pairs({ frame.stoaPanelBg, frame.stoaPanelEdge and frame.stoaPanelEdge.edges and frame.stoaPanelEdge.edges[1] or false, frame.stoaMould or false, mapFill or false }) do
+		if tex then parts[#parts + 1] = tex end
+	end
+	for _, tex in ipairs(parts) do
 		if tex and tex.SetTextureSliceMargins then
-			-- (The map's fill is drawn 2px outside its frame.)
-			if tex == mapFill then tex:SetPoint("TOPLEFT", -2, 2 + raise) else tex:SetPoint("TOPLEFT", 0, raise) end
+			tex:SetPoint("TOPLEFT", 0, raise)
 		end
 	end
 	-- The raised strip lies outside the window's own edge, so a click (or a
@@ -654,23 +658,40 @@ local function onParchment()
 	return QuestInfoFrame and QuestInfoFrame.questLog
 end
 
+-- The quest window's own words (turn-in progress, the greeting list) are
+-- never on that parchment. They are lit whatever the map's log last
+-- showed: the log's flag stays set after it closes, which left a turn-in
+-- in the parchment's dark brown now and then.
+local OWN_TITLES = { "QuestProgressTitleText" }
+local OWN_TEXT = {
+	"QuestProgressText", "QuestProgressRequiredItemsText", "QuestProgressRequiredMoneyText",
+	"GreetingText", "CurrentQuestsText", "AvailableQuestsText",
+}
+
+local function ownText(fs)
+	for _, list in ipairs({ OWN_TITLES, OWN_TEXT }) do
+		for _, name in ipairs(list) do
+			if _G[name] == fs then return true end
+		end
+	end
+	return false
+end
+
 local function lightQuestText()
 	if QuestFrame_SetTitleTextColor then
-		hooksecurefunc("QuestFrame_SetTitleTextColor", function(fs) if not onParchment() then light(fs, true) end end)
+		hooksecurefunc("QuestFrame_SetTitleTextColor", function(fs) if not onParchment() or ownText(fs) then light(fs, true) end end)
 	end
 	if QuestFrame_SetTextColor then
-		hooksecurefunc("QuestFrame_SetTextColor", function(fs) if not onParchment() then light(fs) end end)
+		hooksecurefunc("QuestFrame_SetTextColor", function(fs) if not onParchment() or ownText(fs) then light(fs) end end)
 	end
 	local function recolour()
+		for _, name in ipairs(OWN_TITLES) do light(_G[name], true) end
+		for _, name in ipairs(OWN_TEXT) do light(_G[name]) end
 		if onParchment() then return end
-		for _, name in ipairs({ "QuestInfoTitleHeader", "QuestInfoDescriptionHeader", "QuestInfoObjectivesHeader", "QuestProgressTitleText" }) do
+		for _, name in ipairs({ "QuestInfoTitleHeader", "QuestInfoDescriptionHeader", "QuestInfoObjectivesHeader" }) do
 			light(_G[name], true)
 		end
-		for _, name in ipairs({
-			"QuestInfoDescriptionText", "QuestInfoObjectivesText", "QuestInfoGroupSize", "QuestInfoRewardText",
-			"QuestProgressText", "QuestProgressRequiredItemsText", "QuestProgressRequiredMoneyText",
-			"GreetingText", "CurrentQuestsText", "AvailableQuestsText",
-		}) do
+		for _, name in ipairs({ "QuestInfoDescriptionText", "QuestInfoObjectivesText", "QuestInfoGroupSize", "QuestInfoRewardText" }) do
 			light(_G[name])
 		end
 		local rewards = QuestInfoRewardsFrame
@@ -686,6 +707,7 @@ local function lightQuestText()
 	end
 	if QuestInfo_Display then hooksecurefunc("QuestInfo_Display", recolour) end
 	if QuestFrameProgressItems_Update then hooksecurefunc("QuestFrameProgressItems_Update", recolour) end
+	if QuestFrameProgressPanel then QuestFrameProgressPanel:HookScript("OnShow", recolour) end
 	if QuestFrameGreetingPanel then
 		QuestFrameGreetingPanel:HookScript("OnShow", recolour)
 		-- Its title buttons are filled in as it shows.
@@ -1010,6 +1032,98 @@ local function tryHook(owner, method, fn)
 	if not ok then Stoa.catch(err) end
 end
 
+-- The game menu (Esc). It stays out of Windows:Dress (LEAVE): its buttons
+-- lead to Edit Mode, Log Out and Exit, so nothing of Blizzard's is moved,
+-- resized, reparented or given new fields here. STOA only lays a card
+-- behind it, fades Blizzard's art and paints dark keys over the red
+-- buttons. The menu takes its buttons from a pool and sets their scripts
+-- afresh each time it opens, so the keys are painted after each build.
+local menuKeys = setmetatable({}, { __mode = "k" })
+local function paintMenuKey(button, over)
+	local key = menuKeys[button]
+	if not key then return end
+	for _, part in ipairs(PANEL_PARTS) do hide(button[part]) end
+	local lit = button.GetHighlightTexture and button:GetHighlightTexture()
+	if lit then lit:SetAlpha(0) end
+	local enabled = not button.IsEnabled or button:IsEnabled()
+	local text = button.GetFontString and button:GetFontString()
+	if text then
+		Stoa:SetFont(text, "sans", Stoa.typeSize.label)
+		text:SetShadowOffset(0, 0)
+		text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+	end
+	local hot = over and enabled
+	key.lift:SetShown(hot)
+	if key.edge then
+		local r, g, b = Stoa:Color("accent")
+		key.edge:SetVertexColor(r, g, b, 0.85)
+		key.edge:SetShown(hot)
+	end
+end
+
+-- A key is a flat plate with a 2 pixel corner and no gloss (MatteKey.tga,
+-- Tools/art/matte_key.py): light caught on its top edge, shade along its
+-- foot and a dark line under it, all inside the button, since the menu's
+-- keys touch within a group. Returns the plate's hover parts.
+local KEY_SLICE = 5
+local function raiseMenuKey(button)
+	local plate = UI.sliced(button, "BACKGROUND", "MatteKey.tga", 0, KEY_SLICE)
+	if plate then plate:SetDrawLayer("BACKGROUND", -8) end
+	-- Under the mouse the face lifts a shade and its outline shows.
+	local lift = button:CreateTexture(nil, "BACKGROUND", nil, -7)
+	lift:SetPoint("TOPLEFT", 2, -2)
+	lift:SetPoint("BOTTOMRIGHT", -2, 4)
+	lift:SetColorTexture(1, 1, 1, 0.05)
+	lift:Hide()
+	local edge = UI.sliced(button, "OVERLAY", "MatteKeyEdge.tga", 0, KEY_SLICE)
+	if edge then edge:Hide() end
+	return { lift = lift, edge = edge }
+end
+
+local function dressMenuKey(button)
+	if type(button) ~= "table" or forbidden(button) then return end
+	if not menuKeys[button] then
+		menuKeys[button] = raiseMenuKey(button)
+	end
+	-- Blizzard cleared these scripts when it built the button, so each
+	-- build hooks them once.
+	button:HookScript("OnEnter", function(own) paintMenuKey(own, true) end)
+	button:HookScript("OnLeave", function(own) paintMenuKey(own, false) end)
+	paintMenuKey(button, false)
+end
+
+local function dressGameMenu()
+	local menu = rawget(_G, "GameMenuFrame")
+	if type(menu) ~= "table" or forbidden(menu) or type(menu.InitButtons) ~= "function" then return end
+	local card
+	local function dress()
+		if not card then
+			card = CreateFrame("Frame", nil, menu)
+			card:SetAllPoints(menu)
+			card:EnableMouse(false)
+			UI.surface(card, "card", { alpha = 1 })
+			-- Depth: a soft shadow thrown on the world around the block.
+			UI.roundBorder(card, "CardGlow.tga", 3, 3):Set(0, 0, 0, 0.75)
+		end
+		card:SetFrameLevel(menu:GetFrameLevel())
+		if menu.Border and menu.Border.SetAlpha then menu.Border:SetAlpha(0) end
+		local header = menu.Header
+		if header then
+			for _, part in ipairs({ "LeftBG", "RightBG", "CenterBG" }) do hide(header[part]) end
+			local title = header.Text
+			if title and title.SetTextColor then
+				Stoa:SetFont(title, "serif", Stoa.typeSize.name)
+				title:SetShadowOffset(0, 0)
+				title:SetTextColor(Stoa:Color("text"))
+				title:ClearAllPoints()
+				title:SetPoint("TOP", menu, "TOP", 0, -17)
+			end
+		end
+		for _, button in ipairs(menu.buttons or {}) do dressMenuKey(button) end
+	end
+	tryHook(menu, "InitButtons", function() xpcall(dress, Stoa.catch) end)
+end
+
 local function dressMenus()
 	local manager = type(Menu) == "table" and type(Menu.GetManager) == "function" and Menu.GetManager()
 	-- A dropdown keeps its description between openings, so its submenu
@@ -1138,6 +1252,7 @@ function Windows:OnEnable()
 	guarded(dressBags)
 	guarded(dressTooltips)
 	guarded(dressMenus)
+	guarded(dressGameMenu)
 	guarded(dressReadyCheck)
 	-- The trainer window loads with its own addon the first time it opens.
 	-- Forever's trainer addon has a bootstrap part that loads at startup,
