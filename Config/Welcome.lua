@@ -242,12 +242,9 @@ end
 local builders = {}
 
 local START_WORDS = "A handful of choices and your screen is ready. Each can be changed later in settings, and /stoa welcome brings this back."
-local UPDATE_WORDS = "Version 2 brings a second look, Matte black, and a new setup. Your screen stays exactly as it is unless you choose otherwise."
-local UPDATE_OPTIONS = {
-	{ "keep", "Keep my setup", "Nothing changes. This closes; /stoa welcome brings the setup back any time." },
-	{ "new", "Show me what's new", "Just the new parts: the two looks side by side, then finish." },
-	{ "guided", "Run the whole setup", "Every step, starting from what you have now." },
-}
+local UPDATE_WORDS = "Version 2 brings a second look. Here are both; yours is marked. Nothing changes unless you pick the other."
+-- The two look cards with their pictures (built further down).
+local materialCards
 
 function builders.start(self, step)
 	local hello = UI.text(step, "serif", Stoa.typeSize.display, "text")
@@ -281,21 +278,23 @@ function builders.start(self, step)
 		button.id = id
 		step.cards[#step.cards + 1] = button
 	end
-	-- Version 2, for someone who already plays with STOA: nothing changes
-	-- unless they say so.
-	step.updateCards = {}
-	for i, option in ipairs(UPDATE_OPTIONS) do
-		local id = option[1]
-		-- Each card acts at once: no second button to find.
-		local button = card(step, BODY_W, 54, option[2], function()
-			self.start = id
-			if id == "keep" then self.page:Hide() else self:Move(1) end
-		end)
-		button.sub:SetText(option[3])
-		button:SetPoint("TOPLEFT", 0, -step.top - (i - 1) * (54 + GAP))
-		button.id = id
-		step.updateCards[i] = button
-	end
+	-- Version 2, for someone who already plays with STOA: both looks are
+	-- on the first page, so the new one is seen before anything is closed.
+	-- Nothing changes unless the other look is picked.
+	step.materialCards = materialCards(self, step, -step.top, function(material)
+		local same = material == self.opened.material
+		self.start = same and "keep" or "new"
+		-- Back on their own look, their own theme too.
+		if same and self.opened.theme and Stoa.db.theme ~= self.opened.theme then Stoa:SetTheme(self.opened.theme) end
+	end)
+	step.whole = UI.button(step, "Run the whole setup", 190, function()
+		self.start = "guided"
+		self:Move(1)
+	end)
+	step.whole:SetHeight(30)
+	step.wholeNote = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
+	step.wholeNote:SetPoint("LEFT", step.whole, "RIGHT", 12, 0)
+	step.wholeNote:SetText("Every step, starting from what you have now.")
 	step.setupRows = {}
 	for i = 1, MAX_SETUPS do
 		local row = UI.button(step, "", BODY_W - 32, function(button)
@@ -479,19 +478,20 @@ local MATERIALS = {
 local GRAINS = { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }
 local PREVIEW_H = 150
 
-function builders.look(self, step)
-	-- The two looks, always side by side.
+-- `picked(material)` runs after a card sets the look.
+materialCards = function(self, step, top, picked)
 	local half = math.floor((BODY_W - GAP) / 2)
-	self.materialCards = {}
+	local cards = {}
 	for i, entry in ipairs(MATERIALS) do
 		local button = card(step, half, PREVIEW_H + 70, entry[2], function()
 			Stoa.db.material = entry[1]
 			-- Matte black hides the painted frames, and its own theme suits it.
 			if entry[1] == "matte" and WELCOME_THEME_SET[Stoa.db.theme] and Stoa.db.theme ~= "Class" then Stoa:SetTheme("Matte") end
 			if entry[1] == "leather" and Stoa.db.theme == "Matte" then Stoa:SetTheme("Bone") end
+			if picked then picked(entry[1]) end
 			self:Refresh()
 		end)
-		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), 0)
+		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), top)
 		local view = lookPreview(button, entry[1] == "matte")
 		view:SetPoint("TOPLEFT", 8, -8)
 		view:SetPoint("TOPRIGHT", -8, -8)
@@ -500,8 +500,17 @@ function builders.look(self, step)
 		button.text:SetPoint("TOPLEFT", 14, -(PREVIEW_H + 16))
 		button.text:SetPoint("RIGHT", -14, 0)
 		button.sub:SetText(entry[3])
-		self.materialCards[entry[1]] = button
+		-- "Yours now", on the first page of version 2.
+		button.tag = UI.text(button, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+		button.tag:SetPoint("TOPRIGHT", -14, -(PREVIEW_H + 18))
+		cards[entry[1]] = button
 	end
+	return cards
+end
+
+function builders.look(self, step)
+	-- The two looks, always side by side.
+	self.materialCards = materialCards(self, step, 0)
 	local top = -(PREVIEW_H + 70 + 14)
 
 	local label = UI.caption(step, "Theme")
@@ -1081,10 +1090,15 @@ function Welcome:RefreshStart(step)
 	local update = self.mode == "update"
 	step.hello:SetText(update and "Welcome to STOA 2" or "Welcome to STOA")
 	step.words:SetText(update and UPDATE_WORDS or START_WORDS)
-	for _, button in ipairs(step.updateCards) do
+	for name, button in pairs(step.materialCards) do
 		button:SetShown(update)
-		button:SetSelected(false)
+		button:SetSelected(update and (Stoa.db.material or "leather") == name)
+		button.tag:SetText(self.opened.material == name and "YOURS NOW" or "NEW")
 	end
+	step.whole:SetShown(update)
+	step.wholeNote:SetShown(update)
+	step.whole:ClearAllPoints()
+	step.whole:SetPoint("TOPLEFT", 0, -(step.top + PREVIEW_H + 70 + 16))
 	local y = step.top
 	for _, button in ipairs(step.cards) do
 		local shown = (not update) and (button.id ~= "saved" or #self.setups > 0)
@@ -1273,7 +1287,7 @@ function Welcome:Refresh()
 	if current == "ready" then
 		word = "Finish and reload"
 	elseif current == "start" and self.start == "keep" then
-		word = "Close"
+		word = "Keep my setup"
 	elseif current == "start" and self.start ~= "guided" and self.start ~= "new" then
 		word = "Continue"
 	end
@@ -1304,7 +1318,7 @@ function Welcome:Show(mode)
 	end
 	if Stoa.char.welcomed and not escapes then table.insert(UISpecialFrames, "StoaWelcomePage") end
 	local db = halo()
-	self.opened = { ornament = Stoa.db.ornament, material = Stoa.db.material or "leather", halo = not (db and db.enabled == false) }
+	self.opened = { ornament = Stoa.db.ornament, material = Stoa.db.material or "leather", theme = Stoa.db.theme, halo = not (db and db.enabled == false) }
 	self.applied = nil
 	self.finished = nil
 	self.trying = nil
