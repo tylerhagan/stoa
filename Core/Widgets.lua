@@ -862,12 +862,13 @@ local MATTE_SLICE = 8
 UI.MATTE_SLICE = MATTE_SLICE
 
 -- Matte: windows, tooltips, cards and tabs take the same pieces cut with a
--- 4 pixel corner (Tools/art/window_corners.py, the Sharp set), and the
+-- 4 pixel corner (Tools/art/window_corners.py, the Sharp set), the small
+-- pills a 2 pixel one (Tools/art/plate_corners.py), and the
 -- block's soft bevel gives way to fine lines (Tools/art/matte_parts.py).
 -- The swap is by name, here, so every caller follows. `keep` asks for the
 -- named file as it is (a shape that has to match other art).
 local SHARP = {}
-for _, name in ipairs({ "WindowFill", "WindowEdge", "WindowTop", "WindowBottom", "CardTop", "CardFill", "CardEdge", "CardState", "TabFill", "TabEdge" }) do
+for _, name in ipairs({ "WindowFill", "WindowEdge", "WindowTop", "WindowBottom", "CardTop", "CardFill", "CardEdge", "CardState", "TabFill", "TabEdge", "PlateFill", "PlateEdge" }) do
 	SHARP[name .. ".tga"] = "Sharp" .. name .. ".tga"
 end
 SHARP["MatteBlock.tga"] = "SharpBlock.tga"
@@ -915,10 +916,12 @@ end
 -- Small rounded pieces for thin bars (nameplates): a filled pill behind
 -- the bar and a 1px rounded outline that can be set and cleared like
 -- UI.border. Square where slicing isn't available.
+-- `keep`: the round pill even in Matte (the nameplate styles a player
+-- picks by name).
 local PLATE_SLICE = 5
 
-function UI.pillFill(frame, outset)
-	local tex = sliced(frame, "BACKGROUND", "PlateFill.tga", outset, PLATE_SLICE)
+function UI.pillFill(frame, outset, keep)
+	local tex = sliced(frame, "BACKGROUND", "PlateFill.tga", outset, PLATE_SLICE, keep)
 	if not tex then
 		tex = frame:CreateTexture(nil, "BACKGROUND")
 		tex:SetColorTexture(1, 1, 1)
@@ -929,8 +932,8 @@ function UI.pillFill(frame, outset)
 	return tex
 end
 
-function UI.pillEdge(frame, outset)
-	local tex = sliced(frame, "OVERLAY", "PlateEdge.tga", outset, PLATE_SLICE)
+function UI.pillEdge(frame, outset, keep)
+	local tex = sliced(frame, "OVERLAY", "PlateEdge.tga", outset, PLATE_SLICE, keep)
 	if not tex then return UI.border(frame, 1, outset) end
 	tex:Hide()
 	return {

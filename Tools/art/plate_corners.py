@@ -3,6 +3,9 @@ rounded square) and PlateEdge.tga (its 1px outline), 16x16 with a 3px corner
 radius, white with alpha so the theme tints them. Nine-sliced in game with
 5px margins, so the corners keep their shape on a bar only ~10px tall.
 
+SharpPlateFill.tga and SharpPlateEdge.tga are the same pair with a 2px
+corner, for the Matte look.
+
 Usage: python plate_corners.py <Media/Textures>
 """
 import sys
@@ -13,13 +16,13 @@ from PIL import Image
 SIZE, RADIUS, SCALE = 16, 3.0, 8
 
 
-def coverage(inset):
+def coverage(inset, radius=RADIUS):
     """Supersampled alpha of a rounded square shrunk by `inset` pixels."""
     n = SIZE * SCALE
     c = (np.arange(n) + 0.5) / SCALE
     x, y = np.meshgrid(c, c)
     lo, hi = inset, SIZE - inset
-    r = max(RADIUS - inset, 0.0)
+    r = max(radius - inset, 0.0)
     # Distance outside the rounded rectangle (negative inside).
     qx = np.maximum(np.maximum(lo + r - x, x - (hi - r)), 0)
     qy = np.maximum(np.maximum(lo + r - y, y - (hi - r)), 0)
@@ -39,6 +42,11 @@ def main(out):
     edge = np.clip(fill - coverage(1), 0, 1)
     save(fill, f"{out}/PlateFill.tga")
     save(edge, f"{out}/PlateEdge.tga")
+    # The Matte look's pair: the small key's 2 pixel corner, swapped in by
+    # name (Core/Widgets.lua SHARP).
+    fill = coverage(0, 2.0)
+    save(fill, f"{out}/SharpPlateFill.tga")
+    save(np.clip(fill - coverage(1, 2.0), 0, 1), f"{out}/SharpPlateEdge.tga")
 
 
 if __name__ == "__main__":

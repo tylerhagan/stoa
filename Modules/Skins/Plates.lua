@@ -263,13 +263,13 @@ local function buildParts(frame)
 	-- A dark well behind the bar in every style, so the missing health
 	-- reads against the fill even over the target glow or bright ground.
 	-- (The rulebook's well, in the plates' small corner.)
-	local well = UI.pillFill(bar, 0)
+	local well = UI.pillFill(bar, 0, true)
 	well:SetDrawLayer("BACKGROUND", -6)
 	well:SetVertexColor(0, 0, 0, UI.SURFACES.well.black)
 	parts.well = well
 
 	-- Bold: a dark box well past the bar's edges.
-	local box = UI.pillFill(bar, 3)
+	local box = UI.pillFill(bar, 3, true)
 	box:SetDrawLayer("BACKGROUND", -7)
 	box:SetVertexColor(0, 0, 0, 0.92)
 	parts.box = box
@@ -286,7 +286,7 @@ local function buildParts(frame)
 
 	-- Brass: an accent edge and a small level badge on the right.
 	-- Two fine rounded lines make the 2px brass edge.
-	local brassOuter, brassInner = UI.pillEdge(holder, 2), UI.pillEdge(holder, 1)
+	local brassOuter, brassInner = UI.pillEdge(holder, 2, true), UI.pillEdge(holder, 1, true)
 	parts.brass = {
 		Set = function(_, r, g, b, a)
 			brassOuter:Set(r, g, b, a)
@@ -300,9 +300,9 @@ local function buildParts(frame)
 	local badge = CreateFrame("Frame", nil, holder)
 	badge:SetSize(26, 18)
 	badge:SetPoint("LEFT", bar, "RIGHT", 3, 0)
-	local badgeFill = UI.pillFill(badge, 0)
+	local badgeFill = UI.pillFill(badge, 0, true)
 	badgeFill:SetVertexColor(0, 0, 0, 0.85)
-	badge.edge = UI.pillEdge(badge, 0)
+	badge.edge = UI.pillEdge(badge, 0, true)
 	badge.text = UI.text(badge, "sans", Stoa.typeSize.caption, "accent", "CENTER")
 	badge.text:SetPoint("CENTER", 0, 0)
 	parts.badge = badge
@@ -434,8 +434,8 @@ local function dressCast(cast)
 	if cast.Background then cast.Background:SetAlpha(0) end
 	if cast.Border then cast.Border:SetAlpha(0) end
 	if cast.Icon then cast.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
-	cast.stoaPill = UI.tint(UI.pillFill(cast, PAD), "panel", 0.85)
-	local edge = UI.pillEdge(cast, PAD)
+	cast.stoaPill = UI.tint(UI.pillFill(cast, PAD, true), "panel", 0.85)
+	local edge = UI.pillEdge(cast, PAD, true)
 	edge:Set(0, 0, 0, 0.9)
 	cast.stoaPillEdge = edge
 end
@@ -490,11 +490,11 @@ local function dress(frame)
 		if bar.bgTexture then bar.bgTexture:SetAlpha(0) end
 		if bar.selectedBorder then bar.selectedBorder:SetAlpha(0) end
 		-- A rounded dark track a little larger than the bar sits behind it.
-		frame.stoaPillFill = UI.tint(UI.pillFill(bar, PAD), "panel", 0.85)
-		local edge = UI.pillEdge(bar, PAD)
+		frame.stoaPillFill = UI.tint(UI.pillFill(bar, PAD, true), "panel", 0.85)
+		local edge = UI.pillEdge(bar, PAD, true)
 		edge:Set(0, 0, 0, 0.9)
 		frame.stoaPillEdge = { SetShown = function(_, shown) if shown then edge:Set(0, 0, 0, 0.9) else edge:Clear() end end }
-		frame.stoaTargetEdge = UI.pillEdge(bar, PAD + 1)
+		frame.stoaTargetEdge = UI.pillEdge(bar, PAD + 1, true)
 		if bar.SetIsTarget then hooksecurefunc(bar, "SetIsTarget", function() targetEdge(frame) end) end
 	end
 	dressCast(frame.CastBarsContainer and frame.CastBarsContainer.castBar)
