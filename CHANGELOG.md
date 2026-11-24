@@ -4,6 +4,22 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
 
+## 2.0.0
+
+- **Matte, a second look**: Settings > Look > Material switches STOA from Leather to Matte black, a plain dark design after moulded matte hardware. Off by default; leather stays as it is. It needs a reload.
+  - The console is a matte shell with flat recesses for chat, At a glance, the bars and the pages, and a choice of grain (satin, smooth or fine).
+  - Windows, tooltips, tabs and dropdowns take a sharp 4 pixel corner and fine lines of light and shade instead of round corners and soft gloss.
+  - Party cards and the target, tank watch, pet and target-of-target blocks are flat plates with the same corner; health bars are square-cut with their numbers beside them.
+  - The target comes Compact or Full (Matte target size). Compact is a small block with a slim health line and a small skull beside it when the target is deadly; Full is the larger block with rank words (RARE, ELITE, BOSS) in colour above it.
+  - A Matte nameplate style: a thin health line with a fine dark rim, the name never cut short, and casts as a thin line with the spell's icon and name under it. Matte picks it once; the other styles stay available.
+  - The Game Menu's buttons are flat keys with a 2 pixel corner (in leather too).
+- **Halo arc styles**: Line, Blade, Visor, Gauge or Tube for the two arcs (Settings > Halo).
+- Elite, rare and boss tooltips carry one outline in the rank's colour instead of two, and hostile names are a lighter red that reads on the header.
+- The map's breadcrumbs start at the left edge.
+- Fixed: the map showed a second, lighter border around its header.
+- Fixed: a click near Player vs Player on the character window could fold the window to its narrow size.
+- Fixed: quest turn-in text could stay in the parchment's dark brown after a quest had been open in the map's quest log.
+
 ## 1.6.1
 
 - **Loot rolls up off the bars**: the Need, Greed and Pass cards stack from their own spot, right of the middle of the screen, instead of over your action bars. Move them in unlock mode (Loot rolls). Under each card a list shows everyone in the group, one name a line in class colours, with what they chose (Need, Greed, Pass or still choosing). Once your own card goes, a small card keeps the same list with each roll, then the winner, for 6 seconds. `/stoa rolls` shows two samples; Settings > Loot turns it off.
