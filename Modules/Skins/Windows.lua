@@ -660,23 +660,40 @@ local function onParchment()
 	return QuestInfoFrame and QuestInfoFrame.questLog
 end
 
+-- The quest window's own words (turn-in progress, the greeting list) are
+-- never on that parchment. They are lit whatever the map's log last
+-- showed: the log's flag stays set after it closes, which left a turn-in
+-- in the parchment's dark brown now and then.
+local OWN_TITLES = { "QuestProgressTitleText" }
+local OWN_TEXT = {
+	"QuestProgressText", "QuestProgressRequiredItemsText", "QuestProgressRequiredMoneyText",
+	"GreetingText", "CurrentQuestsText", "AvailableQuestsText",
+}
+
+local function ownText(fs)
+	for _, list in ipairs({ OWN_TITLES, OWN_TEXT }) do
+		for _, name in ipairs(list) do
+			if _G[name] == fs then return true end
+		end
+	end
+	return false
+end
+
 local function lightQuestText()
 	if QuestFrame_SetTitleTextColor then
-		hooksecurefunc("QuestFrame_SetTitleTextColor", function(fs) if not onParchment() then light(fs, true) end end)
+		hooksecurefunc("QuestFrame_SetTitleTextColor", function(fs) if not onParchment() or ownText(fs) then light(fs, true) end end)
 	end
 	if QuestFrame_SetTextColor then
-		hooksecurefunc("QuestFrame_SetTextColor", function(fs) if not onParchment() then light(fs) end end)
+		hooksecurefunc("QuestFrame_SetTextColor", function(fs) if not onParchment() or ownText(fs) then light(fs) end end)
 	end
 	local function recolour()
+		for _, name in ipairs(OWN_TITLES) do light(_G[name], true) end
+		for _, name in ipairs(OWN_TEXT) do light(_G[name]) end
 		if onParchment() then return end
-		for _, name in ipairs({ "QuestInfoTitleHeader", "QuestInfoDescriptionHeader", "QuestInfoObjectivesHeader", "QuestProgressTitleText" }) do
+		for _, name in ipairs({ "QuestInfoTitleHeader", "QuestInfoDescriptionHeader", "QuestInfoObjectivesHeader" }) do
 			light(_G[name], true)
 		end
-		for _, name in ipairs({
-			"QuestInfoDescriptionText", "QuestInfoObjectivesText", "QuestInfoGroupSize", "QuestInfoRewardText",
-			"QuestProgressText", "QuestProgressRequiredItemsText", "QuestProgressRequiredMoneyText",
-			"GreetingText", "CurrentQuestsText", "AvailableQuestsText",
-		}) do
+		for _, name in ipairs({ "QuestInfoDescriptionText", "QuestInfoObjectivesText", "QuestInfoGroupSize", "QuestInfoRewardText" }) do
 			light(_G[name])
 		end
 		local rewards = QuestInfoRewardsFrame
@@ -692,6 +709,7 @@ local function lightQuestText()
 	end
 	if QuestInfo_Display then hooksecurefunc("QuestInfo_Display", recolour) end
 	if QuestFrameProgressItems_Update then hooksecurefunc("QuestFrameProgressItems_Update", recolour) end
+	if QuestFrameProgressPanel then QuestFrameProgressPanel:HookScript("OnShow", recolour) end
 	if QuestFrameGreetingPanel then
 		QuestFrameGreetingPanel:HookScript("OnShow", recolour)
 		-- Its title buttons are filled in as it shows.
