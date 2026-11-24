@@ -45,12 +45,11 @@ local Halo = Stoa:NewModule("Halo", {
 })
 
 -- The arc drawings (Tools/art/halo_arcs.py): `file` goes between HaloArc
--- and the side in the texture's name; `ry` is the arc's height against its
--- width where it isn't a true circle.
+-- and the side in the texture's name.
 local ARC_STYLES = {
 	line = { file = "" },
 	blade = { file = "Blade" },
-	visor = { file = "Visor", ry = 0.86 },
+	visor = { file = "Visor" },
 	gauge = { file = "Gauge" },
 	tube = { file = "Tube" },
 }
