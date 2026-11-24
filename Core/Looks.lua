@@ -166,22 +166,68 @@ end
 
 -- A Details window in one of the console's slots (Console:PlaceDocks).
 -- `spot` is nil when it has none, and the window is then left where it is.
--- Its title bar stands above the window's own frame, so the frame starts
--- that much lower.
-local DETAILS_TITLE = 20
+-- Docked, the window is cut down to its title and rows, through Details'
+-- own setters (each saves on the window, so it holds through a reload):
+-- no backdrop or header art, no icon, the title buttons only under the
+-- mouse, and the title in STOA's type on the line of the pages' headings.
+-- Its title stands above the window's own frame, so the frame starts that
+-- much lower.
+local DETAILS_TITLE = 14
+
+local function call(instance, method, ...)
+	local fn = instance[method]
+	if type(fn) == "function" then pcall(fn, instance, ...) end
+end
+
+local function stripDetails(instance)
+	call(instance, "SetBackdropTexture", "None")
+	call(instance, "SetBackgroundAlpha", 0)
+	call(instance, "InstanceColor", 0, 0, 0, 0)
+	call(instance, "HideStatusBar")
+	call(instance, "HideMainIcon", true)
+	call(instance, "SetAutoHideMenu", true, true)
+	local r, g, b = Stoa:Color("muted")
+	call(instance, "AttributeMenu", true, 0, 2, FONT_UI, 11, { r, g, b, 1 }, 1, false)
+end
+
+-- Out of a slot again: the window's skin is put back on as Details ships
+-- it (or STOA's, when that look is worn), with its icon and buttons.
+local function unstripDetails(instance)
+	call(instance, "SetAutoHideMenu", false, false)
+	call(instance, "HideMainIcon", false)
+	local skin = instance.skin
+	if type(skin) == "string" and type(instance.ChangeSkin) == "function" then
+		-- Another skin first: Details only resets a window on a change.
+		pcall(instance.ChangeSkin, instance, skin == "Minimalistic" and "Minimalistic v2" or "Minimalistic")
+		pcall(instance.ChangeSkin, instance, skin)
+	end
+end
+
 function Looks:DockDetails(n, spot)
-	if not spot then return end
+	local docked = Stoa.db.detailsDocked
+	if not spot and not (docked and docked[n]) then return end
 	local addon = details()
 	if not addon or type(addon.GetInstance) ~= "function" then return end
 	local ok, instance = pcall(addon.GetInstance, addon, n)
 	local frame = ok and type(instance) == "table" and instance.baseframe
 	if type(frame) ~= "table" or not frame.SetPoint then return end
 	if InCombatLockdown() and frame.IsProtected and frame:IsProtected() then return end
+	if not spot then
+		docked[n] = nil
+		unstripDetails(instance)
+		return
+	end
 	frame:ClearAllPoints()
 	frame:SetPoint("TOPRIGHT", UIParent, "BOTTOMRIGHT", -spot.right, spot.top - DETAILS_TITLE)
 	frame:SetSize(spot.width, spot.height - DETAILS_TITLE)
 	-- Details keeps its own record of where each window is.
 	if type(instance.SaveMainWindowPosition) == "function" then pcall(instance.SaveMainWindowPosition, instance) end
+	if not docked then
+		docked = {}
+		Stoa.db.detailsDocked = docked
+	end
+	docked[n] = true
+	stripDetails(instance)
 end
 
 -- RestedXP -------------------------------------------------------------------------
