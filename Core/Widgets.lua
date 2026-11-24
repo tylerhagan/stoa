@@ -1499,7 +1499,9 @@ function UI.button(parent, label, width, onClick, reloads)
 		if lit then
 			glow:Set(Stoa:Color("accent"))
 			-- The edge warms in rather than snapping on.
-			if not button.lit and glow.edges then
+			-- Only on a button in view: a fade started on a hidden one never
+			-- ran, and left the edge clear until the next hover.
+			if not button.lit and glow.edges and button:IsVisible() then
 				button.glowIn = button.glowIn or {}
 				for i, tex in ipairs(glow.edges) do
 					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, UI.MOTION.quick)
@@ -1517,6 +1519,11 @@ function UI.button(parent, label, width, onClick, reloads)
 	end
 	button:SetScript("OnEnter", colour)
 	button:SetScript("OnLeave", colour)
+	-- Coming into view, any fade cut short by the hide is put to rest.
+	button:HookScript("OnShow", function()
+		for _, group in ipairs(button.glowIn or {}) do group:Stop() end
+		colour()
+	end)
 	button:SetScript("OnMouseDown", function(self)
 		if self:IsEnabled() then text:SetPoint("CENTER", 1, -1) end
 	end)
