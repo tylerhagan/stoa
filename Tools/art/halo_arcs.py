@@ -53,30 +53,34 @@ def visor():
     ]
 
 
-# The gauge: an instrument's scale on the curve (fine ticks on a hairline,
-# every fifth longer) with a thin square bracket standing just outside it.
-# The bracket is straight, so it is given as boxes: left, right, bottom,
-# top (x leftwards from the Halo's centre, y up) and alpha.
+# The gauge: a band in five segments on the curve, with a square bracket
+# standing just outside it. The bracket is straight, so it is given as boxes:
+# left, right, bottom, top (x leftwards from the Halo's centre, y up) and
+# alpha. Its lines are one texel thick and sit on the texel grid, the
+# thinnest a line can be and still be crisp.
 GAUGE_RADIUS = 134.0
 GAUGE_HALF_HEIGHT = 104.0
+GAUGE_BAND = 5.0
+GAUGE_SEGMENTS = 5
 GAUGE_BRACKET_X = 144.0
-GAUGE_BRACKET_LINE = 1.0
 GAUGE_BRACKET_TIP = 10.0
 
 
 def gauge():
     span = float(np.degrees(np.arcsin(GAUGE_HALF_HEIGHT / GAUGE_RADIUS)))
-    parts = [(-span, span, GAUGE_RADIUS, lambda a: 1.0 + 0 * a, 0.55)]
-    ticks = 30
-    for i in range(ticks + 1):
-        at = -span + 2 * span * i / ticks
-        length = 11.0 if i % 5 == 0 else 6.0
-        parts.append((at - 0.5, at + 0.5, GAUGE_RADIUS, (lambda n: lambda a: n + 0 * a)(length), 1.0))
-    x, h, line, tip = GAUGE_BRACKET_X, GAUGE_HALF_HEIGHT, GAUGE_BRACKET_LINE, GAUGE_BRACKET_TIP
+    step = 2 * span / GAUGE_SEGMENTS
+    parts = []
+    for i in range(GAUGE_SEGMENTS):
+        start = -span + i * step
+        parts.append((start + 0.6, start + step - 0.6, GAUGE_RADIUS, lambda a: GAUGE_BAND + 0 * a, 1.0))
+    texel = SHOWN / W
+    x = round(GAUGE_BRACKET_X / texel) * texel
+    h = round(GAUGE_HALF_HEIGHT / texel) * texel
+    tip = GAUGE_BRACKET_TIP
     boxes = [
-        (x - line, x, -h, h, 1.0),
-        (x - tip, x, h - line, h, 1.0),
-        (x - tip, x, -h, -h + line, 1.0),
+        (x - texel, x, -h, h, 1.0),
+        (x - tip, x, h - texel, h, 1.0),
+        (x - tip, x, -h, -h + texel, 1.0),
     ]
     return OUTER, parts, boxes
 
