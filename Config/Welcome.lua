@@ -1481,7 +1481,7 @@ function Welcome:Refresh()
 		for _, button in pairs(self.ornamentButtons) do button:SetShown(not matte) end
 		for _, button in pairs(self.grainButtons) do button:SetShown(matte) end
 		choose(self.ornamentButtons, Stoa.db.ornament == "painted" and "painted" or "plain")
-		choose(self.grainButtons, self.grainButtons[Stoa.db.grain] and Stoa.db.grain or "satin")
+		choose(self.grainButtons, self.grainButtons[Stoa.db.grain] and Stoa.db.grain or "soft")
 		choose(self.visionButtons, Stoa.db.vision or "Standard")
 	elseif current == "combat" then
 		self:RefreshCombat(step)

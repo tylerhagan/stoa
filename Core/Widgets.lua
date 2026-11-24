@@ -1123,7 +1123,7 @@ function UI.matte()
 end
 
 function UI.grainAlpha()
-	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.satin
+	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.soft
 end
 
 function UI.fitGrain(tex)

@@ -7,7 +7,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 2.0.0
 
 - **Matte, a second look**: Settings > Look > Material switches STOA from Leather to Matte black, a plain dark design after moulded matte hardware. Off by default; leather stays as it is. It needs a reload.
-  - The console is a matte shell with flat recesses for chat, At a glance, the bars and the pages, and a choice of grain (satin, smooth or fine).
+  - The console is a matte shell with flat recesses for chat, At a glance, the bars and the pages, and a choice of grain (satin, soft, smooth or fine; soft, a hint of texture, is how it comes).
   - Windows, tooltips, tabs and dropdowns take a sharp 4 pixel corner and fine lines of light and shade instead of round corners and soft gloss.
   - Party cards and the target, tank watch, pet and target-of-target blocks are flat plates with the same corner; health bars are square-cut with their numbers beside them.
   - The target comes Compact or Full (Matte target size). Compact is a small block with a slim health line and a small skull beside it when the target is deadly; Full is the larger block with rank words (RARE, ELITE, BOSS) in colour above it.
@@ -26,6 +26,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - **Details in a slot**: a Details window in a slot loses its backdrop, header art, icon and status bar. Its title sits on the line of the pages' headings with the same hairline under it, its buttons show only under the mouse, and its rows are STOA's type over quiet one-colour bars with the class in the name. Taking it out of the slot puts its skin back.
 - **The game's meter in a slot**: one of the game's own damage meter windows in a slot is cut down the same way. Its title is in STOA's quiet type on the line of the pages' headings with the hairline under it, its buttons show only under the mouse, the rows lose their icons and start at the slot's edge, and every bar is one faint colour with the class in the name. Out of a slot it floats as before.
 - **Matte window headers lose their sheen**: on Matte a window's header is the same flat moulded surface as the rest, with only a trace of light along its top. Leather keeps its sheen.
+- **Settings**: a wider row of choices (Matte grain, Arc style) sits at the right edge like every other control, beside its name when there is room. Ornament is tucked under Material and shows only on Leather, where it does something.
 - **Guild member panel**: the panel that opens beside the guild window when you pick a member has the same room on its right as on its left, and stands clear of the window instead of overlapping its edge.
 - **Menu and bags as words**: the game menu and the bag row rest unseen behind two words on the console's edge, MENU and BAGS, and show while the mouse is over the word or the row. A click on BAGS opens the bags. In a fight the words dim. With a window docked in a slot the rows hold their place instead of dropping onto it.
 - **Leather polish**:
