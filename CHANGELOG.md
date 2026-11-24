@@ -13,6 +13,15 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
   - The target comes Compact or Full (Matte target size). Compact is a small block with a slim health line and a small skull beside it when the target is deadly; Full is the larger block with rank words (RARE, ELITE, BOSS) in colour above it.
   - A Matte nameplate style: a thin health line with a fine dark rim, the name never cut short, and casts as a thin line with the spell's icon and name under it. Matte picks it once; the other styles stay available.
   - The Game Menu's buttons are flat keys with a 2 pixel corner (in leather too).
+- **A new setup**: the welcome page's Look step shows Leather and Matte side by side as small drawn pictures, with the theme, grain or ornament and colour vision under them.
+  - Players already set up see a version 2 page once per account with both looks; Keep my setup changes nothing. `/stoa welcome update` shows it again.
+  - How much is two answers: the console (Full, Slim or None) and everything around it (Standard or Quiet). Settings > Setup asks the same two; Classic feel and Same as Designer are under Other starting sets and `/stoa preset`.
+  - Quiet now also makes the target and party thin strips that fade out of combat, and folds the click grid for healers (hidden for everyone else).
+  - A new Target and frames step: target (Compact, Full or Words only), party cards or strips, stay or fade out of combat, nameplate style and text size.
+- On a mount or a flight the chat comes back when you open the chat box and stays for 12 seconds after, and the feed shows messages from every chat window, not only the first.
+- Columns in the guild window and scroll bar rails are divided by the console's seam instead of a white line.
+- Matte keeps its white accent under the colour vision settings.
+- Fixed: a selected button could show its border only after the mouse had been over it.
 - **Halo arc styles**: Line, Blade, Visor, Gauge or Tube for the two arcs (Settings > Halo).
 - Elite, rare and boss tooltips carry one outline in the rank's colour instead of two, and hostile names are a lighter red that reads on the header.
 - The map's breadcrumbs start at the left edge.
