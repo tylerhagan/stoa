@@ -168,7 +168,7 @@ local function showButtons(window, over)
 	local seen = state ~= 2
 	if window.stoaChevron then window.stoaChevron:SetAlpha(seen and 1 or 0) end
 	if window.SessionDropdown then window.SessionDropdown:SetAlpha(seen and 1 or 0) end
-	if window.SettingsDropdown then window.SettingsDropdown:SetAlpha(seen and 0.6 or 0) end
+	if window.SettingsDropdown then window.SettingsDropdown:SetAlpha(seen and 1 or 0) end
 	if window.MinimizeButton then window.MinimizeButton:SetAlpha(seen and 1 or 0) end
 	-- The fight's clock has the buttons' place while they are away.
 	if window.SessionTimer then window.SessionTimer:SetAlpha((docked and over) and 0 or 1) end
@@ -301,18 +301,18 @@ local function dressWindow(window)
 		typeDropdown:HookScript("OnLeave", function() chevron:SetVertexColor(Stoa:Color("muted")) end)
 		window.stoaChevron = chevron
 	end
-	-- The cog keeps its shape and loses its gold.
+	-- The cog keeps its shape and takes the theme's accent for its gold.
 	local settings = window.SettingsDropdown
 	if settings then
-		settings:SetAlpha(0.6)
 		local function quiet()
 			local icon = settings.Icon
 			if not (icon and icon.SetDesaturated) then return end
 			icon:SetDesaturated(true)
-			icon:SetVertexColor(Stoa:Color("text"))
+			icon:SetVertexColor(Stoa:Color("accent"))
 		end
 		if settings.OnButtonStateChanged then hooksecurefunc(settings, "OnButtonStateChanged", quiet) end
 		quiet()
+		window.stoaCog = quiet
 	end
 
 	-- Bars, now and as the list makes new ones.
@@ -468,6 +468,7 @@ function Meters:OnEnable()
 		for i = 1, 3 do
 			local window = _G["DamageMeterSessionWindow" .. i]
 			if window and window.ForEachEntryFrame then window:ForEachEntryFrame(colourEntry) end
+			if window and window.stoaCog then window.stoaCog() end
 		end
 	end)
 	if _G.DamageMeter then
