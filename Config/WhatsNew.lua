@@ -24,7 +24,16 @@ local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
 		edition = "2.0.0",
-		title = "New in STOA 2",
+		title = "STOA 2",
+		-- A big release: a line under the title, and a way to the page that
+		-- shows both looks side by side.
+		lead = "Two looks, a console you arrange, a shorter setup",
+		tour = true,
+		-- A word from the author, in a box of its own above the foot.
+		thanks = {
+			"Thank you to everyone who has stuck with STOA. It means a lot to me. If there is something you would like to see next, leave a comment on the CurseForge page and I will read it.",
+			"curseforge.com/wow/addons/stoa",
+		},
 		lines = {
 			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Material switches between them, or type /stoa welcome update to see both side by side." },
 			{ "Made for Matte", "A matte console with recesses for chat, the bars and the pages, a Compact or Full target, flat party cards and a Matte nameplate style. Leather keeps everything it had." },
@@ -89,6 +98,7 @@ local PAD = Stoa.space.xl
 -- Up to PER_COLUMN lines sit in one column; past that the lines split over
 -- two columns side by side.
 local PER_COLUMN = 5
+local THANKS_PAD = 14
 local COLUMN, GAP = 456, 36
 local HEADER, FOOTER = 64, 58
 
@@ -126,6 +136,10 @@ function WhatsNew:Build()
 	local title = UI.text(page, "serif", Stoa.typeSize.title, "text", "LEFT")
 	title:SetPoint("TOPLEFT", PAD, -PAD + 4)
 	page.title = title
+	-- A big release says what it is about in one line under the title.
+	local lead = UI.text(page, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+	lead:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -5)
+	page.lead = lead
 	page.rows, page.tags, page.columns = {}, {}, {}
 
 	-- The foot runs the page's width above the buttons.
@@ -135,11 +149,40 @@ function WhatsNew:Build()
 	foot:SetWordWrap(true)
 	page.foot = foot
 
+	-- A note can carry a thank-you: a recessed box with an accent bar down
+	-- its left, a small heading, the words, and where to write.
+	local thanks = CreateFrame("Frame", nil, page)
+	thanks:SetPoint("BOTTOMLEFT", foot, "TOPLEFT", 0, 14)
+	thanks:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+	UI.well(thanks)
+	local bar = thanks:CreateTexture(nil, "ARTWORK")
+	bar:SetPoint("TOPLEFT", 0, 0)
+	bar:SetPoint("BOTTOMLEFT", 0, 0)
+	bar:SetWidth(2)
+	UI.paint(bar, "accent")
+	local head = UI.text(thanks, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+	head:SetPoint("TOPLEFT", THANKS_PAD, -10)
+	UI.settleText(head, "THANK YOU")
+	local words = UI.text(thanks, "sans", Stoa.typeSize.body, "text", "LEFT")
+	words:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -6)
+	words:SetWordWrap(true)
+	local where = UI.text(thanks, "sans", Stoa.typeSize.body, "accent", "LEFT")
+	where:SetPoint("TOPLEFT", words, "BOTTOMLEFT", 0, -6)
+	thanks.head, thanks.words, thanks.where = head, words, where
+	thanks:Hide()
+	page.thanks = thanks
+
 	local settings = UI.button(page, "Open settings", 130, function()
 		page:Hide()
 		Stoa:OpenSettings()
 	end)
 	settings:SetPoint("BOTTOMLEFT", PAD, PAD - 10)
+	local tour = UI.button(page, "See both looks", 130, function()
+		page:Hide()
+		Stoa.commands.welcome("update")
+	end)
+	tour:SetPoint("LEFT", settings, "RIGHT", 10, 0)
+	page.tour = tour
 	local done = UI.button(page, "Got it", 110, function() page:Hide() end)
 	done:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
 	-- Earlier and Later page through the notes kept in NOTES.
@@ -175,13 +218,26 @@ end
 
 function WhatsNew:Fit()
 	local page = self.page
+	local box = 0
+	local thanks = page.thanks
+	if thanks:IsShown() then
+		local inner = 10 + heightOf(thanks.head) + 6 + heightOf(thanks.words) + 6 + heightOf(thanks.where) + 12
+		thanks:SetHeight(math.ceil(inner))
+		box = inner + 14
+	end
+	-- With two columns the thank-you stands at the foot of the last one,
+	-- so it counts toward that column's height; with one it has a band of
+	-- its own under the lines.
+	local inColumn = #page.columns > 1
 	local tallest = 0
-	for _, parts in ipairs(page.columns) do
+	for n, parts in ipairs(page.columns) do
 		local tall = 0
 		for i, part in ipairs(parts) do tall = tall + heightOf(part) + (i % 2 == 0 and 12 or 3) end
+		if inColumn and n == #page.columns then tall = tall + box + 6 end
 		tallest = math.max(tallest, tall)
 	end
-	local tall = HEADER + 18 + tallest + 4 + heightOf(page.foot) + 12 + FOOTER
+	if inColumn then box = 0 end
+	local tall = HEADER + 18 + tallest + 4 + box + heightOf(page.foot) + 12 + FOOTER
 	page:SetHeight(math.ceil(tall) + 10)
 end
 
@@ -196,6 +252,21 @@ function WhatsNew:Paint(index)
 	local perColumn = math.ceil(count / columns)
 	page:SetWidth(PAD * 2 + columns * COLUMN + (columns - 1) * GAP)
 	page.title:SetText(note.title)
+	page.title:SetPoint("TOPLEFT", PAD, -PAD + (note.lead and 10 or 4))
+	UI.settleText(page.lead, note.lead and note.lead:upper() or "")
+	page.lead:SetShown(note.lead ~= nil)
+	page.tour:SetShown(note.tour == true)
+	local thanks = page.thanks
+	thanks:SetShown(note.thanks ~= nil)
+	if note.thanks then
+		local left = columns > 1 and (columns - 1) * (COLUMN + GAP) or 0
+		thanks:ClearAllPoints()
+		thanks:SetPoint("BOTTOMLEFT", page.foot, "TOPLEFT", left, 14)
+		thanks:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
+		thanks.words:SetWidth(page:GetWidth() - PAD * 2 - left - THANKS_PAD * 2)
+		UI.settleText(thanks.words, note.thanks[1])
+		UI.settleText(thanks.where, note.thanks[2] or "")
+	end
 	page.foot:SetText(note.foot or FOOT)
 	for _, tag in ipairs(page.tags) do tag:Hide() end
 	wipe(page.columns)
