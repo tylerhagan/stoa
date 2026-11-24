@@ -32,7 +32,7 @@ local UI = Stoa.UI
 
 local Plates = Stoa:NewModule("Plates", {
 	style = "stoa",
-	marker = "edge",
+	marker = "glow",
 	-- 0 to 100: how much plates you aren't targeting fade while you have one.
 	fade = 0,
 	fadeChoice = "0",

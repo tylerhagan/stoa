@@ -1114,15 +1114,16 @@ end
 UI.GRAIN = UI.MEDIA .. "Textures\\MatteGrain"
 local GRAIN_SIZE = 128
 -- Satin is the flat finish of a matte speaker: no grain at all (even a
--- faint one read as speckle). A saved "rough" (dropped) reads as satin.
-local GRAIN_ALPHA = { satin = 0, smooth = 0.07, fine = 0.105 }
+-- faint one read as speckle); Soft is half of Smooth, a hint of texture.
+-- A saved "rough" (dropped) reads as satin.
+local GRAIN_ALPHA = { satin = 0, soft = 0.035, smooth = 0.07, fine = 0.105 }
 
 function UI.matte()
 	return Stoa.db ~= nil and Stoa.db.material == "matte"
 end
 
 function UI.grainAlpha()
-	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.satin
+	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.soft
 end
 
 function UI.fitGrain(tex)
@@ -1282,7 +1283,9 @@ function UI.emboss(frame, header)
 		sheen:SetPoint("BOTTOM", header, "CENTER")
 	end
 	sheen:SetDrawLayer("BACKGROUND", -4)
-	UI.gradient(sheen, "text", 0.07, "VERTICAL", 0, 1)
+	-- Matte has no shine: the header is the same moulded block as the
+	-- rest, with only a trace of light at its top.
+	UI.gradient(sheen, "text", UI.matte() and 0.02 or 0.07, "VERTICAL", 0, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 3)
 	top:SetTexture(UI.WHITE)
 	UI.pixel(top, "height")

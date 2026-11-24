@@ -517,7 +517,7 @@ local MATERIALS = {
 	{ "leather", "Leather", "Tooled leather and brass, round corners, stone behind windows." },
 	{ "matte", "Matte black", "Moulded black hardware: sharp corners, fine lines, no gloss." },
 }
-local GRAINS = { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }
+local GRAINS = { { "satin", "Satin" }, { "soft", "Soft" }, { "smooth", "Smooth" }, { "fine", "Fine" } }
 local PREVIEW_H = 150
 
 -- `picked(material)` runs after a card sets the look.
@@ -611,14 +611,16 @@ function builders.look(self, step)
 		button:SetPoint("TOPLEFT", (i - 1) * (quarter + 6), top - 18)
 		self.ornamentButtons[entry[1]] = button
 	end
+	-- Four grains share the room of the two ornaments' three.
+	local grainW = math.floor((third - (#GRAINS - 1) * 4) / #GRAINS)
 	for i, entry in ipairs(GRAINS) do
-		local button = UI.button(step, entry[2], quarter, function()
+		local button = UI.button(step, entry[2], grainW, function()
 			Stoa.db.grain = entry[1]
 			UI.paintGrain()
 			self:Refresh()
 		end)
 		button:SetHeight(28)
-		button:SetPoint("TOPLEFT", (i - 1) * (quarter + 6), top - 18)
+		button:SetPoint("TOPLEFT", (i - 1) * (grainW + 4), top - 18)
 		self.grainButtons[entry[1]] = button
 	end
 	local vision = UI.caption(step, "Colour vision")
@@ -1479,7 +1481,7 @@ function Welcome:Refresh()
 		for _, button in pairs(self.ornamentButtons) do button:SetShown(not matte) end
 		for _, button in pairs(self.grainButtons) do button:SetShown(matte) end
 		choose(self.ornamentButtons, Stoa.db.ornament == "painted" and "painted" or "plain")
-		choose(self.grainButtons, self.grainButtons[Stoa.db.grain] and Stoa.db.grain or "satin")
+		choose(self.grainButtons, self.grainButtons[Stoa.db.grain] and Stoa.db.grain or "soft")
 		choose(self.visionButtons, Stoa.db.vision or "Standard")
 	elseif current == "combat" then
 		self:RefreshCombat(step)

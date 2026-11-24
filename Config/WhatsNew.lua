@@ -40,7 +40,7 @@ local NOTES = {
 			{ "A console in slots", "The console's right side is now three slots. Put Ready, Journey or Company in any order, drop in the game's damage meter windows or a Details window, or leave one empty. A Details window in a slot is cut down to its title and rows. Settings > Console." },
 			{ "Menu and bags as words", "The game menu and the bag row now rest behind two small words on the console's edge, MENU and BAGS. Put the mouse on a word and its row shows. A click on BAGS opens your bags." },
 			{ "Leather polish", "A Compact target for Leather, rank as coloured words on the target, and nameplates that never cut a name short, with casts as a thin line." },
-			{ "Halo arc styles", "Line, Blade, Visor, Gauge or Tube for the two arcs, under Settings > Halo." },
+			{ "Halo arc styles", "Tube is the new look of the two arcs, with Gauge, Line, Blade or Visor under Settings > Halo." },
 			{ "A shorter setup", "The welcome page asks two things about how much STOA you want: the console (Full, Slim or None) and everything around it (Standard or Quiet). A new Target and frames step sets the target, party, nameplates and text size. /stoa welcome opens it." },
 			{ "Quiet does more", "Quiet now makes the target and party thin strips that fade out of combat, as well as putting away tooltip details, the quest line and At a glance." },
 			{ "Chat on a ride", "On a mount or a flight the chat comes back while you type and for a few seconds after, and whispers from any chat window show in the feed." },

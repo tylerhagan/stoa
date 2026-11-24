@@ -362,12 +362,20 @@ function builders.choice(row, entry)
 	local inline = row.control:GetWidth() <= INLINE + 2
 	function row:Layout(w)
 		self.control:ClearAllPoints()
-		if inline then
+		-- A wider row of choices still sits beside a name short enough to
+		-- leave it the room; otherwise it goes under the name, at the right
+		-- edge where every other control is.
+		local beside = inline
+		if not beside and self.name.GetUnboundedStringWidth then
+			local nameW = tonumber(self.name:GetUnboundedStringWidth())
+			beside = nameW ~= nil and nameW + self.control:GetWidth() + 24 <= w
+		end
+		if beside then
 			self.control:SetPoint("TOPRIGHT", 0, -4)
 			return math.max(nameHeight(self, w - self.control:GetWidth() - 16), 34) + 2
 		end
 		local h = nameHeight(self, w)
-		self.control:SetPoint("TOPLEFT", 0, -h - 4)
+		self.control:SetPoint("TOPRIGHT", 0, -h - 4)
 		return h + 34
 	end
 end

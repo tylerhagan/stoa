@@ -38,10 +38,10 @@ local accountDefaults = {
 	-- portrait coins and the Halo's signature slot; "plain" keeps lines.
 	ornament = "plain",
 	-- What STOA is made of: "leather" (leather, brass and stone) or
-	-- "matte", moulded black hardware with a grain ("satin", "smooth",
+	-- "matte", moulded black hardware with a grain ("satin", "soft", "smooth",
 	-- "fine") on the console and windows.
 	material = "leather",
-	grain = "satin",
+	grain = "soft",
 	-- Items marked as junk, by itemID, sold with the greys.
 	junk = {},
 	modules = {},
@@ -97,6 +97,15 @@ function Stoa:InitializeDatabase()
 			StoaDB.modules[name].enabled = true
 		end
 		module.db = StoaDB.modules[name]
+	end
+
+	-- 2.0, once per character: Tube is the Halo's arc drawing now, the
+	-- improved Line, so whoever still has Line is moved to it. A style
+	-- picked since is left alone.
+	local halo = StoaDB.modules.Halo
+	if halo and not halo.arcTube then
+		if halo.arcStyle == "line" then halo.arcStyle = "tube" end
+		halo.arcTube = true
 	end
 
 	self.db = StoaDB

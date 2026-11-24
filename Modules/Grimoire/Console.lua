@@ -1124,15 +1124,18 @@ function Console:BuildFellowship(frame, space)
 
 	-- Journey.
 	local journey = column(journeyCol, "Journey")
+	-- Without the leather the page sits in a well 110 tall, so its rows
+	-- stand a little closer and all of them stay inside it.
+	local tight = not self:Art()
 	local level = text(journeyCol, "serif", Stoa.typeSize.title, "text")
-	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, -6)
+	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, tight and -4 or -6)
 	-- Earned in the text colour, rest in blue behind it, and an accent mark
 	-- where an hour at your pace would take you.
 	-- Your share of the level on the same row, at the column's right edge.
 	local share = text(journeyCol, "sans", Stoa.typeSize.body, "muted", "RIGHT")
 	share:SetPoint("BOTTOMRIGHT", level, "BOTTOMLEFT", COLUMN_WIDTH, 2)
 	local xp = Figures.xp(journeyCol, COLUMN_WIDTH, 5)
-	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, -8)
+	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, tight and -6 or -8)
 	-- The bar's key (earned, rested to, in an hour) on hover, not as a row.
 	local xpHover = CreateFrame("Frame", nil, journeyCol)
 	xpHover:SetPoint("TOPLEFT", xp, "TOPLEFT", 0, 6)
@@ -1161,7 +1164,7 @@ function Console:BuildFellowship(frame, space)
 	-- nearest watched quest's progress when alone.
 	local pace = CreateFrame("Frame", nil, journeyCol)
 	pace:SetSize(COLUMN_WIDTH, 26)
-	pace:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -17)
+	pace:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, tight and -15 or -17)
 	local spark = Figures.spark(pace, 54, 18)
 	spark:SetPoint("BOTTOMLEFT", 0, 2)
 	local perHour = text(pace, "serif", Stoa.typeSize.name, "text")
@@ -1175,6 +1178,17 @@ function Console:BuildFellowship(frame, space)
 	local toLevelCap = text(pace, "sans", Stoa.typeSize.caption, "muted")
 	toLevelCap:SetPoint("TOPLEFT", toLevel, "BOTTOMLEFT", 0, -2)
 	pace.spark, pace.perHour, pace.perHourCap, pace.toLevel, pace.toLevelCap = spark, perHour, perHourCap, toLevel, toLevelCap
+	-- The chart needs two readings before it has a line to draw; until
+	-- then the numbers start at the row's left instead of beside a blank.
+	function pace:Chart(drawn)
+		if self.charted == drawn then return end
+		self.charted = drawn
+		local left = drawn and 62 or 0
+		spark:SetShown(drawn)
+		perHour:SetPoint("TOPLEFT", self, "TOPLEFT", left, 0)
+		toLevel:SetPoint("TOPLEFT", self, "TOPLEFT", left + math.floor((COLUMN_WIDTH - left) / 2), 0)
+	end
+	self.paceTight = tight
 	pace:Hide()
 	-- While the pace is still being worked out, a line of words instead.
 	local rate = text(journeyCol, "sans", Stoa.typeSize.body, "muted")
@@ -1812,8 +1826,9 @@ function Console:SettleNext()
 	local quest = (self.questNote:GetText() or "") ~= ""
 	local questNote, note = self.questNote, self.trainerNote
 	questNote:ClearAllPoints()
-	if self.pace and self.pace:IsShown() then
-		questNote:SetPoint("TOPLEFT", self.pace, "BOTTOMLEFT", 0, -9)
+	local paced = self.pace and self.pace:IsShown()
+	if paced then
+		questNote:SetPoint("TOPLEFT", self.pace, "BOTTOMLEFT", 0, self.paceTight and -5 or -9)
 	elseif self.rateNote and self.rateNote:IsShown() then
 		questNote:SetPoint("TOPLEFT", self.rateNote, "BOTTOMLEFT", 0, -6)
 	elseif self.xpBar then
@@ -1829,7 +1844,9 @@ function Console:SettleNext()
 		note:SetPoint("TOPLEFT", questNote, "TOPLEFT")
 	end
 	questNote:SetShown(quest)
-	note:SetShown(training)
+	-- In the well there is one line's room under the pace: the quest has
+	-- it, and the trainer's line waits (Ready's small jobs name it too).
+	note:SetShown(training and not (self.paceTight and paced and quest))
 	self:UpdateSlim()
 end
 

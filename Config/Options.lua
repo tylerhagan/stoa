@@ -279,12 +279,14 @@ local function build()
 	choice(db, "textSize", "Text size", "Every STOA size together: words, numbers, tooltips and pages. Whatever you pick, the smallest text keeps at least 13 pixels on the screen, so a low UI scale never shrinks a caption past reading.", "standard", {
 		{ "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" },
 	}, { reload = true, words = "font size scale readable small big" })
-	group = "Painted pieces"
-	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, words = "brass frame leather fancy" })
+	group = "Material"
 	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
+	-- Leather's own choice: Matte black has no painted pieces, so the
+	-- setting is only there under Leather.
+	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return db().material ~= "matte" end, words = "brass frame leather fancy" })
 	-- Part of the Material choice: tucked under it, there once Matte black
 	-- is picked (even before the reload that brings the material in).
-	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker.", "satin", { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
+	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker. Soft is a hint of texture.", "soft", { { "satin", "Satin" }, { "soft", "Soft" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
 		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth satin flat finish",
 		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
 	})
@@ -355,7 +357,7 @@ local function build()
 	toggle(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar.", true, { reload = true, words = "unit frame" })
 	toggle(halo, "targetOfTarget", "Target of target", "Who your target is targeting: a name and a thin health line to the right of the target plaque. Says YOU when it is you. Click it to target them.", true, { reload = true, words = "tot assist aggro" })
 	toggle(halo, "focusFrame", "Focus", "Your focus as a small block under the target of target, with or without a target. Off brings back Blizzard's focus frame. Move it with /stoa move.", true, { reload = true, words = "focus unit frame" })
-	choice(halo, "arcStyle", "Arc style", "How the Halo's health and power arcs are drawn. Line is the even half circle. Blade swells in the middle and thins to points. Visor bends as if on curved glass, with a gloss line inside. Gauge is ten segments with quarter ticks. Tube is a bright line on a wide faint band.", "line", { { "line", "Line" }, { "blade", "Blade" }, { "visor", "Visor" }, { "gauge", "Gauge" }, { "tube", "Tube" } }, { reload = true, words = "arc arcs shape style health mana ring" })
+	choice(halo, "arcStyle", "Arc style", "How the Halo's health and power arcs are drawn. Tube is a bright line on a wide faint band. Gauge is square: a straight bar inside a bracket. Line is the even half circle. Blade swells in the middle and thins to points. Visor bends as if on curved glass, with a gloss line inside. To see one without a fight, type /stoa combat.", "tube", { { "tube", "Tube" }, { "gauge", "Gauge" }, { "line", "Line" }, { "blade", "Blade" }, { "visor", "Visor" } }, { reload = true, words = "arc arcs shape style health mana ring" })
 	toggle(halo, "shield", "Your shield", "A silver shield whose fill drains as it soaks up damage: under the Halo's health number, and left of the medallion while the console is open.", true, { id = "haloShield", reload = true, words = "absorb power word shield bubble" })
 	toggle(halo, "classMark", "Your class mark", "The buff your class keeps up, drawn like the shield and emptying as it runs out: Battle Shout (warrior), Slice and Dice (rogue), your seal (paladin), Lightning or Water Shield and Inner Fire by their charges (shaman, priest). Under the Halo's power number, and beside the shield left of the medallion.", true, { id = "haloClassMark", reload = true, words = "battle shout slice dice seal inner fire lightning water shield" })
 	toggle(halo, "hideTargetFrame", "Hide Blizzard's target frame", "STOA shows your target beside the Halo.", true, { reload = true, words = "unit frame" })
@@ -483,7 +485,7 @@ local function build()
 	choice(plates, "style", "Nameplate style", "STOA: a rounded track. Bold: a heavy dark frame with the health value in the bar. Inline: name and health inside the bar. Brass: a brass edge with a level badge. Slim: a thin bar under the name. Matte: a thin line with no frame, as on the Matte target.", "stoa", {
 		{ "stoa", "STOA" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" }, { "matte", "Matte" },
 	}, { id = "plateStyle", change = restyle })
-	choice(plates, "marker", "Mark your target's plate", "A bone edge round it, arrows either side, or a soft glow behind it.", "edge", {
+	choice(plates, "marker", "Mark your target's plate", "A soft glow behind it, a bone edge round it, or arrows either side.", "glow", {
 		{ "edge", "Edge" }, { "arrows", "Arrows" }, { "glow", "Glow" },
 	}, { id = "plateMarker", words = "target highlight", change = restyle })
 	choice(plates, "fadeChoice", "Fade other plates", "While you have a target, plates you aren't targeting fade by this much.", "0", {
