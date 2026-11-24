@@ -118,6 +118,56 @@ local function makeSegments(parent, entry)
 	return holder
 end
 
+-- A choice whose options are small pictures over their names (the Halo's
+-- arc styles). entry.pictures(value) gives the textures for one option's
+-- left and right half; they are the real art, drawn small.
+local TILE_W, TILE_H, TILE_ART = 84, 94, 60
+
+local function makeTiles(parent, entry)
+	local holder = CreateFrame("Frame", nil, parent)
+	holder.buttons = {}
+	for i, option in ipairs(entry.options) do
+		local button = CreateFrame("Button", nil, holder)
+		button:SetSize(TILE_W, TILE_H)
+		button:SetPoint("LEFT", (i - 1) * (TILE_W + 4), 0)
+		button.back = UI.pillFill(button, 0)
+		button.edge = UI.pillEdge(button, 0)
+		local left, right = entry.pictures(option[1])
+		button.left = button:CreateTexture(nil, "ARTWORK")
+		button.left:SetSize(TILE_ART / 2, TILE_ART)
+		button.left:SetPoint("TOPRIGHT", button, "TOP", 0, -8)
+		button.left:SetTexture(left)
+		button.right = button:CreateTexture(nil, "ARTWORK")
+		button.right:SetSize(TILE_ART / 2, TILE_ART)
+		button.right:SetPoint("TOPLEFT", button, "TOP", 0, -8)
+		button.right:SetTexture(right)
+		local text = UI.text(button, "sans", Stoa.typeSize.body, "muted", "CENTER")
+		text:SetPoint("BOTTOM", 0, 7)
+		text:SetText(option[2])
+		button.text, button.value = text, option[1]
+		button:SetScript("OnClick", function() Options.set(entry, option[1]) end)
+		button:SetScript("OnEnter", function(self) self.over = true; holder:Refresh() end)
+		button:SetScript("OnLeave", function(self) self.over = nil; holder:Refresh() end)
+		hover(button, entry)
+		holder.buttons[i] = button
+	end
+	holder:SetSize(#entry.options * (TILE_W + 4) - 4, TILE_H)
+	function holder:Refresh()
+		local v = Options.value(entry)
+		for _, button in ipairs(self.buttons) do
+			local chosen = button.value == v
+			local lit = chosen or button.over
+			button.chosen = chosen
+			button.back:SetVertexColor(0, 0, 0, chosen and 0.5 or 0.3)
+			button.edge:Set(Stoa:Color(chosen and "accent" or "hairline"))
+			colour(button.left, "text", lit and 0.95 or 0.5)
+			colour(button.right, "accent", lit and 0.95 or 0.5)
+			colour(button.text, chosen and "accent" or button.over and "text" or "muted")
+		end
+	end
+	return holder
+end
+
 -- One shared list for every dropdown, drawn in the theme.
 local menu
 
@@ -353,7 +403,7 @@ function builders.toggle(row, entry)
 end
 
 function builders.choice(row, entry)
-	local seg = not entry.list and makeSegments(row, entry)
+	local seg = not entry.list and (entry.pictures and makeTiles or makeSegments)(row, entry)
 	if seg and seg:GetWidth() > CONTENT - 40 then
 		seg:Hide()
 		seg = nil
@@ -376,7 +426,7 @@ function builders.choice(row, entry)
 		end
 		local h = nameHeight(self, w)
 		self.control:SetPoint("TOPRIGHT", 0, -h - 4)
-		return h + 34
+		return h + math.max(self.control:GetHeight(), 26) + 8
 	end
 end
 
