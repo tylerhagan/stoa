@@ -216,7 +216,7 @@ local function layoutWindow(window)
 	if minimize then
 		minimize:ClearAllPoints()
 		if docked then
-			minimize:SetPoint("TOPRIGHT", window, "TOPRIGHT", 0, 2)
+			minimize:SetPoint("TOPRIGHT", window, "TOPRIGHT", 0, 4)
 		else
 			minimize:SetPoint("TOPRIGHT", header, "TOPRIGHT", -3, -5)
 		end
