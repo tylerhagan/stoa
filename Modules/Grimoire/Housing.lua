@@ -412,6 +412,12 @@ local function placeMenuNow()
 	local edge = Console.frame or UIParent
 	local point = Console.frame and "TOPRIGHT" or "BOTTOMRIGHT"
 	local lift = (Console.frame or Console.bare) and MENU_LIFT or Console:OpenHeight()
+	-- With a window docked on the right (Console:PlaceDocks), the rows hold
+	-- the open console's height on the screen instead of riding its top
+	-- down in a fight, where they would land on that window.
+	if Console.frame and Console.docked then
+		edge, point, lift = UIParent, "BOTTOMRIGHT", Console:OpenHeight() + MENU_LIFT
+	end
 	-- Bags take the corner, where every hand already goes for the backpack;
 	-- the menu sits inward of them.
 	if bags then
@@ -586,6 +592,12 @@ local function placeMenu()
 	local ok, err = pcall(placeMenuNow)
 	menuPlacing = false
 	if not ok then error(err, 0) end
+end
+
+-- For the console's slots: places the rows again, out of a fight.
+function Console:ReplaceMenu()
+	if not self.db.houseMenu then return end
+	Stoa:AfterCombat(function() xpcall(placeMenu, Stoa.catch) end)
 end
 
 -- Blizzard puts the menu and bags back now and then: Edit Mode re-applies

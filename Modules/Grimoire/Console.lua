@@ -2208,6 +2208,11 @@ end
 -- Hands each docking window its place, or nil when it has none. Places
 -- are from the screen's bottom right corner, since the console folds.
 function Console:PlaceDocks(spots)
+	local docked = next(spots) ~= nil
+	if docked ~= (self.docked or false) then
+		self.docked = docked
+		if self.ReplaceMenu then self:ReplaceMenu() end
+	end
 	local meters, looks = Stoa.modules.Meters, Stoa.Looks
 	for n = 1, 3 do
 		if meters and meters.Dock then xpcall(meters.Dock, Stoa.catch, meters, n, spots["meter" .. n]) end
