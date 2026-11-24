@@ -18,7 +18,19 @@ local GAP = 6
 
 local call = Stoa.safe.call
 
+-- Whether the quest is on the tracker. Someone who tracks nothing at all
+-- still gets every quest's item: untracking one quest says "not this one
+-- now", and tracking none says nothing.
+local function tracked(questID)
+	local log = C_QuestLog
+	if not (log and log.GetQuestWatchType and log.GetNumQuestWatches) then return true end
+	local watches = Stoa:PlainNumber(call(log.GetNumQuestWatches)) or 0
+	if watches == 0 then return true end
+	return call(log.GetQuestWatchType, questID) ~= nil
+end
+
 -- The quest items in your log, as links, one per quest, in log order.
+-- A quest taken off the tracker keeps its item out of the row.
 function QuestItems:Collect()
 	local list, seen = {}, {}
 	local count = Stoa:PlainNumber(call(C_QuestLog and C_QuestLog.GetNumQuestLogEntries or GetNumQuestLogEntries)) or 0
@@ -29,7 +41,8 @@ function QuestItems:Collect()
 			local link, _, _, showWhenComplete = call(GetQuestLogSpecialItemInfo, index)
 			local complete = type(info) == "table" and info.questID
 				and call(C_QuestLog.IsComplete, info.questID)
-			if link and not Stoa:IsSecret(link) and (not complete or showWhenComplete) then
+			local wanted = type(info) ~= "table" or not info.questID or tracked(info.questID)
+			if link and wanted and not Stoa:IsSecret(link) and (not complete or showWhenComplete) then
 				local id = Stoa.Items.id(link)
 				if id and not seen[id] then
 					seen[id] = true
@@ -156,7 +169,7 @@ function QuestItems:OnEnable()
 			xpcall(function() self:Update() end, Stoa.catch)
 		end)
 	end
-	for _, event in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "BAG_UPDATE_DELAYED", "GROUP_ROSTER_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED" }) do
+	for _, event in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_WATCH_LIST_CHANGED", "BAG_UPDATE_DELAYED", "GROUP_ROSTER_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED" }) do
 		Stoa:On(event, soon)
 	end
 	Stoa:On("PLAYER_REGEN_ENABLED", function() if self.pending then soon() end end)
