@@ -388,13 +388,15 @@ end
 
 -- Bags and the game menu leave the action bar row for the console's top
 -- edge on the right, mirroring the chat tabs on the left: the menu, a gap,
--- then the bags in the corner, a size down and quiet until the mouse is
--- over them. They ride the console's top, so they come down with it when
--- it folds.
+-- then the bags in the corner, a size down. At rest each row is hidden
+-- behind a word on the rim, MENU and BAGS, and shows while the mouse is
+-- over the word or the row. They ride the console's top, so they come down
+-- with it when it folds.
 local MENU_SCALE = 0.8
 local MENU_LIFT = 4
 local MENU_GAP = 14
-local MENU_REST_ALPHA = 0.55
+local MENU_WORD_ROOM = 16
+local MENU_WORD_REST, MENU_WORD_FIGHT = 0.6, 0.3
 local BAG_SLOTS = {
 	"MainMenuBarBackpackButton", "CharacterBag0Slot", "CharacterBag1Slot",
 	"CharacterBag2Slot", "CharacterBag3Slot", "CharacterReagentBag0Slot",
@@ -418,6 +420,8 @@ local function placeMenuNow()
 	if Console.frame and Console.docked then
 		edge, point, lift = UIParent, "BOTTOMRIGHT", Console:OpenHeight() + MENU_LIFT
 	end
+	-- Room under the rows for their words.
+	lift = lift + MENU_WORD_ROOM
 	-- Bags take the corner, where every hand already goes for the backpack;
 	-- the menu sits inward of them.
 	if bags then
@@ -663,7 +667,7 @@ local function liftBags()
 	local row = bagsBar or menu
 	if Console.db.houseMenu and row and row:IsShown() then
 		local height = Stoa:PlainNumber(row:GetHeight())
-		if height then floor = floor + MENU_LIFT + height * MENU_SCALE end
+		if height then floor = floor + MENU_LIFT + MENU_WORD_ROOM + height * MENU_SCALE end
 	end
 	local frames = { ContainerFrameCombinedBags }
 	for i = 1, 13 do frames[#frames + 1] = _G["ContainerFrame" .. i] end
@@ -678,19 +682,47 @@ local function liftBags()
 	end
 end
 
--- Rests dim, brightens while the mouse is over either row.
+-- Each row rests unseen behind its word and shows while the mouse is over
+-- the word or the row. The words are Stoa's own frames hung under the
+-- game's rows, so they follow wherever the rows are put. BAGS opens the
+-- bags on a click, as the backpack does.
+local function menuWord(row, label, click)
+	local word = CreateFrame("Button", nil, UIParent)
+	local text = UI.caption(word, label)
+	text:SetPoint("RIGHT")
+	word.text = text
+	word:SetSize(math.max(text:GetStringWidth() or 0, 24) + 4, MENU_WORD_ROOM - 4)
+	word:SetPoint("TOPRIGHT", row, "BOTTOMRIGHT", 0, -2)
+	if click then word:SetScript("OnClick", click) end
+	return word
+end
+
 local function watchMenu()
 	local menu, bags = menuFrames()
 	if not (menu or bags) then return end
-	local lit
+	local rows = {}
+	if menu then rows[#rows + 1] = { row = menu, word = menuWord(menu, "Menu") } end
+	if bags then
+		rows[#rows + 1] = { row = bags, word = menuWord(bags, "Bags", function()
+			if ToggleAllBags then ToggleAllBags() end
+		end) }
+	end
 	local function update()
-		local over = (menu and menu:IsVisible() and menu:IsMouseOver())
-			or (bags and bags:IsVisible() and bags:IsMouseOver())
-		if over == lit then return end
-		lit = over
-		local alpha = over and 1 or MENU_REST_ALPHA
-		if menu then menu:SetAlpha(alpha) end
-		if bags then bags:SetAlpha(alpha) end
+		local fight = InCombatLockdown()
+		for _, entry in ipairs(rows) do
+			local row, word = entry.row, entry.word
+			local seen = row:IsVisible()
+			word:SetShown(seen)
+			-- The row's own reach runs down over its word.
+			local over = seen and (row:IsMouseOver(0, -MENU_WORD_ROOM / MENU_SCALE, 0, 0) or word:IsMouseOver())
+			local state = over and 1 or (fight and 2 or 3)
+			if state ~= entry.state then
+				entry.state = state
+				row:SetAlpha(over and 1 or 0)
+				word.text:SetTextColor(Stoa:Color(over and "accent" or "muted"))
+				word:SetAlpha(over and 1 or (fight and MENU_WORD_FIGHT or MENU_WORD_REST))
+			end
+		end
 	end
 	update()
 	Stoa:NewTicker(0.15, update)

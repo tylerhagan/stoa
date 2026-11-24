@@ -202,7 +202,17 @@ local function stripDetails(instance)
 	call(instance, "HideMainIcon", true)
 	call(instance, "SetAutoHideMenu", true, true)
 	local r, g, b = Stoa:Color("muted")
-	call(instance, "AttributeMenu", true, 0, 8, FONT_UI, 11, { r, g, b, 1 }, 1, false)
+	-- Details hangs the title off the right of its header's corner art, a
+	-- gap that was the icon's; the title is pulled back flush with the
+	-- window's left edge.
+	local x = 0
+	local frame = instance.baseframe
+	local ball = frame and frame.cabecalho and frame.cabecalho.ball
+	if ball and ball.GetRight then
+		local right, left = Stoa:PlainNumber(ball:GetRight()), Stoa:PlainNumber(frame:GetLeft())
+		if right and left then x = left - right end
+	end
+	call(instance, "AttributeMenu", true, x, 8, FONT_UI, 11, { r, g, b, 1 }, 1, false)
 end
 
 -- Out of a slot again: the window's skin is put back on as Details ships
