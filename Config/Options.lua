@@ -483,7 +483,7 @@ local function build()
 	choice(plates, "style", "Nameplate style", "STOA: a rounded track. Bold: a heavy dark frame with the health value in the bar. Inline: name and health inside the bar. Brass: a brass edge with a level badge. Slim: a thin bar under the name. Matte: a thin line with no frame, as on the Matte target.", "stoa", {
 		{ "stoa", "STOA" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" }, { "matte", "Matte" },
 	}, { id = "plateStyle", change = restyle })
-	choice(plates, "marker", "Mark your target's plate", "A bone edge round it, arrows either side, or a soft glow behind it.", "edge", {
+	choice(plates, "marker", "Mark your target's plate", "A soft glow behind it, a bone edge round it, or arrows either side.", "glow", {
 		{ "edge", "Edge" }, { "arrows", "Arrows" }, { "glow", "Glow" },
 	}, { id = "plateMarker", words = "target highlight", change = restyle })
 	choice(plates, "fadeChoice", "Fade other plates", "While you have a target, plates you aren't targeting fade by this much.", "0", {

@@ -99,6 +99,15 @@ function Stoa:InitializeDatabase()
 		module.db = StoaDB.modules[name]
 	end
 
+	-- 2.0: the target's nameplate is marked by a glow as STOA comes, where
+	-- it was an edge. Defaults are saved with the settings, so the old one
+	-- is moved over once; choosing Edge again after that sticks.
+	if not StoaDB.markerGlow then
+		StoaDB.markerGlow = true
+		local plates = StoaDB.modules.Plates
+		if plates and plates.marker == "edge" then plates.marker = "glow" end
+	end
+
 	self.db = StoaDB
 	self.char = StoaCharDB
 end
