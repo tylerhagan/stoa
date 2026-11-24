@@ -15,7 +15,7 @@ local WIDTH, HEIGHT = 860, 600
 local HEADER, FOOTER = 64, 62
 local RAIL = 190
 local PAD = Stoa.space.xl
-local STEP_ORDER = { "start", "specs", "look", "combat", "preset", "addons", "ready" }
+local STEP_ORDER = { "start", "specs", "look", "combat", "preset", "frames", "addons", "ready" }
 local CLASS_DEFAULT_WORD = "  (class default)"
 local WELCOME_THEMES = { "Bone", "Tide", "Graphite", "Matte", "Class" }
 local WELCOME_THEME_SET = {}
@@ -217,7 +217,7 @@ local GAP = 10
 
 local STEP_TITLES = {
 	start = "Welcome", specs = "Your specs", look = "Look", combat = "In combat",
-	preset = "How much", addons = "Other addons", ready = "Ready",
+	preset = "How much", frames = "Target and frames", addons = "Other addons", ready = "Ready",
 }
 local CLASS_THEME_ORDER = { "Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Shaman", "Mage", "Warlock", "Druid" }
 local VISION_WORDS = { Standard = "Standard", RedGreen = "Red-green", BlueYellow = "Blue-yellow", NoColour = "No colour" }
@@ -781,6 +781,120 @@ function builders.preset(self, step)
 	note:SetText("Opens Settings, Setup, to switch the parts one by one. Classic feel and Same as Designer are there too.")
 end
 
+-- Target and frames: the things most people change in their first hour.
+-- Every one is read when the UI loads, so Finish's reload settles them.
+local TARGETS = { { "compact", "Compact" }, { "full", "Full" }, { "words", "Words only" } }
+local TARGET_SUBS = {
+	compact = "A small block: name, type and a slim health line.",
+	full = "The larger plaque, with the target's portrait.",
+	words = "No panel: a name and a bar over the world.",
+}
+local PLATE_STYLES = { { "stoa", "STOA" }, { "bold", "Bold" }, { "inline", "Inline" }, { "brass", "Brass" }, { "slim", "Slim" }, { "matte", "Matte" } }
+local TEXT_SIZES = { { "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" } }
+local TARGET_H = 46
+
+-- A target drawn small: the block, the plaque or bare words.
+local function targetView(parent, kind)
+	local view = CreateFrame("Frame", nil, parent)
+	local world = view:CreateTexture(nil, "BACKGROUND")
+	world:SetAllPoints()
+	world:SetColorTexture(0.17, 0.20, 0.21, 1)
+	local width, height = kind == "full" and 104 or 84, kind == "full" and 32 or 22
+	local panel = view:CreateTexture(nil, "BORDER")
+	panel:SetSize(width, height)
+	panel:SetPoint("CENTER")
+	panel:SetColorTexture(0.07, 0.075, 0.08, kind == "words" and 0 or 1)
+	local name = view:CreateTexture(nil, "ARTWORK")
+	name:SetSize(kind == "full" and 52 or 44, 3)
+	name:SetPoint("TOPLEFT", panel, "TOPLEFT", kind == "full" and 30 or 8, kind == "full" and -9 or -6)
+	name:SetColorTexture(1, 1, 1, 0.75)
+	local bar = view:CreateTexture(nil, "ARTWORK")
+	bar:SetSize(kind == "full" and 64 or 68, kind == "full" and 6 or 3)
+	bar:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, kind == "full" and -5 or -4)
+	bar:SetColorTexture(0.88, 0.27, 0.23, 1)
+	if kind == "full" then
+		local portrait = UI.circle(view, "ARTWORK", 1, 20)
+		portrait:SetPoint("LEFT", panel, "LEFT", 6, 0)
+		portrait:SetColorTexture(1, 1, 1, 0.3)
+	end
+	return view
+end
+
+local function moduleDb(name)
+	local m = Stoa.modules[name]
+	return m and m.db
+end
+
+function builders.frames(self, step)
+	local third = math.floor((BODY_W - 2 * GAP) / 3)
+	local label = UI.caption(step, "Target")
+	label:SetPoint("TOPLEFT")
+	self.targetCards = {}
+	for i, entry in ipairs(TARGETS) do
+		local button = card(step, third, TARGET_H + 66, entry[2], function()
+			local halo = moduleDb("Halo")
+			if halo then
+				halo.targetStrip = entry[1] == "words"
+				if entry[1] ~= "words" then halo.targetFull = entry[1] == "full" end
+			end
+			self.touched = true
+			self:Refresh()
+		end)
+		button:SetPoint("TOPLEFT", (i - 1) * (third + GAP), -18)
+		local view = targetView(button, entry[1])
+		view:SetPoint("TOPLEFT", 8, -8)
+		view:SetPoint("TOPRIGHT", -8, -8)
+		view:SetHeight(TARGET_H)
+		button.text:ClearAllPoints()
+		button.text:SetPoint("TOPLEFT", 14, -(TARGET_H + 14))
+		button.text:SetPoint("RIGHT", -14, 0)
+		button.sub:SetText(TARGET_SUBS[entry[1]])
+		self.targetCards[entry[1]] = button
+	end
+	self.targetNote = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
+	self.targetNote:SetPoint("TOPLEFT", 0, -(18 + TARGET_H + 66 + 6))
+	local top = -(18 + TARGET_H + 66 + 30)
+
+	-- A row of small buttons under a caption; returns the buttons by value.
+	local function row(caption, entries, y, onPick, x, width)
+		local heading = UI.caption(step, caption)
+		heading:SetPoint("TOPLEFT", x or 0, y)
+		local buttons = {}
+		local room = width or BODY_W
+		local each = math.floor((room - (#entries - 1) * 6) / #entries)
+		for i, entry in ipairs(entries) do
+			local button = UI.button(step, entry[2], each, function()
+				onPick(entry[1])
+				self.touched = true
+				self:Refresh()
+			end)
+			button:SetHeight(28)
+			button:SetPoint("TOPLEFT", (x or 0) + (i - 1) * (each + 6), y - 18)
+			buttons[entry[1]] = button
+		end
+		return buttons
+	end
+	local half = math.floor((BODY_W - 2 * GAP) / 2)
+	self.partyButtons = row("Party", { { "cards", "Cards" }, { "strips", "Strips" } }, top, function(value)
+		local party = moduleDb("Party")
+		if party then party.strips = value == "strips" end
+	end, 0, half)
+	self.restButtons = row("Out of combat, target and party", { { "stay", "Stay" }, { "fade", "Fade" } }, top, function(value)
+		local halo, party = moduleDb("Halo"), moduleDb("Party")
+		if halo then halo.restFade = value == "fade" end
+		if party then party.restFade = value == "fade" end
+	end, half + 2 * GAP, half)
+	top = top - 60
+	self.plateButtons = row("Nameplates", PLATE_STYLES, top, function(value)
+		local plates = moduleDb("Plates")
+		if plates then plates.style = value end
+	end)
+	top = top - 60
+	self.sizeButtons = row("Text size", TEXT_SIZES, top, function(value)
+		Stoa.db.textSize = value
+	end, 0, half)
+end
+
 function builders.addons(self, step)
 	local words = lede(step, "STOA found these addons. Each keeps working; say who looks after what.")
 	words:SetPoint("TOPLEFT")
@@ -919,7 +1033,7 @@ end
 -- The steps in play: Other addons only when Stoa found some.
 function Welcome:Order()
 	-- "Show me what's new" walks only the new parts.
-	if self.start == "new" then return { "start", "look", "ready" } end
+	if self.start == "new" then return { "start", "look", "frames", "ready" } end
 	local list = {}
 	for _, id in ipairs(STEP_ORDER) do
 		if id ~= "addons" or #self.addonRows > 0 then list[#list + 1] = id end
@@ -1108,7 +1222,7 @@ end
 
 function Welcome:NeedsReload()
 	if self.start == "saved" and self.setup then return true end
-	if self.applied then return true end
+	if self.applied or self.touched then return true end
 	if not self.opened then return false end
 	if Stoa.db.ornament ~= self.opened.ornament then return true end
 	if (Stoa.db.material or "leather") ~= self.opened.material then return true end
@@ -1298,6 +1412,9 @@ function Welcome:Summary()
 	local shape, around = self:Mix()
 	add("Console", shape == "slim" and "Slim" or shape == "none" and "None" or "Full")
 	add("Around it", around == "quiet" and "Quiet" or "Standard")
+	local halo, party = moduleDb("Halo") or {}, moduleDb("Party") or {}
+	add("Target", halo.targetStrip and "Words only" or (halo.targetFull or Stoa.db.material ~= "matte") and "Full" or "Compact")
+	add("Party", party.strips and "Strips" or "Cards")
 	for i, row in ipairs(self.addonRows) do
 		if i <= MAX_ADDON_ROWS and row.options and #lines < 10 then
 			for _, option in ipairs(row.options) do
@@ -1367,6 +1484,18 @@ function Welcome:Refresh()
 		local shape, around = self:Mix()
 		choose(self.consoleCards, shape)
 		choose(self.aroundCards, around)
+	elseif current == "frames" then
+		local halo, party, plates = moduleDb("Halo") or {}, moduleDb("Party") or {}, moduleDb("Plates") or {}
+		local matte = Stoa.db.material == "matte"
+		-- Leather has one plaque; the small block is Matte's.
+		self.targetCards.compact:SetShown(matte)
+		self.targetCards.full.text:SetText(matte and "Full" or "Plaque")
+		self.targetNote:SetText(matte and "" or "The Compact target comes with the Matte black look.")
+		choose(self.targetCards, halo.targetStrip and "words" or ((halo.targetFull or not matte) and "full" or "compact"))
+		choose(self.partyButtons, party.strips and "strips" or "cards")
+		choose(self.restButtons, (halo.restFade or party.restFade) and "fade" or "stay")
+		choose(self.plateButtons, plates.style or "stoa")
+		choose(self.sizeButtons, Stoa.db.textSize or "standard")
 	elseif current == "addons" then
 		for _, frame in ipairs(step.rows) do
 			if frame:IsShown() and frame.row then
@@ -1429,6 +1558,7 @@ function Welcome:Show(mode)
 	local db = halo()
 	self.opened = { ornament = Stoa.db.ornament, material = Stoa.db.material or "leather", theme = Stoa.db.theme, halo = not (db and db.enabled == false) }
 	self.applied = nil
+	self.touched = nil
 	self.finished = nil
 	self.trying = nil
 	self.start = mode == "update" and "keep" or "guided"
