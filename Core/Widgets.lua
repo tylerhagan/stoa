@@ -1282,7 +1282,9 @@ function UI.emboss(frame, header)
 		sheen:SetPoint("BOTTOM", header, "CENTER")
 	end
 	sheen:SetDrawLayer("BACKGROUND", -4)
-	UI.gradient(sheen, "text", 0.07, "VERTICAL", 0, 1)
+	-- Matte has no shine: the header is the same moulded block as the
+	-- rest, with only a trace of light at its top.
+	UI.gradient(sheen, "text", UI.matte() and 0.02 or 0.07, "VERTICAL", 0, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 3)
 	top:SetTexture(UI.WHITE)
 	UI.pixel(top, "height")

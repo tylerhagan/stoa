@@ -986,11 +986,32 @@ end
 -- The member card that opens beside the roster: STOA's card in place of the
 -- dark dialog border, quiet labels, the notes as wells, STOA's buttons.
 local DETAIL_LABELS = { "ZoneLabel", "RankLabel", "OnlineLabel", "NoteLabel", "OfficerNoteLabel" }
+-- The member panel's card: how far its left edge sits inside the frame's
+-- (the words start 17 in), how far its right runs past, and the gap to
+-- the guild window.
+local DETAIL_LEFT, DETAIL_RIGHT, DETAIL_GAP = 4, 8, 6
+
 local function guildDetail(detail, windows)
 	if type(detail) ~= "table" or forbidden(detail) or detail.stoaDetail then return end
 	detail.stoaDetail = true
 	alphaOff(detail.Border)
-	UI.surface(detail, "card", { alpha = 0.97 })
+	-- Blizzard's border ran wider than the frame, more so on the right,
+	-- and the buttons and note run to the frame's own right edge. The card
+	-- is a frame of its own behind the words, with the same room on both
+	-- sides, and the whole panel stands clear of the window beside it.
+	local card = CreateFrame("Frame", nil, detail)
+	card:SetPoint("TOPLEFT", detail, "TOPLEFT", DETAIL_LEFT, 0)
+	card:SetPoint("BOTTOMRIGHT", detail, "BOTTOMRIGHT", DETAIL_RIGHT, 0)
+	card:SetFrameLevel(math.max(detail:GetFrameLevel() - 1, 0))
+	UI.surface(card, "card", { alpha = 0.97 })
+	local function stand()
+		local parent = detail:GetParent()
+		if not parent then return end
+		detail:ClearAllPoints()
+		detail:SetPoint("TOPLEFT", parent, "TOPRIGHT", DETAIL_GAP - DETAIL_LEFT, -76)
+	end
+	detail:HookScript("OnShow", function() xpcall(stand, Stoa.catch) end)
+	stand()
 	if windows then
 		if windows.DressClose then windows.DressClose(detail.CloseButton) end
 		if windows.DressButton then
