@@ -32,7 +32,6 @@ end
 -- touches back to their defaults, then applies its own changes, so picking
 -- one after another never leaves leftovers. Skins and the like only change
 -- after /reload.
-local PRESET_ORDER = { "full", "slim", "minimal", "quiet", "classic", "taer" }
 -- Full is how Stoa ships; the other two are described against it, so the
 -- page says exactly what a choice takes away.
 local PRESET_WORDS = {
@@ -152,12 +151,55 @@ function Welcome:ApplyPreset(name)
 	end
 	for _, change in ipairs(changesFor(name)) do setValue(change[1], change[2], change[3]) end
 	Stoa.db.preset = name
+	-- (How much, below, sets this again after a preset.)
+	Stoa.db.around = nil
 	-- Until the next reload the page asks for one.
 	self.applied = name
 	-- The settings these change are read when the UI loads.
 	local party = Stoa.modules.Party
 	if party and party.SetGridMode and party.db then party:SetGridMode(party.db.clickGrid) end
 	return true
+end
+
+-- How much, as two answers ------------------------------------------------------
+-- The console (full, slim or none) and everything around it (standard or
+-- quiet). Each pair starts from the preset that carries its Edit Mode
+-- layout, then sets the parts Quiet means, so any console goes with either.
+local QUIET_ON = {
+	{ "Party", "strips", true }, { "Halo", "targetStrip", true },
+	{ "Halo", "restFade", true }, { "Party", "restFade", true },
+	{ "Tooltip", "unitDetails", false }, { "Kit", "questLine", false },
+	{ "Tally", "enabled", false },
+}
+
+function Welcome:Mix()
+	local console = Stoa.modules.Grimoire
+	local db = console and console.db
+	local shape = "full"
+	if db and db.enabled == false then shape = "none" elseif db and db.slim then shape = "slim" end
+	local around = Stoa.db.around
+	if around ~= "standard" and around ~= "quiet" then
+		local party = Stoa.modules.Party
+		around = ((party and party.db and party.db.strips) or Stoa.db.preset == "quiet") and "quiet" or "standard"
+	end
+	return shape, around
+end
+
+function Welcome:ApplyMix(shape, around)
+	local base = shape == "slim" and "slim" or shape == "none" and "minimal" or (around == "quiet" and "quiet" or "full")
+	self:ApplyPreset(base)
+	for _, entry in ipairs(QUIET_ON) do
+		if around == "quiet" then
+			setValue(entry[1], entry[2], entry[3])
+		else
+			setValue(entry[1], entry[2], defaultOf(entry[1], entry[2]))
+		end
+	end
+	-- The grid only matters to healers, who keep it folded when quiet.
+	setValue("Party", "clickGrid", around == "quiet" and (playsHealer() and "fold" or "hidden") or defaultOf("Party", "clickGrid"))
+	Stoa.db.around = around
+	local party = Stoa.modules.Party
+	if party and party.SetGridMode and party.db then party:SetGridMode(party.db.clickGrid) end
 end
 
 -- The wizard ------------------------------------------------------------------
@@ -642,38 +684,101 @@ function builders.combat(self, step)
 end
 
 -- Six cards share the step, so each is a little shorter than the others'.
-local PRESET_CARD = 60
+
+local CONSOLES = {
+	{ "full", "Full", "The whole console with its pages." },
+	{ "slim", "Slim", "The console as one line." },
+	{ "none", "None", "No console; health and mana as two faint arcs." },
+}
+local AROUNDS = {
+	{ "standard", "Standard", "Target and party as cards, tooltip details, the quest line and At a glance." },
+	{ "quiet", "Quiet", "The slim version of everything: target and party as strips that fade at rest, and fewer words on tooltips and the console." },
+}
+local SHAPE_H = 62
+
+-- A small drawing of the screen for a console choice.
+local function shapeView(parent, shape)
+	local view = CreateFrame("Frame", nil, parent)
+	local world = view:CreateTexture(nil, "BACKGROUND")
+	world:SetAllPoints()
+	world:SetColorTexture(0.17, 0.20, 0.21, 1)
+	local height = shape == "full" and 22 or shape == "slim" and 7 or 0
+	if height > 0 then
+		local band = view:CreateTexture(nil, "ARTWORK")
+		band:SetPoint("BOTTOMLEFT")
+		band:SetPoint("BOTTOMRIGHT")
+		band:SetHeight(height)
+		band:SetColorTexture(0.07, 0.075, 0.08, 1)
+		local rim = view:CreateTexture(nil, "OVERLAY")
+		rim:SetPoint("BOTTOMLEFT", band, "TOPLEFT")
+		rim:SetPoint("BOTTOMRIGHT", band, "TOPRIGHT")
+		rim:SetHeight(1)
+		rim:SetColorTexture(1, 1, 1, 0.25)
+	end
+	-- The character, with health and mana beside it where there's no console.
+	local figure = UI.circle(view, "ARTWORK", 1, 8)
+	figure:SetPoint("CENTER", 0, 10)
+	figure:SetColorTexture(1, 1, 1, 0.5)
+	if shape == "none" then
+		for side = -1, 1, 2 do
+			local arc = view:CreateTexture(nil, "ARTWORK")
+			arc:SetSize(2, 20)
+			arc:SetPoint("CENTER", figure, "CENTER", side * 12, 0)
+			if side < 0 then arc:SetColorTexture(0.9, 0.87, 0.8, 0.8) else arc:SetColorTexture(0.44, 0.61, 1, 0.8) end
+		end
+	end
+	return view
+end
 
 function builders.preset(self, step)
-	local words = lede(step, "How much STOA does. Full is how it ships; the others say exactly what they take away.")
-	words:SetPoint("TOPLEFT")
-	-- The presets set the layout's parts together; the settings change them
-	-- one by one. The page stays up behind the settings window.
-	local MIX_W = 150
-	words:SetWidth(BODY_W - MIX_W - 24)
-	local mix = UI.button(step, "Mix your own", MIX_W, function()
+	local third = math.floor((BODY_W - 2 * GAP) / 3)
+	local half = math.floor((BODY_W - GAP) / 2)
+	local label = UI.caption(step, "The console")
+	label:SetPoint("TOPLEFT")
+	self.consoleCards, self.aroundCards = {}, {}
+	for i, entry in ipairs(CONSOLES) do
+		local button = card(step, third, SHAPE_H + 70, entry[2], function()
+			local _, around = self:Mix()
+			self:ApplyMix(entry[1], around)
+			self:Refresh()
+		end)
+		button:SetPoint("TOPLEFT", (i - 1) * (third + GAP), -18)
+		local view = shapeView(button, entry[1])
+		view:SetPoint("TOPLEFT", 8, -8)
+		view:SetPoint("TOPRIGHT", -8, -8)
+		view:SetHeight(SHAPE_H)
+		button.text:ClearAllPoints()
+		button.text:SetPoint("TOPLEFT", 14, -(SHAPE_H + 16))
+		button.text:SetPoint("RIGHT", -14, 0)
+		button.sub:SetText(entry[3])
+		self.consoleCards[entry[1]] = button
+	end
+	local top = -(18 + SHAPE_H + 70 + 16)
+	local second = UI.caption(step, "Everything around it")
+	second:SetPoint("TOPLEFT", 0, top)
+	for i, entry in ipairs(AROUNDS) do
+		local button = card(step, half, 84, entry[2], function()
+			local shape = self:Mix()
+			self:ApplyMix(shape, entry[1])
+			self:Refresh()
+		end)
+		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), top - 18)
+		button.sub:SetText(entry[3])
+		self.aroundCards[entry[1]] = button
+	end
+	top = top - 18 - 84 - 14
+	-- The parts one by one live in settings. The page stays up behind the
+	-- settings window.
+	local mix = UI.button(step, "Mix your own", 150, function()
 		Stoa:OpenSettings("setup")
 		local window = Stoa.SettingsWindow and Stoa.SettingsWindow.page
 		if window and window:IsShown() then window:Raise() end
 	end)
-	mix:SetPoint("TOPRIGHT", 0, 2)
-	mix:HookScript("OnEnter", function(button)
-		GameTooltip:SetOwner(button, "ANCHOR_BOTTOMRIGHT")
-		GameTooltip:SetText("Mix your own")
-		GameTooltip:AddLine("Opens Settings, Setup, where Your own mix sets the console, party, target and resting look one by one. Pick a card here first as a starting point, or go straight there.", 1, 1, 1, true)
-		GameTooltip:Show()
-	end)
-	mix:HookScript("OnLeave", GameTooltip_Hide)
-	self.presetCards = {}
-	for i, name in ipairs(PRESET_ORDER) do
-		local button = card(step, BODY_W, PRESET_CARD, PRESET_WORDS[name][1], function()
-			self:ApplyPreset(name)
-			self:Refresh()
-		end)
-		button.sub:SetText(PRESET_WORDS[name][2])
-		button:SetPoint("TOPLEFT", 0, -44 - (i - 1) * (PRESET_CARD + 6))
-		self.presetCards[name] = button
-	end
+	mix:SetPoint("TOPLEFT", 0, top)
+	local note = UI.text(step, "sans", Stoa.typeSize.caption, "muted")
+	note:SetPoint("LEFT", mix, "RIGHT", 12, 0)
+	note:SetPoint("RIGHT", step, "RIGHT", 0, 0)
+	note:SetText("Opens Settings, Setup, to switch the parts one by one. Classic feel and Same as Designer are there too.")
 end
 
 function builders.addons(self, step)
@@ -1190,7 +1295,9 @@ function Welcome:Summary()
 	local choice = combatChoice()
 	add("In combat", choice == "fold" and ("Fold, " .. (Stoa.db.calm or "5") .. " s" .. (Stoa.db.calmGroup ~= false and ", waits for group" or ""))
 		or choice == "open" and "Console open, Halo" or "Console open, no Halo")
-	add("How much", PRESET_WORDS[Stoa.db.preset or "full"][1])
+	local shape, around = self:Mix()
+	add("Console", shape == "slim" and "Slim" or shape == "none" and "None" or "Full")
+	add("Around it", around == "quiet" and "Quiet" or "Standard")
 	for i, row in ipairs(self.addonRows) do
 		if i <= MAX_ADDON_ROWS and row.options and #lines < 10 then
 			for _, option in ipairs(row.options) do
@@ -1257,7 +1364,9 @@ function Welcome:Refresh()
 	elseif current == "combat" then
 		self:RefreshCombat(step)
 	elseif current == "preset" then
-		choose(self.presetCards, Stoa.db.preset or "full")
+		local shape, around = self:Mix()
+		choose(self.consoleCards, shape)
+		choose(self.aroundCards, around)
 	elseif current == "addons" then
 		for _, frame in ipairs(step.rows) do
 			if frame:IsShown() and frame.row then
