@@ -360,8 +360,9 @@ local function lookPreview(parent, matte)
 		local grain = console:CreateTexture(nil, "BACKGROUND", nil, -5)
 		grain:SetAllPoints()
 		grain:SetTexture(UI.GRAIN, "REPEAT", "REPEAT")
-		grain:SetTexCoord(0, 3, 0, 0.3)
-		grain:SetAlpha(0.105)
+		-- The Smooth finish, one texel to the pixel near enough.
+		grain:SetTexCoord(0, 2.3, 0, 0.36)
+		grain:SetAlpha(0.07)
 		rim:SetHeight(1)
 		rim:SetColorTexture(1, 1, 1, 0.2)
 	else
