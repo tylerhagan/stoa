@@ -23,6 +23,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - Matte keeps its white accent under the colour vision settings.
 - Fixed: a selected button could show its border only after the mouse had been over it.
 - **The console's right side in slots**: Settings > Console has three slots, left to right. Each holds Ready, Journey or Company, one of the game's damage meter windows (Meter 1 to 3), a Details window (Details 1 or 2) or nothing. Choosing something another slot holds swaps the two. The full console only.
+- **Details in a slot**: a Details window in a slot loses its backdrop, header art, icon and status bar. Its title sits on the line of the pages' headings with the same hairline under it, its buttons show only under the mouse, and its rows are STOA's type over quiet one-colour bars with the class in the name. Taking it out of the slot puts its skin back.
+- **Menu and bags as words**: the game menu and the bag row rest unseen behind two words on the console's edge, MENU and BAGS, and show while the mouse is over the word or the row. A click on BAGS opens the bags. In a fight the words dim. With a window docked in a slot the rows hold their place instead of dropping onto it.
 - **Leather polish**:
   - The target can be Compact on Leather too (Settings > Target size, and the welcome page's Target and frames step). Leather starts Full, Matte starts Compact, and each look remembers its own.
   - The Leather target says RARE, ELITE or BOSS in colour and no longer says HOSTILE, as the red bar already does.
