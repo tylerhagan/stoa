@@ -159,15 +159,44 @@ local function chatParts()
 		local frame = _G["ChatFrame" .. i]
 		if frame then parts[#parts + 1] = frame end
 	end
-	for _, name in ipairs({ "StoaChatRail", "StoaChatTabs", "ChatFrame1EditBox" }) do
+	for i = 1, (NUM_CHAT_WINDOWS or 10) do
+		local box = _G["ChatFrame" .. i .. "EditBox"]
+		if box then parts[#parts + 1] = box end
+	end
+	for _, name in ipairs({ "StoaChatRail", "StoaChatTabs" }) do
 		if _G[name] then parts[#parts + 1] = _G[name] end
 	end
 	return parts
 end
 
 local function typing()
+	if ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow() then return true end
 	local box = ChatFrame1EditBox
 	return box and box.HasFocus and box:HasFocus()
+end
+
+-- How long the chat stays after you stop typing, for the answer to come.
+local CHAT_LINGER = 12
+
+-- Enter (or anything that opens a chat box) brings the whole chat back with
+-- the lines already said: the game had faded those out while it was clear.
+function Console:WakeChat()
+	if not self.riding then return end
+	self.chatWake = (self.chatWake or 0) + 1
+	self:ClearChat(false)
+	for i = 1, (NUM_CHAT_WINDOWS or 10) do
+		local frame = _G["ChatFrame" .. i]
+		if frame and frame.ResetAllFadeTimes and frame.IsShown and frame:IsShown() then frame:ResetAllFadeTimes() end
+	end
+end
+
+function Console:RestChat()
+	if not self.riding then return end
+	self.chatWake = (self.chatWake or 0) + 1
+	local wake = self.chatWake
+	C_Timer.After(CHAT_LINGER, function()
+		if self.riding and self.chatWake == wake and not typing() then self:ClearChat(true) end
+	end)
 end
 
 function Console:ClearChat(clear)
@@ -299,10 +328,18 @@ Stoa:On("STOA_READY", function()
 		end)
 	end
 	-- Typing brings the chat back until you're done.
-	local box = ChatFrame1EditBox
-	if box and box.HookScript then
-		box:HookScript("OnEditFocusGained", function() if Console.riding then Console:ClearChat(false) end end)
-		box:HookScript("OnEditFocusLost", function() if Console.riding then Console:ClearChat(true) end end)
+	-- It stays a while after, so a conversation reads as one.
+	local function wake() xpcall(Console.WakeChat, Stoa.catch, Console) end
+	local function rest() xpcall(Console.RestChat, Stoa.catch, Console) end
+	if ChatEdit_ActivateChat and ChatEdit_DeactivateChat then
+		hooksecurefunc("ChatEdit_ActivateChat", wake)
+		hooksecurefunc("ChatEdit_DeactivateChat", rest)
+	else
+		local box = ChatFrame1EditBox
+		if box and box.HookScript then
+			box:HookScript("OnEditFocusGained", wake)
+			box:HookScript("OnEditFocusLost", rest)
+		end
 	end
 	Console:CheckRiding()
 end)
