@@ -241,12 +241,22 @@ end
 
 local builders = {}
 
+local START_WORDS = "A handful of choices and your screen is ready. Each can be changed later in settings, and /stoa welcome brings this back."
+local UPDATE_WORDS = "Version 2 brings a second look, Matte black, and a new setup. Your screen stays exactly as it is unless you choose otherwise."
+local UPDATE_OPTIONS = {
+	{ "keep", "Keep my setup", "Nothing changes. This closes, and /stoa welcome brings the setup back any time." },
+	{ "new", "Show me what's new", "Just the new parts: the two looks side by side, then finish." },
+	{ "guided", "Run the whole setup", "Every step, starting from what you have now." },
+}
+
 function builders.start(self, step)
 	local hello = UI.text(step, "serif", Stoa.typeSize.display, "text")
 	hello:SetPoint("TOPLEFT")
 	hello:SetText("Welcome to STOA")
-	local words = lede(step, "A handful of choices and your screen is ready. Each can be changed later in settings, and /stoa welcome brings this back.")
+	step.hello = hello
+	local words = lede(step, START_WORDS)
 	words:SetPoint("TOPLEFT", hello, "BOTTOMLEFT", 0, -10)
+	step.words = words
 	step.top = 92
 	if Stoa:MediaMissing() then
 		local warn = lede(step, Stoa.RESTART_NOTE)
@@ -270,6 +280,20 @@ function builders.start(self, step)
 		button.sub:SetText(option[3])
 		button.id = id
 		step.cards[#step.cards + 1] = button
+	end
+	-- Version 2, for someone who already plays with STOA: nothing changes
+	-- unless they say so.
+	step.updateCards = {}
+	for i, option in ipairs(UPDATE_OPTIONS) do
+		local id = option[1]
+		local button = card(step, BODY_W, 54, option[2], function()
+			self.start = id
+			self:Refresh()
+		end)
+		button.sub:SetText(option[3])
+		button:SetPoint("TOPLEFT", 0, -step.top - (i - 1) * (54 + GAP))
+		button.id = id
+		step.updateCards[i] = button
 	end
 	step.setupRows = {}
 	for i = 1, MAX_SETUPS do
@@ -779,6 +803,8 @@ end
 
 -- The steps in play: Other addons only when Stoa found some.
 function Welcome:Order()
+	-- "Show me what's new" walks only the new parts.
+	if self.start == "new" then return { "start", "look", "ready" } end
 	local list = {}
 	for _, id in ipairs(STEP_ORDER) do
 		if id ~= "addons" or #self.addonRows > 0 then list[#list + 1] = id end
@@ -805,7 +831,11 @@ function Welcome:Move(by)
 	for i, id in ipairs(order) do if id == self.current then index = i end end
 	if by > 0 and self.current == "ready" then return self:Finish() end
 	-- A saved setup or Stoa as it ships has nothing in between.
-	if self.start ~= "guided" and (self.current == "start" or self.current == "ready") then
+	if self.start == "keep" and by > 0 then
+		self.page:Hide()
+		return
+	end
+	if self.start ~= "guided" and self.start ~= "new" and (self.current == "start" or self.current == "ready") then
 		return self:Go(by > 0 and "ready" or "start")
 	end
 	self:Go(order[math.max(1, math.min(#order, index + by))])
@@ -1047,9 +1077,16 @@ local function choose(map, chosen)
 end
 
 function Welcome:RefreshStart(step)
+	local update = self.mode == "update"
+	step.hello:SetText(update and "Welcome to STOA 2" or "Welcome to STOA")
+	step.words:SetText(update and UPDATE_WORDS or START_WORDS)
+	for _, button in ipairs(step.updateCards) do
+		button:SetShown(update)
+		button:SetSelected(self.start == button.id)
+	end
 	local y = step.top
 	for _, button in ipairs(step.cards) do
-		local shown = button.id ~= "saved" or #self.setups > 0
+		local shown = (not update) and (button.id ~= "saved" or #self.setups > 0)
 		button:SetShown(shown)
 		if shown then
 			button:ClearAllPoints()
@@ -1058,7 +1095,7 @@ function Welcome:RefreshStart(step)
 			y = y + button:GetHeight() + GAP
 			if button.id == "saved" then
 				for i, row in ipairs(step.setupRows) do
-					local entry = self.start == "saved" and self.setups[i]
+					local entry = (not update) and self.start == "saved" and self.setups[i]
 					row:SetShown(entry and true or false)
 					if entry then
 						local setup = entry.setup
@@ -1225,7 +1262,7 @@ function Welcome:Refresh()
 	end
 
 	-- Header and footer.
-	self.skip:SetShown(current ~= "start" and current ~= "ready" and self.start == "guided")
+	self.skip:SetShown(current ~= "start" and current ~= "ready" and (self.start == "guided" or self.start == "new"))
 	self.back:SetShown(current ~= "start")
 	local index
 	for i, id in ipairs(order) do if id == current then index = i end end
@@ -1234,7 +1271,9 @@ function Welcome:Refresh()
 	local word = "Next"
 	if current == "ready" then
 		word = "Finish and reload"
-	elseif current == "start" and self.start ~= "guided" then
+	elseif current == "start" and self.start == "keep" then
+		word = "Close"
+	elseif current == "start" and self.start ~= "guided" and self.start ~= "new" then
 		word = "Continue"
 	end
 	self.next:SetReloads(current == "ready")
@@ -1243,11 +1282,15 @@ function Welcome:Refresh()
 	self.next:SetSelected(true)
 end
 
-function Welcome:Show()
+-- `mode` "update": the version 2 card for someone who already plays with
+-- STOA (shown once per account).
+function Welcome:Show(mode)
 	if InCombatLockdown() then
-		Stoa:AfterCombat(function() Welcome:Show() end)
+		Stoa:AfterCombat(function() Welcome:Show(mode) end)
 		return
 	end
+	self.mode = mode
+	Stoa.db.v2Offered = true
 	if not self.page then self:Build() end
 	-- The first showing on a character ignores Escape, so a key pressed to
 	-- clear a quest window or a cinematic at login can't close it unseen;
@@ -1264,7 +1307,7 @@ function Welcome:Show()
 	self.applied = nil
 	self.finished = nil
 	self.trying = nil
-	self.start = "guided"
+	self.start = mode == "update" and "keep" or "guided"
 	self.setups = Stoa.Setups and Stoa.Setups:List() or {}
 	while #self.setups > MAX_SETUPS do table.remove(self.setups) end
 	self.setup = nil
@@ -1284,7 +1327,9 @@ function Welcome:Pending()
 	return Stoa.char ~= nil and not Stoa.char.welcomed
 end
 
-Stoa.commands.welcome = function() Welcome:Show() end
+Stoa.commands.welcome = function(rest)
+	Welcome:Show(strtrim(rest or ""):lower() == "update" and "update" or nil)
+end
 
 -- Back from practice combat: the page again, at its last step, as it was.
 function Welcome:Resume()
@@ -1303,11 +1348,17 @@ Stoa:On("STOA_PRACTICE", function(on)
 end)
 
 Stoa:On("STOA_READY", function()
-	if Stoa.char.welcomed then return end
+	-- A character already set up, on an account that hasn't been offered
+	-- version 2 yet, gets its card once; a new character gets the setup.
+	local mode
+	if Stoa.char.welcomed then
+		if Stoa.db.v2Offered then return end
+		mode = "update"
+	end
 	-- Let the world and the rest of the UI settle first.
 	-- A companion's own welcome page (Core/Companions.lua) goes first.
 	C_Timer.After(5, function()
-		Stoa.Companions:AfterWelcomes(function() Welcome:Show() end)
+		Stoa.Companions:AfterWelcomes(function() Welcome:Show(mode) end)
 	end)
 end)
 
