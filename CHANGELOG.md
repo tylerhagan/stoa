@@ -30,7 +30,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - **Visor arcs flatter**: the Halo's Visor arc style bows about half as much and is a fifth shorter, like marks on a wide curved pane.
 - **Gauge arcs redrawn**: the Halo's Gauge arc style is now the square one, a straight slim bar standing inside a faint square bracket.
 - **Guild member panel**: the panel that opens beside the guild window when you pick a member has the same room on its right as on its left, and stands clear of the window instead of overlapping its edge.
-- **Menu and bags as words**: the game menu and the bag row rest unseen behind two words on the console's edge, MENU and BAGS, and show while the mouse is over the word or the row. A click on BAGS opens the bags. In a fight the words dim. With a window docked in a slot the rows hold their place instead of dropping onto it.
+- **Menu and bags as words**: the game menu and the bag row rest unseen behind two words on the console's edge, MENU and BAGS, and open in the word's place while the mouse is over it, so the hand only moves across to its button. A click on BAGS opens the bags. In a fight the words dim. With a window docked in a slot the rows hold their place instead of dropping onto it.
 - **Leather polish**:
   - The target can be Compact on Leather too (Settings > Target size, and the welcome page's Target and frames step). Leather starts Full, Matte starts Compact, and each look remembers its own.
   - The Leather target says RARE, ELITE or BOSS in colour and no longer says HOSTILE, as the red bar already does.
