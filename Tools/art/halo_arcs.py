@@ -53,14 +53,32 @@ def visor():
     ]
 
 
+# The gauge: an instrument's scale on the curve (fine ticks on a hairline,
+# every fifth longer) with a thin square bracket standing just outside it.
+# The bracket is straight, so it is given as boxes: left, right, bottom,
+# top (x leftwards from the Halo's centre, y up) and alpha.
+GAUGE_RADIUS = 134.0
+GAUGE_HALF_HEIGHT = 104.0
+GAUGE_BRACKET_X = 144.0
+GAUGE_BRACKET_LINE = 1.0
+GAUGE_BRACKET_TIP = 10.0
+
+
 def gauge():
-    parts = []
-    for i in range(10):
-        start = -60 + i * 12
-        parts.append((start + 1, start + 11, OUTER, lambda a: 9 + 0 * a, 1.0))
-    for tick in (-30, 0, 30):
-        parts.append((tick - 0.6, tick + 0.6, 150, lambda a: 4 + 0 * a, 0.5))
-    return OUTER, parts
+    span = float(np.degrees(np.arcsin(GAUGE_HALF_HEIGHT / GAUGE_RADIUS)))
+    parts = [(-span, span, GAUGE_RADIUS, lambda a: 1.0 + 0 * a, 0.55)]
+    ticks = 30
+    for i in range(ticks + 1):
+        at = -span + 2 * span * i / ticks
+        length = 11.0 if i % 5 == 0 else 6.0
+        parts.append((at - 0.5, at + 0.5, GAUGE_RADIUS, (lambda n: lambda a: n + 0 * a)(length), 1.0))
+    x, h, line, tip = GAUGE_BRACKET_X, GAUGE_HALF_HEIGHT, GAUGE_BRACKET_LINE, GAUGE_BRACKET_TIP
+    boxes = [
+        (x - line, x, -h, h, 1.0),
+        (x - tip, x, h - line, h, 1.0),
+        (x - tip, x, -h, -h + line, 1.0),
+    ]
+    return OUTER, parts, boxes
 
 
 def tube():
@@ -70,7 +88,7 @@ def tube():
     ]
 
 
-def draw(circle, parts, squash=1.0):
+def draw(circle, parts, boxes=(), squash=1.0):
     """`circle` is the radius the parts are measured on; its outer edge
     always meets the Halo's own (OUTER) at the arc's middle."""
     n_x, n_y = W * SS, H * SS
@@ -78,6 +96,7 @@ def draw(circle, parts, squash=1.0):
     x = (n_x - (np.arange(n_x) + 0.5)) * SHOWN / n_x
     y = (n_y / 2 - (np.arange(n_y) + 0.5)) * SHOWN / (n_x)
     xx, yy = np.meshgrid(x, y)
+    flat_x, flat_y = xx, yy
     xx = xx + (circle - OUTER)
     yy = yy / squash
     radius = np.hypot(xx, yy)
@@ -85,6 +104,9 @@ def draw(circle, parts, squash=1.0):
     alpha = np.zeros((n_y, n_x))
     for start, end, outer, thickness, strength in parts:
         inside = (angle >= start) & (angle <= end) & (radius <= outer) & (radius >= outer - thickness(angle))
+        alpha = np.maximum(alpha, inside * strength)
+    for left, right, bottom, top, strength in boxes:
+        inside = (flat_x >= left) & (flat_x <= right) & (flat_y >= bottom) & (flat_y <= top)
         alpha = np.maximum(alpha, inside * strength)
     return alpha.reshape(H, SS, W, SS).mean(axis=(1, 3))
 

@@ -28,6 +28,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 - **Matte window headers lose their sheen**: on Matte a window's header is the same flat moulded surface as the rest, with only a trace of light along its top. Leather keeps its sheen.
 - **Settings**: a wider row of choices (Matte grain, Arc style) sits at the right edge like every other control, beside its name when there is room. Ornament is tucked under Material and shows only on Leather, where it does something.
 - **Visor arcs flatter**: the Halo's Visor arc style bows about half as much and is a fifth shorter, like marks on a wide curved pane.
+- **Gauge arcs redrawn**: the Halo's Gauge arc style is now fine dial ticks on a hairline, every fifth one longer, with a thin square bracket standing just outside.
 - **Guild member panel**: the panel that opens beside the guild window when you pick a member has the same room on its right as on its left, and stands clear of the window instead of overlapping its edge.
 - **Menu and bags as words**: the game menu and the bag row rest unseen behind two words on the console's edge, MENU and BAGS, and show while the mouse is over the word or the row. A click on BAGS opens the bags. In a fight the words dim. With a window docked in a slot the rows hold their place instead of dropping onto it.
 - **Leather polish**:
