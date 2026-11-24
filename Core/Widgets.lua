@@ -211,6 +211,67 @@ function UI.line(parent, token, alpha)
 	return tex
 end
 
+-- An upright seam like the console's own: a line strongest in the middle
+-- and clear at both ends, a dark crease to its left for depth. Leather
+-- draws it in the accent; Matte as a moulded groove with a faint lit edge.
+-- `quiet` is for scroll rails, which sit beside their own thumb.
+local seams = setmetatable({}, { __mode = "k" })
+
+local function paintSeam(seam)
+	local matte = Stoa.db ~= nil and Stoa.db.material == "matte"
+	local r, g, b = Stoa:Color("accent")
+	local lineAlpha, creaseAlpha = seam.quiet and 0.22 or 0.4, seam.quiet and 0.3 or 0.5
+	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, seam.quiet and 0.04 or 0.06, seam.quiet and 0.45 or 0.6 end
+	seam.creaseUp:SetWidth(matte and 2 or 1)
+	seam.creaseDown:SetWidth(matte and 2 or 1)
+	local gradient = CreateColor and seam.upper.SetGradient
+	for _, part in ipairs({ seam.upper, seam.lower, seam.creaseUp, seam.creaseDown }) do
+		local dark = part == seam.creaseUp or part == seam.creaseDown
+		local pr, pg, pb, pa = r, g, b, lineAlpha
+		if dark then pr, pg, pb, pa = 0, 0, 0, creaseAlpha end
+		local up = part == seam.upper or part == seam.creaseUp
+		part:SetColorTexture(1, 1, 1, 1)
+		if gradient then
+			local clear, solid = CreateColor(pr, pg, pb, 0), CreateColor(pr, pg, pb, pa)
+			-- (A vertical gradient runs from the bottom colour to the top one.)
+			pcall(part.SetGradient, part, "VERTICAL", up and solid or clear, up and clear or solid)
+		else
+			part:SetColorTexture(pr, pg, pb, pa * 0.7)
+		end
+	end
+end
+
+function UI.seam(parent, quiet)
+	local seam = CreateFrame("Frame", nil, parent)
+	seam:SetWidth(3)
+	seam.quiet = quiet
+	local function half(layer, up)
+		local tex = seam:CreateTexture(nil, layer)
+		tex:SetWidth(1)
+		if up then
+			tex:SetPoint("TOP")
+			tex:SetPoint("BOTTOM", seam, "CENTER")
+		else
+			tex:SetPoint("TOP", seam, "CENTER")
+			tex:SetPoint("BOTTOM")
+		end
+		return tex
+	end
+	seam.upper, seam.lower = half("ARTWORK", true), half("ARTWORK", false)
+	seam.creaseUp, seam.creaseDown = seam:CreateTexture(nil, "BORDER"), seam:CreateTexture(nil, "BORDER")
+	seam.creaseUp:SetPoint("TOPRIGHT", seam.upper, "TOPLEFT")
+	seam.creaseUp:SetPoint("BOTTOMRIGHT", seam.upper, "BOTTOMLEFT")
+	seam.creaseDown:SetPoint("TOPRIGHT", seam.lower, "TOPLEFT")
+	seam.creaseDown:SetPoint("BOTTOMRIGHT", seam.lower, "BOTTOMLEFT")
+	seams[seam] = true
+	paintSeam(seam)
+	return seam
+end
+
+Stoa:On("STOA_THEME_CHANGED", function()
+	for seam in pairs(seams) do paintSeam(seam) end
+end)
+
 function UI.text(parent, kind, size, token, justify)
 	local fs = parent:CreateFontString(nil, "OVERLAY")
 	Stoa:SetFont(fs, kind, size)

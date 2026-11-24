@@ -878,14 +878,11 @@ local function column(owner, alpha, side)
 	fill:SetTexture(UI.WHITE)
 	fill:SetAllPoints()
 	fill:SetVertexColor(0, 0, 0, alpha)
-	local rule = owner:CreateTexture(nil, "BORDER")
-	rule:SetTexture(UI.WHITE)
-	UI.pixel(rule, "width")
+	-- The console's own seam between the columns, not a plain white line.
+	local rule = UI.seam(owner)
 	rule:SetPoint("TOP" .. side)
 	rule:SetPoint("BOTTOM" .. side)
-	UI.tint(rule, "hairline")
 	owner.stoaColumn = fill
-	UI.applyTheme()
 end
 
 -- Each scroll list builds its rows as they scroll into view.

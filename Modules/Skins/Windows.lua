@@ -249,13 +249,11 @@ local function dressScrollBar(bar)
 	for _, key in ipairs({ "Begin", "Middle", "End" }) do
 		if track[key] and track[key].SetAlpha then track[key]:SetAlpha(0) end
 	end
-	local rail = track:CreateTexture(nil, "BACKGROUND")
-	rail:SetTexture(UI.WHITE)
-	rail:SetWidth(1)
-	UI.pixel(rail, "width")
+	-- The rail: a quiet seam, clear at both ends, under the thumb.
+	local rail = UI.seam(track, true)
+	rail:SetFrameLevel(track:GetFrameLevel())
 	rail:SetPoint("TOP", 0, 0)
 	rail:SetPoint("BOTTOM", 0, 0)
-	UI.tint(rail, "hairline", 0.6)
 	local thumb = track.Thumb
 	if type(thumb) ~= "table" or not thumb.CreateTexture then return end
 	for _, key in ipairs({ "Begin", "Middle", "End" }) do
