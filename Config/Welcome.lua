@@ -374,23 +374,35 @@ local function lookPreview(parent, matte)
 		local well = piece(104, 26, i == 1 and "LEFT" or "RIGHT", console, i == 1 and "LEFT" or "RIGHT", i == 1 and 12 or -12, -2)
 		skin(well, "BACKGROUND", matte and "SharpPlateFill.tga" or "PlateFill.tga", 5, { 0, 0, 0 }, 0.45)
 	end
-	-- The seal, kept simple: a ring in the look's metal around a coloured
-	-- disc with a head and shoulders.
-	local ring = UI.circle(console, "ARTWORK", 1, 38)
-	ring:SetPoint("CENTER", console, "TOP", 0, -4)
-	local disc = UI.circle(console, "ARTWORK", 2, matte and 32 or 34)
-	disc:SetPoint("CENTER", ring)
+	-- The seal: the console's own medallion with its brass line, or the
+	-- matte bezel, each around a coloured disc with a head and shoulders.
+	local disc
 	if matte then
-		ring:SetColorTexture(0.2, 0.21, 0.22, 1)
+		local bezel = console:CreateTexture(nil, "ARTWORK", nil, 1)
+		bezel:SetSize(46, 46)
+		bezel:SetPoint("CENTER", console, "TOP", 0, -5)
+		bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
+		disc = UI.circle(console, "ARTWORK", 2, 26)
+		disc:SetPoint("CENTER", bezel)
 		disc:SetColorTexture(0.16, 0.24, 0.34, 1)
 	else
-		ring:SetColorTexture(palette.accent[1], palette.accent[2], palette.accent[3], 1)
+		local seat
+		for i, file in ipairs({ "ConsoleMedallion", "ConsoleMedallionLines" }) do
+			local art = console:CreateTexture(nil, "ARTWORK", nil, i)
+			art:SetSize(136, 68)
+			art:SetPoint("CENTER", console, "TOP", 0, -1)
+			art:SetTexture(UI.MEDIA .. "Textures\\" .. file)
+			if i == 2 then art:SetVertexColor(palette.accent[1], palette.accent[2], palette.accent[3], 1) end
+			seat = art
+		end
+		disc = UI.circle(console, "ARTWORK", 3, 28)
+		disc:SetPoint("CENTER", seat, "CENTER", 0, -1)
 		disc:SetColorTexture(0.3, 0.2, 0.14, 1)
 	end
-	local head = UI.circle(console, "ARTWORK", 3, 11)
-	head:SetPoint("CENTER", disc, "CENTER", 0, 5)
-	local shoulders = UI.circle(console, "ARTWORK", 3, 24)
-	shoulders:SetPoint("CENTER", disc, "CENTER", 0, -14)
+	local head = UI.circle(console, "ARTWORK", 4, 9)
+	head:SetPoint("CENTER", disc, "CENTER", 0, 4)
+	local shoulders = UI.circle(console, "ARTWORK", 4, 20)
+	shoulders:SetPoint("CENTER", disc, "CENTER", 0, -12)
 	-- (The shoulders stay inside the disc.)
 	local inside = console:CreateMaskTexture()
 	inside:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
