@@ -279,9 +279,11 @@ local function build()
 	choice(db, "textSize", "Text size", "Every STOA size together: words, numbers, tooltips and pages. Whatever you pick, the smallest text keeps at least 13 pixels on the screen, so a low UI scale never shrinks a caption past reading.", "standard", {
 		{ "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" },
 	}, { reload = true, words = "font size scale readable small big" })
-	group = "Painted pieces"
-	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, words = "brass frame leather fancy" })
+	group = "Material"
 	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
+	-- Leather's own choice: Matte black has no painted pieces, so the
+	-- setting is only there under Leather.
+	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return db().material ~= "matte" end, words = "brass frame leather fancy" })
 	-- Part of the Material choice: tucked under it, there once Matte black
 	-- is picked (even before the reload that brings the material in).
 	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker.", "satin", { { "satin", "Satin" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
