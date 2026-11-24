@@ -4,6 +4,10 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
 
+## 2.0.1
+
+- **Leather is now called Brass**: the original look is named Brass in Settings > Look > Material, the welcome page and the what's-new note. Only the name changed; the look and your saved settings are the same.
+
 ## 2.0.0
 
 - **Matte, a second look**: Settings > Look > Material switches STOA from Leather to Matte black, a plain dark design after moulded matte hardware. Off by default; leather stays as it is. It needs a reload.
