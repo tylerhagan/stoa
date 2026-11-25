@@ -69,7 +69,7 @@ if os.environ.get("SIM_EXTRA"):  # a scratch Lua file run after the toc, to try 
 for f in files:
     loader(open(os.path.join(ROOT, f), encoding="utf-8").read(), f, ns)
 
-# STOA_SIM_SETUP=slim or minimal starts the run on that console setting (as a
+# STOA_SIM_SETUP=slim, minimal, matte or pages (the level 60 slot pages) starts the run on that console setting (as a
 # saved account would), so those builds are exercised too.
 if os.environ.get("STOA_SIM_SETUP") == "slim":
     lua.execute("StoaDB = { modules = { Grimoire = { slim = true } } }")
@@ -77,6 +77,8 @@ elif os.environ.get("STOA_SIM_SETUP") == "matte":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', grain = 'satin', modules = { Halo = { arcStyle = 'visor' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "matteslim":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { slim = true }, Halo = { arcStyle = 'gauge' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "pages":
+    lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { slot1 = 'reputation', slot2 = 'cooldowns', slot3 = 'week' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "minimal":
     lua.execute("StoaDB = { modules = { Grimoire = { enabled = false }, Halo = { restArcs = true, restFade = true }, Party = { restFade = true } } }")
 

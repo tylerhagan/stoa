@@ -310,8 +310,8 @@ local function build()
 	local function refit() local c = Stoa.modules.Grimoire; if c and c.FitPages then Stoa:AfterCombat(function() c:FitPages() end) end end
 	for n = 1, 3 do
 		local key = "slot" .. n
-		choice(console, key, ("Right side, slot %d"):format(n), n == 1 and "The console's right side is three slots, left to right. Each holds Ready, Journey or Company, a damage meter window, or nothing. Meter 1 to 3 are the game's own meter windows (open more from the meter's menu, for healing or interrupts, say). Details 1 and 2 are Details' windows, when you run it. Empty leaves bare console for anything else. On a narrow screen the right-hand slots drop first. The full console only." or "What the console's right side holds in this slot. Choosing something another slot holds swaps the two.", ({ "ready", "journey", "company" })[n], Stoa.modules.Grimoire.SLOT_KINDS, {
-			words = "slots modular right side meter details ready journey company empty arrange", change = refit,
+		choice(console, key, ("Right side, slot %d"):format(n), n == 1 and "The console's right side is three slots, left to right. Each holds Ready, Journey or Company, one of the level 60 pages (Reputation: the standings that moved last; Cooldowns: profession and item cooldowns of an hour or more, across your characters; This week: what you're saved to), a damage meter window, or nothing. Meter 1 to 3 are the game's own meter windows (open more from the meter's menu, for healing or interrupts, say). Details 1 and 2 are Details' windows, when you run it. Empty leaves bare console for anything else. On a narrow screen the right-hand slots drop first. The full console only." or "What the console's right side holds in this slot. Choosing something another slot holds swaps the two.", ({ "ready", "journey", "company" })[n], Stoa.modules.Grimoire.SLOT_KINDS, {
+			words = "slots modular right side meter details ready journey company empty arrange reputation cooldowns lockouts week pages", change = refit,
 			set = function(v)
 				local c = console()
 				if not c then return end

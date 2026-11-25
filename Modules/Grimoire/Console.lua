@@ -2200,6 +2200,32 @@ Console.SLOT_KINDS = {
 	{ "details1", "Details 1" }, { "details2", "Details 2" }, { "empty", "Empty" },
 }
 
+-- More pages (Pages.lua): { label, build }. A page costs nothing until it
+-- is put in a slot, when its column is built once.
+local EXTRA_PAGES = {}
+
+-- build(col, kit) draws the page on its column; kit carries the column's
+-- width, and `heading(label)`, which draws the caption and its rule and
+-- returns the rule to hang the rest from.
+function Console:RegisterPage(kind, label, build)
+	if PAGE_KINDS[kind] then return end
+	PAGE_KINDS[kind] = true
+	EXTRA_PAGES[kind] = { label = label, build = build }
+	table.insert(self.SLOT_KINDS, #self.SLOT_KINDS, { kind, label })
+end
+
+function Console:EnsurePage(kind)
+	local extra, cols, page = EXTRA_PAGES[kind], self.pageColumns, self.rightPage
+	if not (extra and cols and page) or cols[kind] then return end
+	local col = CreateFrame("Frame", nil, page)
+	col:SetSize(COLUMN_WIDTH, 110)
+	cols[kind] = col
+	xpcall(extra.build, Stoa.catch, col, {
+		width = COLUMN_WIDTH,
+		heading = function(label) return column(col, label) end,
+	})
+end
+
 -- What the slots hold, in order. Something chosen twice counts once.
 function Console:Slots()
 	local list, seen = {}, {}
@@ -2268,6 +2294,7 @@ function Console:FitPages()
 	-- the screen is narrow. The slim card always holds the three pages.
 	if not self.slimCard and not self:SlotsDefault() then
 		local slots = self:Slots()
+		for _, kind in ipairs(slots) do self:EnsurePage(kind) end
 		orders = {}
 		for n = #slots, 1, -1 do
 			local order = {}

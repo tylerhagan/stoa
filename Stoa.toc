@@ -71,6 +71,7 @@ Modules\QoL\Trainer.lua
 Modules\QoL\Layout.lua
 
 Modules\Grimoire\Console.lua
+Modules\Grimoire\Pages.lua
 Modules\Grimoire\Housing.lua
 Modules\Grimoire\Riding.lua
 Modules\Grimoire\Minimap.lua
