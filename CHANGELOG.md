@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 2.1.0
 
+- **Keyring**: the money and free-slot count no longer show behind the keyring's slots.
 - **Away screen tips in full**: a long tip under the timer was cut off after two lines; it now has the room to finish.
 - **Choosing the console's pages**: click a page's caption on the console (a small chevron shows under the mouse) for the list of what its slot can hold, out of a fight; an empty slot shows "Add a page" under the mouse. In Settings > Console the three dropdowns are now one picture: three wells for the slots and a tile for every page, with a line on what it shows.
 - **Pages for level 60**: three new pages for the console's right side slots. Reputation leads with the standing that moved last, with two more under it. Cooldowns lists profession and item cooldowns of an hour or more across your characters, ready ones first, and its headline breathes when one comes up; the on-use trinkets you're wearing take any rows left over. This week lists what you're saved to and when it opens, with your alts on the last line. A page costs nothing until it is in a slot.
