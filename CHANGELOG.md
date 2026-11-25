@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 2.1.0
 
+- **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.
 - **Style, not Material**: the choice between Leather and Matte black is now called Style and sits first on the Look page, above Theme, with a description of everything it switches. It was tucked under More before. The Equipped tab on compare tooltips wears STOA's dark card.
 - **Compare tooltips beside a chat link**: the Equipped tooltips that open beside an item you clicked in chat now wear STOA's dark card like every other tooltip, and that tooltip's close button is STOA's cross.
 - **Moved windows stay put**: opening a second window (the spellbook beside the character sheet, say) no longer shows a window you have moved on the game's spot for an instant before it jumps back to yours.
