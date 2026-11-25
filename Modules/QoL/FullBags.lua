@@ -66,7 +66,7 @@ local function candidates()
 	Items.eachBagSlot(function(bag, slot, info)
 		local id = info.itemID
 		if not id or info.isLocked or info.hasNoValue then return end
-		local quality, price, equipLoc, classID, subclassID = Items.info(id)
+		local quality, price, _, classID, subclassID = Items.info(id)
 		if not quality or price <= 0 then return end
 		if REAGENTS[id] or classID == REAGENT_CLASS or (classID == MISC_CLASS and subclassID == MISC_REAGENT) then return end
 		local marked = Items.isMarkedJunk(id)
