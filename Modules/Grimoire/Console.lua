@@ -1060,7 +1060,9 @@ function Console:BuildFellowship(frame, space)
 
 	-- Ready.
 	local ready = column(readyCol, "Ready")
-	local role = text(readyCol, "serif", Stoa.typeSize.title, "accent")
+	-- The page's lead lines are a step under the title size, and what they
+	-- gave up is air before the line below.
+	local role = text(readyCol, "serif", Stoa.typeSize.page, "accent")
 	role:SetPoint("TOPLEFT", ready, "BOTTOMLEFT", 0, -6)
 	-- Click the role to switch spec (SpecSwitch.lua).
 	local roleHit = CreateFrame("Button", nil, readyCol)
@@ -1076,7 +1078,7 @@ function Console:BuildFellowship(frame, space)
 	-- on hover. Nothing shows when there's nothing to do.
 	local note = CreateFrame("Button", nil, readyCol)
 	note:SetSize(COLUMN_WIDTH, 13)
-	note:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -3)
+	note:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -6)
 	note:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	local mark = note:CreateTexture(nil, "ARTWORK")
 	mark:SetSize(5, 5)
@@ -1161,7 +1163,7 @@ function Console:BuildFellowship(frame, space)
 	-- Without the leather the page sits in a well 110 tall, so its rows
 	-- stand a little closer and all of them stay inside it.
 	local tight = not self:Art()
-	local level = text(journeyCol, "serif", Stoa.typeSize.title, "text")
+	local level = text(journeyCol, "serif", Stoa.typeSize.page, "text")
 	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, tight and -4 or -6)
 	-- Earned in the text colour, rest in blue behind it, and an accent mark
 	-- where an hour at your pace would take you.
@@ -1169,7 +1171,7 @@ function Console:BuildFellowship(frame, space)
 	local share = text(journeyCol, "sans", Stoa.typeSize.body, "muted", "RIGHT")
 	share:SetPoint("BOTTOMRIGHT", level, "BOTTOMLEFT", COLUMN_WIDTH, 2)
 	local xp = Figures.xp(journeyCol, COLUMN_WIDTH, 5)
-	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, tight and -6 or -8)
+	xp:SetPoint("TOPLEFT", level, "BOTTOMLEFT", 0, tight and -9 or -11)
 	-- The bar's key (earned, rested to, in an hour) on hover, not as a row.
 	local xpHover = CreateFrame("Frame", nil, journeyCol)
 	xpHover:SetPoint("TOPLEFT", xp, "TOPLEFT", 0, 6)

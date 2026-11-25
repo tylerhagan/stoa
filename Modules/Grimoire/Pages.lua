@@ -45,12 +45,12 @@ end
 -- `drop` lowers the rows, for a page with a bar under its big line.
 local function scaffold(col, kit, label, drop)
 	local rule = kit.heading(label)
-	local big = UI.text(col, "serif", Stoa.typeSize.title, "text")
+	local big = UI.text(col, "serif", Stoa.typeSize.page, "text")
 	big:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6)
 	big:SetWordWrap(false)
 	local note = UI.text(col, "sans", Stoa.typeSize.body, "muted", "RIGHT")
 	-- Hung from the rule, not from the big line, which is cut short of it.
-	note:SetPoint("TOPRIGHT", rule, "BOTTOMRIGHT", 0, -13)
+	note:SetPoint("TOPRIGHT", rule, "BOTTOMRIGHT", 0, -11)
 	big:SetWidth(kit.width - 62)
 	local rows = {}
 	for i = 1, ROWS do
@@ -58,7 +58,7 @@ local function scaffold(col, kit, label, drop)
 		name:SetWordWrap(false)
 		local value = UI.text(col, "sans", Stoa.typeSize.body, "muted", "RIGHT")
 		-- Rows hang under the big line, so a short list sits close to it.
-		local y = -(7 + (drop or 0) + (i - 1) * ROW_H)
+		local y = -(10 + (drop or 0) + (i - 1) * ROW_H)
 		-- The figure hangs from the big line by one point, and the name runs
 		-- up to it: neither may be anchored to the other both ways, which
 		-- the game refuses (and the page then draws nothing).

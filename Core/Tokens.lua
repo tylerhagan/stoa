@@ -236,7 +236,7 @@ local CLASS_THEMES = {
 -- for words and keys on icons, name for unit names and the console's big
 -- numbers.
 Stoa.space = { xs = 4, s = 8, m = 12, l = 16, xl = 24, xxl = 36 }
-Stoa.typeSize = { micro = 10, caption = 11, body = 12, label = 14, name = 16, title = 20, display = 28, hero = 38 }
+Stoa.typeSize = { micro = 10, caption = 11, body = 12, label = 14, name = 16, page = 17, title = 20, display = 28, hero = 38 }
 
 -- The rare's silver, wherever a rank is drawn (plaques, tooltips, gallery).
 Stoa.silver = { 0.79, 0.8, 0.82 }

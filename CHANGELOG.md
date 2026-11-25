@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 2.1.0
 
+- **Console pages breathe**: the lead line of each page (your role, your level, a page's headline) is a step smaller, and the space it gave up now sits between it and the line below.
 - **Windows in Leather lose the stone rings**: the body of each window now sits a step below its header and footer, with a soft shadow at its edges, like the console's wells. The stone image is gone, which makes the addon about 4 MB lighter on disk. Matte black gets the same recess, a little tighter, under its grain. The setting is now Look > Depth in windows.
 - **Full bags**: when the game says your inventory is full, a small card names the two or three least valuable stacks you carry, by what a vendor pays, and a click destroys one to make room. Grey junk comes first, then what you marked as junk, then white food and drink; never quest items, spell reagents, gear, trade goods, tools or what you keep in Restock. Anything that isn't grey asks for a second click. Beside the loot window it also names a quest item that is waiting, or says when what's left isn't worth the room. STOA never destroys anything by itself. Settings > Comforts; `/stoa fullbags` previews the card.
 - **A tip for quest items**: a new tip says how to hide a quest's item from beside your character (untrack the quest).
