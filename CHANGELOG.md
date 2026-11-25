@@ -8,7 +8,6 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Loot rolls**: a new roll card opens in its place instead of starting at the bottom of the screen and jumping up, and the list of who chose what and the result card are larger and easier to read.
 - **Arc styles show themselves**: Settings > Halo > Arc style is now a row of small pictures, each drawing its own arcs above its name, so you can see a style before choosing it.
-- **Leather is now called Gilded**: the original look is named Gilded in Settings > Look > Material, the welcome page and the what's-new note. Only the name changed; the look and your saved settings are the same.
 
 ## 2.0.0
 
