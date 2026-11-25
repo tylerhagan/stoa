@@ -280,7 +280,7 @@ local function build()
 		{ "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" },
 	}, { reload = true, words = "font size scale readable small big" })
 	group = "Material"
-	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with stone behind windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
+	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with recessed windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
 	-- Leather's own choice: Matte black has no painted pieces, so the
 	-- setting is only there under Leather.
 	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return db().material ~= "matte" end, words = "brass frame leather fancy" })
@@ -290,8 +290,8 @@ local function build()
 		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth satin flat finish",
 		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
 	})
-	toggle(db, "windowStone", "Stone behind windows", "Faint rings and grain in the theme's colour behind windows and STOA's own pages. The console keeps its leather.", true, {
-		words = "texture background granite", change = function() Stoa.UI.showStone(Stoa.db.windowStone) end,
+	toggle(db, "windowStone", "Depth in windows", "In Leather the body of each window sits a step below its header and footer, with a soft shadow at its edges. In Matte black it wears the fine grain. Off leaves windows flat.", true, {
+		words = "stone texture background grain recess shadow", change = function() Stoa.UI.showStone(Stoa.db.windowStone) end,
 	})
 	toggle(db, "coinArt", "Spell art in the Halo's coins", "Each coin shows its spell's icon faintly behind the letter, in colour while it runs or is ready.", true, { words = "icons" })
 	toggle(db, "smoothBars", "Smooth health and power", "Health and power bars glide to a new value instead of jumping.", true, { words = "animation motion bars" })
