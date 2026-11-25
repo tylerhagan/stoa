@@ -66,17 +66,42 @@ function WindowMover:Wants()
 	return IsShiftKeyDown() and not shared()
 end
 
-function WindowMover:Hook(name)
+-- The keyring opens in whichever bag window is free, so its spot is kept
+-- under its own name, not the window's. The other single bags stay with
+-- the game's stack; the first keeps the spot it always had.
+local KEYRING = "Keyring"
+local function isKeyring(frame)
+	local ok, bag = pcall(function() return frame.GetBagID and frame:GetBagID() end)
+	return ok and bag == (KEYRING_CONTAINER or -2)
+end
+local function bagKey(frame, name)
+	if isKeyring(frame) then return KEYRING end
+	return name == "ContainerFrame1" and name or nil
+end
+local function keyringFrame()
+	for i = 1, 13 do
+		local frame = _G["ContainerFrame" .. i]
+		if type(frame) == "table" and frame.IsShown and frame:IsShown() and isKeyring(frame) then return frame, "ContainerFrame" .. i end
+	end
+end
+
+function WindowMover:Hook(name, keyOf)
 	local frame = _G[name]
 	if hooked[name] or type(frame) ~= "table" or not frame.HookScript then return end
 	if frame.IsForbidden and frame:IsForbidden() then return end
 	hooked[name] = true
 
+	local function key(window)
+		if keyOf then return keyOf(window, name) end
+		return name
+	end
 	local function down(window, button)
 		if not self:Wants() or not canMove(window, name) then return end
+		local spot = key(window)
+		if not spot then return end
 		if button == "RightButton" then
-			spots()[name] = nil
-			Stoa:Print(("%s goes back to its usual place next time it opens."):format(name:gsub("Frame$", "")))
+			spots()[spot] = nil
+			Stoa:Print(("%s goes back to its usual place next time it opens."):format(spot:gsub("Frame$", "")))
 			return
 		end
 		if button ~= "LeftButton" then return end
@@ -92,7 +117,8 @@ function WindowMover:Hook(name)
 		-- Stoa keeps the spot, not the game's layout cache.
 		if window.SetUserPlaced then window:SetUserPlaced(false) end
 		local left, top = window:GetLeft(), window:GetTop()
-		if left and top then spots()[name] = { left, top } end
+		local spot = key(window)
+		if left and top and spot then spots()[spot] = { left, top } end
 	end
 	frame:HookScript("OnMouseDown", down)
 	frame:HookScript("OnMouseUp", up)
@@ -101,11 +127,13 @@ function WindowMover:Hook(name)
 	-- title bar), so a drag there never reached the window: hand it on.
 	self:HookHeader(frame, down, up)
 	frame:HookScript("OnShow", function(window)
-		xpcall(place, Stoa.catch, name, window)
+		local spot = key(window)
+		if spot then xpcall(place, Stoa.catch, spot, window) end
 		-- Laid out now, so the frames along its top can be found.
 		xpcall(self.HookHeader, Stoa.catch, self, window, down, up)
 	end)
-	xpcall(place, Stoa.catch, name, frame)
+	local spot = key(frame)
+	if spot then xpcall(place, Stoa.catch, spot, frame) end
 end
 
 local HEADER_KEYS = { "TitleContainer", "TitleBar", "DragBar", "TitleButton", "Header", "TitleRegion" }
@@ -172,19 +200,31 @@ end
 
 function WindowMover:HookAll()
 	for _, name in ipairs(WINDOWS) do
-		xpcall(self.Hook, Stoa.catch, self, name)
+		xpcall(self.Hook, Stoa.catch, self, name, name == "ContainerFrame1" and bagKey or nil)
 	end
+	for i = 2, 13 do xpcall(self.Hook, Stoa.catch, self, "ContainerFrame" .. i, bagKey) end
 end
 
 -- Puts every open moved window back on its spot, after the game's own
 -- layout has had its turn.
 function WindowMover:PlaceAll()
-	C_Timer.After(0, function()
+	local function all()
 		for name in pairs(spots()) do
-			local frame = _G[name]
-			if type(frame) == "table" and hooked[name] then xpcall(place, Stoa.catch, name, frame) end
+			local frame, as = _G[name], name
+			if name == KEYRING then
+				frame, as = keyringFrame()
+			elseif name == "ContainerFrame1" and type(frame) == "table" and isKeyring(frame) then
+				frame = nil
+			end
+			if type(frame) == "table" and hooked[as] then xpcall(place, Stoa.catch, name, frame) end
 		end
-	end)
+	end
+	-- At once, so a moved window is never drawn for a frame on the game's
+	-- spot and then seen to jump back (opening the spellbook beside the
+	-- character sheet did that to both), and once more when the game has
+	-- finished, in case it lays things out again after this.
+	all()
+	C_Timer.After(0, all)
 end
 
 function WindowMover:OnEnable()

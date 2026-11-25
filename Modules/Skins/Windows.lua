@@ -976,7 +976,9 @@ end
 -- Tooltips: the same dark rounded panel, a thin health bar, and the
 -- default spot lifted to sit above the console's right corner instead of
 -- over it.
-local TOOLTIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2", "EmbeddedItemTooltip" }
+-- (A chat link's tooltip has compare tooltips of its own, the Equipped
+-- ones beside it, and a close button.)
+local TOOLTIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2", "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2", "EmbeddedItemTooltip" }
 local TOOLTIP_GAP = 16
 
 local function dressTooltip(tip)
@@ -986,6 +988,16 @@ local function dressTooltip(tip)
 	UI.surface(tip, "card", { alpha = 0.96 })
 	-- Blizzard re-applies its backdrop style each time a tooltip shows.
 	tip:HookScript("OnShow", function(self) hide(self.NineSlice) end)
+	-- A compare tooltip's "Equipped" tab: its gold-edged plate goes and the
+	-- word sits on the tooltip's own dark card.
+	local tab = tip.CompareHeader
+	if tab and tab.GetRegions and not (tab.IsForbidden and tab:IsForbidden()) then
+		for _, region in ipairs({ tab:GetRegions() }) do
+			if region.IsObjectType and region:IsObjectType("Texture") then hide(region) end
+		end
+		pcall(UI.surface, tab, "card", { alpha = 0.96 })
+		if tab.Label then tab.Label:SetTextColor(Stoa:Color("muted")) end
+	end
 end
 
 -- Dropdown menus (the minimap's tracking list, the friends status, every
@@ -1188,6 +1200,8 @@ end
 
 local function dressTooltips()
 	for _, name in ipairs(TOOLTIPS) do dressTooltip(_G[name]) end
+	local link = _G.ItemRefTooltip
+	if link then pcall(dressClose, link.CloseButton or _G.ItemRefCloseButton) end
 	local bar = GameTooltipStatusBar
 	if bar then
 		bar:SetStatusBarTexture(UI.WHITE)

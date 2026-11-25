@@ -4,6 +4,25 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
 
+## 2.1.0
+
+- **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.
+- **Style, not Material**: the choice between Leather and Matte black is now called Style and sits first on the Look page, above Theme, with a description of everything it switches. It was tucked under More before. The Equipped tab on compare tooltips wears STOA's dark card.
+- **Compare tooltips beside a chat link**: the Equipped tooltips that open beside an item you clicked in chat now wear STOA's dark card like every other tooltip, and that tooltip's close button is STOA's cross.
+- **Moved windows stay put**: opening a second window (the spellbook beside the character sheet, say) no longer shows a window you have moved on the game's spot for an instant before it jumps back to yours.
+- **Finding Full, Slim and None**: the two starting questions are now called Layout (Full, Slim or None, and everything around it) on Build your STOA and Setup, and say that None with Quiet is the Minimal layout. Console size is the first setting on the Console page. Choosing None there turns on the faint health and mana arcs, and Full or Slim turns them off again. In Matte black the Leather console switch is hidden, since it has nothing to switch.
+- **Console pages breathe**: the lead line of each page (your role, your level, a page's headline) is a step smaller, and the space it gave up now sits between it and the line below.
+- **Windows in Leather lose the stone rings**: the body of each window now sits a step below its header and footer, with a soft shadow at its edges, like the console's wells. The stone image is gone, which makes the addon about 4 MB lighter on disk. Matte black gets the same recess, a little tighter, under its grain. The setting is now Look > Depth in windows.
+- **Full bags**: when the game says your inventory is full, a small card names the two or three least valuable stacks you carry, by what a vendor pays, and a click destroys one to make room. Grey junk comes first, then what you marked as junk, then plain white food and drink (health or mana back and nothing more); never food with a buff, elixirs, scrolls, quest items, spell reagents, gear, trade goods, tools or what you keep in Restock. Anything that isn't grey asks for a second click. Beside the loot window it also names a quest item that is waiting, or says when what's left isn't worth the room. STOA never destroys anything by itself. Settings > Comforts; `/stoa fullbags` previews the card.
+- **A tip for quest items**: a new tip says how to hide a quest's item from beside your character (untrack the quest).
+- **Keyring**: the money, the free-slot count and the Junk word no longer show on the keyring, and Shift and drag now moves it by itself; it keeps its own spot whichever bag window it opens in.
+- **Changing the Company page**: the whole Company column is a button, and it lay over half of the caption you click to change the page. The caption now sits above it.
+- **Away screen tips in full**: a long tip under the timer was cut off after two lines; it now has the room to finish.
+- **Choosing the console's pages**: click a page's caption on the console (a small chevron shows under the mouse) for the list of what its slot can hold, out of a fight; an empty slot shows "Add a page" under the mouse. In Settings > Console the three dropdowns are now one picture: three wells for the slots and a tile for every page, with a line on what it shows.
+- **Pages for level 60**: three new pages for the console's right side slots. Reputation leads with the standing that moved last, with two more under it. Cooldowns lists profession and item cooldowns of an hour or more across your characters, ready ones first, and its headline breathes when one comes up; the on-use trinkets you're wearing take any rows left over. This week lists what you're saved to and when it opens, with your alts on the last line. A page costs nothing until it is in a slot.
+- **Loot rolls**: a new roll card opens in its place instead of starting at the bottom of the screen and jumping up, and the list of who chose what and the result card are larger and easier to read.
+- **Arc styles show themselves**: Settings > Halo > Arc style is now a row of small pictures, each drawing its own arcs above its name, so you can see a style before choosing it.
+
 ## 2.0.0
 
 - **Matte, a second look**: Settings > Look > Material switches STOA from Leather to Matte black, a plain dark design after moulded matte hardware. Off by default; leather stays as it is. It needs a reload.

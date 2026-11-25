@@ -118,6 +118,56 @@ local function makeSegments(parent, entry)
 	return holder
 end
 
+-- A choice whose options are small pictures over their names (the Halo's
+-- arc styles). entry.pictures(value) gives the textures for one option's
+-- left and right half; they are the real art, drawn small.
+local TILE_W, TILE_H, TILE_ART = 80, 94, 60
+
+local function makeTiles(parent, entry)
+	local holder = CreateFrame("Frame", nil, parent)
+	holder.buttons = {}
+	for i, option in ipairs(entry.options) do
+		local button = CreateFrame("Button", nil, holder)
+		button:SetSize(TILE_W, TILE_H)
+		button:SetPoint("LEFT", (i - 1) * (TILE_W + 4), 0)
+		button.back = UI.pillFill(button, 0)
+		button.edge = UI.pillEdge(button, 0)
+		local left, right = entry.pictures(option[1])
+		button.left = button:CreateTexture(nil, "ARTWORK")
+		button.left:SetSize(TILE_ART / 2, TILE_ART)
+		button.left:SetPoint("TOPRIGHT", button, "TOP", 0, -8)
+		button.left:SetTexture(left)
+		button.right = button:CreateTexture(nil, "ARTWORK")
+		button.right:SetSize(TILE_ART / 2, TILE_ART)
+		button.right:SetPoint("TOPLEFT", button, "TOP", 0, -8)
+		button.right:SetTexture(right)
+		local text = UI.text(button, "sans", Stoa.typeSize.body, "muted", "CENTER")
+		text:SetPoint("BOTTOM", 0, 7)
+		text:SetText(option[2])
+		button.text, button.value = text, option[1]
+		button:SetScript("OnClick", function() Options.set(entry, option[1]) end)
+		button:SetScript("OnEnter", function(self) self.over = true; holder:Refresh() end)
+		button:SetScript("OnLeave", function(self) self.over = nil; holder:Refresh() end)
+		hover(button, entry)
+		holder.buttons[i] = button
+	end
+	holder:SetSize(#entry.options * (TILE_W + 4) - 4, TILE_H)
+	function holder:Refresh()
+		local v = Options.value(entry)
+		for _, button in ipairs(self.buttons) do
+			local chosen = button.value == v
+			local lit = chosen or button.over
+			button.chosen = chosen
+			button.back:SetVertexColor(0, 0, 0, chosen and 0.5 or 0.3)
+			button.edge:Set(Stoa:Color(chosen and "accent" or "hairline"))
+			colour(button.left, "text", lit and 0.95 or 0.5)
+			colour(button.right, "accent", lit and 0.95 or 0.5)
+			colour(button.text, chosen and "accent" or button.over and "text" or "muted")
+		end
+	end
+	return holder
+end
+
 -- One shared list for every dropdown, drawn in the theme.
 local menu
 
@@ -188,7 +238,7 @@ local function buildMenu()
 	end
 end
 
-local function openMenu(owner, entry)
+local function openMenu(owner, entry, above)
 	if not menu then buildMenu() end
 	if menu:IsShown() and menu.entry == entry then closeMenu() return end
 	menu.entry = entry
@@ -234,11 +284,17 @@ local function openMenu(owner, entry)
 	menu.focus = menu.focus and math.min(menu.focus, #entry.options) or 1
 	menu:SetSize(listWidth, #entry.options * 24 + 12)
 	menu:ClearAllPoints()
-	menu:SetPoint("TOPRIGHT", owner, "BOTTOMRIGHT", 0, -4)
+	if above then
+		menu:SetPoint("BOTTOMLEFT", owner, "TOPLEFT", -8, 4)
+	else
+		menu:SetPoint("TOPRIGHT", owner, "BOTTOMRIGHT", 0, -4)
+	end
 	menu:Paint()
 	menu.catcher:Show()
 	menu:Show()
 end
+-- The same list for a choice made outside the window (the console's slots).
+Window.OpenMenu = openMenu
 
 local function makeSelect(parent, entry)
 	local button = UI.button(parent, "", INLINE, function(self) openMenu(self, entry) end)
@@ -276,7 +332,9 @@ end
 local function makeTick(parent)
 	local tick = CreateFrame("Button", nil, parent)
 	tick:SetSize(14, 14)
-	local edge = UI.border(tick, 1)
+	-- A drawn outline, not four one-pixel lines: at some UI scales a line
+	-- that thin fell between pixels and one side of the box went missing.
+	local edge = UI.pillEdge(tick, 0)
 	local fill = tick:CreateTexture(nil, "ARTWORK")
 	fill:SetTexture(UI.WHITE)
 	fill:SetPoint("TOPLEFT", 3, -3)
@@ -353,7 +411,7 @@ function builders.toggle(row, entry)
 end
 
 function builders.choice(row, entry)
-	local seg = not entry.list and makeSegments(row, entry)
+	local seg = not entry.list and (entry.pictures and makeTiles or makeSegments)(row, entry)
 	if seg and seg:GetWidth() > CONTENT - 40 then
 		seg:Hide()
 		seg = nil
@@ -376,7 +434,7 @@ function builders.choice(row, entry)
 		end
 		local h = nameHeight(self, w)
 		self.control:SetPoint("TOPRIGHT", 0, -h - 4)
-		return h + 34
+		return h + math.max(self.control:GetHeight(), 26) + 8
 	end
 end
 
@@ -562,6 +620,122 @@ function builders.checks(row, entry)
 		self.empty:ClearAllPoints()
 		self.empty:SetPoint("TOPLEFT", 0, -h - 6)
 		return h + 8 + math.max(1, math.ceil(#items / 2)) * 24
+	end
+end
+
+-- The console's right side: its three slots as wells, then every page a
+-- slot can hold as a tile. Click a well, then a tile.
+local WELL_H, PAGE_TILE_H = 44, 46
+function builders.slots(row, entry)
+	local console = Stoa.modules.Grimoire
+	row.sel = 1
+	row.wells, row.tiles, row.heads = {}, {}, {}
+	local function plate(parent)
+		local button = CreateFrame("Button", nil, parent)
+		button.back = UI.pillFill(button, 0)
+		button.edge = UI.pillEdge(button, 0)
+		button:SetScript("OnEnter", function(self) self.over = true; row:Paint() end)
+		button:SetScript("OnLeave", function(self) self.over = nil; row:Paint() end)
+		hover(button, entry)
+		return button
+	end
+	for n = 1, 3 do
+		local well = plate(row)
+		well.cap = UI.caption(well, "Slot " .. n)
+		well.cap:SetPoint("TOPLEFT", 10, -8)
+		well.text = UI.text(well, "serif", Stoa.typeSize.label, "text")
+		well.text:SetPoint("BOTTOMLEFT", 10, 8)
+		well.text:SetPoint("BOTTOMRIGHT", -8, 8)
+		well.text:SetJustifyH("LEFT")
+		well.text:SetWordWrap(false)
+		well:SetScript("OnClick", function() row.sel = n; row:Paint() end)
+		row.wells[n] = well
+	end
+	-- Says what a click on a tile will do, so the two steps read at once.
+	row.guide = UI.text(row, "sans", Stoa.typeSize.body, "muted")
+	local kinds = console and console.SLOT_KINDS or {}
+	for i, kind in ipairs(kinds) do
+		local tile = plate(row)
+		tile.text = UI.text(tile, "sans", Stoa.typeSize.body, "text")
+		tile.text:SetPoint("TOPLEFT", 9, -8)
+		tile.note = UI.text(tile, "sans", Stoa.typeSize.caption, "muted")
+		tile.note:SetPoint("TOPLEFT", tile.text, "BOTTOMLEFT", 0, -3)
+		tile.note:SetJustifyH("LEFT")
+		tile.note:SetWordWrap(false)
+		tile.mark = UI.text(tile, "sans", Stoa.typeSize.caption, "accent", "RIGHT")
+		tile.mark:SetPoint("TOPRIGHT", -8, -9)
+		tile.text:SetText(kind[2])
+		tile.note:SetText(kind[3] or "")
+		tile.value = kind[1]
+		tile:SetScript("OnClick", function() if console then console:SetSlot(row.sel, kind[1]) end end)
+		row.tiles[i] = tile
+	end
+	function row:Paint()
+		local slots = console and console.Slots and console.db and console:Slots() or {}
+		local labels = {}
+		for _, kind in ipairs(kinds) do labels[kind[1]] = kind[2] end
+		for n, well in ipairs(self.wells) do
+			local chosen = n == self.sel
+			well.text:SetText(labels[slots[n]] or "Empty")
+			well.back:SetVertexColor(0, 0, 0, 0.5)
+			well.edge:Set(Stoa:Color(chosen and "accent" or "hairline"))
+			colour(well.cap, chosen and "accent" or "muted")
+			colour(well.text, (chosen or well.over) and "text" or "muted")
+		end
+		local r, g, b = Stoa:Color("accent")
+		self.guide:SetText(("Slot %d holds |cff%02x%02x%02x%s|r. Click a page below to change it, or another slot above."):format(self.sel, r * 255, g * 255, b * 255, labels[slots[self.sel]] or "Empty"))
+		for _, tile in ipairs(self.tiles) do
+			local at
+			for n, held in ipairs(slots) do
+				if held == tile.value and held ~= "empty" then at = n end
+			end
+			tile.mark:SetText(at and ("SLOT " .. at) or "")
+			tile.back:SetVertexColor(0, 0, 0, tile.over and 0.45 or 0.25)
+			tile.edge:Set(Stoa:Color((tile.over or at == self.sel) and "accent" or "hairline"))
+			colour(tile.text, (at or tile.over) and "text" or "muted")
+		end
+	end
+	function row:Layout(w)
+		local y = -nameHeight(self, w) - 4
+		local gap = 6
+		local third = math.floor((w - gap * 2) / 3)
+		for n, well in ipairs(self.wells) do
+			well:SetSize(third, WELL_H)
+			well:ClearAllPoints()
+			well:SetPoint("TOPLEFT", (n - 1) * (third + gap), y)
+		end
+		y = y - WELL_H - 10
+		self.guide:ClearAllPoints()
+		self.guide:SetPoint("TOPLEFT", 0, y)
+		self.guide:SetWidth(w)
+		self.guide:SetJustifyH("LEFT")
+		y = y - 18
+		local group, col, heads = nil, 0, 0
+		for i, tile in ipairs(self.tiles) do
+			local g = kinds[i][4]
+			if g ~= group then
+				if group and col > 0 then y = y - PAGE_TILE_H - gap end
+				group, col, heads = g, 0, heads + 1
+				local head = self.heads[heads]
+				if not head then
+					head = UI.caption(self, g)
+					self.heads[heads] = head
+				end
+				head:ClearAllPoints()
+				head:SetPoint("TOPLEFT", 0, y - 8)
+				y = y - 26
+			elseif col == 3 then
+				col = 0
+				y = y - PAGE_TILE_H - gap
+			end
+			tile:SetSize(third, PAGE_TILE_H)
+			tile.note:SetWidth(third - 17)
+			tile:ClearAllPoints()
+			tile:SetPoint("TOPLEFT", col * (third + gap), y)
+			col = col + 1
+		end
+		self:Paint()
+		return -y + PAGE_TILE_H + 10
 	end
 end
 

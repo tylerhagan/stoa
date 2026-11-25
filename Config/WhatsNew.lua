@@ -23,6 +23,17 @@ Stoa.WhatsNew = WhatsNew
 local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
+		edition = "2.1.0",
+		title = "New in STOA 2.1",
+		lines = {
+			{ "Pages for level 60", "Three new pages for the console's right side. Click a page's caption on the console to change it, or pick from the tiles under Settings > Console. Reputation leads with the standing that moved last. Cooldowns lists profession and item cooldowns of an hour or more across your characters, with your on-use trinkets below. This week shows what you're saved to and when it opens." },
+			{ "When your bags are full", "If the game says your inventory is full, a small card names your least valuable stacks. Click one to destroy it and make room; anything that isn't grey asks twice. /stoa fullbags previews it." },
+			{ "Windows without the rings", "In Leather, the stone and its rings are gone from behind windows. The body now sits a step below the header, like the console's wells. Settings > Look > Depth in windows." },
+			{ "Arc styles you can see", "Settings > Halo > Arc style now draws each style small on its own tile, so you can see one before choosing it." },
+			{ "Loot rolls", "A new roll card opens in its place instead of jumping up from the bottom of the screen, and the list of who chose what is larger." },
+		},
+	},
+	{
 		edition = "2.0.0",
 		title = "STOA 2",
 		-- A big release: a line under the title, and a way to the page that
@@ -35,7 +46,7 @@ local NOTES = {
 			"curseforge.com/wow/addons/stoa",
 		},
 		lines = {
-			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Material switches between them, or type /stoa welcome update to see both side by side." },
+			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Style switches between them, or type /stoa welcome update to see both side by side." },
 			{ "Made for Matte", "A matte console with recesses for chat, the bars and the pages, a Compact or Full target, flat party cards and a Matte nameplate style. Leather keeps everything it had." },
 			{ "A console in slots", "The console's right side is now three slots. Put Ready, Journey or Company in any order, drop in the game's damage meter windows or a Details window, or leave one empty. A Details window in a slot is cut down to its title and rows. Settings > Console." },
 			{ "Menu and bags as words", "The game menu and the bag row now rest behind two small words on the console's edge, MENU and BAGS. Put the mouse on a word and its row opens in its place. A click on BAGS opens your bags." },

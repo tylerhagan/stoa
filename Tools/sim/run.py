@@ -69,7 +69,7 @@ if os.environ.get("SIM_EXTRA"):  # a scratch Lua file run after the toc, to try 
 for f in files:
     loader(open(os.path.join(ROOT, f), encoding="utf-8").read(), f, ns)
 
-# STOA_SIM_SETUP=slim or minimal starts the run on that console setting (as a
+# STOA_SIM_SETUP=slim, minimal, matte, matteslim, matteminimal or pages (the level 60 slot pages) starts the run on that console setting (as a
 # saved account would), so those builds are exercised too.
 if os.environ.get("STOA_SIM_SETUP") == "slim":
     lua.execute("StoaDB = { modules = { Grimoire = { slim = true } } }")
@@ -77,6 +77,10 @@ elif os.environ.get("STOA_SIM_SETUP") == "matte":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', grain = 'satin', modules = { Halo = { arcStyle = 'visor' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "matteslim":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { slim = true }, Halo = { arcStyle = 'gauge' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "pages":
+    lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { slot1 = 'reputation', slot2 = 'cooldowns', slot3 = 'week' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "matteminimal":
+    lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { enabled = false }, Halo = { restArcs = true, restFade = true }, Party = { restFade = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "minimal":
     lua.execute("StoaDB = { modules = { Grimoire = { enabled = false }, Halo = { restArcs = true, restFade = true }, Party = { restFade = true } } }")
 
@@ -585,6 +589,98 @@ do
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Tips: " .. e end
 	end
 end
+-- Full bags: the card offers grey first, never a quest item or gear, asks
+-- twice for anything not grey, and deletes only what the cursor then holds.
+do
+	local ok, e = xpcall(function()
+		local F = Stoa.modules.FullBags
+		assert(F and F.Show, "FullBags loaded")
+		local bags = {
+			{ itemID = 11, itemName = "Cracked Bill", stackCount = 3, quality = 0, iconFileID = 1 },
+			{ itemID = 12, itemName = "Tough Jerky", stackCount = 2, quality = 1, iconFileID = 1 },
+			{ itemID = 13, itemName = "Quest Thing", stackCount = 1, quality = 1, iconFileID = 1 },
+			{ itemID = 14, itemName = "Plain Sword", stackCount = 1, quality = 1, iconFileID = 1 },
+			{ itemID = 15, itemName = "Ruined Pelt", stackCount = 1, quality = 0, iconFileID = 1 },
+			{ itemID = 16, itemName = "Bound Token", stackCount = 1, quality = 1, iconFileID = 1, hasNoValue = true },
+			{ itemID = 17056, itemName = "Light Feather", stackCount = 5, quality = 0, iconFileID = 1 },
+			{ itemID = 18, itemName = "Some Reagent", stackCount = 1, quality = 0, iconFileID = 1 },
+			{ itemID = 19, itemName = "Runed Rod", stackCount = 1, quality = 1, iconFileID = 1 },
+			{ itemID = 20, itemName = "Spiced Stew", stackCount = 1, quality = 1, iconFileID = 1 },
+		}
+		-- The jerky only feeds; the stew also leaves a buff and must stay.
+		local uses = { [12] = "Use: Restores 61 health over 18 sec. Must remain seated while eating.",
+			[20] = "Use: Restores 552 health over 24 sec. Must remain seated while eating. If you spend at least 10 seconds eating you will become well fed and gain 6 Stamina and Spirit for 15 min." }
+		C_TooltipInfo = C_TooltipInfo or {}
+		local realTip = C_TooltipInfo.GetBagItem
+		C_TooltipInfo.GetBagItem = function(bag, slot)
+			local item = bag == 0 and bags[slot]
+			return { lines = { { leftText = item and item.itemName or "" }, { leftText = item and uses[item.itemID] or "" } } }
+		end
+		local info = { [11] = { 0, 4, "", 15 }, [12] = { 1, 125, "", 0 }, [13] = { 1, 50, "", 12 }, [14] = { 1, 900, "INVTYPE_WEAPON", 2 }, [15] = { 0, 31, "", 15 }, [17056] = { 0, 1, "", 15 }, [18] = { 0, 1, "", 5 }, [19] = { 1, 24, "", 7 }, [20] = { 1, 2, "", 0 } }
+		local real = { C_Container.GetContainerNumSlots, C_Container.GetContainerItemInfo, C_Container.GetContainerNumFreeSlots, C_Container.PickupContainerItem,
+			C_Item.GetItemInfo, GetItemInfo, DeleteCursorItem, GetCursorInfo, ClearCursor, C_Container.GetContainerItemQuestInfo }
+		local cursor, deleted = nil, {}
+		C_Container.GetContainerNumSlots = function(bag) return bag == 0 and #bags or 0 end
+		C_Container.GetContainerItemInfo = function(bag, slot) return bag == 0 and bags[slot] or nil end
+		C_Container.GetContainerNumFreeSlots = function() return 0, 0 end
+		C_Container.GetContainerItemQuestInfo = function() return {} end
+		C_Container.PickupContainerItem = function(bag, slot) cursor = bags[slot] and bags[slot].itemID end
+		local function itemInfo(id)
+			local i = info[tonumber(id) or (type(id) == "string" and tonumber(id:match("item:(%d+)")))]
+			if not i then return nil end
+			return "x", nil, i[1], nil, nil, nil, nil, nil, i[3], nil, i[2], i[4], 0
+		end
+		C_Item.GetItemInfo, GetItemInfo = itemInfo, itemInfo
+		-- Items.info holds the game's function from load: answer for it here.
+		local realItemsInfo = Stoa.Items.info
+		Stoa.Items.info = function(id)
+			local i = info[tonumber(id) or (type(id) == "string" and tonumber(id:match("item:(%d+)")))]
+			if i then return i[1], i[2], i[3], i[4], 0 end
+		end
+		GetCursorInfo = function() if cursor then return "item", cursor end end
+		ClearCursor = function() cursor = nil end
+		DeleteCursorItem = function()
+			deleted[#deleted + 1] = cursor
+			for slot, item in pairs(bags) do if item.itemID == cursor then bags[slot] = nil end end
+			cursor = nil
+		end
+		F:OnEnable()
+		F:Show()
+		local rows = F.card.rows
+		assert(rows[1].candidate.id == 11 and rows[2].candidate.id == 15 and rows[3].candidate.id == 12, "grey by value, then white")
+		for _, row in ipairs(rows) do assert(row.candidate.id ~= 13 and row.candidate.id ~= 14 and row.candidate.id ~= 16 and row.candidate.id ~= 17056 and row.candidate.id ~= 18 and row.candidate.id ~= 19 and row.candidate.id ~= 20, "no quest item, gear, reagent, trade good, buff food or unsellable") end
+		-- A white item asks first; leaving takes the ask back.
+		rows[3]:GetScript("OnClick")(rows[3], "LeftButton")
+		assert(#deleted == 0 and rows[3].asked, "white asks first")
+		rows[3]:GetScript("OnLeave")(rows[3])
+		assert(not rows[3].asked, "leaving cancels")
+		rows[3]:GetScript("OnClick")(rows[3], "LeftButton")
+		rows[3]:GetScript("OnClick")(rows[3], "LeftButton")
+		assert(#deleted == 1 and deleted[1] == 12, "second click destroys the white stack")
+		rows[1]:GetScript("OnClick")(rows[1], "LeftButton")
+		assert(#deleted == 2 and deleted[2] == 11, "grey goes on one click")
+		-- The slot changed under the card: nothing is deleted.
+		local stale = F.card.rows[1].candidate
+		assert(stale and stale.id == 15, "the next grey moves up")
+		bags[5] = { itemID = 14, itemName = "Plain Sword", stackCount = 1, quality = 1, iconFileID = 1 }
+		rows[1]:GetScript("OnClick")(rows[1], "LeftButton")
+		assert(#deleted == 2, "a changed slot is left alone")
+		-- A preview never destroys.
+		F:Hide()
+		SlashCmdList.STOA("fullbags")
+		local first = F.card.rows[1]
+		if first.candidate then
+			first:GetScript("OnClick")(first, "LeftButton"); first:GetScript("OnClick")(first, "LeftButton")
+		end
+		assert(#deleted == 2, "the preview destroys nothing")
+		F:Hide()
+		Stoa.Items.info = realItemsInfo
+		C_TooltipInfo.GetBagItem = realTip
+		C_Container.GetContainerNumSlots, C_Container.GetContainerItemInfo, C_Container.GetContainerNumFreeSlots, C_Container.PickupContainerItem,
+			C_Item.GetItemInfo, GetItemInfo, DeleteCursorItem, GetCursorInfo, ClearCursor, C_Container.GetContainerItemQuestInfo = unpack(real, 1, 10)
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Full bags: " .. e end
+end
 -- Settings window: every page and a search drawn, every setting changed
 -- and put back, the lists added to and taken from, a dropdown by keys.
 do
@@ -615,6 +711,29 @@ do
 				local was = O.value(entry)
 				for _, option in ipairs(entry.options) do O.set(entry, option[1]) end
 				O.set(entry, was)
+			elseif entry.kind == "slots" then
+				-- Every tile into every slot, then a caption's list on the console.
+				local c, row = Stoa.modules.Grimoire, W.rowFor(entry)
+				local was = c:Slots()
+				for _, well in ipairs(row.wells) do
+					well:GetScript("OnClick")(well)
+					for _, tile in ipairs(row.tiles) do tile:GetScript("OnClick")(tile) end
+				end
+				assert(c:Slots()[1] == "empty" and c:Slots()[3] == "empty", "slots emptied")
+				c:SetSlot(1, "week"); c:SetSlot(2, "week")
+				assert(c:Slots()[2] == "week" and c:Slots()[1] == "empty", "slots swap")
+				if c.frame and not c.slimCard and not c.db.freeRight then
+					-- The sim's screen has no width, so no slot is placed: make the handle.
+					local handle = c:EmptyHandle(1)
+					handle:GetScript("OnEnter")(handle)
+					handle:GetScript("OnClick")(handle)
+					handle:GetScript("OnLeave")(handle)
+					assert(StoaSettingsMenu and StoaSettingsMenu:IsShown(), "caption opens the list")
+					StoaSettingsMenu.rows[1]:GetScript("OnClick")(StoaSettingsMenu.rows[1])
+					assert(c:Slots()[1] == "ready", "list sets the slot")
+				end
+				for n, kind in ipairs(was) do c:SetSlot(n, kind) end
+				for n, kind in ipairs(was) do assert(c:Slots()[n] == kind, "slots put back") end
 			elseif entry.kind == "words" then
 				local before, had = #entry.items(), {}
 				for _, item in ipairs(entry.items()) do had[item[1]] = true end

@@ -1100,13 +1100,11 @@ function UI.shadowLine(parent, anchor)
 	return line, fall
 end
 
--- Window stone ----------------------------------------------------------------
--- Tyler's stone, its faint rings and grain, laid over the body of every
--- window (quests, merchants, bags, Stoa's own pages) but never the console,
--- buttons or tooltips. The texture is white with alpha and takes the
--- theme's text colour, so it sits on any theme's panel. Each window shows
--- a slice of it at its natural size rather than stretching it, and it
--- fades out towards the top, where titles and text start.
+-- Window depth ---------------------------------------------------------------
+-- What lies behind the body of every window (quests, merchants, bags,
+-- Stoa's own pages) but never the console, buttons or tooltips: a recessed
+-- well in both looks, with the grain lying in it in Matte. (Leather wore a stone with faint
+-- rings here until 2.1.)
 
 -- The Matte material (Stoa.db.material): the console and windows as
 -- moulded black hardware, a fine grain (Tools/art/matte_grain.py) in place
@@ -1138,19 +1136,41 @@ function UI.fitGrain(tex)
 	tex:SetTexCoord(0, width * perUnit / GRAIN_SIZE, 0, height * perUnit / GRAIN_SIZE)
 end
 
-local STONE = UI.MEDIA .. "Textures\\WindowStone"
-local STONE_SIZE = 1024
 local STONE_INSET = 2
-UI.STONE_STRENGTH = 0.16
--- The stone's strength at the top of a body, as a share of the bottom's.
-local STONE_TOP = 0.3
+-- Leather's windows have a recessed body: a step darker than the header
+-- and footer, with a soft shadow falling in from each edge (deepest under
+-- the header), as the console's wells are. Flat colour only, no art.
+local WELL_FILL = 0.30
+local WELL_SHADE = { top = { 16, 0.62 }, bottom = { 10, 0.42 }, left = { 10, 0.45 }, right = { 10, 0.45 } }
 local stones = {}
 
 local function fitStone(tex)
 	if tex.stoaGrain then return UI.fitGrain(tex) end
-	local width, height = tex:GetWidth(), tex:GetHeight()
-	if Stoa:IsSecret(width) or Stoa:IsSecret(height) or not width or width <= 0 then return end
-	tex:SetTexCoord(0, width / STONE_SIZE, 0, height / STONE_SIZE)
+end
+
+local function shade(frame, tex, side)
+	local size, alpha = WELL_SHADE[side][1], WELL_SHADE[side][2]
+	if tex.stoaGrain then size = math.floor(size * 0.6 + 0.5) end
+	local part = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
+	part:SetColorTexture(1, 1, 1, 1)
+	local clear, solid = CreateColor and CreateColor(0, 0, 0, 0), CreateColor and CreateColor(0, 0, 0, alpha)
+	local vertical = side == "top" or side == "bottom"
+	if vertical then
+		part:SetPoint(side == "top" and "TOPLEFT" or "BOTTOMLEFT", tex)
+		part:SetPoint(side == "top" and "TOPRIGHT" or "BOTTOMRIGHT", tex)
+		part:SetHeight(size)
+	else
+		part:SetPoint(side == "left" and "TOPLEFT" or "TOPRIGHT", tex)
+		part:SetPoint(side == "left" and "BOTTOMLEFT" or "BOTTOMRIGHT", tex)
+		part:SetWidth(size)
+	end
+	-- (A vertical gradient runs from the bottom colour to the top one, a
+	-- horizontal one from left to right.)
+	local dark = side == "top" or side == "right"
+	if not (clear and part.SetGradient and pcall(part.SetGradient, part, vertical and "VERTICAL" or "HORIZONTAL", dark and clear or solid, dark and solid or clear)) then
+		part:SetColorTexture(0, 0, 0, alpha * 0.4)
+	end
+	return part
 end
 
 -- `top` and `bottom` are what the stone sits between (the header and the
@@ -1160,7 +1180,7 @@ function UI.stone(frame, top, bottom)
 	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
 	-- Matte windows wear the grain where the others wear the stone.
 	tex.stoaGrain = UI.matte()
-	tex:SetTexture(tex.stoaGrain and UI.GRAIN or STONE, "REPEAT", "REPEAT")
+	if tex.stoaGrain then tex:SetTexture(UI.GRAIN, "REPEAT", "REPEAT") end
 	if top then
 		tex:SetPoint("TOPLEFT", top, "BOTTOMLEFT")
 		tex:SetPoint("TOPRIGHT", top, "BOTTOMRIGHT")
@@ -1173,10 +1193,19 @@ function UI.stone(frame, top, bottom)
 	else
 		tex:SetPoint("BOTTOM", 0, STONE_INSET)
 	end
+	-- A window with no header or footer has nothing to sit below, so it
+	-- keeps the panel's own shade and only the edges fall away.
+	local fill = (top or bottom) and WELL_FILL or 0
+	tex.shades = { shade(frame, tex, "top"), shade(frame, tex, "bottom"), shade(frame, tex, "left"), shade(frame, tex, "right") }
 	if tex.stoaGrain then
+		-- Matte: the same well, moulded tighter, with the grain lying in it.
 		tex:SetVertexColor(1, 1, 1, UI.grainAlpha())
+		local floor = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+		floor:SetColorTexture(0, 0, 0, fill)
+		floor:SetAllPoints(tex)
+		table.insert(tex.shades, floor)
 	else
-		UI.gradient(tex, "text", UI.STONE_STRENGTH, "VERTICAL", 1, STONE_TOP)
+		tex:SetColorTexture(0, 0, 0, fill)
 	end
 	frame.stoaStone = tex
 	stones[#stones + 1] = tex
@@ -1192,8 +1221,9 @@ function UI.stone(frame, top, bottom)
 		end)
 	end
 	pcall(fitStone, tex)
-	tex:SetShown(Stoa.db == nil or Stoa.db.windowStone ~= false)
-	UI.applyTheme()
+	local shown = Stoa.db == nil or Stoa.db.windowStone ~= false
+	tex:SetShown(shown)
+	for _, part in ipairs(tex.shades or {}) do part:SetShown(shown) end
 	return tex
 end
 
@@ -1463,12 +1493,16 @@ function UI.stoneOn(frame, on)
 	local tex = frame and frame.stoaStone
 	if not tex then return end
 	tex:SetAlpha(on and (tex.stoaGrain and UI.grainAlpha() or 1) or 0)
+	for _, part in ipairs(tex.shades or {}) do part:SetAlpha(on and 1 or 0) end
 	tex.stoaOff = not on
 end
 
 function UI.showStone(on)
 	Stoa.db.windowStone = on and true or false
-	for _, tex in ipairs(stones) do tex:SetShown(on and true or false) end
+	for _, tex in ipairs(stones) do
+		tex:SetShown(on and true or false)
+		for _, part in ipairs(tex.shades or {}) do part:SetShown(on and true or false) end
+	end
 end
 
 -- A Stoa button: a dark rounded panel with a word in the sans, warming to

@@ -384,6 +384,15 @@ local function hideBarArt()
 		local art = bar[key]
 		if art and art.Hide then art:Hide() end
 	end
+	-- The gold dividers the game draws between the main bar's buttons when
+	-- they stand close together (a layout with Hide Bar Art unticked and
+	-- the least padding, as STOA's own is).
+	for _, key in ipairs({ "HorizontalDividersPool", "VerticalDividersPool" }) do
+		local pool = bar[key]
+		if pool and pool.EnumerateActive then
+			for divider in pool:EnumerateActive() do divider:Hide() end
+		end
+	end
 end
 
 -- Bags and the game menu leave the action bar row for the console's top
@@ -1058,6 +1067,11 @@ function Console:OnOff()
 			if db.hideBarArt then safely(hideBarArt) end
 		end)
 	end
+	if bar and bar.UpdateDividers then
+		hooksecurefunc(bar, "UpdateDividers", function()
+			if db.hideBarArt then safely(hideBarArt) end
+		end)
+	end
 end
 
 function Console:House()
@@ -1144,6 +1158,11 @@ function Console:House()
 	local bar = actionBar()
 	if bar and bar.UpdateEndCaps then
 		hooksecurefunc(bar, "UpdateEndCaps", function()
+			if db.hideBarArt then safely(hideBarArt) end
+		end)
+	end
+	if bar and bar.UpdateDividers then
+		hooksecurefunc(bar, "UpdateDividers", function()
 			if db.hideBarArt then safely(hideBarArt) end
 		end)
 	end
