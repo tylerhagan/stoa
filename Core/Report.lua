@@ -35,6 +35,16 @@ local function noteBlocked(event, addon, func)
 	local entry = blockedByKey[key]
 	if not entry then
 		entry = { addon = tostring(addon), func = tostring(func), count = 0, forbidden = event == "ADDON_ACTION_FORBIDDEN" }
+		-- The first time: when, whether in a fight, and what the mouse was
+		-- over, so there is something to go on.
+		local over = "nothing"
+		local ok, foci = pcall(function() return GetMouseFoci and GetMouseFoci() end)
+		local focus = ok and type(foci) == "table" and foci[1]
+		if focus then
+			local named, name = pcall(function() return focus.GetDebugName and focus:GetDebugName() or focus:GetName() end)
+			over = named and type(name) == "string" and name or "an unnamed frame"
+		end
+		entry.where = ("%s, %s, mouse over %s"):format(date and date("%H:%M:%S") or "?", InCombatLockdown() and "in combat" or "out of combat", over)
 		blockedByKey[key] = entry
 		if #blocked < MAX_BLOCKED then blocked[#blocked + 1] = entry end
 	end
@@ -42,6 +52,10 @@ local function noteBlocked(event, addon, func)
 end
 Stoa:On("ADDON_ACTION_BLOCKED", function(addon, func) noteBlocked("ADDON_ACTION_BLOCKED", addon, func) end)
 Stoa:On("ADDON_ACTION_FORBIDDEN", function(addon, func) noteBlocked("ADDON_ACTION_FORBIDDEN", addon, func) end)
+-- The same refusal reached through a macro or a secure click names only
+-- the function, not the addon.
+Stoa:On("MACRO_ACTION_BLOCKED", function(func) noteBlocked("ADDON_ACTION_BLOCKED", "a macro or secure click", func) end)
+Stoa:On("MACRO_ACTION_FORBIDDEN", function(func) noteBlocked("ADDON_ACTION_FORBIDDEN", "a macro or secure click", func) end)
 
 local function now()
 	return GetTime and GetTime() or 0
@@ -228,6 +242,7 @@ function Report:Text()
 		add("Blocked actions this session (the game's \"Interface action failed because of an AddOn\"):")
 		for _, entry in ipairs(blocked) do
 			add("  x", entry.count, " ", entry.addon, " calling ", entry.func, entry.forbidden and " (forbidden)" or "")
+			if entry.where then add("     first at ", entry.where) end
 		end
 		add("")
 	end
