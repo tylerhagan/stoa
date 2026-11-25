@@ -3,7 +3,8 @@
 -- pays, and one click on a row destroys that stack to make room.
 --
 -- Offered, in order: grey junk, then what you marked as junk, then other
--- white items with a price. Never a quest item, gear that isn't junk,
+-- white items with a price. Never a quest item, a spell reagent, gear that
+-- isn't junk,
 -- anything you keep in Restock, or anything a vendor won't buy. Grey goes
 -- on one click; anything else turns red and asks for a second.
 --
@@ -30,6 +31,22 @@ local DONE_SECONDS = 2.5   -- once there is room again
 local POOR, COMMON = 0, 1
 local QUEST_CLASS = 12
 
+-- Spell reagents are never offered, whatever their quality: a Light
+-- Feather is grey and still what Levitate and Slow Fall burn. The game's
+-- reagent classes catch most; these are the class reagents by name, in
+-- case one is filed elsewhere.
+local REAGENT_CLASS, MISC_CLASS, MISC_REAGENT = 5, 15, 1
+local REAGENTS = {
+	[17056] = true, -- Light Feather
+	[17031] = true, [17032] = true, [17020] = true, -- Rune of Teleportation, Rune of Portals, Arcane Powder
+	[17028] = true, [17029] = true, -- Holy Candle, Sacred Candle
+	[17033] = true, [21177] = true, -- Symbol of Divinity, Symbol of Kings
+	[17030] = true, [17057] = true, [17058] = true, -- Ankh, Shiny Fish Scales, Fish Oil
+	[6265] = true, [5565] = true, [16583] = true, -- Soul Shard, Infernal Stone, Demonic Figurine
+	[17034] = true, [17035] = true, [17036] = true, [17037] = true, [17038] = true, [17026] = true, [17021] = true, -- druid seeds and roots
+	[5140] = true, [5530] = true, [3775] = true, -- Flash Powder, Blinding Powder, Crippling Poison
+}
+
 local Items
 
 -- Candidates ---------------------------------------------------------------
@@ -48,8 +65,9 @@ local function candidates()
 	Items.eachBagSlot(function(bag, slot, info)
 		local id = info.itemID
 		if not id or info.isLocked or info.hasNoValue then return end
-		local quality, price, equipLoc, classID = Items.info(id)
+		local quality, price, equipLoc, classID, subclassID = Items.info(id)
 		if not quality or price <= 0 then return end
+		if REAGENTS[id] or classID == REAGENT_CLASS or (classID == MISC_CLASS and subclassID == MISC_REAGENT) then return end
 		local marked = Items.isMarkedJunk(id)
 		local tier = quality == POOR and 1 or marked and 2 or quality == COMMON and 3 or nil
 		if not tier or keep[id] then return end
@@ -310,7 +328,7 @@ function FullBags:Refresh()
 	if free > 0 then
 		head = free == 1 and "Room for one more now." or ("%d slots free now."):format(free)
 	elseif #list == 0 then
-		head = "Nothing here is safe to destroy. STOA won't offer quest items, gear or what you keep in Restock; open your bags to choose yourself."
+		head = "Nothing here is safe to destroy. STOA won't offer quest items, reagents, gear or what you keep in Restock; open your bags to choose yourself."
 	elseif quest and name then
 		head = ("You need |cffffffff%s|r for a quest."):format(name)
 	elseif name and value and value < list[1].value then
