@@ -602,8 +602,9 @@ do
 			{ itemID = 16, itemName = "Bound Token", stackCount = 1, quality = 1, iconFileID = 1, hasNoValue = true },
 			{ itemID = 17056, itemName = "Light Feather", stackCount = 5, quality = 0, iconFileID = 1 },
 			{ itemID = 18, itemName = "Some Reagent", stackCount = 1, quality = 0, iconFileID = 1 },
+			{ itemID = 19, itemName = "Runed Rod", stackCount = 1, quality = 1, iconFileID = 1 },
 		}
-		local info = { [11] = { 0, 4, "", 15 }, [12] = { 1, 125, "", 0 }, [13] = { 1, 50, "", 12 }, [14] = { 1, 900, "INVTYPE_WEAPON", 2 }, [15] = { 0, 31, "", 15 }, [17056] = { 0, 1, "", 15 }, [18] = { 0, 1, "", 5 } }
+		local info = { [11] = { 0, 4, "", 15 }, [12] = { 1, 125, "", 0 }, [13] = { 1, 50, "", 12 }, [14] = { 1, 900, "INVTYPE_WEAPON", 2 }, [15] = { 0, 31, "", 15 }, [17056] = { 0, 1, "", 15 }, [18] = { 0, 1, "", 5 }, [19] = { 1, 24, "", 7 } }
 		local real = { C_Container.GetContainerNumSlots, C_Container.GetContainerItemInfo, C_Container.GetContainerNumFreeSlots, C_Container.PickupContainerItem,
 			C_Item.GetItemInfo, GetItemInfo, DeleteCursorItem, GetCursorInfo, ClearCursor, C_Container.GetContainerItemQuestInfo }
 		local cursor, deleted = nil, {}
@@ -635,7 +636,7 @@ do
 		F:Show()
 		local rows = F.card.rows
 		assert(rows[1].candidate.id == 11 and rows[2].candidate.id == 15 and rows[3].candidate.id == 12, "grey by value, then white")
-		for _, row in ipairs(rows) do assert(row.candidate.id ~= 13 and row.candidate.id ~= 14 and row.candidate.id ~= 16 and row.candidate.id ~= 17056 and row.candidate.id ~= 18, "no quest item, gear, reagent or unsellable") end
+		for _, row in ipairs(rows) do assert(row.candidate.id ~= 13 and row.candidate.id ~= 14 and row.candidate.id ~= 16 and row.candidate.id ~= 17056 and row.candidate.id ~= 18 and row.candidate.id ~= 19, "no quest item, gear, reagent, trade good or unsellable") end
 		-- A white item asks first; leaving takes the ask back.
 		rows[3]:GetScript("OnClick")(rows[3], "LeftButton")
 		assert(#deleted == 0 and rows[3].asked, "white asks first")

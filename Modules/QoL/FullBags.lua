@@ -2,8 +2,8 @@
 -- names the two or three least valuable stacks you carry, by what a vendor
 -- pays, and one click on a row destroys that stack to make room.
 --
--- Offered, in order: grey junk, then what you marked as junk, then other
--- white items with a price. Never a quest item, a spell reagent, gear that
+-- Offered, in order: grey junk, then what you marked as junk, then white
+-- food, drink and other consumables with a price. Never a quest item, a spell reagent, gear that
 -- isn't junk,
 -- anything you keep in Restock, or anything a vendor won't buy. Grey goes
 -- on one click; anything else turns red and asks for a second.
@@ -22,7 +22,7 @@ local UI = Stoa.UI
 local FullBags = Stoa:NewModule("FullBags", {})
 
 local call = Stoa.safe.call
-local WIDTH, PAD = 262, 12
+local WIDTH, PAD = 290, 12
 local ROW_H = 30
 local MAX_ROWS = 3
 local ALONE_SECONDS = 15   -- the card's life with no loot window open
@@ -36,6 +36,7 @@ local QUEST_CLASS = 12
 -- reagent classes catch most; these are the class reagents by name, in
 -- case one is filed elsewhere.
 local REAGENT_CLASS, MISC_CLASS, MISC_REAGENT = 5, 15, 1
+local CONSUMABLE_CLASS = 0
 local REAGENTS = {
 	[17056] = true, -- Light Feather
 	[17031] = true, [17032] = true, [17020] = true, -- Rune of Teleportation, Rune of Portals, Arcane Powder
@@ -71,8 +72,10 @@ local function candidates()
 		local marked = Items.isMarkedJunk(id)
 		local tier = quality == POOR and 1 or marked and 2 or quality == COMMON and 3 or nil
 		if not tier or keep[id] then return end
-		-- Gear goes only as junk: a white sword may be the one you swing.
-		if tier == 3 and type(equipLoc) == "string" and equipLoc ~= "" and equipLoc ~= "INVTYPE_NON_EQUIP_IGNORE" then return end
+		-- Of white items only food, drink and the like are offered: they are
+		-- bought back anywhere. A white rod, tool, cloth or bar may be what a
+		-- profession of yours runs on, and a white sword the one you swing.
+		if tier == 3 and classID ~= CONSUMABLE_CLASS then return end
 		if isQuestItem(bag, slot, id, info.itemName, classID) then return end
 		local count = Stoa:PlainNumber(info.stackCount) or 1
 		list[#list + 1] = { bag = bag, slot = slot, id = id, name = info.itemName, icon = info.iconFileID,
@@ -328,7 +331,7 @@ function FullBags:Refresh()
 	if free > 0 then
 		head = free == 1 and "Room for one more now." or ("%d slots free now."):format(free)
 	elseif #list == 0 then
-		head = "Nothing here is safe to destroy. STOA won't offer quest items, reagents, gear or what you keep in Restock; open your bags to choose yourself."
+		head = "Nothing here is safe to destroy. STOA only offers junk and white food or drink; open your bags to choose yourself."
 	elseif quest and name then
 		head = ("You need |cffffffff%s|r for a quest."):format(name)
 	elseif name and value and value < list[1].value then
