@@ -41,9 +41,9 @@ local function scaffold(col, kit, label)
 	big:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6)
 	big:SetWordWrap(false)
 	local note = UI.text(col, "sans", Stoa.typeSize.body, "muted", "RIGHT")
-	note:SetPoint("RIGHT", col, "RIGHT", 0, 0)
-	note:SetPoint("BOTTOM", big, "BOTTOM", 0, 2)
-	big:SetPoint("RIGHT", note, "LEFT", -8, 0)
+	-- Hung from the rule, not from the big line, which is cut short of it.
+	note:SetPoint("TOPRIGHT", rule, "BOTTOMRIGHT", 0, -13)
+	big:SetWidth(kit.width - 62)
 	local rows = {}
 	for i = 1, ROWS do
 		local name = UI.text(col, "sans", Stoa.typeSize.body, "text")
