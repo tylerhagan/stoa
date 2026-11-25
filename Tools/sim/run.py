@@ -605,8 +605,18 @@ do
 			{ itemID = 17056, itemName = "Light Feather", stackCount = 5, quality = 0, iconFileID = 1 },
 			{ itemID = 18, itemName = "Some Reagent", stackCount = 1, quality = 0, iconFileID = 1 },
 			{ itemID = 19, itemName = "Runed Rod", stackCount = 1, quality = 1, iconFileID = 1 },
+			{ itemID = 20, itemName = "Spiced Stew", stackCount = 1, quality = 1, iconFileID = 1 },
 		}
-		local info = { [11] = { 0, 4, "", 15 }, [12] = { 1, 125, "", 0 }, [13] = { 1, 50, "", 12 }, [14] = { 1, 900, "INVTYPE_WEAPON", 2 }, [15] = { 0, 31, "", 15 }, [17056] = { 0, 1, "", 15 }, [18] = { 0, 1, "", 5 }, [19] = { 1, 24, "", 7 } }
+		-- The jerky only feeds; the stew also leaves a buff and must stay.
+		local uses = { [12] = "Use: Restores 61 health over 18 sec. Must remain seated while eating.",
+			[20] = "Use: Restores 552 health over 24 sec. Must remain seated while eating. If you spend at least 10 seconds eating you will become well fed and gain 6 Stamina and Spirit for 15 min." }
+		C_TooltipInfo = C_TooltipInfo or {}
+		local realTip = C_TooltipInfo.GetBagItem
+		C_TooltipInfo.GetBagItem = function(bag, slot)
+			local item = bag == 0 and bags[slot]
+			return { lines = { { leftText = item and item.itemName or "" }, { leftText = item and uses[item.itemID] or "" } } }
+		end
+		local info = { [11] = { 0, 4, "", 15 }, [12] = { 1, 125, "", 0 }, [13] = { 1, 50, "", 12 }, [14] = { 1, 900, "INVTYPE_WEAPON", 2 }, [15] = { 0, 31, "", 15 }, [17056] = { 0, 1, "", 15 }, [18] = { 0, 1, "", 5 }, [19] = { 1, 24, "", 7 }, [20] = { 1, 2, "", 0 } }
 		local real = { C_Container.GetContainerNumSlots, C_Container.GetContainerItemInfo, C_Container.GetContainerNumFreeSlots, C_Container.PickupContainerItem,
 			C_Item.GetItemInfo, GetItemInfo, DeleteCursorItem, GetCursorInfo, ClearCursor, C_Container.GetContainerItemQuestInfo }
 		local cursor, deleted = nil, {}
@@ -638,7 +648,7 @@ do
 		F:Show()
 		local rows = F.card.rows
 		assert(rows[1].candidate.id == 11 and rows[2].candidate.id == 15 and rows[3].candidate.id == 12, "grey by value, then white")
-		for _, row in ipairs(rows) do assert(row.candidate.id ~= 13 and row.candidate.id ~= 14 and row.candidate.id ~= 16 and row.candidate.id ~= 17056 and row.candidate.id ~= 18 and row.candidate.id ~= 19, "no quest item, gear, reagent, trade good or unsellable") end
+		for _, row in ipairs(rows) do assert(row.candidate.id ~= 13 and row.candidate.id ~= 14 and row.candidate.id ~= 16 and row.candidate.id ~= 17056 and row.candidate.id ~= 18 and row.candidate.id ~= 19 and row.candidate.id ~= 20, "no quest item, gear, reagent, trade good, buff food or unsellable") end
 		-- A white item asks first; leaving takes the ask back.
 		rows[3]:GetScript("OnClick")(rows[3], "LeftButton")
 		assert(#deleted == 0 and rows[3].asked, "white asks first")
@@ -665,6 +675,7 @@ do
 		assert(#deleted == 2, "the preview destroys nothing")
 		F:Hide()
 		Stoa.Items.info = realItemsInfo
+		C_TooltipInfo.GetBagItem = realTip
 		C_Container.GetContainerNumSlots, C_Container.GetContainerItemInfo, C_Container.GetContainerNumFreeSlots, C_Container.PickupContainerItem,
 			C_Item.GetItemInfo, GetItemInfo, DeleteCursorItem, GetCursorInfo, ClearCursor, C_Container.GetContainerItemQuestInfo = unpack(real, 1, 10)
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)

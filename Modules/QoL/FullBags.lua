@@ -3,7 +3,8 @@
 -- pays, and one click on a row destroys that stack to make room.
 --
 -- Offered, in order: grey junk, then what you marked as junk, then white
--- food, drink and other consumables with a price. Never a quest item, a spell reagent, gear that
+-- food and drink of the plain kind (health or mana back and nothing more).
+-- Never food with a buff, an elixir or a scroll, a quest item, a spell reagent, gear that
 -- isn't junk,
 -- anything you keep in Restock, or anything a vendor won't buy. Grey goes
 -- on one click; anything else turns red and asks for a second.
@@ -59,6 +60,62 @@ local function isQuestItem(bag, slot, id, name, classID)
 	return Items.questNeeds(id, name) and true or false
 end
 
+-- A white consumable is offered only when it is the plain kind: all it
+-- does is give back health or mana. Food that also leaves you well fed, an
+-- elixir, a scroll or anything that raises a stat or your experience stays.
+-- Read from the item's own "Use:" lines. Plain food carries two or three
+-- numbers (how much, over how long); anything with a buff carries more, and
+-- that holds in every language. The words catch the rest in English. When
+-- the text can't be read the item is kept.
+local BUFF_WORDS = { "increas", "gain", "well fed", "experience", "chance", "resist", "reduc", "absorb", "grant", "improv", "bonus" }
+local plainUse = {}
+
+local function useText(bag, slot, id)
+	local prefix = type(ITEM_SPELL_TRIGGER_ONUSE) == "string" and ITEM_SPELL_TRIGGER_ONUSE or "Use:"
+	local getLines = C_TooltipInfo and C_TooltipInfo.GetBagItem
+	if getLines then
+		local ok, data = pcall(getLines, bag, slot)
+		if ok and type(data) == "table" and type(data.lines) == "table" then
+			local found
+			for _, line in ipairs(data.lines) do
+				local text = line.leftText
+				if type(text) == "string" and not Stoa:IsSecret(text) and text:sub(1, #prefix) == prefix then
+					found = (found and (found .. " ") or "") .. text:sub(#prefix + 1)
+				end
+			end
+			if found then return found end
+		end
+	end
+	local _, spell = call(C_Item and C_Item.GetItemSpell, id)
+	spell = Stoa:PlainNumber(spell)
+	local text = spell and C_Spell and C_Spell.GetSpellDescription and call(C_Spell.GetSpellDescription, spell)
+	if type(text) == "string" and not Stoa:IsSecret(text) and text ~= "" then return text end
+	if spell and C_Spell and C_Spell.RequestLoadSpellData then call(C_Spell.RequestLoadSpellData, spell) end
+	return nil
+end
+
+local function plainConsumable(bag, slot, id)
+	if plainUse[id] ~= nil then return plainUse[id] end
+	local text = useText(bag, slot, id)
+	if not text then return false end
+	text = text:lower()
+	local health = type(HEALTH) == "string" and HEALTH:lower() or "health"
+	local mana = type(MANA) == "string" and MANA:lower() or "mana"
+	local plain = (text:find(health, 1, true) or text:find(mana, 1, true)) and true or false
+	if plain then
+		local numbers = 0
+		for _ in text:gmatch("%d[%d,%.]*") do numbers = numbers + 1 end
+		if numbers > 3 then plain = false end
+	end
+	if plain then
+		for _, word in ipairs(BUFF_WORDS) do
+			if text:find(word, 1, true) then plain = false break end
+		end
+	end
+	plainUse[id] = plain
+	return plain
+end
+
 -- The stacks that may go, least valuable first within grey, marked, white.
 local function candidates()
 	local list = {}
@@ -77,6 +134,7 @@ local function candidates()
 		-- profession of yours runs on, and a white sword the one you swing.
 		if tier == 3 and classID ~= CONSUMABLE_CLASS then return end
 		if isQuestItem(bag, slot, id, info.itemName, classID) then return end
+		if tier == 3 and not plainConsumable(bag, slot, id) then return end
 		local count = Stoa:PlainNumber(info.stackCount) or 1
 		list[#list + 1] = { bag = bag, slot = slot, id = id, name = info.itemName, icon = info.iconFileID,
 			count = count, value = price * count, quality = quality, tier = tier }
@@ -331,7 +389,7 @@ function FullBags:Refresh()
 	if free > 0 then
 		head = free == 1 and "Room for one more now." or ("%d slots free now."):format(free)
 	elseif #list == 0 then
-		head = "Nothing here is safe to destroy. STOA only offers junk and white food or drink; open your bags to choose yourself."
+		head = "Nothing here is safe to destroy. STOA only offers junk and plain white food or drink; open your bags to choose yourself."
 	elseif quest and name then
 		head = ("You need |cffffffff%s|r for a quest."):format(name)
 	elseif name and value and value < list[1].value then
