@@ -1010,6 +1010,9 @@ local function slotHandle(parent, heading)
 	local handle = CreateFrame("Button", nil, parent)
 	handle:SetPoint("TOPLEFT", heading, "TOPLEFT", -4, 5)
 	handle:SetPoint("BOTTOMRIGHT", heading, "BOTTOMRIGHT", 20, -5)
+	-- Above anything else on the page that takes the mouse: Company's
+	-- whole column is a button, and it lay over half of this one.
+	handle:SetFrameLevel(parent:GetFrameLevel() + 6)
 	local chevron = UI.glyph(handle, "Chevron", 10, "text")
 	chevron:SetPoint("LEFT", heading, "RIGHT", 5, 0)
 	chevron:Hide()

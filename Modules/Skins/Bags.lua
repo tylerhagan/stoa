@@ -368,6 +368,8 @@ local function updateFooter(frame)
 	parts.free:SetShown(not keys)
 	if parts.money then parts.money:SetShown(not keys) end
 	if parts.moneyHover and parts.moneyHover.SetShown then parts.moneyHover:SetShown(not keys) end
+	-- Keys are never junk, so the keyring goes without the Junk word too.
+	if parts.junk then parts.junk:SetShown(not keys) end
 	if parts.sort then
 		local bag = frame.GetBagID and frame:GetBagID()
 		local combined = frame.IsCombinedBagContainer and frame:IsCombinedBagContainer()
