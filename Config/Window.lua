@@ -651,6 +651,8 @@ function builders.slots(row, entry)
 		well:SetScript("OnClick", function() row.sel = n; row:Paint() end)
 		row.wells[n] = well
 	end
+	-- Says what a click on a tile will do, so the two steps read at once.
+	row.guide = UI.text(row, "sans", Stoa.typeSize.body, "muted")
 	local kinds = console and console.SLOT_KINDS or {}
 	for i, kind in ipairs(kinds) do
 		local tile = plate(row)
@@ -680,6 +682,8 @@ function builders.slots(row, entry)
 			colour(well.cap, chosen and "accent" or "muted")
 			colour(well.text, (chosen or well.over) and "text" or "muted")
 		end
+		local r, g, b = Stoa:Color("accent")
+		self.guide:SetText(("Slot %d holds |cff%02x%02x%02x%s|r. Click a page below to change it, or another slot above."):format(self.sel, r * 255, g * 255, b * 255, labels[slots[self.sel]] or "Empty"))
 		for _, tile in ipairs(self.tiles) do
 			local at
 			for n, held in ipairs(slots) do
@@ -700,7 +704,12 @@ function builders.slots(row, entry)
 			well:ClearAllPoints()
 			well:SetPoint("TOPLEFT", (n - 1) * (third + gap), y)
 		end
-		y = y - WELL_H - 6
+		y = y - WELL_H - 10
+		self.guide:ClearAllPoints()
+		self.guide:SetPoint("TOPLEFT", 0, y)
+		self.guide:SetWidth(w)
+		self.guide:SetJustifyH("LEFT")
+		y = y - 18
 		local group, col, heads = nil, 0, 0
 		for i, tile in ipairs(self.tiles) do
 			local g = kinds[i][4]
