@@ -695,7 +695,7 @@ end
 
 -- Dressing -----------------------------------------------------------------------------
 
-local TIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2" }
+local TIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2", "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2" }
 
 -- Rank outlines and the header fade ---------------------------------------------------
 

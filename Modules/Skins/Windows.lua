@@ -976,7 +976,9 @@ end
 -- Tooltips: the same dark rounded panel, a thin health bar, and the
 -- default spot lifted to sit above the console's right corner instead of
 -- over it.
-local TOOLTIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2", "EmbeddedItemTooltip" }
+-- (A chat link's tooltip has compare tooltips of its own, the Equipped
+-- ones beside it, and a close button.)
+local TOOLTIPS = { "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2", "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2", "EmbeddedItemTooltip" }
 local TOOLTIP_GAP = 16
 
 local function dressTooltip(tip)
@@ -1188,6 +1190,8 @@ end
 
 local function dressTooltips()
 	for _, name in ipairs(TOOLTIPS) do dressTooltip(_G[name]) end
+	local link = _G.ItemRefTooltip
+	if link then pcall(dressClose, link.CloseButton or _G.ItemRefCloseButton) end
 	local bar = GameTooltipStatusBar
 	if bar then
 		bar:SetStatusBarTexture(UI.WHITE)
