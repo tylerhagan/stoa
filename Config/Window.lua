@@ -121,7 +121,7 @@ end
 -- A choice whose options are small pictures over their names (the Halo's
 -- arc styles). entry.pictures(value) gives the textures for one option's
 -- left and right half; they are the real art, drawn small.
-local TILE_W, TILE_H, TILE_ART = 84, 94, 60
+local TILE_W, TILE_H, TILE_ART = 80, 94, 60
 
 local function makeTiles(parent, entry)
 	local holder = CreateFrame("Frame", nil, parent)
@@ -326,7 +326,9 @@ end
 local function makeTick(parent)
 	local tick = CreateFrame("Button", nil, parent)
 	tick:SetSize(14, 14)
-	local edge = UI.border(tick, 1)
+	-- A drawn outline, not four one-pixel lines: at some UI scales a line
+	-- that thin fell between pixels and one side of the box went missing.
+	local edge = UI.pillEdge(tick, 0)
 	local fill = tick:CreateTexture(nil, "ARTWORK")
 	fill:SetTexture(UI.WHITE)
 	fill:SetPoint("TOPLEFT", 3, -3)
