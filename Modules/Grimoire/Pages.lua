@@ -24,6 +24,12 @@ local HEARTHSTONE = 6948
 
 local function plain(v) return Stoa:PlainNumber(v) end
 
+-- A colour code in the theme's muted tone, for a quiet word inside a line.
+local function muted(word)
+	local r, g, b = Stoa:Color("muted")
+	return string.format("|cff%02x%02x%02x%s|r", (r or 0.5) * 255, (g or 0.5) * 255, (b or 0.5) * 255, word)
+end
+
 -- "2d 14h", "3h 20m", "12m", "under 1m".
 local function span(seconds)
 	seconds = math.max(0, math.floor(seconds))
@@ -36,7 +42,8 @@ end
 
 -- A page's frame: the big line with a small note at its right, and rows
 -- of a name with a figure at the right.
-local function scaffold(col, kit, label)
+-- `drop` lowers the rows, for a page with a bar under its big line.
+local function scaffold(col, kit, label, drop)
 	local rule = kit.heading(label)
 	local big = UI.text(col, "serif", Stoa.typeSize.title, "text")
 	big:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 0, -6)
@@ -50,8 +57,11 @@ local function scaffold(col, kit, label)
 		local name = UI.text(col, "sans", Stoa.typeSize.body, "text")
 		name:SetWordWrap(false)
 		local value = UI.text(col, "sans", Stoa.typeSize.body, "muted", "RIGHT")
-		value:SetPoint("BOTTOMRIGHT", col, "BOTTOMRIGHT", 0, (ROWS - i) * ROW_H)
-		name:SetPoint("BOTTOMLEFT", col, "BOTTOMLEFT", 0, (ROWS - i) * ROW_H)
+		-- Rows hang under the big line, so a short list sits close to it.
+		local y = -(7 + (drop or 0) + (i - 1) * ROW_H)
+		name:SetPoint("TOPLEFT", big, "BOTTOMLEFT", 0, y)
+		value:SetPoint("TOP", name, "TOP", 0, 0)
+		value:SetPoint("RIGHT", col, "RIGHT", 0, 0)
 		name:SetPoint("RIGHT", value, "LEFT", -8, 0)
 		rows[i] = { name = name, value = value }
 	end
@@ -95,6 +105,16 @@ local function factions()
 	return list
 end
 
+local function rank(f)
+	return f.reaction and _G["FACTION_STANDING_LABEL" .. f.reaction] or ""
+end
+
+local function share(f)
+	local room = f.ceiling - f.floor
+	if room <= 0 then return 1 end
+	return math.max(0, math.min(1, (f.standing - f.floor) / room))
+end
+
 -- Writes down when each standing last moved, so the page can lead with
 -- what you're working on. Returns the list, most recent first.
 local function movedFirst()
@@ -109,26 +129,20 @@ local function movedFirst()
 		end
 		f.moved = seen[f.id].moved
 	end
+	-- The one you watch, then what moved last. Before anything has moved:
+	-- the highest standing first, and the nearest to its next rank.
 	table.sort(list, function(a, b)
 		if a.watched ~= b.watched then return a.watched end
 		if a.moved ~= b.moved then return a.moved > b.moved end
+		if (a.reaction or 0) ~= (b.reaction or 0) then return (a.reaction or 0) > (b.reaction or 0) end
+		if share(a) ~= share(b) then return share(a) > share(b) end
 		return a.name < b.name
 	end)
 	return list
 end
 
-local function rank(f)
-	return f.reaction and _G["FACTION_STANDING_LABEL" .. f.reaction] or ""
-end
-
-local function share(f)
-	local room = f.ceiling - f.floor
-	if room <= 0 then return 1 end
-	return math.max(0, math.min(1, (f.standing - f.floor) / room))
-end
-
 local function buildReputation(col, kit)
-	local page = scaffold(col, kit, "Reputation")
+	local page = scaffold(col, kit, "Reputation", 8)
 	local bar = Stoa.Figures.bar(col, kit.width, 4)
 	bar:SetPoint("TOPLEFT", page.big, "BOTTOMLEFT", 0, -5)
 	local update = keep(col, 60, function()
@@ -150,7 +164,9 @@ local function buildReputation(col, kit)
 		for i = 2, ROWS do
 			local f = list[i]
 			if f then
-				setRow(page.rows[i], f.name, rank(f) .. "  " .. math.floor(share(f) * 100) .. "%")
+				-- The rank is the first word, so a long name gives way to it
+				-- last: "Honored  Timbermaw Hold" and the share at the right.
+				setRow(page.rows[i], muted(rank(f)) .. "  " .. f.name, math.floor(share(f) * 100) .. "%")
 			else
 				setRow(page.rows[i])
 			end
@@ -296,7 +312,7 @@ local function buildCooldowns(col, kit)
 		for i = 1, ROWS do
 			local cd = list[i]
 			if cd then
-				local name = cd.who and (cd.name .. "  |cff8b929a" .. cd.who .. "|r") or cd.name
+				local name = cd.who and (cd.name .. "  " .. muted(cd.who)) or cd.name
 				setRow(page.rows[i], name, cd.left <= 0 and "ready" or span(cd.left), "text", cd.left <= 0 and "accent" or "muted")
 			else
 				setRow(page.rows[i])
