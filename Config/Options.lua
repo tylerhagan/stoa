@@ -304,7 +304,7 @@ local function build()
 	page = "console"
 	group = "The console"
 	-- First on its page: the console's size is what people come here for.
-	choice(nil, "consoleShape", "Console size", "Full is the console along the bottom of the screen. Slim is one plain line a quarter of the height, with chat and the bars standing above it. None takes it away: turn on the faint arcs below to keep your health and mana in view.", "full", {
+	choice(nil, "consoleShape", "Console size", "Full is the console along the bottom of the screen. Slim is one plain line a quarter of the height, with chat and the bars standing above it. None takes it away, and your health and mana show as two faint arcs around your character. Setup > Health and mana out of combat changes that.", "full", {
 		{ "full", "Full" }, { "slim", "Slim line" }, { "none", "None" },
 	}, {
 		id = "consoleShape", reload = true, words = "console slim minimal full none hide bottom bar layout size",
@@ -318,6 +318,11 @@ local function build()
 			if not c then return end
 			c.enabled = v ~= "none"
 			c.slim = v == "slim"
+			-- Health and mana follow the console: on it while there is one,
+			-- as the faint arcs when there is none (else they'd show nowhere,
+			-- or twice once the console comes back).
+			local halo = module("Halo")
+			if halo then halo.restArcs = v == "none" end
 		end,
 	})
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, {
