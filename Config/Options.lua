@@ -24,7 +24,7 @@ local Options = { list = {}, byId = {}, start = {} }
 Stoa.Options = Options
 
 Options.PAGES = {
-	{ "parts", "Build your STOA", "Start here. Pick a starting set, then switch on only the parts you want: anything you switch off goes back to the game's own. This page is the quick start; each part's finer settings are on its own page in the list on the left.", "Quick start" },
+	{ "parts", "Build your STOA", "Start here. Pick a layout (Full, Slim or None), then switch on only the parts you want: anything you switch off goes back to the game's own. This page is the quick start; each part's finer settings are on its own page in the list on the left.", "Quick start" },
 	{ "look", "Look", "Theme, colour and the few painted pieces. These change everything else, so they come first." },
 	{ "console", "Console", "The console along the bottom of the screen and what it holds." },
 	{ "combat", "Combat", "What happens when a fight starts: the Halo, the combat bar and what they show." },
@@ -48,8 +48,8 @@ end
 -- pages below under a plain name, with what you get and what Off leaves.
 -- { setting id, group, name, what it is }
 local PARTS = {
-	{ "preset", "Step 1: pick a starting set", "How much STOA: console", "The first of two answers that set the parts below in one go: Full, Slim (one line) or None. Then switch parts on or off." },
-	{ "around", "Step 1: pick a starting set", "How much STOA: everything around it", "The second answer. Standard shows everything. Quiet makes the target and party thin strips that fade out of combat and puts the extras away." },
+	{ "preset", "Step 1: pick a layout", "Layout: Full, Slim or None", "The first of two answers that set the parts below in one go: the Full console, Slim (one line) or None. None with Quiet below is the Minimal layout. Then switch parts on or off." },
+	{ "around", "Step 1: pick a layout", "Layout: everything around it", "The second answer. Standard shows everything. Quiet makes the target and party thin strips that fade out of combat and puts the extras away." },
 	{ "consoleShape", "Step 2: choose your parts, out of a fight", "Console", "The panel along the bottom of the screen that holds chat, your action bars and the Ready, Journey and Company pages. Slim is one thin line with chat and bars standing above it. None takes the console away." },
 	{ "houseChat", "Step 2: choose your parts, out of a fight", "Chat on the console", "Chat sits on the console's left page. Off leaves the chat window where the game puts it." },
 	{ "glanceOn", "Step 2: choose your parts, out of a fight", "At a glance", "Up to eight numbers you choose, such as gold, gear and stats, beside the chat on the console. Off takes them away." },
@@ -71,7 +71,7 @@ local PARTS = {
 
 local EVERYDAY = setOf(
 	"Theme", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
-	"Leather console", "Hold chat in the console", "Travel line while riding", "At a glance, beside the chat", "Lines at a glance",
+	"Console size", "Leather console", "Hold chat in the console", "Travel line while riding", "At a glance, beside the chat", "Lines at a glance",
 	"In combat", "Target of target", "Focus", "Combat bar under the Halo", "Combat rows", "Proc art beside the Halo",
 	"Show STOA party cards", "Show STOA raid frames", "Show sample frames", "Click-casting", "Click bindings", "Threat meter",
 	"Restyle nameplates", "Nameplate style", "Damage numbers", "Tooltip cards", "Tooltip position",
@@ -79,7 +79,7 @@ local EVERYDAY = setOf(
 	"Style the minimap", "Minimap shape", "Gather addon icons", "Times on chat lines",
 	"Experience pace", "New spells at your trainer", "Mark the best quest reward", "Quest item buttons", "Your buffs at hand", "Emergency item",
 	"Faster loot", "Whisper card", "Accept quests", "Hand in quests", "Sell grey junk", "Repair gear", "Away screen", "Dungeon companion",
-	"Welcome page", "How much STOA", "Backup", "Characters", "Bind keys", "Other addons", "Report a problem"
+	"Welcome page", "Layout: Full, Slim or None", "Layout: everything around it", "Backup", "Characters", "Bind keys", "Other addons", "Report a problem"
 )
 
 local QUIET = setOf(
@@ -302,6 +302,23 @@ local function build()
 	-- Console
 	page = "console"
 	group = "The console"
+	-- First on its page: the console's size is what people come here for.
+	choice(nil, "consoleShape", "Console size", "Full is the console along the bottom of the screen. Slim is one plain line a quarter of the height, with chat and the bars standing above it. None takes it away: turn on the faint arcs below to keep your health and mana in view.", "full", {
+		{ "full", "Full" }, { "slim", "Slim line" }, { "none", "None" },
+	}, {
+		id = "consoleShape", reload = true, words = "console slim minimal full none hide bottom bar layout size",
+		get = function()
+			local c = module("Grimoire")
+			if not c or c.enabled == false then return "none" end
+			return c.slim and "slim" or "full"
+		end,
+		set = function(v)
+			local c = module("Grimoire")
+			if not c then return end
+			c.enabled = v ~= "none"
+			c.slim = v == "slim"
+		end,
+	})
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, {
 		-- Leather's own choice: Matte black has its moulded console and no leather to switch.
 		id = "consoleArt", reload = true, showWhen = function() return db().material ~= "matte" end,
@@ -787,17 +804,17 @@ local function build()
 		welcome:ApplyMix(shape or nowShape, around or nowAround)
 		welcome:FollowLayout()
 	end
-	choice(nil, "preset", "How much STOA: console", "Full is the console along the bottom of the screen. Slim makes it one line, with chat and the bars standing above it. None takes it away: two faint arcs for health and mana, and the Halo in a fight. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
+	choice(nil, "preset", "Layout: Full, Slim or None", "Full is the console along the bottom of the screen. Slim makes it one line, with chat and the bars standing above it. None takes it away: two faint arcs for health and mana, and the Halo in a fight. Choosing one sets several settings at once; Your own mix below changes the parts one by one.", "full", {
 		{ "full", "Full" }, { "slim", "Slim" }, { "none", "None" },
 	}, {
-		id = "preset", reload = true, cmd = "/stoa preset", words = "preset minimal slim starting set",
+		id = "preset", reload = true, cmd = "/stoa preset", words = "preset minimal slim full none layout starting set how much",
 		get = function() return (Stoa.Welcome:Mix()) end,
 		set = function(v) mixTo(v, nil) end,
 	})
-	choice(nil, "around", "How much STOA: everything around it", "Standard shows the target and party as panels, with tooltip details, the quest line and At a glance. Quiet makes the target and party thin strips that fade out of combat, and puts away tooltip details, the quest line, At a glance and the Cooldown Manager rows.", "standard", {
+	choice(nil, "around", "Layout: everything around it", "Standard shows the target and party as panels, with tooltip details, the quest line and At a glance. Quiet makes the target and party thin strips that fade out of combat, and puts away tooltip details, the quest line, At a glance and the Cooldown Manager rows.", "standard", {
 		{ "standard", "Standard" }, { "quiet", "Quiet" },
 	}, {
-		id = "around", reload = true, words = "preset quiet less starting set",
+		id = "around", reload = true, words = "preset quiet minimal less layout starting set how much",
 		get = function() return select(2, Stoa.Welcome:Mix()) end,
 		set = function(v) mixTo(nil, v) end,
 	})
@@ -807,23 +824,6 @@ local function build()
 	}, { words = "preset classic designer" })
 	-- One place to mix the parts the presets above set together.
 	group = "Your own mix"
-	local function grimoire() return module("Grimoire") end
-	choice(nil, "consoleShape", "Console", "Full is the console along the bottom of the screen. Slim is one plain line a quarter of the height, with chat and the bars standing above it. None takes it away: turn on the faint arcs below to keep your health and mana in view.", "full", {
-		{ "full", "Full" }, { "slim", "Slim line" }, { "none", "None" },
-	}, {
-		id = "consoleShape", reload = true, words = "console slim minimal hide bottom bar layout",
-		get = function()
-			local c = grimoire()
-			if not c or c.enabled == false then return "none" end
-			return c.slim and "slim" or "full"
-		end,
-		set = function(v)
-			local c = grimoire()
-			if not c then return end
-			c.enabled = v ~= "none"
-			c.slim = v == "slim"
-		end,
-	})
 	choice(nil, "partyShape", "Party when not healing", "Cards are solid panels in a column at the left of the screen. Strips are thin lines beside the Halo: a name, health, and a word when you can act, resting faint while everyone is fine. Healers always get cards under the Halo.", "cards", {
 		{ "cards", "Cards" }, { "strips", "Strips" },
 	}, {
