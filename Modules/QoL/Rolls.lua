@@ -15,9 +15,9 @@ local UI = Stoa.UI
 local Rolls = Stoa:NewModule("Rolls", {})
 
 local call = Stoa.safe.call
-local CARD_W, CARD_H = 286, 76
+local CARD_W, CARD_H = 320, 76
 local GAP = 8
-local LINE_H = 14
+local LINE_H = 17
 local HOLD = 6       -- seconds a result card stays after the roll ends
 local MAX_RESULTS = 3
 
@@ -102,8 +102,8 @@ end
 
 -- Two columns, names left and choices right, kept on the same lines.
 local function columns(parent)
-	local names = UI.text(parent, "sans", Stoa.typeSize.caption, "text")
-	local choices = UI.text(parent, "sans", Stoa.typeSize.caption, "text", "RIGHT")
+	local names = UI.text(parent, "sans", Stoa.typeSize.body, "text")
+	local choices = UI.text(parent, "sans", Stoa.typeSize.body, "text", "RIGHT")
 	names:SetSpacing(3)
 	choices:SetSpacing(3)
 	return names, choices
@@ -117,8 +117,8 @@ function Rolls:WhoPanel(frame)
 	panel:SetHeight(LINE_H)
 	UI.surface(panel, "card", { alpha = 0.96 })
 	panel.names, panel.choices = columns(panel)
-	panel.names:SetPoint("TOPLEFT", 12, -6)
-	panel.choices:SetPoint("TOPRIGHT", -12, -6)
+	panel.names:SetPoint("TOPLEFT", 12, -8)
+	panel.choices:SetPoint("TOPRIGHT", -12, -8)
 	panel:Hide()
 	frame.stoaWho = panel
 	return panel
@@ -131,20 +131,20 @@ local results = {}
 function Rolls:ResultCard(i)
 	if results[i] then return results[i] end
 	local card = CreateFrame("Frame", nil, self.anchor)
-	card:SetSize(CARD_W, 40)
+	card:SetSize(CARD_W, 46)
 	UI.surface(card, "card", { alpha = 0.96 })
 	card.icon = card:CreateTexture(nil, "ARTWORK")
-	card.icon:SetSize(24, 24)
-	card.icon:SetPoint("TOPLEFT", 10, -8)
-	card.name = UI.text(card, "serif", Stoa.typeSize.body, "text")
+	card.icon:SetSize(28, 28)
+	card.icon:SetPoint("TOPLEFT", 12, -9)
+	card.name = UI.text(card, "serif", Stoa.typeSize.label, "text")
 	card.name:SetPoint("LEFT", card.icon, "RIGHT", 8, 0)
-	card.name:SetPoint("RIGHT", card, "RIGHT", -110, 0)
+	card.name:SetPoint("RIGHT", card, "RIGHT", -124, 0)
 	card.name:SetWordWrap(false)
-	card.status = UI.text(card, "sans", Stoa.typeSize.caption, "accent", "RIGHT")
-	card.status:SetPoint("RIGHT", card, "TOPRIGHT", -10, -20)
+	card.status = UI.text(card, "sans", Stoa.typeSize.body, "accent", "RIGHT")
+	card.status:SetPoint("RIGHT", card, "TOPRIGHT", -12, -23)
 	card.names, card.choices = columns(card)
-	card.names:SetPoint("TOPLEFT", card.icon, "BOTTOMLEFT", 0, -6)
-	card.choices:SetPoint("TOPRIGHT", card, "TOPRIGHT", -10, -38)
+	card.names:SetPoint("TOPLEFT", card.icon, "BOTTOMLEFT", 0, -8)
+	card.choices:SetPoint("TOPRIGHT", card, "TOPRIGHT", -12, -45)
 	card:Hide()
 	results[i] = card
 	return card
@@ -174,7 +174,7 @@ local function fillResult(card, drop)
 	local names, choices, count = rows(info)
 	card.names:SetText(names)
 	card.choices:SetText(choices)
-	card:SetHeight(40 + count * LINE_H + (count > 0 and 4 or 0))
+	card:SetHeight(46 + count * LINE_H + (count > 0 and 6 or 0))
 end
 
 -- Layout ---------------------------------------------------------------------
@@ -199,7 +199,7 @@ function Rolls:Layout()
 					taken[id] = true
 					panel.names:SetText(names)
 					panel.choices:SetText(choices)
-					extra = 12 + count * LINE_H
+					extra = 14 + count * LINE_H
 					panel:SetHeight(extra)
 					panel:Show()
 				else
@@ -282,6 +282,16 @@ function Rolls:OnEnable()
 		hooksecurefunc("GroupLootContainer_Update", function()
 			xpcall(self.Layout, Stoa.catch, self)
 		end)
+	end
+	-- The game lays its cards out before it shows the new one, so that pass
+	-- misses it and the card would open at the bottom of the screen and jump
+	-- here on the next change. Placing again as each card shows catches it
+	-- before it is first drawn.
+	for i = 1, 4 do
+		local frame = _G["GroupLootFrame" .. i]
+		if type(frame) == "table" and frame.HookScript then
+			frame:HookScript("OnShow", function() xpcall(self.Layout, Stoa.catch, self) end)
+		end
 	end
 	Stoa:On("LOOT_HISTORY_UPDATE_DROP", function(encounterID, key) self:OnDrop(encounterID, key) end)
 	Stoa:On("LOOT_HISTORY_CLEAR_HISTORY", function()
