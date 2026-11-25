@@ -27,6 +27,7 @@ local NOTES = {
 		title = "New in STOA 2.1",
 		lines = {
 			{ "Pages for level 60", "Three new pages for the console's right side. Click a page's caption on the console to change it, or pick from the tiles under Settings > Console. Reputation leads with the standing that moved last. Cooldowns lists profession and item cooldowns of an hour or more across your characters, with your on-use trinkets below. This week shows what you're saved to and when it opens." },
+			{ "When your bags are full", "If the game says your inventory is full, a small card names your least valuable stacks. Click one to destroy it and make room; anything that isn't grey asks twice. /stoa fullbags previews it." },
 			{ "Arc styles you can see", "Settings > Halo > Arc style now draws each style small on its own tile, so you can see one before choosing it." },
 			{ "Loot rolls", "A new roll card opens in its place instead of jumping up from the bottom of the screen, and the list of who chose what is larger." },
 		},

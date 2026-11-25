@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 2.1.0
 
+- **Full bags**: when the game says your inventory is full, a small card names the two or three least valuable stacks you carry, by what a vendor pays, and a click destroys one to make room. Grey junk comes first, then what you marked as junk, then other white items; never quest items, gear or what you keep in Restock. Anything that isn't grey asks for a second click. Beside the loot window it also names a quest item that is waiting, or says when what's left isn't worth the room. STOA never destroys anything by itself. Settings > Comforts; `/stoa fullbags` previews the card.
 - **A tip for quest items**: a new tip says how to hide a quest's item from beside your character (untrack the quest).
 - **Keyring**: the money and free-slot count no longer show behind the keyring's slots.
 - **Away screen tips in full**: a long tip under the timer was cut off after two lines; it now has the room to finish.

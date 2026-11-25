@@ -587,6 +587,84 @@ do
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Tips: " .. e end
 	end
 end
+-- Full bags: the card offers grey first, never a quest item or gear, asks
+-- twice for anything not grey, and deletes only what the cursor then holds.
+do
+	local ok, e = xpcall(function()
+		local F = Stoa.modules.FullBags
+		assert(F and F.Show, "FullBags loaded")
+		local bags = {
+			{ itemID = 11, itemName = "Cracked Bill", stackCount = 3, quality = 0, iconFileID = 1 },
+			{ itemID = 12, itemName = "Tough Jerky", stackCount = 2, quality = 1, iconFileID = 1 },
+			{ itemID = 13, itemName = "Quest Thing", stackCount = 1, quality = 1, iconFileID = 1 },
+			{ itemID = 14, itemName = "Plain Sword", stackCount = 1, quality = 1, iconFileID = 1 },
+			{ itemID = 15, itemName = "Ruined Pelt", stackCount = 1, quality = 0, iconFileID = 1 },
+			{ itemID = 16, itemName = "Bound Token", stackCount = 1, quality = 1, iconFileID = 1, hasNoValue = true },
+		}
+		local info = { [11] = { 0, 4, "", 15 }, [12] = { 1, 125, "", 0 }, [13] = { 1, 50, "", 12 }, [14] = { 1, 900, "INVTYPE_WEAPON", 2 }, [15] = { 0, 31, "", 15 } }
+		local real = { C_Container.GetContainerNumSlots, C_Container.GetContainerItemInfo, C_Container.GetContainerNumFreeSlots, C_Container.PickupContainerItem,
+			C_Item.GetItemInfo, GetItemInfo, DeleteCursorItem, GetCursorInfo, ClearCursor, C_Container.GetContainerItemQuestInfo }
+		local cursor, deleted = nil, {}
+		C_Container.GetContainerNumSlots = function(bag) return bag == 0 and #bags or 0 end
+		C_Container.GetContainerItemInfo = function(bag, slot) return bag == 0 and bags[slot] or nil end
+		C_Container.GetContainerNumFreeSlots = function() return 0, 0 end
+		C_Container.GetContainerItemQuestInfo = function() return {} end
+		C_Container.PickupContainerItem = function(bag, slot) cursor = bags[slot] and bags[slot].itemID end
+		local function itemInfo(id)
+			local i = info[tonumber(id) or (type(id) == "string" and tonumber(id:match("item:(%d+)")))]
+			if not i then return nil end
+			return "x", nil, i[1], nil, nil, nil, nil, nil, i[3], nil, i[2], i[4], 0
+		end
+		C_Item.GetItemInfo, GetItemInfo = itemInfo, itemInfo
+		-- Items.info holds the game's function from load: answer for it here.
+		local realItemsInfo = Stoa.Items.info
+		Stoa.Items.info = function(id)
+			local i = info[tonumber(id) or (type(id) == "string" and tonumber(id:match("item:(%d+)")))]
+			if i then return i[1], i[2], i[3], i[4], 0 end
+		end
+		GetCursorInfo = function() if cursor then return "item", cursor end end
+		ClearCursor = function() cursor = nil end
+		DeleteCursorItem = function()
+			deleted[#deleted + 1] = cursor
+			for slot, item in pairs(bags) do if item.itemID == cursor then bags[slot] = nil end end
+			cursor = nil
+		end
+		F:OnEnable()
+		F:Show()
+		local rows = F.card.rows
+		assert(rows[1].candidate.id == 11 and rows[2].candidate.id == 15 and rows[3].candidate.id == 12, "grey by value, then white")
+		for _, row in ipairs(rows) do assert(row.candidate.id ~= 13 and row.candidate.id ~= 14 and row.candidate.id ~= 16, "no quest item, gear or unsellable") end
+		-- A white item asks first; leaving takes the ask back.
+		rows[3]:GetScript("OnClick")(rows[3], "LeftButton")
+		assert(#deleted == 0 and rows[3].asked, "white asks first")
+		rows[3]:GetScript("OnLeave")(rows[3])
+		assert(not rows[3].asked, "leaving cancels")
+		rows[3]:GetScript("OnClick")(rows[3], "LeftButton")
+		rows[3]:GetScript("OnClick")(rows[3], "LeftButton")
+		assert(#deleted == 1 and deleted[1] == 12, "second click destroys the white stack")
+		rows[1]:GetScript("OnClick")(rows[1], "LeftButton")
+		assert(#deleted == 2 and deleted[2] == 11, "grey goes on one click")
+		-- The slot changed under the card: nothing is deleted.
+		local stale = F.card.rows[1].candidate
+		assert(stale and stale.id == 15, "the next grey moves up")
+		bags[5] = { itemID = 14, itemName = "Plain Sword", stackCount = 1, quality = 1, iconFileID = 1 }
+		rows[1]:GetScript("OnClick")(rows[1], "LeftButton")
+		assert(#deleted == 2, "a changed slot is left alone")
+		-- A preview never destroys.
+		F:Hide()
+		SlashCmdList.STOA("fullbags")
+		local first = F.card.rows[1]
+		if first.candidate then
+			first:GetScript("OnClick")(first, "LeftButton"); first:GetScript("OnClick")(first, "LeftButton")
+		end
+		assert(#deleted == 2, "the preview destroys nothing")
+		F:Hide()
+		Stoa.Items.info = realItemsInfo
+		C_Container.GetContainerNumSlots, C_Container.GetContainerItemInfo, C_Container.GetContainerNumFreeSlots, C_Container.PickupContainerItem,
+			C_Item.GetItemInfo, GetItemInfo, DeleteCursorItem, GetCursorInfo, ClearCursor, C_Container.GetContainerItemQuestInfo = unpack(real, 1, 10)
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Full bags: " .. e end
+end
 -- Settings window: every page and a search drawn, every setting changed
 -- and put back, the lists added to and taken from, a dropdown by keys.
 do

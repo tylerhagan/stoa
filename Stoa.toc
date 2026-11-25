@@ -63,6 +63,7 @@ Modules\QoL\ChatLook.lua
 Modules\QoL\Uprank.lua
 Modules\QoL\QuestReward.lua
 Modules\QoL\Loot.lua
+Modules\QoL\FullBags.lua
 Modules\QoL\Rolls.lua
 Modules\QoL\WindowMover.lua
 Modules\QoL\QuestItems.lua
