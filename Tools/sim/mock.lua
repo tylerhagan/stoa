@@ -57,6 +57,24 @@ local special = {
 	HookScript = function(self, k, fn) self.__scripts[k] = self.__scripts[k] or fn end,
 	GetAttribute = function(self, k) return self.__attr[k] end,
 	SetAttribute = function(self, k, v) self.__attr[k] = v end,
+	-- Like the game, a region can't be anchored to one that is anchored
+	-- (through any chain) to it: the call fails and the region draws nothing.
+	SetPoint = function(self, _, rel)
+		if type(rel) ~= "table" or rel == self or getmetatable(rel) ~= Object then return end
+		local seen, stack = {}, { rel }
+		while #stack > 0 do
+			local at = table.remove(stack)
+			if at == self then error("Action[SetPoint] failed because[Cannot anchor to a region dependent on it]", 2) end
+			if not seen[at] then
+				seen[at] = true
+				for other in pairs(rawget(at, "__anchors") or {}) do stack[#stack + 1] = other end
+			end
+		end
+		local anchors = rawget(self, "__anchors")
+		if not anchors then anchors = {}; rawset(self, "__anchors", anchors) end
+		anchors[rel] = true
+	end,
+	ClearAllPoints = function(self) rawset(self, "__anchors", nil) end,
 	-- Like the game, a change of shown state runs OnShow / OnHide.
 	Show = function(self)
 		local was = self.__shown

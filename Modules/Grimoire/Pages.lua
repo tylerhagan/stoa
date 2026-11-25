@@ -59,10 +59,12 @@ local function scaffold(col, kit, label, drop)
 		local value = UI.text(col, "sans", Stoa.typeSize.body, "muted", "RIGHT")
 		-- Rows hang under the big line, so a short list sits close to it.
 		local y = -(7 + (drop or 0) + (i - 1) * ROW_H)
+		-- The figure hangs from the big line by one point, and the name runs
+		-- up to it: neither may be anchored to the other both ways, which
+		-- the game refuses (and the page then draws nothing).
+		value:SetPoint("TOPRIGHT", big, "BOTTOMLEFT", kit.width, y)
 		name:SetPoint("TOPLEFT", big, "BOTTOMLEFT", 0, y)
-		value:SetPoint("TOP", name, "TOP", 0, 0)
-		value:SetPoint("RIGHT", col, "RIGHT", 0, 0)
-		name:SetPoint("RIGHT", value, "LEFT", -8, 0)
+		name:SetPoint("TOPRIGHT", value, "TOPLEFT", -8, 0)
 		rows[i] = { name = name, value = value }
 	end
 	return { big = big, note = note, rows = rows }
