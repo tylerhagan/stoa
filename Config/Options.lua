@@ -26,7 +26,7 @@ Stoa.Options = Options
 Options.PAGES = {
 	{ "parts", "Build your STOA", "Start here. Pick a starting set, then switch on only the parts you want: anything you switch off goes back to the game's own. This page is the quick start; each part's finer settings are on its own page in the list on the left.", "Quick start" },
 	{ "look", "Look", "Theme, colour and the few painted pieces. These change everything else, so they come first." },
-	{ "console", "Console", "The leather console along the bottom of the screen and what it holds." },
+	{ "console", "Console", "The console along the bottom of the screen and what it holds." },
 	{ "combat", "Combat", "What happens when a fight starts: the Halo, the combat bar and what they show." },
 	{ "group", "Group", "Party and raid cards, healing clicks, and tools for tanks and leaders." },
 	{ "plates", "Plates & tooltips", "Nameplates over the world, and the cards that appear under the mouse." },
@@ -50,7 +50,7 @@ end
 local PARTS = {
 	{ "preset", "Step 1: pick a starting set", "How much STOA: console", "The first of two answers that set the parts below in one go: Full, Slim (one line) or None. Then switch parts on or off." },
 	{ "around", "Step 1: pick a starting set", "How much STOA: everything around it", "The second answer. Standard shows everything. Quiet makes the target and party thin strips that fade out of combat and puts the extras away." },
-	{ "consoleShape", "Step 2: choose your parts, out of a fight", "Console", "The leather panel along the bottom of the screen that holds chat, your action bars and the Ready, Journey and Company pages. Slim is one thin line with chat and bars standing above it. None takes the console away." },
+	{ "consoleShape", "Step 2: choose your parts, out of a fight", "Console", "The panel along the bottom of the screen that holds chat, your action bars and the Ready, Journey and Company pages. Slim is one thin line with chat and bars standing above it. None takes the console away." },
 	{ "houseChat", "Step 2: choose your parts, out of a fight", "Chat on the console", "Chat sits on the console's left page. Off leaves the chat window where the game puts it." },
 	{ "glanceOn", "Step 2: choose your parts, out of a fight", "At a glance", "Up to eight numbers you choose, such as gold, gear and stats, beside the chat on the console. Off takes them away." },
 	{ "actionBars", "Step 2: choose your parts, out of a fight", "Action buttons", "Rounded buttons with a fine edge and dim sockets for empty slots. Off keeps the game's square buttons." },
@@ -302,9 +302,12 @@ local function build()
 	-- Console
 	page = "console"
 	group = "The console"
-	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
+	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, {
+		-- Leather's own choice: Matte black has its moulded console and no leather to switch.
+		id = "consoleArt", reload = true, showWhen = function() return db().material ~= "matte" end,
+	})
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
-	toggle(console, "freeRight", "Leave the console's right side free", "Hides the Ready, Journey and Company pages together, leaving bare leather right of the action bars for a window of your own, such as another addon's damage meter. The full console only.", false, { words = "ready journey company hide empty space meter right pages", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
+	toggle(console, "freeRight", "Leave the console's right side free", "Hides the Ready, Journey and Company pages together, leaving it bare right of the action bars for a window of your own, such as another addon's damage meter. The full console only.", false, { words = "ready journey company hide empty space meter right pages", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	-- The right side's three slots: wells and page tiles (Window's slots
 	-- row). The console's own captions change them too.
 	add({
@@ -312,7 +315,7 @@ local function build()
 		desc = "Three slots, left to right. Pick a slot, then what it holds; choosing something another slot holds swaps the two. On the console itself, a click on a page's caption does the same. Meter 1 to 3 are the game's own meter windows (open more from the meter's menu, for healing or interrupts, say). Details 1 and 2 are Details' windows, when you run it. Empty leaves bare console for anything else. On a narrow screen the right-hand slots drop first. Usually Ready, Journey, Company. The full console only.",
 		words = "slots modular right side meter details ready journey company empty arrange reputation cooldowns lockouts week pages",
 	})
-	toggle(console, "dividers", "Lines between the console's sections", "A faint gold line with a small diamond between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
+	toggle(console, "dividers", "Lines between the console's sections", "A faint line between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	toggle(console, "daylight", "Light from the time of day", "The console's gold catches the sky's colour from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk, moonlit blue at night, with a faint glass reflection on your portrait. Off keeps the gold as it is. /stoa daylight 23 previews an hour.", true, { words = "time of day daylight night dusk dawn", change = function() local c = Stoa.modules.Grimoire; if c and c.UpdateDaylight then c:UpdateDaylight() end end })
 	toggle(console, "riding", "Travel line while riding", "On a mount or a flight, out of a fight, the console folds to a slim line with your speed, the zone, and how far the quest you follow is. Chat lifts above it and the action bars fade. A fight or getting off brings the full console back. Not on the Slim console. /stoa ride previews it.", true, { words = "mount mounted riding travel flight taxi speed", cmd = "/stoa ride", change = function() local c = Stoa.modules.Grimoire; if c and c.CheckRiding then c:CheckRiding() end end })
 	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner without their stone frames, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
@@ -722,7 +725,7 @@ local function build()
 	toggle(mail, "toList", "Your characters in To", "A small arrow inside the name box lists your own characters on this realm and the people you mailed lately.", true, { reload = true, words = "postal alts send recipient" })
 	group = "Away"
 	local away = of("Away")
-	toggle(away, "enabled", "Away screen", "When you go away out of a fight, the interface steps aside: your name, rest and time away on a band of leather, and any whispers that come meanwhile. Move, or press Back, to return.", true, { id = "awayOn", words = "afk idle screensaver" })
+	toggle(away, "enabled", "Away screen", "When you go away out of a fight, the interface steps aside: your name, rest and time away on a quiet band, and any whispers that come meanwhile. Move, or press Back, to return.", true, { id = "awayOn", words = "afk idle screensaver" })
 	toggle(away, "spin", "Turn the camera", "The camera circles your character slowly while you're away.", true, { words = "afk rotate" })
 	toggle(away, "inInstances", "In dungeons and raids too", "Off, the away screen waits for the open world.", false, { words = "afk instance" })
 	button("awayNow", "See it now", "Shows the away screen without going away. Back or /stoa away closes it.", "Show", command("away"), { cmd = "/stoa away", words = "afk preview" })
@@ -805,7 +808,7 @@ local function build()
 	-- One place to mix the parts the presets above set together.
 	group = "Your own mix"
 	local function grimoire() return module("Grimoire") end
-	choice(nil, "consoleShape", "Console", "Full is the leather console along the bottom of the screen. Slim is one plain line a quarter of the height, with chat and the bars standing above it. None takes it away: turn on the faint arcs below to keep your health and mana in view.", "full", {
+	choice(nil, "consoleShape", "Console", "Full is the console along the bottom of the screen. Slim is one plain line a quarter of the height, with chat and the bars standing above it. None takes it away: turn on the faint arcs below to keep your health and mana in view.", "full", {
 		{ "full", "Full" }, { "slim", "Slim line" }, { "none", "None" },
 	}, {
 		id = "consoleShape", reload = true, words = "console slim minimal hide bottom bar layout",
