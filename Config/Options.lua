@@ -290,7 +290,7 @@ local function build()
 		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth satin flat finish",
 		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
 	})
-	toggle(db, "windowStone", "Depth in windows", "In Leather the body of each window sits a step below its header and footer, with a soft shadow at its edges. In Matte black it wears the fine grain. Off leaves windows flat.", true, {
+	toggle(db, "windowStone", "Depth in windows", "The body of each window sits a step below its header and footer, with a soft shadow at its edges. In Matte black the fine grain lies in it. Off leaves windows flat.", true, {
 		words = "stone texture background grain recess shadow", change = function() Stoa.UI.showStone(Stoa.db.windowStone) end,
 	})
 	toggle(db, "coinArt", "Spell art in the Halo's coins", "Each coin shows its spell's icon faintly behind the letter, in colour while it runs or is ready.", true, { words = "icons" })

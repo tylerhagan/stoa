@@ -1103,7 +1103,7 @@ end
 -- Window depth ---------------------------------------------------------------
 -- What lies behind the body of every window (quests, merchants, bags,
 -- Stoa's own pages) but never the console, buttons or tooltips: a recessed
--- well in Leather, the grain in Matte. (Leather wore a stone with faint
+-- well in both looks, with the grain lying in it in Matte. (Leather wore a stone with faint
 -- rings here until 2.1.)
 
 -- The Matte material (Stoa.db.material): the console and windows as
@@ -1150,6 +1150,7 @@ end
 
 local function shade(frame, tex, side)
 	local size, alpha = WELL_SHADE[side][1], WELL_SHADE[side][2]
+	if tex.stoaGrain then size = math.floor(size * 0.6 + 0.5) end
 	local part = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
 	part:SetColorTexture(1, 1, 1, 1)
 	local clear, solid = CreateColor and CreateColor(0, 0, 0, 0), CreateColor and CreateColor(0, 0, 0, alpha)
@@ -1192,13 +1193,19 @@ function UI.stone(frame, top, bottom)
 	else
 		tex:SetPoint("BOTTOM", 0, STONE_INSET)
 	end
+	-- A window with no header or footer has nothing to sit below, so it
+	-- keeps the panel's own shade and only the edges fall away.
+	local fill = (top or bottom) and WELL_FILL or 0
+	tex.shades = { shade(frame, tex, "top"), shade(frame, tex, "bottom"), shade(frame, tex, "left"), shade(frame, tex, "right") }
 	if tex.stoaGrain then
+		-- Matte: the same well, moulded tighter, with the grain lying in it.
 		tex:SetVertexColor(1, 1, 1, UI.grainAlpha())
+		local floor = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+		floor:SetColorTexture(0, 0, 0, fill)
+		floor:SetAllPoints(tex)
+		table.insert(tex.shades, floor)
 	else
-		-- A window with no header or footer has nothing to sit below, so it
-		-- keeps the panel's own shade and only the edges fall away.
-		tex:SetColorTexture(0, 0, 0, (top or bottom) and WELL_FILL or 0)
-		tex.shades = { shade(frame, tex, "top"), shade(frame, tex, "bottom"), shade(frame, tex, "left"), shade(frame, tex, "right") }
+		tex:SetColorTexture(0, 0, 0, fill)
 	end
 	frame.stoaStone = tex
 	stones[#stones + 1] = tex
