@@ -179,12 +179,18 @@ end
 -- Puts every open moved window back on its spot, after the game's own
 -- layout has had its turn.
 function WindowMover:PlaceAll()
-	C_Timer.After(0, function()
+	local function all()
 		for name in pairs(spots()) do
 			local frame = _G[name]
 			if type(frame) == "table" and hooked[name] then xpcall(place, Stoa.catch, name, frame) end
 		end
-	end)
+	end
+	-- At once, so a moved window is never drawn for a frame on the game's
+	-- spot and then seen to jump back (opening the spellbook beside the
+	-- character sheet did that to both), and once more when the game has
+	-- finished, in case it lays things out again after this.
+	all()
+	C_Timer.After(0, all)
 end
 
 function WindowMover:OnEnable()
