@@ -305,23 +305,13 @@ local function build()
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, { id = "consoleArt", reload = true })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "freeRight", "Leave the console's right side free", "Hides the Ready, Journey and Company pages together, leaving bare leather right of the action bars for a window of your own, such as another addon's damage meter. The full console only.", false, { words = "ready journey company hide empty space meter right pages", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
-	-- The right side's three slots. Choosing something another slot holds
-	-- swaps the two.
-	local function refit() local c = Stoa.modules.Grimoire; if c and c.FitPages then Stoa:AfterCombat(function() c:FitPages() end) end end
-	for n = 1, 3 do
-		local key = "slot" .. n
-		choice(console, key, ("Right side, slot %d"):format(n), n == 1 and "The console's right side is three slots, left to right. Each holds Ready, Journey or Company, one of the level 60 pages (Reputation: the standings that moved last; Cooldowns: profession and item cooldowns of an hour or more, across your characters, then your on-use trinkets; This week: what you're saved to), a damage meter window, or nothing. Meter 1 to 3 are the game's own meter windows (open more from the meter's menu, for healing or interrupts, say). Details 1 and 2 are Details' windows, when you run it. Empty leaves bare console for anything else. On a narrow screen the right-hand slots drop first. The full console only." or "What the console's right side holds in this slot. Choosing something another slot holds swaps the two.", ({ "ready", "journey", "company" })[n], Stoa.modules.Grimoire.SLOT_KINDS, {
-			words = "slots modular right side meter details ready journey company empty arrange reputation cooldowns lockouts week pages", change = refit,
-			set = function(v)
-				local c = console()
-				if not c then return end
-				for m = 1, 3 do
-					if m ~= n and v ~= "empty" and c["slot" .. m] == v then c["slot" .. m] = c[key] end
-				end
-				c[key] = v
-			end,
-		})
-	end
+	-- The right side's three slots: wells and page tiles (Window's slots
+	-- row). The console's own captions change them too.
+	add({
+		kind = "slots", id = "slots", name = "The console's right side",
+		desc = "Three slots, left to right. Pick a slot, then what it holds; choosing something another slot holds swaps the two. On the console itself, a click on a page's caption does the same. Meter 1 to 3 are the game's own meter windows (open more from the meter's menu, for healing or interrupts, say). Details 1 and 2 are Details' windows, when you run it. Empty leaves bare console for anything else. On a narrow screen the right-hand slots drop first. Usually Ready, Journey, Company. The full console only.",
+		words = "slots modular right side meter details ready journey company empty arrange reputation cooldowns lockouts week pages",
+	})
 	toggle(console, "dividers", "Lines between the console's sections", "A faint gold line with a small diamond between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	toggle(console, "daylight", "Light from the time of day", "The console's gold catches the sky's colour from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk, moonlit blue at night, with a faint glass reflection on your portrait. Off keeps the gold as it is. /stoa daylight 23 previews an hour.", true, { words = "time of day daylight night dusk dawn", change = function() local c = Stoa.modules.Grimoire; if c and c.UpdateDaylight then c:UpdateDaylight() end end })
 	toggle(console, "riding", "Travel line while riding", "On a mount or a flight, out of a fight, the console folds to a slim line with your speed, the zone, and how far the quest you follow is. Chat lifts above it and the action bars fade. A fight or getting off brings the full console back. Not on the Slim console. /stoa ride previews it.", true, { words = "mount mounted riding travel flight taxi speed", cmd = "/stoa ride", change = function() local c = Stoa.modules.Grimoire; if c and c.CheckRiding then c:CheckRiding() end end })

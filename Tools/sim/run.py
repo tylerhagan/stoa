@@ -617,6 +617,29 @@ do
 				local was = O.value(entry)
 				for _, option in ipairs(entry.options) do O.set(entry, option[1]) end
 				O.set(entry, was)
+			elseif entry.kind == "slots" then
+				-- Every tile into every slot, then a caption's list on the console.
+				local c, row = Stoa.modules.Grimoire, W.rowFor(entry)
+				local was = c:Slots()
+				for _, well in ipairs(row.wells) do
+					well:GetScript("OnClick")(well)
+					for _, tile in ipairs(row.tiles) do tile:GetScript("OnClick")(tile) end
+				end
+				assert(c:Slots()[1] == "empty" and c:Slots()[3] == "empty", "slots emptied")
+				c:SetSlot(1, "week"); c:SetSlot(2, "week")
+				assert(c:Slots()[2] == "week" and c:Slots()[1] == "empty", "slots swap")
+				if c.frame and not c.slimCard and not c.db.freeRight then
+					-- The sim's screen has no width, so no slot is placed: make the handle.
+					local handle = c:EmptyHandle(1)
+					handle:GetScript("OnEnter")(handle)
+					handle:GetScript("OnClick")(handle)
+					handle:GetScript("OnLeave")(handle)
+					assert(StoaSettingsMenu and StoaSettingsMenu:IsShown(), "caption opens the list")
+					StoaSettingsMenu.rows[1]:GetScript("OnClick")(StoaSettingsMenu.rows[1])
+					assert(c:Slots()[1] == "ready", "list sets the slot")
+				end
+				for n, kind in ipairs(was) do c:SetSlot(n, kind) end
+				for n, kind in ipairs(was) do assert(c:Slots()[n] == kind, "slots put back") end
 			elseif entry.kind == "words" then
 				local before, had = #entry.items(), {}
 				for _, item in ipairs(entry.items()) do had[item[1]] = true end

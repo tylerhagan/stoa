@@ -1003,12 +1003,46 @@ end
 local COLUMN_WIDTH = 196
 local COLUMN_GAP = 40
 
+-- A page's caption is the handle of its slot: a chevron shows beside it
+-- under the mouse, and a click lists what the slot can hold. Only the
+-- caption takes the click, never the page.
+local function slotHandle(parent, heading)
+	local handle = CreateFrame("Button", nil, parent)
+	handle:SetPoint("TOPLEFT", heading, "TOPLEFT", -4, 5)
+	handle:SetPoint("BOTTOMRIGHT", heading, "BOTTOMRIGHT", 20, -5)
+	local chevron = UI.glyph(handle, "Chevron", 10, "text")
+	chevron:SetPoint("LEFT", heading, "RIGHT", 5, 0)
+	chevron:Hide()
+	handle:SetScript("OnEnter", function(own)
+		if not Console:CanPick() then return end
+		chevron:Show()
+		heading:SetAlpha(1)
+		heading:SetTextColor(Stoa:Color("text"))
+		GameTooltip:SetOwner(own, "ANCHOR_TOP")
+		GameTooltip:AddLine(own.empty and "Add a page" or "Change this page")
+		GameTooltip:AddLine("Click to choose what this slot holds.", 0.7, 0.7, 0.7)
+		GameTooltip:Show()
+	end)
+	handle:SetScript("OnLeave", function(own)
+		chevron:Hide()
+		heading:SetTextColor(Stoa:Color("muted"))
+		if own.empty then heading:SetAlpha(0) end
+		GameTooltip:Hide()
+	end)
+	handle:SetScript("OnClick", function(own)
+		GameTooltip:Hide()
+		Console:PickSlot(own)
+	end)
+	return handle
+end
+
 local function column(col, label)
 	local heading = caption(col, label)
 	heading:SetPoint("TOPLEFT", col, "TOPLEFT", 0, 0)
 	local rule = line(col)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
 	rule:SetWidth(COLUMN_WIDTH)
+	slotHandle(col, heading).column = col
 	return rule
 end
 
@@ -2194,10 +2228,18 @@ end
 local SLOT_KEYS = { "slot1", "slot2", "slot3" }
 local PAGE_KINDS = { ready = true, journey = true, company = true }
 local DOCK_WIDTH = 240
+-- { kind, label, what it shows, group }: the list the console's captions
+-- and the settings' tiles both offer.
 Console.SLOT_KINDS = {
-	{ "ready", "Ready" }, { "journey", "Journey" }, { "company", "Company" },
-	{ "meter1", "Meter 1" }, { "meter2", "Meter 2" }, { "meter3", "Meter 3" },
-	{ "details1", "Details 1" }, { "details2", "Details 2" }, { "empty", "Empty" },
+	{ "ready", "Ready", "Small jobs before you go", "STOA" },
+	{ "journey", "Journey", "Level, rest and your pace", "STOA" },
+	{ "company", "Company", "Your party, or who's online", "STOA" },
+	{ "meter1", "Meter 1", "The game's damage meter", "Meters and empty" },
+	{ "meter2", "Meter 2", "Its second window", "Meters and empty" },
+	{ "meter3", "Meter 3", "Its third window", "Meters and empty" },
+	{ "details1", "Details 1", "Details' first window", "Meters and empty" },
+	{ "details2", "Details 2", "Details' second window", "Meters and empty" },
+	{ "empty", "Empty", "Bare console", "Meters and empty" },
 }
 
 -- More pages (Pages.lua): { label, build }. A page costs nothing until it
@@ -2206,12 +2248,16 @@ local EXTRA_PAGES = {}
 
 -- build(col, kit) draws the page on its column; kit carries the column's
 -- width, and `heading(label)`, which draws the caption and its rule and
--- returns the rule to hang the rest from.
-function Console:RegisterPage(kind, label, build)
+-- returns the rule to hang the rest from. `note` says what it shows.
+function Console:RegisterPage(kind, label, build, note)
 	if PAGE_KINDS[kind] then return end
 	PAGE_KINDS[kind] = true
 	EXTRA_PAGES[kind] = { label = label, build = build }
-	table.insert(self.SLOT_KINDS, #self.SLOT_KINDS, { kind, label })
+	local at = 1
+	for i, entry in ipairs(self.SLOT_KINDS) do
+		if entry[4] == "STOA" or entry[4] == "Level 60" then at = i + 1 end
+	end
+	table.insert(self.SLOT_KINDS, at, { kind, label, note or "", "Level 60" })
 end
 
 function Console:EnsurePage(kind)
@@ -2224,6 +2270,69 @@ function Console:EnsurePage(kind)
 		width = COLUMN_WIDTH,
 		heading = function(label) return column(col, label) end,
 	})
+end
+
+-- Puts `kind` in slot n. Something another slot holds swaps with it.
+function Console:SetSlot(n, kind)
+	local db, key = self.db, SLOT_KEYS[n]
+	if not (db and key) then return end
+	local was = self:Slots()[n]
+	for m, other in ipairs(SLOT_KEYS) do
+		if m ~= n and kind ~= "empty" and db[other] == kind then db[other] = was end
+	end
+	db[key] = kind
+	Stoa:AfterCombat(function() if self.FitPages then self:FitPages() end end)
+	Stoa:Fire("STOA_OPTION_CHANGED", "slots")
+end
+
+-- The slots are the player's to change on the full console, out of a
+-- fight, while the right side isn't left free.
+function Console:CanPick()
+	return not (self.slimCard or self.db.freeRight or InCombatLockdown())
+end
+
+-- A caption was clicked: the list of pages, above it.
+local picker
+function Console:PickSlot(handle)
+	local window = Stoa.SettingsWindow
+	if not (self:CanPick() and window and window.OpenMenu) then return end
+	local slots, n = self:Slots(), handle.slot
+	if not n then
+		for kind, col in pairs(self.pageColumns or {}) do
+			if col == handle.column then
+				for m, held in ipairs(slots) do if held == kind then n = m end end
+			end
+		end
+	end
+	if not n then return end
+	local options = {}
+	for i, entry in ipairs(self.SLOT_KINDS) do
+		local label = entry[2]
+		for m, held in ipairs(slots) do
+			if m ~= n and held == entry[1] and held ~= "empty" then label = ("%s  |cff7f858cslot %d|r"):format(label, m) end
+		end
+		options[i] = { entry[1], label }
+	end
+	picker = picker or {}
+	picker.options = options
+	picker.get = function() return self:Slots()[n] end
+	picker.set = function(kind) self:SetSlot(n, kind) end
+	window.OpenMenu(handle, picker, true)
+end
+
+-- An empty slot keeps a quiet handle where its caption would be, seen
+-- only under the mouse.
+function Console:EmptyHandle(n)
+	self.emptyHandles = self.emptyHandles or {}
+	local handle = self.emptyHandles[n]
+	if not handle then
+		local heading = caption(self.rightPage, "Add a page")
+		handle = slotHandle(self.rightPage, heading)
+		handle.heading, handle.empty, handle.slot = heading, true, n
+		heading:SetAlpha(0)
+		self.emptyHandles[n] = handle
+	end
+	return handle
 end
 
 -- What the slots hold, in order. Something chosen twice counts once.
@@ -2319,19 +2428,30 @@ function Console:FitPages()
 	end
 	local total = span(chosen, gap)
 	local shown, docks, x = {}, {}, 0
+	local usedEmpty = {}
 	local _, pageTop = self:PageInset()
-	for _, key in ipairs(chosen) do
+	for i, key in ipairs(chosen) do
 		local w = slotWidth(key)
 		if cols[key] then
 			shown[key] = true
 			cols[key]:ClearAllPoints()
 			cols[key]:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
-		elseif key ~= "empty" then
+		elseif key == "empty" then
+			-- Arranged slots show in order, so this is slot i.
+			usedEmpty[i] = true
+			local handle = self:EmptyHandle(i)
+			handle.heading:ClearAllPoints()
+			handle.heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
+		else
 			docks[key] = { right = inset + total - x - w, top = self:OpenHeight() + pageTop, width = w, height = page:GetHeight() }
 		end
 		x = x + w + gap
 	end
 	for key, col in pairs(cols) do col:SetShown(shown[key] == true) end
+	for n, handle in pairs(self.emptyHandles or {}) do
+		handle:SetShown(usedEmpty[n] == true)
+		handle.heading:SetShown(usedEmpty[n] == true)
+	end
 	self:PlaceDocks(docks)
 	page:SetWidth(math.max(1, total))
 	if self.slimCard then self.slimCard:SetSize(page:GetWidth() + CARD_PAD * 2, page:GetHeight() + CARD_PAD * 2) end

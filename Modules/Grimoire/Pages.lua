@@ -370,9 +370,9 @@ local function buildWeek(col, kit)
 end
 
 if Console and Console.RegisterPage then
-	Console:RegisterPage("reputation", "Reputation", buildReputation)
-	Console:RegisterPage("cooldowns", "Cooldowns", buildCooldowns)
-	Console:RegisterPage("week", "This week", buildWeek)
+	Console:RegisterPage("reputation", "Reputation", buildReputation, "The standings that moved last")
+	Console:RegisterPage("cooldowns", "Cooldowns", buildCooldowns, "Profession and item cooldowns")
+	Console:RegisterPage("week", "This week", buildWeek, "What you're saved to")
 end
 
 function Pages:OnEnable()
