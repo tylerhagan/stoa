@@ -3,7 +3,8 @@
 --   Reputation: the standings that moved last, each with its bar.
 --   Cooldowns: the long ones (an hour or more) across your characters:
 --     profession cooldowns, and items such as a teleporter or the
---     hearthstone. Short ones (trinkets, spells) are left to the bars.
+--     hearthstone. Your on-use trinkets fill any rows left over; other
+--     short cooldowns are left to the bars.
 --   This week: the raids and dungeons you're saved to, and when they open.
 --
 -- Each is registered with the console and built only when put in a slot
@@ -30,7 +31,7 @@ local function span(seconds)
 	if d > 0 then return d .. "d " .. h .. "h" end
 	if h > 0 then return h .. "h " .. m .. "m" end
 	if m > 0 then return m .. "m" end
-	return "under 1m"
+	return seconds .. "s"
 end
 
 -- A page's frame: the big line with a small note at its right, and rows
@@ -245,6 +246,27 @@ local function shelved()
 	return list
 end
 
+-- The trinkets you're wearing that can be used, read as they stand: they
+-- take the rows the long cooldowns leave, and never the headline.
+local TRINKET_SLOTS = { 13, 14 }
+local function trinkets()
+	local list = {}
+	if InCombatLockdown() or not (GetInventoryItemCooldown and GetInventoryItemID and C_Item and C_Item.GetItemSpell and C_Item.GetItemNameByID) then return list end
+	for _, slot in ipairs(TRINKET_SLOTS) do
+		local id = GetInventoryItemID("player", slot)
+		if id and C_Item.GetItemSpell(id) then
+			local start, duration = GetInventoryItemCooldown("player", slot)
+			start, duration = plain(start), plain(duration)
+			local name = C_Item.GetItemNameByID(id)
+			-- An hour or more is already on the shelf by its own note.
+			if name and start and duration and duration < LONG then
+				list[#list + 1] = { name = name, left = duration > 0 and (start + duration - GetTime()) or 0, minor = true }
+			end
+		end
+	end
+	return list
+end
+
 local function buildCooldowns(col, kit)
 	local page = scaffold(col, kit, "Cooldowns")
 	-- The big line breathes once when something comes off cooldown.
@@ -254,7 +276,7 @@ local function buildCooldowns(col, kit)
 	local lift = pulse:CreateAnimation("Alpha")
 	lift:SetFromAlpha(0.35); lift:SetToAlpha(1); lift:SetDuration(0.3); lift:SetOrder(2)
 	local wasReady
-	local update = keep(col, 20, function()
+	local update = keep(col, 5, function()
 		local list = shelved()
 		local ready, soonest = 0, nil
 		for _, cd in ipairs(list) do
@@ -270,6 +292,7 @@ local function buildCooldowns(col, kit)
 		UI.paint(page.big, ready > 0 and "accent" or "text")
 		if wasReady and ready > wasReady then pulse:Play() end
 		wasReady = ready
+		for _, trinket in ipairs(trinkets()) do list[#list + 1] = trinket end
 		for i = 1, ROWS do
 			local cd = list[i]
 			if cd then

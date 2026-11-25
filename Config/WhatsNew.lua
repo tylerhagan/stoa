@@ -23,6 +23,15 @@ Stoa.WhatsNew = WhatsNew
 local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
+		edition = "2.1.0",
+		title = "New in STOA 2.1",
+		lines = {
+			{ "Pages for level 60", "Three new pages for the console's slots, under Settings > Console > Right side. Reputation leads with the standing that moved last. Cooldowns lists profession and item cooldowns of an hour or more across your characters, with your on-use trinkets below. This week shows what you're saved to and when it opens." },
+			{ "Arc styles you can see", "Settings > Halo > Arc style now draws each style small on its own tile, so you can see one before choosing it." },
+			{ "Loot rolls", "A new roll card opens in its place instead of jumping up from the bottom of the screen, and the list of who chose what is larger." },
+		},
+	},
+	{
 		edition = "2.0.0",
 		title = "STOA 2",
 		-- A big release: a line under the title, and a way to the page that
