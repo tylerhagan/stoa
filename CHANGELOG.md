@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 2.1.0
 
+- **A tip for quest items**: a new tip says how to hide a quest's item from beside your character (untrack the quest).
 - **Keyring**: the money and free-slot count no longer show behind the keyring's slots.
 - **Away screen tips in full**: a long tip under the timer was cut off after two lines; it now has the room to finish.
 - **Choosing the console's pages**: click a page's caption on the console (a small chevron shows under the mouse) for the list of what its slot can hold, out of a fight; an empty slot shows "Add a page" under the mouse. In Settings > Console the three dropdowns are now one picture: three wells for the slots and a tile for every page, with a line on what it shows.

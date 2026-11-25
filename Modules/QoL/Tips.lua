@@ -27,6 +27,7 @@ Tips.LIST = {
 	{ "specSwitch", "Switch layout from Ready", "Click your role under Ready on the console to pick another layout for this spec, or to switch talent spec.", "console" },
 	{ "glance", "Choose At a glance", "Right-click At a glance on the console to choose which numbers it shows, per spec.", "console" },
 	{ "bagViews", "Sections or one grid", "The word in the bag's header switches between sections (new, consumables, gear, junk and more) and one grid in bag order.", "windows" },
+	{ "questItems", "Hide a quest's item", "The buttons beside your character are items your quests ask you to use. To hide one, untrack its quest; track it again to bring it back.", "journey" },
 	{ "xpBar", "Your finished quests", "The deeper gold stretch on the experience bar is what handing in your finished quests gives. Hover the bar for the count.", "journey" },
 	{ "safe", "If a window ever breaks", "/stoa safe turns off every skin that reaches into Blizzard's windows and reloads. Turn them back on in Settings afterwards.", "setup" },
 	{ "news", "What's new", "/stoa news shows the latest what's-new note again.", "/stoa news" },
