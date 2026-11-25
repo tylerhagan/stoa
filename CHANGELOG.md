@@ -6,6 +6,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 2.1.0
 
+- **Away screen tips in full**: a long tip under the timer was cut off after two lines; it now has the room to finish.
 - **Pages for level 60**: three new pages for the console's right side slots (Settings > Console > Right side). Reputation leads with the standing that moved last, with two more under it. Cooldowns lists profession and item cooldowns of an hour or more across your characters, ready ones first, and its headline breathes when one comes up; the on-use trinkets you're wearing take any rows left over. This week lists what you're saved to and when it opens, with your alts on the last line. A page costs nothing until it is in a slot.
 - **Loot rolls**: a new roll card opens in its place instead of starting at the bottom of the screen and jumping up, and the list of who chose what and the result card are larger and easier to read.
 - **Arc styles show themselves**: Settings > Halo > Arc style is now a row of small pictures, each drawing its own arcs above its name, so you can see a style before choosing it.

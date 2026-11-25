@@ -99,15 +99,17 @@ function Away:Build()
 	rest:SetPoint("TOPLEFT", about, "BOTTOMLEFT", 0, -6)
 
 	local caption = UI.caption(band, "Away")
-	caption:SetPoint("TOP", band, "TOP", 0, -34)
+	caption:SetPoint("TOP", band, "TOP", 0, -26)
 	local timer = UI.text(band, "serif", Stoa.typeSize.hero, "text", "CENTER")
 	timer:SetPoint("TOP", caption, "BOTTOM", 0, -6)
 
 	-- A tip under the timer, a new one every TIP_EVERY seconds.
-	local tip = UI.text(band, "sans", Stoa.typeSize.label, "muted", "CENTER")
-	tip:SetPoint("TOP", timer, "BOTTOM", 0, -10)
-	tip:SetWidth(520)
-	tip:SetMaxLines(2)
+	-- Room for the longest tip in full: a cut-off tip tells nobody anything.
+	local tip = UI.text(band, "sans", Stoa.typeSize.body, "muted", "CENTER")
+	tip:SetPoint("TOP", timer, "BOTTOM", 0, -8)
+	tip:SetWidth(560)
+	tip:SetMaxLines(3)
+	tip:SetSpacing(2)
 
 	local heard = UI.caption(band, "")
 	heard:SetPoint("TOPLEFT", band, "TOPRIGHT", -620, -30)
