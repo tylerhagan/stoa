@@ -988,6 +988,16 @@ local function dressTooltip(tip)
 	UI.surface(tip, "card", { alpha = 0.96 })
 	-- Blizzard re-applies its backdrop style each time a tooltip shows.
 	tip:HookScript("OnShow", function(self) hide(self.NineSlice) end)
+	-- A compare tooltip's "Equipped" tab: its gold-edged plate goes and the
+	-- word sits on the tooltip's own dark card.
+	local tab = tip.CompareHeader
+	if tab and tab.GetRegions and not (tab.IsForbidden and tab:IsForbidden()) then
+		for _, region in ipairs({ tab:GetRegions() }) do
+			if region.IsObjectType and region:IsObjectType("Texture") then hide(region) end
+		end
+		pcall(UI.surface, tab, "card", { alpha = 0.96 })
+		if tab.Label then tab.Label:SetTextColor(Stoa:Color("muted")) end
+	end
 end
 
 -- Dropdown menus (the minimap's tracking list, the friends status, every

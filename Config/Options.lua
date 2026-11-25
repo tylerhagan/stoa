@@ -25,7 +25,7 @@ Stoa.Options = Options
 
 Options.PAGES = {
 	{ "parts", "Build your STOA", "Start here. Pick a layout (Full, Slim or None), then switch on only the parts you want: anything you switch off goes back to the game's own. This page is the quick start; each part's finer settings are on its own page in the list on the left.", "Quick start" },
-	{ "look", "Look", "Theme, colour and the few painted pieces. These change everything else, so they come first." },
+	{ "look", "Look", "The style (Leather or Matte black), then theme and colour. These change everything else, so they come first." },
 	{ "console", "Console", "The console along the bottom of the screen and what it holds." },
 	{ "combat", "Combat", "What happens when a fight starts: the Halo, the combat bar and what they show." },
 	{ "group", "Group", "Party and raid cards, healing clicks, and tools for tanks and leaders." },
@@ -70,7 +70,7 @@ local PARTS = {
 }
 
 local EVERYDAY = setOf(
-	"Theme", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
+	"Style", "Matte grain", "Theme", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
 	"Console size", "Leather console", "Hold chat in the console", "Travel line while riding", "At a glance, beside the chat", "Lines at a glance",
 	"In combat", "Target of target", "Focus", "Combat bar under the Halo", "Combat rows", "Proc art beside the Halo",
 	"Show STOA party cards", "Show STOA raid frames", "Show sample frames", "Click-casting", "Click bindings", "Threat meter",
@@ -261,6 +261,17 @@ local function build()
 
 	-- Look
 	page = "look"
+	group = "Style"
+	choice(db, "material", "Style", "The whole design, and the biggest change on this page. It switches the console, windows, target and party frames, nameplates and minimap together. Leather is tooled leather and brass on the console, with warm rounded panels. Matte black is moulded black hardware: sharp corners, flat plates and a fine grain, and it loads far less art. Theme below then picks the colours; the Matte theme suits Matte black, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "material look design matte black hardware plastic texture grain leather v2" })
+	-- Leather's own choice: Matte black has no painted pieces, so the
+	-- setting is only there under Leather.
+	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return db().material ~= "matte" end, words = "brass frame leather fancy" })
+	-- Part of the Style choice: tucked under it, there once Matte black
+	-- is picked (even before the reload that brings the material in).
+	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker. Soft is a hint of texture.", "soft", { { "satin", "Satin" }, { "soft", "Soft" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
+		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth satin flat finish",
+		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
+	})
 	group = "Theme"
 	local themes = {}
 	for _, name in ipairs(Stoa.themeOrder) do
@@ -279,17 +290,7 @@ local function build()
 	choice(db, "textSize", "Text size", "Every STOA size together: words, numbers, tooltips and pages. Whatever you pick, the smallest text keeps at least 13 pixels on the screen, so a low UI scale never shrinks a caption past reading.", "standard", {
 		{ "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" },
 	}, { reload = true, words = "font size scale readable small big" })
-	group = "Material"
-	choice(db, "material", "Material", "Leather is tooled leather and brass on the console, with recessed windows. Matte black is moulded black hardware: a fine grain on the console and windows, dark seams, and the plain console's shape. It loads far less art. The Matte theme suits it, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "matte black hardware plastic texture grain leather v2" })
-	-- Leather's own choice: Matte black has no painted pieces, so the
-	-- setting is only there under Leather.
-	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return db().material ~= "matte" end, words = "brass frame leather fancy" })
-	-- Part of the Material choice: tucked under it, there once Matte black
-	-- is picked (even before the reload that brings the material in).
-	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker. Soft is a hint of texture.", "soft", { { "satin", "Satin" }, { "soft", "Soft" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
-		under = "material", showWhen = function() return db().material == "matte" end, words = "matte texture rough smooth satin flat finish",
-		change = function() Stoa.UI.paintGrain() local c = Stoa.modules.Grimoire; if c and c.PaintMatte then c:PaintMatte() end end,
-	})
+	group = "Finish"
 	toggle(db, "windowStone", "Depth in windows", "The body of each window sits a step below its header and footer, with a soft shadow at its edges. In Matte black the fine grain lies in it. Off leaves windows flat.", true, {
 		words = "stone texture background grain recess shadow", change = function() Stoa.UI.showStone(Stoa.db.windowStone) end,
 	})

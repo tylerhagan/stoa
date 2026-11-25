@@ -46,7 +46,7 @@ local NOTES = {
 			"curseforge.com/wow/addons/stoa",
 		},
 		lines = {
-			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Material switches between them, or type /stoa welcome update to see both side by side." },
+			{ "Matte, a second look", "STOA now comes in two looks. Leather is the one you know. Matte black is a plain dark design after moulded matte hardware: sharp corners, flat plates and a fine grain. Settings > Look > Style switches between them, or type /stoa welcome update to see both side by side." },
 			{ "Made for Matte", "A matte console with recesses for chat, the bars and the pages, a Compact or Full target, flat party cards and a Matte nameplate style. Leather keeps everything it had." },
 			{ "A console in slots", "The console's right side is now three slots. Put Ready, Journey or Company in any order, drop in the game's damage meter windows or a Details window, or leave one empty. A Details window in a slot is cut down to its title and rows. Settings > Console." },
 			{ "Menu and bags as words", "The game menu and the bag row now rest behind two small words on the console's edge, MENU and BAGS. Put the mouse on a word and its row opens in its place. A click on BAGS opens your bags." },
