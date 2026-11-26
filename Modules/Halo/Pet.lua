@@ -405,25 +405,29 @@ function Pet:UpdateCard()
 	local fraction = healthFraction(unit())
 	local low = fraction and fraction < LOW
 	local mood = self:Mood()
+	local stance, command = self:Stance()
+	-- One word under the bar, the most pressing first. Following is the
+	-- usual state and goes unsaid; staying or moving is worth a word.
 	local word, token = "", "muted"
 	if dead then
 		word, token = "DEAD", "danger"
 	elseif mood == 1 then
-		word, token = "UNHAPPY, FEED IT", "danger"
+		word, token = "FEED IT", "danger"
 	elseif low then
 		word, token = "LOW", "danger"
+	elseif mood == 2 then
+		word, token = MOODS[mood], "accent"
+	elseif command and command ~= "FOLLOWING" then
+		word = command
 	elseif mood then
-		word, token = MOODS[mood], mood == 2 and "accent" or "muted"
+		word = MOODS[mood]
 	end
 	card.word:SetText(word)
 	card.word:SetTextColor(Stoa:Color(token))
 	card.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
 
-	local stance, command = self:Stance()
-	local doing = {}
-	if stance then doing[#doing + 1] = stance end
-	if command then doing[#doing + 1] = command end
-	card.doing:SetText(Stoa.UI.join(doing))
+	-- The stance alone fits the name's column whole.
+	card.doing:SetText(stance or "")
 end
 
 -- The arc ---------------------------------------------------------------------
