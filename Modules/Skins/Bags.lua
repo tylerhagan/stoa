@@ -56,6 +56,9 @@ local function hideSquareArt(button)
 		local art = button[key]
 		if art and art.SetAlpha then art:SetAlpha(0) end
 	end
+	-- Slate: the character sheet's carved slot rim goes too (its gold
+	-- corners read as the old style beside the flat window).
+	if UI.slate() and button.BorderFrame and button.BorderFrame.SetAlpha then button.BorderFrame:SetAlpha(0) end
 	local normal = button.GetNormalTexture and button:GetNormalTexture()
 	if normal then normal:SetAlpha(0) end
 end
@@ -117,7 +120,8 @@ function Item.markSlot(button, quality, level)
 	if not parts then return end
 	hideSquareArt(button)
 	local r, g, b = Item.qualityColour(quality)
-	if r then parts.edge:Set(r, g, b, 1) else parts.edge:Clear() end
+	-- Slate: the quality is a quiet edge, the name and pips carry it.
+	if r then parts.edge:Set(r, g, b, UI.slate() and 0.4 or 1) else parts.edge:Clear() end
 	quality = Stoa:PlainNumber(quality) or 0
 	local pips = quality > EPIC and 2 or quality == EPIC and 1 or 0
 	for i, pip in ipairs(parts.pips) do

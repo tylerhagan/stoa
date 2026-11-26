@@ -281,13 +281,19 @@ function Console:BuildSlate(frame, drawn)
 	self.slateCard = function(i)
 		local well = self.wells[i]
 		if well then return well end
-		local fill, edge, shadow = slatePlate(frame)
+		-- On a frame of its own, which fades with the pages: a texture's
+		-- alpha is its colour's, so fading the parts themselves set the
+		-- faint edge and the shadow to full strength (a white outline).
+		local holder = CreateFrame("Frame", nil, frame)
+		holder:SetAllPoints(frame)
+		holder:SetFrameLevel(frame:GetFrameLevel())
+		local fill, edge, shadow = slatePlate(holder)
 		well = { fill, edge, shadow }
 		for _, part in ipairs(well) do
 			part:ClearAllPoints()
 			part:Hide()
-			self:AddPage(part)
 		end
+		self:AddPage(holder)
 		self.wells[i] = well
 		return well
 	end
