@@ -897,17 +897,27 @@ function Console:BuildYou(card)
 	self:PlaceCrest()
 end
 
-local YOU_FORM_WASH = 0.4
+-- Smoke, not colour: the card goes near black with only a breath of the
+-- form's shade in it, and the portrait's ring a dim ash of its colour.
+local YOU_FORM_WASH, YOU_FORM_TINT = 0.6, 0.18
+local YOU_FORM_RING = 0.35
 function Console:PaintForm(look)
 	local parts = self.youForm
 	if not parts then return end
 	local ring = type(look) == "table" and look.ring
 	local shade = type(look) == "table" and look.shade
 	parts.ring:SetShown(ring and true or false)
-	if ring then parts.ring:SetVertexColor(ring[1], ring[2], ring[3], 1) end
+	if ring then
+		local k = YOU_FORM_RING
+		local grey = 0.34
+		parts.ring:SetVertexColor(grey + (ring[1] - grey) * k, grey + (ring[2] - grey) * k, grey + (ring[3] - grey) * k, 1)
+	end
 	if parts.wash then
 		parts.wash:SetShown(shade and true or false)
-		if shade then parts.wash:SetVertexColor(shade[1], shade[2], shade[3], YOU_FORM_WASH) end
+		if shade then
+			local k = YOU_FORM_TINT
+			parts.wash:SetVertexColor(shade[1] * k, shade[2] * k, shade[3] * k, YOU_FORM_WASH)
+		end
 	end
 end
 
