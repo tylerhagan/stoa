@@ -1338,9 +1338,28 @@ local function slotHandle(parent, heading)
 	local chevron = UI.glyph(handle, "Chevron", 10, "text")
 	chevron:SetPoint("LEFT", heading, "RIGHT", 5, 0)
 	chevron:Hide()
+	-- Slate: the chevron stays beside the caption, small, dim and pointing
+	-- down, so the caption reads as something that opens a list; under the
+	-- mouse it takes the accent. Not where the slot can't be changed.
+	local slate = UI.slate()
+	local function rest(own)
+		if not slate then return chevron:Hide() end
+		local r, g, b = Stoa:Color("muted")
+		chevron:SetVertexColor(r, g, b, 0.55)
+		chevron:SetShown(not (own.empty or Console.slimCard or Console.db.freeRight))
+	end
+	if slate then
+		chevron:SetSize(8, 8)
+		chevron:SetRotation(-math.pi / 2)
+		chevron:SetPoint("LEFT", heading, "RIGHT", 6, 0)
+		handle:SetScript("OnShow", rest)
+	end
+	handle.Rest = rest
+	rest(handle)
 	handle:SetScript("OnEnter", function(own)
 		if not Console:CanPick() then return end
 		chevron:Show()
+		if slate then chevron:SetVertexColor(Stoa:Color("accent")) end
 		heading:SetAlpha(1)
 		heading:SetTextColor(Stoa:Color("text"))
 		GameTooltip:SetOwner(own, "ANCHOR_TOP")
@@ -1349,8 +1368,8 @@ local function slotHandle(parent, heading)
 		GameTooltip:Show()
 	end)
 	handle:SetScript("OnLeave", function(own)
-		chevron:Hide()
-		heading:SetTextColor(Stoa:Color(UI.slate() and "accent" or "muted"))
+		rest(own)
+		heading:SetTextColor(Stoa:Color("muted"))
 		if own.empty then heading:SetAlpha(0) end
 		GameTooltip:Hide()
 	end)
@@ -1362,7 +1381,9 @@ local function slotHandle(parent, heading)
 end
 
 local function column(col, label)
-	local heading = UI.eyebrow(col, label)
+	-- Slate: captions stay quiet, so the accent is left for where you are
+	-- and what wants doing.
+	local heading = UI.caption(col, label)
 	heading:SetPoint("TOPLEFT", col, "TOPLEFT", 0, 0)
 	local rule = line(col)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
@@ -1389,7 +1410,7 @@ function Console:BuildFellowship(frame, space)
 	local ready = column(readyCol, "Ready")
 	-- The page's lead lines are a step under the title size, and what they
 	-- gave up is air before the line below.
-	local role = text(readyCol, "serif", Stoa.typeSize.page, "accent")
+	local role = text(readyCol, "serif", Stoa.typeSize.page, UI.slate() and "text" or "accent")
 	role:SetPoint("TOPLEFT", ready, "BOTTOMLEFT", 0, -6)
 	-- Click the role to switch spec (SpecSwitch.lua).
 	local roleHit = CreateFrame("Button", nil, readyCol)
@@ -2780,7 +2801,8 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 	if self.wells then
 		self:PlaceWells({
 			chatRight and { inset, chatRight },
-			glanceShown and { inset + 484, inset + 484 + (Stoa:PlainNumber(glance:GetWidth()) or 0) },
+			-- The same 16 round its content as the page cards (SLATE_PAGE_PAD).
+			glanceShown and { inset + 484, inset + 484 + (Stoa:PlainNumber(glance:GetWidth()) or 0), pad = 16, gap = 56 },
 			{ barsLeft, barsRight },
 			not self.db.freeRight and pageWidth > 1 and { width - inset - pageWidth, width - inset },
 		}, top)
@@ -2907,6 +2929,7 @@ function Console:EmptyHandle(n)
 		local heading = caption(self.rightPage, "Add a page")
 		handle = slotHandle(self.rightPage, heading)
 		handle.heading, handle.empty, handle.slot = heading, true, n
+		handle:Rest()
 		heading:SetAlpha(0)
 		self.emptyHandles[n] = handle
 	end

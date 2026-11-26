@@ -233,7 +233,7 @@ local function profession(key, fallback)
 		figure = function()
 			local p = professions[key]
 			local rank, max = p and plain(p[2]), p and plain(p[3])
-			if rank and max and max > 0 then return "bar", rank / max, "text" end
+			if rank and max and max > 0 then return "bar", rank / max, UI.slate() and "muted" or "text" end
 		end,
 		detail = function(add)
 			local p = professions[key]
@@ -445,7 +445,7 @@ local ENTRIES = {
 		return ("%d / %d"):format(into, span)
 	end, figure = function()
 		local into, span = standing()
-		if into then return "bar", into / span, "text" end
+		if into then return "bar", into / span, UI.slate() and "muted" or "text" end
 	end, detail = function(add)
 		local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
 		local name, reaction, value
@@ -864,7 +864,7 @@ function Tally:Build(console)
 	page:SetScript("OnClick", function(button) self:OpenPicker(button) end)
 	self.page = page
 
-	local heading = UI.eyebrow(page, "At a glance")
+	local heading = UI.caption(page, "At a glance")
 	heading:SetPoint("TOPLEFT")
 	local rule = UI.line(page)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
