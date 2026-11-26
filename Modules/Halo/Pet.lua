@@ -33,6 +33,8 @@ local COIN = 46
 local LOW = 0.35
 -- When the game shows the pet row and the pet coin.
 local ROW_RULE = "[combat,@pet,exists,nopossessbar] show; hide"
+-- Slate: the row also stands over the pet's card at rest.
+local ROW_RULE_REST = "[@pet,exists,nopossessbar] show; hide"
 local COIN_RULE = "[combat] hide; [@pet,exists] show; hide"
 
 -- Spells that say you play with a pet: Call Pet and Revive Pet, the
@@ -524,15 +526,31 @@ function Pet:BuildRow()
 	local label = UI.caption(row, "Pet")
 	label:SetPoint("RIGHT", row, "LEFT", -8, 0)
 	UI.legible(label)
-	RegisterStateDriver(row, "visibility", ROW_RULE)
+	row.label = label
+	RegisterStateDriver(row, "visibility", self:RowRule())
 	Stoa:RegisterMover("petrow", row, "Pet row", { default = function() self:PlaceRow() end })
 	self:PlaceRow()
 end
 
+function Pet:RowRule()
+	return self.card and ROW_RULE_REST or ROW_RULE
+end
+
 -- Under the combat bar's last row; the party row moves down to make room.
+-- Slate, at rest: standing on the pet's card, its right end over the
+-- card's. Pinned to the screen, never to the console, which folds.
 function Pet:PlaceRow()
 	local row, halo = self.row, _G.StoaHalo
 	if not row or not halo or InCombatLockdown() or Stoa:HasSavedPosition("petrow") then return end
+	local console = Stoa.modules.Grimoire
+	local resting = self.card and Stoa:GetState() == Stoa.STATE_WORLD
+	if row.label then row.label:SetShown(not resting) end
+	if resting then
+		local you = console.YOU_CARD
+		row:ClearAllPoints()
+		row:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOM", -(you.width / 2 + CARD_GAP), console:OpenHeight() + you.y + you.height / 2 + 6)
+		return
+	end
 	local bar = Stoa.modules.CombatBar
 	local offset = bar and bar.enabled and bar.groupOffset and (bar.groupOffset - (bar.shift or 0))
 	if not offset then
@@ -791,9 +809,7 @@ function Pet:SetDemo(on)
 		return
 	end
 	self.demo = on and true or nil
-	-- With Slate's card the row keeps its rule: it belongs to a fight, and
-	-- at rest it would only sit over your own card.
-	for frame, rule in pairs({ [not self.card and self.row or false] = ROW_RULE, [self.coin or false] = COIN_RULE }) do
+	for frame, rule in pairs({ [self.row or false] = self:RowRule(), [self.coin or false] = COIN_RULE }) do
 		if frame then
 			if on then
 				UnregisterStateDriver(frame, "visibility")
@@ -839,8 +855,9 @@ end
 function Pet:OnEnable()
 	if self.db.plaque then self:BuildPlaque() end
 	if self.db.arc then self:BuildArc() end
-	if self.db.row then self:BuildRow() end
+	-- The card first: the row and the coin take their place from it.
 	if self.db.coin then self:BuildCard() end
+	if self.db.row then self:BuildRow() end
 	if self.db.coin then self:BuildCoin() end
 	if self.db.partyPets then self:BuildCells() end
 	UI.applyTheme()
@@ -861,7 +878,12 @@ function Pet:OnEnable()
 	Stoa:On("PET_UI_UPDATE", refresh)
 	Stoa:On("PET_BAR_UPDATE_COOLDOWN", function() xpcall(self.UpdateRow, Stoa.catch, self) end)
 	Stoa:On("UNIT_HAPPINESS", refresh)
-	Stoa:On("STOA_STATE_CHANGED", refresh)
+	Stoa:On("STOA_STATE_CHANGED", function()
+		refresh()
+		-- The row has a resting spot on Slate; it moves while it still may.
+		if self.card and not InCombatLockdown() then self:PlaceRow() end
+	end)
+	Stoa:On("PLAYER_REGEN_ENABLED", function() if self.card then self:PlaceRow() end end)
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		self:PlacePlaque()
 		self:Relayout()
