@@ -2,9 +2,10 @@
 --
 --   * A look per form (only Shadowform has one so far): while you're in it
 --     the console seal's ring and dial and the Halo's signature ring take
---     the form's colour, a soft shade breathes slowly round the seal, and a
---     faint haze of it sits behind the Halo. Entering sends one quick dark
---     pulse across the console; leaving snaps everything back at once.
+--     the form's colour, a glow of it breathes round the seal, and a faint
+--     haze of it sits behind the Halo. Entering sends a wave of its light
+--     out from the seal to the console's ends; leaving snaps everything
+--     back at once.
 --   * A row of form chips off the medallion's lower right (the pet coin
 --     sits lower left): one round chip per form, lit while you're in it.
 --     Click to shift in or out, right-click to leave. Built so paladin
@@ -33,7 +34,8 @@ local Forms = Stoa:NewModule("Forms", {
 Stoa.Forms = Forms
 
 -- The looks, by the form's spell. `ring` is the bright colour (rings and
--- the dial's lit ticks), `shade` the dark one that breathes round the seal.
+-- the dial's lit ticks, the breath and the wave), `shade` a dark one for
+-- pieces that wash over (Slate's player card).
 local LOOKS = {
 	[15473] = { -- Shadowform
 		ring = { 0.60, 0.40, 1.00 },
@@ -48,13 +50,16 @@ local CHIPS = {
 }
 
 local CHIP = 30
-local BREATH = 2.6       -- seconds each way
-local BREATH_LOW, BREATH_HIGH = 0.3, 0.75
-local PULSE_IN, PULSE_OUT = 0.05, 0.13
-local PULSE_DARK = 0.45
+local BREATH = 1.8       -- seconds each way
+local BREATH_LOW, BREATH_HIGH = 0.12, 0.95
+-- The entering wave: two bands of violet light running out from the seal
+-- to the console's ends.
+local WAVE = 0.24
+local WAVE_W = 260
+local WAVE_ALPHA = 0.55
 -- RingGlow.tga's light peaks this far out from its centre (Tools/art/ring_glow.py).
 local GLOW_PEAK = 55 / 77
-local SEAL_SHADE_OUT = 10   -- the shade's peak, beyond the face's edge
+local SEAL_SHADE_OUT = 16   -- the glow's peak, beyond the face's edge
 local HALO_HAZE_ALPHA = 0.35
 
 local function knows(spellID)
@@ -118,12 +123,14 @@ function Forms:BuildLook()
 	if console and console.enabled and console.seal and console.portrait and not slate then
 		local seal, face = console.seal, console.portrait
 		parts.sealBand = band(seal, face, 4)
-		-- The shade round the seal: the ring glow's soft halo, dark.
+		-- The breath round the seal: the ring glow's soft halo in the form's
+		-- colour, lit (ADD) so it reads on dark leather too.
 		local shade = seal:CreateTexture(nil, "BORDER", nil, 3)
 		shade:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
 		local size = (face:GetWidth() / 2 + SEAL_SHADE_OUT) / GLOW_PEAK * 2
 		shade:SetSize(size, size)
 		shade:SetPoint("CENTER", face, "CENTER")
+		shade:SetBlendMode("ADD")
 		shade:SetAlpha(0)
 		shade:Hide()
 		parts.sealShade, parts.breath = shade, breathe(shade)
@@ -131,29 +138,52 @@ function Forms:BuildLook()
 		hooksecurefunc(console, "UpdateRing", function() self:PaintTicks() end)
 		parts.console = console
 
-		-- The pulse: a dark veil over the whole console, gone in a blink.
+		-- The wave: two bands of the form's light leave the seal and run out
+		-- to either end of the console, fading as they go. Clipped to the
+		-- console so they never spill over the world.
 		local veil = CreateFrame("Frame", nil, console.frame)
 		veil:SetAllPoints()
 		veil:SetFrameLevel(console.frame:GetFrameLevel() + 2)
+		veil:SetClipsChildren(true)
 		veil:EnableMouse(false)
-		local dark = veil:CreateTexture(nil, "OVERLAY")
-		dark:SetAllPoints()
-		dark:SetColorTexture(0, 0, 0, 1)
-		veil:SetAlpha(0)
-		local pulse = veil:CreateAnimationGroup()
-		local down = pulse:CreateAnimation("Alpha")
-		down:SetFromAlpha(0)
-		down:SetToAlpha(PULSE_DARK)
-		down:SetDuration(PULSE_IN)
-		down:SetOrder(1)
-		local up = pulse:CreateAnimation("Alpha")
-		up:SetFromAlpha(PULSE_DARK)
-		up:SetToAlpha(0)
-		up:SetDuration(PULSE_OUT)
-		up:SetSmoothing("OUT")
-		up:SetOrder(2)
-		pulse:SetScript("OnFinished", function() veil:SetAlpha(0) end)
-		parts.veil, parts.veilDark, parts.pulse = veil, dark, pulse
+		local bands, moves = {}, {}
+		for _, sign in ipairs({ -1, 1 }) do
+			local holder = CreateFrame("Frame", nil, veil)
+			holder:SetSize(WAVE_W, 1)
+			holder:SetPoint("TOP", veil, "TOP", -sign * WAVE_W / 2, 0)
+			holder:SetPoint("BOTTOM", veil, "BOTTOM", -sign * WAVE_W / 2, 0)
+			holder:SetAlpha(0)
+			local light = holder:CreateTexture(nil, "OVERLAY")
+			light:SetAllPoints()
+			light:SetTexture(UI.WHITE)
+			light:SetBlendMode("ADD")
+			light.sign = sign
+			local group = holder:CreateAnimationGroup()
+			local fade = group:CreateAnimation("Alpha")
+			fade:SetFromAlpha(1)
+			fade:SetToAlpha(0)
+			fade:SetStartDelay(WAVE * 0.4)
+			fade:SetDuration(WAVE * 0.6)
+			local move = group:CreateAnimation("Translation")
+			move:SetDuration(WAVE)
+			move:SetSmoothing("OUT")
+			group:SetScript("OnFinished", function() holder:SetAlpha(0) end)
+			bands[#bands + 1] = { light = light, group = group, holder = holder }
+			moves[#moves + 1] = { anim = move, sign = sign }
+		end
+		local pulse = {}
+		function pulse.Play()
+			local reach = veil:GetWidth() / 2 + WAVE_W
+			for i, band in ipairs(bands) do
+				moves[i].anim:SetOffset(moves[i].sign * reach, 0)
+				band.holder:SetAlpha(1)
+				band.group:Play()
+			end
+		end
+		function pulse.Stop()
+			for _, band in ipairs(bands) do band.group:Stop() band.holder:SetAlpha(0) end
+		end
+		parts.veil, parts.waveBands, parts.pulse = veil, bands, pulse
 	end
 
 	local halo = Stoa.modules.Halo
@@ -199,7 +229,6 @@ function Forms:ApplyLook(look, entering)
 	self.look = look
 	if look then
 		local r, g, b = unpack(look.ring)
-		local sr, sg, sb = unpack(look.shade)
 		for _, key in ipairs({ "sealBand", "haloBand" }) do
 			local tex = parts[key]
 			if tex then
@@ -208,7 +237,7 @@ function Forms:ApplyLook(look, entering)
 			end
 		end
 		if parts.sealShade then
-			parts.sealShade:SetVertexColor(sr, sg, sb)
+			parts.sealShade:SetVertexColor(r, g, b)
 			parts.sealShade:Show()
 			if not parts.breath:IsPlaying() then parts.breath:Play() end
 		end
@@ -216,13 +245,17 @@ function Forms:ApplyLook(look, entering)
 			parts.haloHaze:SetVertexColor(r, g, b, HALO_HAZE_ALPHA)
 			parts.haloHaze:Show()
 		end
-		if parts.veilDark then parts.veilDark:SetColorTexture(sr * 0.3, sg * 0.3, sb * 0.3, 1) end
+		for _, band in ipairs(parts.waveBands or {}) do
+			-- The leading edge bright, trailing off towards the seal.
+			local light = band.light
+			UI.setGradient(light, { "HORIZONTAL", light.sign > 0 and 0 or 1, light.sign > 0 and 1 or 0 }, r, g, b, WAVE_ALPHA)
+		end
 		self:PaintTicks()
 		-- The pulse only marks the moment you step in, and only where it
 		-- can be seen: the console open on screen.
 		if entering and not was and parts.pulse and parts.veil:IsVisible() then
-			parts.pulse:Stop()
-			parts.pulse:Play()
+			parts.pulse.Stop()
+			parts.pulse.Play()
 		end
 	else
 		-- Leaving snaps back: no fade.
