@@ -144,8 +144,11 @@ end
 -- or window is only a whisper (the console's rim wears the same), where
 -- the other materials draw the theme's hairline.
 local MATTE_EDGE = 0.07
+-- Slate: a fine light edge, never a white line (its header tops too).
+local SLATE_EDGE = 0.06
 function UI.edgeAlpha()
-	return Stoa.db ~= nil and Stoa.db.material == "matte" and MATTE_EDGE or nil
+	local material = Stoa.db ~= nil and Stoa.db.material
+	return material == "matte" and MATTE_EDGE or material == "slate" and SLATE_EDGE or nil
 end
 
 -- A small leather and brass ring (Tools/art/coin_frame.py) round a circle
@@ -1467,6 +1470,12 @@ function UI.badge(parent, word, token)
 	end
 	fill:SetVertexColor(0, 0, 0, UI.BADGE.alpha)
 	badge.fill = fill
+	-- Slate: a chip, the word's own colour washed faintly over the pill.
+	local wash = UI.slate() and sliced(badge, "BACKGROUND", "PlateFill.tga", 0, 5)
+	if wash then
+		wash:SetDrawLayer("BACKGROUND", 1)
+		badge.wash = wash
+	end
 	local text = badge:CreateFontString(nil, "OVERLAY")
 	Stoa:SetFont(text, "sans", Stoa.typeSize.caption)
 	text:SetPoint("CENTER", 0, 0)
@@ -1478,7 +1487,9 @@ function UI.badge(parent, word, token)
 			return
 		end
 		text:SetText(newWord:upper())
-		text:SetTextColor(Stoa:Color(newToken or Stoa:StateToken(newWord)))
+		local r, g, b = Stoa:Color(newToken or Stoa:StateToken(newWord))
+		text:SetTextColor(r, g, b)
+		if self.wash then self.wash:SetVertexColor(r, g, b, 0.16) end
 		local width = text:GetStringWidth()
 		if Stoa:IsSecret(width) or not width or width <= 0 then width = #newWord * 7 end
 		self:SetWidth(math.floor(width + UI.BADGE.pad * 2 + 0.5))
@@ -1538,6 +1549,12 @@ function UI.button(parent, label, width, onClick, reloads)
 	local button = CreateFrame("Button", nil, parent, reloads and "SecureActionButtonTemplate" or nil)
 	button:SetSize(width or 110, 26)
 	UI.roundPanel(button, 0.95)
+	-- Slate: a lit button is washed in the accent as well as edged.
+	local wash = UI.slate() and sliced(button, "BACKGROUND", "CardFill.tga")
+	if wash then
+		wash:SetDrawLayer("BACKGROUND", 2)
+		wash:Hide()
+	end
 	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
 	local text = button:CreateFontString(nil, "OVERLAY")
 	Stoa:SetFont(text, "sans", Stoa.typeSize.body)
@@ -1550,10 +1567,16 @@ function UI.button(parent, label, width, onClick, reloads)
 		if not button:IsEnabled() then
 			text:SetTextColor(Stoa:Color("muted"))
 			glow:Clear()
+			if wash then wash:Hide() end
 			return
 		end
 		local lit = button.selected or button:IsMouseOver()
 		text:SetTextColor(Stoa:Color(lit and "accent" or "text"))
+		if wash then
+			local r, g, b = Stoa:Color("accent")
+			wash:SetVertexColor(r, g, b, button.selected and 0.16 or 0.1)
+			wash:SetShown(lit and true or false)
+		end
 		if lit then
 			glow:Set(Stoa:Color("accent"))
 			-- The edge warms in rather than snapping on.
@@ -1769,7 +1792,8 @@ function UI.unitCard(card, styleName)
 
 	local hp = UI.bar(card, 10, 10, "health")
 	card.hp = hp
-	if plate then UI.softCorners(hp) end
+	-- Slate rounds the bar's ends too (the card's colour over its corners).
+	if plate or UI.slate() then UI.softCorners(hp) end
 	UI.halvedStripes(hp)
 
 	-- Shields sit on the empty end of the health bar, starting where health

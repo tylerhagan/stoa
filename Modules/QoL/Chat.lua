@@ -266,7 +266,13 @@ function Chat:BuildCopyButton()
 	if not (chat and chat.CreateFontString) then return end
 	local button = CreateFrame("Button", nil, chat)
 	button:SetSize(36, 14)
-	button:SetPoint("TOPRIGHT", chat, "TOPRIGHT", -4, 0)
+	-- Slate: on the row of tab pills above the messages, not over them.
+	local console = Stoa.modules.Grimoire
+	if UI.slate() and console and console.db and not console.db.slim then
+		button:SetPoint("BOTTOMRIGHT", chat, "TOPRIGHT", -4, 7)
+	else
+		button:SetPoint("TOPRIGHT", chat, "TOPRIGHT", -4, 0)
+	end
 	button:SetFrameLevel(chat:GetFrameLevel() + 5)
 	local label = UI.text(button, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	label:SetPoint("RIGHT")

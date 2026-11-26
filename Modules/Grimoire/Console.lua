@@ -221,9 +221,14 @@ end
 -- Only a breath of light at the edge: the cards are shaped by their fill
 -- and shadow, not an outline (a brighter line read as white over the world).
 local SLATE_EDGE = 0.045
--- A soft dark falloff round each card, so it stands over bright ground.
-local SLATE_SHADOW, SLATE_SHADOW_A = 3, 0.4
+-- A soft drop shadow under each card (Tools/art/slate_shadow.py), so it
+-- stands over bright ground without a dark ring round it: laid
+-- SLATE_SHADOW out from the card and SLATE_DROP lower.
+local SLATE_SHADOW, SLATE_SHADOW_A, SLATE_DROP, SLATE_SHADOW_SLICE = 22, 0.45, 3, 28
 local SLATE_INSET, SLATE_LIFT = 10, 6
+
+-- The portrait stands a little higher, clear of the bars' card.
+local SLATE_SEAL_Y = 14
 
 local function slatePlate(owner, layer)
 	local fill = UI.sliced(owner, layer or "BACKGROUND", "CardFill.tga")
@@ -244,11 +249,14 @@ local function slatePlate(owner, layer)
 		local r, g, b = Stoa:Color("text")
 		edge:SetVertexColor(r, g, b, SLATE_EDGE)
 	end
-	local shadow = UI.sliced(owner, layer or "BACKGROUND", "CardGlow.tga", SLATE_SHADOW)
+	local shadow = UI.sliced(owner, layer or "BACKGROUND", "SlateShadow.tga", SLATE_SHADOW, SLATE_SHADOW_SLICE)
 	if shadow then
 		shadow:SetDrawLayer(layer or "BACKGROUND", -4)
-		shadow:SetVertexColor(0, 0, 0, SLATE_SHADOW_A)
-		shadow.stoaOutset = SLATE_SHADOW
+		shadow:SetVertexColor(1, 1, 1, SLATE_SHADOW_A)
+		shadow.stoaOutset, shadow.stoaDrop = SLATE_SHADOW, SLATE_DROP
+		shadow:ClearAllPoints()
+		shadow:SetPoint("TOPLEFT", -SLATE_SHADOW, SLATE_SHADOW - SLATE_DROP)
+		shadow:SetPoint("BOTTOMRIGHT", SLATE_SHADOW, -SLATE_SHADOW - SLATE_DROP)
 	end
 	return fill, edge, shadow
 end
@@ -453,6 +461,9 @@ local WELL_BARS, WELL_BARS_TOP = 3, -48
 -- The cards stand from a little under the console's top (room for the
 -- chat's tabs inside the chat card) to SLATE_BOTTOM over the screen's foot.
 local SLATE_PAD, SLATE_TOP, SLATE_BOTTOM = 10, -8, 8
+-- The bars' card hugs the bars, so the portrait, health and mana stand
+-- over the world above it rather than in an empty band of card.
+local SLATE_BARS_TOP = -40
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
 	if self.slateCard then
@@ -467,10 +478,10 @@ function Console:PlaceWells(zones, top)
 				used[i] = true
 				local pad = math.min(SLATE_PAD, math.floor(((zone.gap or 40) - 8) / 2))
 				for _, part in ipairs(well) do
-					local out = part.stoaOutset or 0
+					local out, drop = part.stoaOutset or 0, part.stoaDrop or 0
 					part:ClearAllPoints()
-					part:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - pad + 0.5) - out, SLATE_TOP + out)
-					part:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + pad + 0.5) + out, SLATE_BOTTOM - out)
+					part:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - pad + 0.5) - out, (i == WELL_BARS and SLATE_BARS_TOP or SLATE_TOP) + out - drop)
+					part:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + pad + 0.5) + out, SLATE_BOTTOM - out - drop)
 				end
 			end
 		end
@@ -608,7 +619,7 @@ function Console:BuildSeal(frame)
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
 	-- Slim: the seal sits in the line, its head just over the top edge.
-	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or 6
+	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or self:Slate() and SLATE_SEAL_Y or 6
 	seal:SetPoint("CENTER", frame, "TOP", 0, sealY)
 	self.seal = seal
 
@@ -724,7 +735,9 @@ function Console:BuildSeal(frame)
 	-- nothing floats over the world.
 	local role = text(seal, "italic", Stoa.typeSize.label, "accent", "CENTER")
 	role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
-	role:SetShown(not art and not slim and not self:Matte())
+	-- Slate: the Ready card says the role; under the seal it would sit
+	-- on the bars' card.
+	role:SetShown(not art and not slim and not self:Matte() and not self:Slate())
 	self.roleText = role
 
 	if slim then
@@ -742,7 +755,8 @@ function Console:BuildSeal(frame)
 
 	-- Health on the left, filling towards the seal; mana on the right.
 	local matte = self:Matte()
-	local health = bar(frame, matte and MATTE_RESOURCE_W or 150, 3, "health")
+	local resourceH = self:Slate() and 4 or 3
+	local health = bar(frame, matte and MATTE_RESOURCE_W or 150, resourceH, "health")
 	health:SetReverseFill(true)
 	-- Matte: the values are as small as their captions, one line over the bar.
 	local valueFont, valueSize = matte and "sans" or "serif", matte and Stoa.typeSize.caption or Stoa.typeSize.title
@@ -750,7 +764,7 @@ function Console:BuildSeal(frame)
 	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, matte and 5 or 4)
 	local healthCap = caption(frame, "Health")
 
-	local mana = bar(frame, matte and MATTE_RESOURCE_W or 150, 3, "mana")
+	local mana = bar(frame, matte and MATTE_RESOURCE_W or 150, resourceH, "mana")
 	local manaText = text(frame, valueFont, valueSize, "mana")
 	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, matte and 5 or 4)
 	local manaCap = caption(frame, "Mana")
@@ -1306,7 +1320,7 @@ function Console:BuildFellowship(frame, space)
 	xpHover:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	-- The one key kept on the page: what the gold mark is, under the bar's
 	-- right end.
-	local hourKey = Figures.key(journeyCol, "accent")
+	local hourKey = Figures.key(journeyCol, UI.slate() and "text" or "accent")
 	hourKey:SetPoint("TOPRIGHT", xp, "BOTTOMRIGHT", 0, -4)
 	hourKey:SetText(nil)
 	self.levelText, self.levelShare, self.xpBar, self.hourKey = level, share, xp, hourKey
@@ -1510,6 +1524,10 @@ function Console:BuildRing(seal, portrait, size)
 		ticks[i] = tick
 	end
 	self.ringTicks = ticks
+	-- Slate: a plain ring (experience reads on the Journey card).
+	if UI.slate() then
+		for _, tick in ipairs(ticks) do tick:Hide() end
+	end
 
 	-- The level in the display serif, a size up from the badge's caption, on
 	-- an opaque plate so the bezel ticks under it don't read as digits.
@@ -1948,11 +1966,15 @@ function Console:UpdateJourney()
 	self.xpBar:Set(xp / xpMax, math.min(xp + rested, xpMax) / xpMax, hour)
 	local earned = math.floor(xp / xpMax * 100)
 	self.levelShare:SetText(earned .. "%")
-	local keys = { { "text", "Earned " .. earned .. "%" } }
+	local slate = UI.slate()
+	local keys = { { slate and "accent" or "text", "Earned " .. earned .. "%" } }
 	if rested > 0 then
 		keys[#keys + 1] = { "mana", "Rested to " .. math.floor(math.min(xp + rested, xpMax) / xpMax * 100) .. "%" }
 	end
-	if hour then keys[#keys + 1] = { "accent", "The gold mark: where an hour at your pace gets you" } end
+	if hour then
+		keys[#keys + 1] = slate and { "text", "The light mark: where an hour at your pace gets you" }
+			or { "accent", "The gold mark: where an hour at your pace gets you" }
+	end
 	self.xpKeyWords = keys
 	self.hourKey:SetText(hour and "In an hour" or nil)
 	self:UpdateKitLines()

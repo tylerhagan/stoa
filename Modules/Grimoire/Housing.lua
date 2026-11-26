@@ -745,12 +745,23 @@ end
 -- are Stoa's own frames laid on the game's rows' near corners, so they
 -- follow wherever the rows are put. BAGS opens the bags on a click, as the
 -- backpack does; MENU takes no clicks, so the button under it has them.
+-- Slate: each word is a small chip of its own (the panel colour, rounded),
+-- so it doesn't float loose over the world above the cards.
+local CHIP_PAD, CHIP_H = 9, 18
 local function menuWord(row, label, click)
 	local word = CreateFrame("Button", nil, UIParent)
 	local text = UI.caption(word, label)
-	text:SetPoint("RIGHT")
 	word.text = text
-	word:SetSize(math.max(text:GetStringWidth() or 0, 24) + 4, MENU_WORD_ROOM - 4)
+	if Console:Slate() then
+		text:SetPoint("CENTER")
+		local fill = UI.pillFill(word, 0)
+		UI.tint(fill, "panel", 0.94)
+		fill:SetVertexColor(Stoa:Color("panel"))
+		word:SetSize(math.max(text:GetStringWidth() or 0, 24) + CHIP_PAD * 2, CHIP_H)
+	else
+		text:SetPoint("RIGHT")
+		word:SetSize(math.max(text:GetStringWidth() or 0, 24) + 4, MENU_WORD_ROOM - 4)
+	end
 	word:SetPoint("RIGHT", row, "RIGHT", 0, 0)
 	word:EnableMouse(click ~= nil)
 	if click then word:SetScript("OnClick", click) end
@@ -779,7 +790,9 @@ local function watchMenu()
 				entry.state = state
 				row:SetAlpha(over and 1 or 0)
 				word.text:SetTextColor(Stoa:Color(over and "accent" or "muted"))
-				word:SetAlpha(over and 0 or (fight and MENU_WORD_FIGHT or MENU_WORD_REST))
+				-- (A Slate chip keeps its panel solid; its word is muted.)
+				local rest = Console:Slate() and 1 or MENU_WORD_REST
+				word:SetAlpha(over and 0 or (fight and MENU_WORD_FIGHT or rest))
 			end
 		end
 	end

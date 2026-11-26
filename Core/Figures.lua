@@ -24,6 +24,17 @@ local function fill(parent, layer, token, alpha)
 	return tex
 end
 
+-- Slate draws its figures as small rounded pills (PlateFill, nine-sliced
+-- at 5), not square cells and strips.
+local function pill(parent, layer, token, alpha)
+	if not UI.slate() then return fill(parent, layer, token, alpha) end
+	local tex = UI.sliced(parent, layer or "ARTWORK", "PlateFill.tga", 0, 5, true)
+	if not tex then return fill(parent, layer, token, alpha) end
+	tex:ClearAllPoints()
+	if token then UI.tint(tex, token, alpha) end
+	return tex
+end
+
 local function color(tex, token, alpha)
 	local r, g, b = Stoa:Color(token)
 	tex:SetVertexColor(r, g, b, alpha or 1)
@@ -39,6 +50,16 @@ end
 -- Segments ------------------------------------------------------------------------
 
 function Figures.segments(parent, count, width, height, gap)
+	-- Slate: one rounded bar, a little thinner, in place of the cells.
+	if UI.slate() then
+		local frame = Figures.bar(parent, width, math.max(4, height - 2))
+		local set = frame.Set
+		function frame:Set(fraction, token)
+			fraction = math.max(0, math.min(1, fraction or 0))
+			set(self, fraction, token or Figures.wear(fraction))
+		end
+		return frame
+	end
 	gap = gap or 2
 	local frame = CreateFrame("Frame", nil, parent)
 	frame:SetSize(width, height)
@@ -71,11 +92,11 @@ function Figures.columns(parent, count, columnWidth, height, gap)
 	frame:SetSize(count * columnWidth + (count - 1) * gap, height)
 	frame.bars = {}
 	for i = 1, count do
-		local track = fill(frame, "BACKGROUND")
+		local track = pill(frame, "BACKGROUND")
 		track:SetSize(columnWidth, height)
 		track:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", (i - 1) * (columnWidth + gap), 0)
 		color(track, "text", 0.12)
-		local used = fill(frame)
+		local used = pill(frame)
 		used:SetWidth(columnWidth)
 		used:SetPoint("BOTTOMLEFT", track, "BOTTOMLEFT")
 		frame.bars[i] = { track = track, used = used }
@@ -101,17 +122,19 @@ end
 function Figures.bar(parent, width, height)
 	local frame = CreateFrame("Frame", nil, parent)
 	frame:SetSize(width, height)
-	local track = fill(frame, "BACKGROUND")
+	local track = pill(frame, "BACKGROUND")
 	track:SetAllPoints()
 	color(track, "text", 0.14)
-	local value = fill(frame)
+	local value = pill(frame)
 	value:SetPoint("TOPLEFT")
 	value:SetPoint("BOTTOMLEFT")
 	frame.track, frame.value = track, value
+	-- A rounded fill can't be narrower than it is tall.
+	local least = UI.slate() and height or 1
 	function frame:Set(fraction, token)
 		fraction = math.max(0, math.min(1, fraction or 0))
 		self.value:SetShown(fraction > 0)
-		self.value:SetWidth(math.max(1, width * fraction))
+		self.value:SetWidth(math.max(least, width * fraction))
 		color(self.track, "text", 0.14)
 		color(self.value, token or "text")
 	end
@@ -197,21 +220,25 @@ end
 function Figures.xp(parent, width, height)
 	local frame = CreateFrame("Frame", nil, parent)
 	frame:SetSize(width, height)
-	local track = fill(frame, "BACKGROUND", "text", 0.12)
+	local slate = UI.slate()
+	local track = pill(frame, "BACKGROUND", "text", 0.12)
 	track:SetAllPoints()
-	local rested = fill(frame, "BORDER", "mana", 0.55)
+	local rested = pill(frame, "BORDER", "mana", 0.55)
 	rested:SetPoint("TOPLEFT")
 	rested:SetPoint("BOTTOMLEFT")
-	local earned = fill(frame, "ARTWORK", "text")
+	-- Slate: what's earned in the accent, as on its mock-up.
+	local earned = pill(frame, "ARTWORK", slate and "accent" or "text")
 	earned:SetPoint("TOPLEFT")
 	earned:SetPoint("BOTTOMLEFT")
-	local mark = fill(frame, "OVERLAY", "accent")
+	-- (In the text colour under Slate, where the earned stretch is the accent.)
+	local mark = fill(frame, "OVERLAY", slate and "text" or "accent")
 	mark:SetSize(2, height + 8)
 	frame.rested, frame.earned, frame.mark = rested, earned, mark
+	local least = slate and height or 1
 	local function share(tex, fraction)
 		fraction = math.max(0, math.min(1, fraction or 0))
 		tex:SetShown(fraction > 0)
-		tex:SetWidth(math.max(1, width * fraction))
+		tex:SetWidth(math.max(least, width * fraction))
 	end
 	-- Shares of the bar: earned, earned plus rest, and where an hour at
 	-- your pace gets you (nil hides the mark).
