@@ -1600,8 +1600,11 @@ end
 -- blocks that match it, unless the full plaques were chosen (Halo's
 -- targetFull). Read at build time; the choice reloads.
 function UI.slabCards()
-	if not UI.matte() then return false end
 	local halo = Stoa.modules and Stoa.modules.Halo
+	-- Slate: the tank watch and pet block go compact with the target
+	-- (Settings: Target, Compact), so the three match.
+	if UI.slate() then return (halo and halo.db and halo.db.targetCompact) and true or false end
+	if not UI.matte() then return false end
 	return not (halo and halo.db and halo.db.targetFull)
 end
 
