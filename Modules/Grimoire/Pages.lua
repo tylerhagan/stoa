@@ -21,6 +21,7 @@ local ROWS = 3
 local ROW_H = 15
 local LONG = 3600        -- seconds: a cooldown this long or longer is "long"
 local HEARTHSTONE = 6948
+local HEARTH_SPELL = 8690
 
 local function plain(v) return Stoa:PlainNumber(v) end
 
@@ -70,11 +71,18 @@ local function scaffold(col, kit, label, drop)
 	return { big = big, note = note, rows = rows }
 end
 
+-- Colours a line from the theme as it stands. Not UI.paint: these lines
+-- are coloured again on every refresh, and each paint is kept for the
+-- theme passes, so the list of them grew for as long as a page showed.
+local function tint(region, token)
+	region:SetTextColor(Stoa:Color(token))
+end
+
 local function setRow(row, name, value, nameToken, valueToken)
 	row.name:SetText(name or "")
 	row.value:SetText(value or "")
-	UI.paint(row.name, nameToken or "text")
-	UI.paint(row.value, valueToken or "muted")
+	tint(row.name, nameToken or "text")
+	tint(row.value, valueToken or "muted")
 end
 
 -- Refreshes a page now and then while it shows, and on its own events.
@@ -193,7 +201,7 @@ end
 
 local function noteCooldown(id, name, start, duration, quiet)
 	start, duration = plain(start), plain(duration)
-	if not (start and duration and type(name) == "string") or duration < LONG then return end
+	if not (start and duration and type(name) == "string" and name ~= "") or duration < LONG then return end
 	local store = shelf()
 	if not store then return end
 	store[id] = { name = name, ends = math.floor(time() + start + duration - GetTime()), quiet = quiet or nil }
@@ -231,6 +239,8 @@ end
 -- A spell you just cast that now cools for an hour or more: a profession
 -- cooldown, mostly. No list of them is kept; the game says how long.
 function Pages:NoteSpell(spellID)
+	-- The hearthstone is an item: the bag pass notes it, quietly.
+	if spellID == HEARTH_SPELL then return end
 	if InCombatLockdown() or not (C_Spell and C_Spell.GetSpellCooldown) then return end
 	local info = C_Spell.GetSpellCooldown(spellID)
 	if type(info) ~= "table" then return end
@@ -248,7 +258,10 @@ local function shelved()
 		if type(entry.cooldowns) == "table" then
 			for id, cd in pairs(entry.cooldowns) do
 				local left = (cd.ends or 0) - now
-				if left <= 0 and cd.quiet then
+				-- Notes an older version kept by mistake: a cooldown with no
+				-- name, and the hearthstone noted a second time by its spell.
+				local stray = type(cd.name) ~= "string" or cd.name == "" or id == ("spell:" .. HEARTH_SPELL)
+				if stray or (left <= 0 and cd.quiet) then
 					entry.cooldowns[id] = nil
 				else
 					list[#list + 1] = { name = cd.name, left = left, who = key ~= me and entry.name or nil }
@@ -293,6 +306,9 @@ local function buildCooldowns(col, kit)
 	dim:SetFromAlpha(1); dim:SetToAlpha(0.35); dim:SetDuration(0.18); dim:SetOrder(1)
 	local lift = pulse:CreateAnimation("Alpha")
 	lift:SetFromAlpha(0.35); lift:SetToAlpha(1); lift:SetDuration(0.3); lift:SetOrder(2)
+	local function whole() page.big:SetAlpha(1) end
+	pulse:SetScript("OnFinished", whole)
+	pulse:SetScript("OnStop", whole)
 	local wasReady
 	local update = keep(col, 5, function()
 		local list = shelved()
@@ -307,7 +323,9 @@ local function buildCooldowns(col, kit)
 			page.big:SetText(ready > 0 and (ready .. " ready") or "None ready")
 			page.note:SetText(soonest and ("next " .. span(soonest)) or "")
 		end
-		UI.paint(page.big, ready > 0 and "accent" or "text")
+		tint(page.big, ready > 0 and "accent" or "text")
+		-- Whatever the pulse left behind, the line is always fully shown.
+		if not pulse:IsPlaying() then page.big:SetAlpha(1) end
 		if wasReady and ready > wasReady then pulse:Play() end
 		wasReady = ready
 		for _, trinket in ipairs(trinkets()) do list[#list + 1] = trinket end

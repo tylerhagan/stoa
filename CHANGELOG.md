@@ -8,6 +8,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Class colours on names**: a new choice on Settings > Look. As the theme sets (the default) keeps things as they were: Bone and the class themes colour names by class, while Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override the theme, on party and raid cards, the target, nameplates, tooltips, the threat list, meters and the roster.
 
+- **Cooldowns page**: a cooldown with no name no longer takes a row, the hearthstone is no longer listed a second time as ready on your other characters, and the headline keeps its full strength. The page also stops adding to STOA's list of themed parts every few seconds.
+
 ## 2.1.0
 
 - **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.
