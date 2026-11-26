@@ -948,7 +948,7 @@ function Console:PlaceYouBars(crests)
 	self.health:SetPoint("LEFT", card, "LEFT", YOU_PAD, -YOU_BAR_APART)
 	self.health:SetPoint("RIGHT", card, "CENTER", -inner, -YOU_BAR_APART)
 	-- Right wing, its mirror: mana's number by the portrait, your class
-	-- at the far end, short of the shield and class mark.
+	-- at the far end; the bar stops short of the shield and class mark.
 	self.manaText:ClearAllPoints()
 	self.manaText:SetJustifyH("LEFT")
 	self.manaText:SetPoint("LEFT", card, "CENTER", inner, YOU_BAR_APART)
@@ -956,8 +956,8 @@ function Console:PlaceYouBars(crests)
 	self.mana:SetPoint("LEFT", card, "CENTER", inner, -YOU_BAR_APART)
 	self.mana:SetPoint("RIGHT", card, "RIGHT", -right, -YOU_BAR_APART)
 	self.youSub:ClearAllPoints()
-	self.youSub:SetPoint("RIGHT", card, "RIGHT", -right, YOU_BAR_APART)
-	self.youSub:SetWidth(math.max(20, wing - right - YOU_VALUE_W - 6))
+	self.youSub:SetPoint("RIGHT", card, "RIGHT", -YOU_PAD, YOU_BAR_APART)
+	self.youSub:SetWidth(math.max(20, wing - YOU_PAD - YOU_VALUE_W - 6))
 end
 
 -- With the art: health and mana sit down in the leather either side of
@@ -1643,10 +1643,11 @@ function Console:PlaceCrest()
 		if gauge and not gauge:IsShown() then shown[#shown + 1] = gauge end
 	end
 	if self.youCard then
-		-- At the card's right end, the bars drawn in to make room.
+		-- At the right end of the mana bar's row, the bar drawn in to
+		-- make room; your class keeps the row above to its end.
 		local n = 0
 		for _, gauge in ipairs(shown) do
-			gauge:SetPoint("RIGHT", self.youCard, "RIGHT", -YOU_PAD - n * (size + 4) + nudge, nudge)
+			gauge:SetPoint("RIGHT", self.youCard, "RIGHT", -YOU_PAD - n * (size + 4) + nudge, nudge - YOU_BAR_APART)
 			if gauge:IsShown() then n = n + 1 end
 		end
 		self:PlaceYouBars(n)
