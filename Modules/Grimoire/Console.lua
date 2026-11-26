@@ -237,7 +237,7 @@ local YOU_W, YOU_H, YOU_Y = 360, 50, -9
 -- The portrait stands in the middle, a little taller than the card, with
 -- health on its left wing and mana on its right.
 local YOU_SEAL, YOU_PAD, YOU_GAP = 60, 12, 12
-local YOU_NAME_W, YOU_VALUE_W, YOU_CREST = 104, 34, 18
+local YOU_VALUE_W, YOU_CREST = 34, 18
 local YOU_BAR_H, YOU_BAR_APART = 4, 8
 -- For pieces pinned to the screen beside the card (the form chips): its
 -- size and its centre's height over the console's top edge.
