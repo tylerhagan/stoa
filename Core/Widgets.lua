@@ -607,8 +607,10 @@ end
 -- Party:UpdateCard fills them in.
 
 UI.CARD_STYLES = {
-	party = { pad = 9, name = 16, bar = 12, pip = 16, pipFont = 11, gap = 6 },
-	compact = { pad = 7, name = 14, bar = 8, pip = 14, pipFont = 10, gap = 5 },
+	-- slateBar: Slate's health bar, a touch slimmer to make room for the
+	-- thin mana line it hangs under it (card.mp, there only under Slate).
+	party = { pad = 9, name = 16, bar = 12, slateBar = 10, pip = 16, pipFont = 11, gap = 6 },
+	compact = { pad = 7, name = 14, bar = 8, slateBar = 7, pip = 14, pipFont = 10, gap = 5 },
 	raid = { pad = 7, name = 15, bar = 9, pip = 14, pipFont = 10, gap = 5 },
 	-- The compact raid cell: health fills the cell behind the name, and one
 	-- word or the percent sits on the right.
@@ -1806,6 +1808,17 @@ function UI.unitCard(card, styleName)
 	if hp.SetClipsChildren then hp:SetClipsChildren(true) end
 	card.absorb = absorb
 
+	-- Slate: a thin mana line under health and a small role chip after the
+	-- name (Tank, Healer). Whoever owns the card fills and shows them.
+	if UI.slate() then
+		local mp = UI.bar(card, 10, 3, "mana")
+		mp:Hide()
+		card.mp = mp
+		local role = UI.badge(card, nil, "muted")
+		role:Hide()
+		card.role = role
+	end
+
 	card.pips = {}
 	for i = 1, MAX_PIPS do card.pips[i] = makePip(card) end
 
@@ -2474,6 +2487,10 @@ function UI.styleCard(card, styleName)
 	if not style.strip then
 		for _, part in ipairs({ card.name, card.percent, card.hp }) do part:SetAlpha(1) end
 	end
+	if card.mp and not style.slateBar then
+		card.mp:Hide()
+		card.role:Hide()
+	end
 	if style.strip then
 		Stoa:SetFont(card.name, "sans", style.name, "OUTLINE")
 		card.name:ClearAllPoints()
@@ -2528,13 +2545,21 @@ function UI.styleCard(card, styleName)
 	card.hp:ClearAllPoints()
 	card.hp:SetPoint("TOPLEFT", pad, -(pad + style.name + 3))
 	card.hp:SetPoint("TOPRIGHT", -pad, -(pad + style.name + 3))
-	card.hp:SetHeight(style.bar)
+	local mana = card.mp and style.slateBar
+	card.hp:SetHeight(mana and style.slateBar or style.bar)
 	card.absorb:SetWidth(math.max(1, (card:GetWidth() or 100) - pad * 2))
+	if mana then
+		card.mp:ClearAllPoints()
+		card.mp:SetPoint("TOPLEFT", card.hp, "BOTTOMLEFT", 0, -2)
+		card.mp:SetPoint("TOPRIGHT", card.hp, "BOTTOMRIGHT", 0, -2)
+		card.role:ClearAllPoints()
+		card.role:SetPoint("RIGHT", card.percent, "LEFT", -6, 0)
+	end
 
 	for i, pip in ipairs(card.pips) do
 		pip:ClearAllPoints()
 		if i == 1 then
-			pip:SetPoint("TOPLEFT", card.hp, "BOTTOMLEFT", 0, -style.gap)
+			pip:SetPoint("TOPLEFT", mana and card.mp or card.hp, "BOTTOMLEFT", 0, -style.gap + (mana and 1 or 0))
 		else
 			pip:SetPoint("LEFT", card.pips[i - 1], "RIGHT", 4, 0)
 		end

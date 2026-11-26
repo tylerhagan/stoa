@@ -439,10 +439,43 @@ function Party:UpdateMark(card)
 	end
 end
 
+-- Slate: the thin mana line under a card's health, in the power's colour
+-- (rage and energy read as text and accent), gone for the dead.
+local CARD_POWER = { [1] = "text", [3] = "accent" }
+function Party:UpdatePower(card)
+	local mp = card.mp
+	if not mp or not (card.style and card.style.slateBar) then return end
+	local unit = card.unit
+	if card.preview or not unit or not UnitExists(unit) then return end
+	local max = UnitPowerMax(unit)
+	local has = Stoa:IsSecret(max) or ((Stoa:PlainNumber(max) or 0) > 0)
+	if not has or not flag(UnitIsConnected(unit)) or flag(UnitIsDeadOrGhost(unit)) then
+		mp:Hide()
+		return
+	end
+	UI.setUnitBar(mp, unit, "power")
+	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType(unit)))
+	mp:SetStatusBarColor(Stoa:Color(kind and CARD_POWER[kind] or "mana"))
+	mp:Show()
+end
+
+-- Slate: a small chip after the name for a tank or a healer.
+local ROLE_CHIP = { TANK = { "Tank", "accent" }, HEALER = { "Healer", "health" } }
+function Party:UpdateRole(card)
+	local chip = card.role
+	if not chip or not (card.style and card.style.slateBar) then return end
+	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(card.unit)
+	local entry = not Stoa:IsSecret(role) and ROLE_CHIP[role]
+	if entry then chip:Set(entry[1], entry[2]) else chip:Hide() end
+	card.name:SetPoint("RIGHT", entry and chip or card.percent, "LEFT", -6, 0)
+end
+
 function Party:UpdateCard(card)
 	local unit = card.unit
 	-- Cards showing the /stoa test preview keep their sample data.
 	if card.preview or not unit or not UnitExists(unit) then return end
+	self:UpdatePower(card)
+	self:UpdateRole(card)
 
 	self:UpdateMark(card)
 	card.name:SetText(UnitName(unit))
@@ -1132,6 +1165,10 @@ function Party:OnEnable()
 
 	for _, event in ipairs({ "UNIT_POWER_UPDATE", "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER" }) do
 		Stoa:On(event, function(unit)
+			if UI.slate() then
+				local card = cardFor(self, unit)
+				if card then self:UpdatePower(card) end
+			end
 			if unit and self.watch and self.watch.shown and self.watchedUnit and flag(UnitIsUnit(unit, self.watchedUnit)) then
 				self:UpdateWatchPower()
 			end
