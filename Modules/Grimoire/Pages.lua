@@ -236,8 +236,19 @@ function Pages:ScanItems()
 	end
 end
 
+-- The profession cooldowns worth asking the game about at login, so one
+-- that was cast before STOA could see it (an older version, a reset
+-- profile) still shows. Transmutes share one cooldown, so they share one
+-- row: the first that is cooling stands for all of them.
+local TRANSMUTES = { 17187, 11479, 11480, 17559, 17560, 17561, 17562, 17563, 17564, 17565, 17566, 25146 }
+local CRAFTS = { 18560 } -- Mooncloth
+local TRANSMUTE_KEY = "spell:transmute"
+local TRANSMUTE_NAME = "Transmute"
+local isTransmute = {}
+for _, id in ipairs(TRANSMUTES) do isTransmute[id] = true end
+
 -- A spell you just cast that now cools for an hour or more: a profession
--- cooldown, mostly. No list of them is kept; the game says how long.
+-- cooldown, mostly. Any spell counts; the game says how long.
 function Pages:NoteSpell(spellID)
 	-- The hearthstone is an item: the bag pass notes it, quietly.
 	if spellID == HEARTH_SPELL then return end
@@ -246,7 +257,41 @@ function Pages:NoteSpell(spellID)
 	if type(info) ~= "table" then return end
 	local name = C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
 	if type(name) == "string" and not Stoa:IsSecret(name) then
-		noteCooldown("spell:" .. spellID, name, info.startTime, info.duration)
+		if isTransmute[spellID] then
+			noteCooldown(TRANSMUTE_KEY, TRANSMUTE_NAME, info.startTime, info.duration)
+		else
+			noteCooldown("spell:" .. spellID, name, info.startTime, info.duration)
+		end
+	end
+end
+
+-- The login pass over the list above. Out of combat only.
+function Pages:ScanSpells()
+	if InCombatLockdown() or not (C_Spell and C_Spell.GetSpellCooldown) then return end
+	local store = shelf()
+	if not store then return end
+	local function cooling(spellID)
+		local info = C_Spell.GetSpellCooldown(spellID)
+		return type(info) == "table" and (plain(info.duration) or 0) >= LONG
+	end
+	for _, id in ipairs(TRANSMUTES) do
+		-- A transmute an older version noted under its own spell moves to
+		-- the shared row, so the two never stand side by side.
+		local old = store["spell:" .. id]
+		if old then
+			local kept = store[TRANSMUTE_KEY]
+			if not kept or (old.ends or 0) > (kept.ends or 0) then store[TRANSMUTE_KEY] = { name = TRANSMUTE_NAME, ends = old.ends } end
+			store["spell:" .. id] = nil
+		end
+	end
+	local noted = store[TRANSMUTE_KEY]
+	if not (noted and (noted.ends or 0) > time()) then
+		for _, id in ipairs(TRANSMUTES) do
+			if cooling(id) then self:NoteSpell(id) break end
+		end
+	end
+	for _, id in ipairs(CRAFTS) do
+		if cooling(id) then self:NoteSpell(id) end
 	end
 end
 
@@ -406,6 +451,7 @@ function Pages:OnEnable()
 		C_Timer.After(1.5, function()
 			pending = false
 			self:ScanItems()
+			self:ScanSpells()
 			if self.cooldownsChanged then self.cooldownsChanged() end
 		end)
 	end
