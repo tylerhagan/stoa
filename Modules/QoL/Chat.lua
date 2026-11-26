@@ -266,10 +266,10 @@ function Chat:BuildCopyButton()
 	if not (chat and chat.CreateFontString) then return end
 	local button = CreateFrame("Button", nil, chat)
 	button:SetSize(36, 14)
-	-- Slate: on the row of tab pills above the messages, not over them.
+	-- Slate: level with the tab chips standing over the chat card.
 	local console = Stoa.modules.Grimoire
 	if UI.slate() and console and console.db and not console.db.slim then
-		button:SetPoint("BOTTOMRIGHT", chat, "TOPRIGHT", -4, 7)
+		button:SetPoint("BOTTOMRIGHT", chat, "TOPRIGHT", -4, 18)
 	else
 		button:SetPoint("TOPRIGHT", chat, "TOPRIGHT", -4, 0)
 	end

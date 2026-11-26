@@ -2867,8 +2867,9 @@ end
 -- Which right-page columns fit, right to left. Company goes first; then
 -- Journey at the level cap, Ready while you level.
 local PAGE_GAPS = { COLUMN_GAP, 24 }
--- Slate: wider first, so each page's card stands apart.
-local SLATE_PAGE_GAPS = { COLUMN_GAP + 16, COLUMN_GAP, 30 }
+-- Slate: each page is a card; the air between them matches the chat and
+-- At a glance cards on the left.
+local SLATE_PAGE_GAPS = { COLUMN_GAP + 4, 30 }
 
 function Console:FitPages()
 	local frame, page, cols = self.frame, self.rightPage, self.pageColumns
