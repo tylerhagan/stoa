@@ -10,6 +10,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Cooldowns page**: a cooldown with no name no longer takes a row, the hearthstone is no longer listed a second time as ready on your other characters, and the headline keeps its full strength. The page also stops adding to STOA's list of themed parts every few seconds.
 
+- **Unit tooltips in a dungeon fight**: when the game hides which unit a tooltip is for, STOA now reads what the mouse is over instead of leaving the game's lines undressed.
+
 ## 2.1.0
 
 - **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.

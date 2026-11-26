@@ -384,7 +384,23 @@ end
 
 function Tooltip:DressUnit(tip)
 	local unit = tipUnit(tip)
-	if not unit or Stoa:IsSecret(unit) then return end
+	if not unit then return end
+	-- In a dungeon fight the game hides which unit the card is for. The
+	-- card is nearly always for what the mouse is over, so that is read
+	-- instead; failing that the game's lines at least go quiet like
+	-- STOA's, rather than standing white under a dressed name.
+	if Stoa:IsSecret(unit) then
+		unit = known(UnitExists("mouseover")) and "mouseover" or nil
+		if not unit then
+			local name = line(tip, 1)
+			if name then Stoa:SetFont(name, "serif", Stoa.typeSize.name) end
+			for i = 2, tip:NumLines() do
+				local text = line(tip, i)
+				if text then text:SetTextColor(Stoa:Color("muted")) end
+			end
+			return
+		end
+	end
 	local r, g, b = self:UnitColour(unit)
 	local name = line(tip, 1)
 	if name then
