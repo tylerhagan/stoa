@@ -110,7 +110,8 @@ local function makeSegments(parent, entry)
 		for _, button in ipairs(self.buttons) do
 			button.chosen = button.value == v
 			button.lift:SetShown(button.chosen)
-			colour(button.lift, "text", 0.12)
+			-- Slate: the chosen one washed in the accent, as on its mock-up.
+			if UI.slate() then colour(button.lift, "accent", 0.16) else colour(button.lift, "text", 0.12) end
 			if button.chosen then button.edge:Set(Stoa:Color("accent")) else button.edge:Clear() end
 			colour(button.text, button.chosen and "accent" or "muted")
 		end
@@ -868,11 +869,13 @@ local function groupHeader(text, y)
 	if not header then
 		header = CreateFrame("Frame", nil, Window.child)
 		header:SetHeight(20)
-		header.text = UI.caption(header, "")
+		-- Slate: the heading in the accent (UI.eyebrow), with no rule.
+		header.text = UI.eyebrow(header, "")
 		header.text:SetPoint("LEFT")
 		header.rule = UI.line(header, "hairline")
 		header.rule:SetPoint("LEFT", header.text, "RIGHT", 10, 0)
 		header.rule:SetPoint("RIGHT")
+		header.rule:SetShown(not UI.slate())
 		headers[headerCount] = header
 	end
 	header.text:SetText(text:upper())
@@ -1026,7 +1029,7 @@ function Window:Nav()
 		local chosen = not query and button.id == current
 		-- The lift first: it's a white plate until tinted, so nothing that
 		-- follows (the mark's motion) may leave it untinted.
-		colour(button.lift, "text", 0.06)
+		if UI.slate() then colour(button.lift, "accent", 0.1) else colour(button.lift, "text", 0.06) end
 		button.lift:SetShown(chosen)
 		colour(button.text, chosen and "accent" or (button:IsMouseOver() and "text" or "muted"))
 		colour(button.mark, "accent")
