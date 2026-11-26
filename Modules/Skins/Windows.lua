@@ -299,7 +299,16 @@ local function colourTabs(frame)
 		local selected = tabSelected(tab)
 		local text = tab.Text or (tab.GetFontString and tab:GetFontString())
 		if text then text:SetTextColor(Stoa:Color(selected and "text" or "muted")) end
-		if tab.stoaShade and UI.slate() then
+		if tab.stoaWordOnly then
+			-- A tab drawn as a word only (macros): the chosen one in the
+			-- text colour over the accent line, and every word on one line,
+			-- where Blizzard sits the chosen tab's word higher.
+			tab.stoaUnderline:SetShown(selected)
+			if text then
+				text:ClearAllPoints()
+				text:SetPoint("CENTER", tab, "CENTER", 0, 0)
+			end
+		elseif tab.stoaShade and UI.slate() then
 			-- Slate: the chosen tab washed in the accent, its word in the
 			-- accent, no underline (the mock-up's segmented control).
 			if selected then
@@ -316,6 +325,8 @@ local function colourTabs(frame)
 		end
 	end
 end
+
+Windows.ColourTabs = colourTabs
 
 local function tabArt(tab)
 	if tab.stoaShade then return end

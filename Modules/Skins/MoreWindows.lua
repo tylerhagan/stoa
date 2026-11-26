@@ -697,7 +697,10 @@ function AFTER.macro(frame)
 	-- with the accent underline, not tiles.
 	for _, tab in ipairs(frame.stoaTabs or {}) do
 		for _, part in ipairs(tab.stoaTabParts or {}) do part:Hide() end
+		tab.stoaWordOnly = true
 	end
+	local windows = Stoa.modules.Windows
+	if windows and windows.ColourTabs then windows.ColourTabs(frame) end
 end
 
 -- Collections: each page's count pill ("Total Mounts 2") moves from the top
