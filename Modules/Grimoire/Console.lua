@@ -234,7 +234,9 @@ local SLATE_SEAL_Y = 14
 -- name and class, then health and mana as thin bars with their numbers,
 -- and your shield and class mark at its right end while they show.
 local YOU_W, YOU_H, YOU_Y = 360, 50, -9
-local YOU_SEAL, YOU_PAD, YOU_GAP = 36, 10, 14
+-- The portrait stands in the middle, a little taller than the card, with
+-- health on its left wing and mana on its right.
+local YOU_SEAL, YOU_PAD, YOU_GAP = 60, 12, 12
 local YOU_NAME_W, YOU_VALUE_W, YOU_CREST = 104, 34, 18
 local YOU_BAR_H, YOU_BAR_APART = 4, 8
 -- For pieces pinned to the screen beside the card (the form chips): its
@@ -654,7 +656,7 @@ function Console:BuildSeal(frame)
 	seal:SetSize(size + 12, size + 12)
 	-- Slim: the seal sits in the line, its head just over the top edge.
 	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or you and YOU_Y or self:Slate() and SLATE_SEAL_Y or 6
-	local sealX = you and -(YOU_W / 2 - YOU_PAD - YOU_SEAL / 2 - 2) or 0
+	local sealX = 0
 	seal:SetPoint("CENTER", frame, "TOP", sealX, sealY)
 	if card then seal:SetFrameLevel(card:GetFrameLevel() + 1) end
 	self.seal = seal
@@ -706,7 +708,10 @@ function Console:BuildSeal(frame)
 			bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
 			bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
 			bezel:SetPoint("CENTER")
-		elseif not you then
+		else
+			-- Slate's card: the same disc, so the portrait breaks the card's
+			-- top and foot as one round body.
+			if you then seal:SetFrameLevel(frame:GetFrameLevel() + 3) end
 			local outer = circle(seal, "BORDER", 0, size + (matte and 14 or 12), not matte and "hairline" or nil)
 			if matte then outer:SetColorTexture(0, 0, 0, 0.85) end
 			outer:SetPoint("CENTER")
@@ -764,7 +769,7 @@ function Console:BuildSeal(frame)
 	rest:SetFrameLevel(seal:GetFrameLevel() + 4)
 	if card then
 		-- On the card's top edge: the portrait is too small to carry it.
-		rest:SetPoint("CENTER", card, "TOP", 0, 0)
+		rest:SetPoint("CENTER", portrait, "TOP", 0, -1)
 	else
 		rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1) + 4)
 	end
@@ -869,14 +874,13 @@ end
 -- Slate's card for you: name and class beside the portrait, then health
 -- over mana, each a thin bar with its number at the right.
 function Console:BuildYou(card)
-	local left = YOU_PAD + YOU_SEAL + YOU_GAP
+	local inner = YOU_SEAL / 2 + YOU_GAP
+	-- Your name over the health wing, your class over the mana wing.
 	local name = text(card, "sans", Stoa.typeSize.body, "text", "LEFT")
-	name:SetPoint("BOTTOMLEFT", card, "LEFT", left, 1)
-	name:SetWidth(YOU_NAME_W)
+	name:SetPoint("LEFT", card, "LEFT", YOU_PAD, YOU_BAR_APART)
+	name:SetWidth(YOU_W / 2 - inner - YOU_PAD - YOU_VALUE_W - 6)
 	name:SetWordWrap(false)
-	local sub = text(card, "sans", Stoa.typeSize.caption, "muted", "LEFT")
-	sub:SetPoint("TOPLEFT", card, "LEFT", left, -3)
-	sub:SetWidth(YOU_NAME_W)
+	local sub = text(card, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	sub:SetWordWrap(false)
 	self.youName, self.youSub = name, sub
 
@@ -933,24 +937,27 @@ function Console:PlaceYouBars(crests)
 	if not (card and self.health) then return end
 	crests = crests or self.youCrests or 0
 	self.youCrests = crests
-	-- The words take the room they need, and the bars the rest.
-	local words = 0
-	for _, fs in ipairs({ self.youName, self.youSub }) do
-		local width = Stoa:PlainNumber(fs:GetStringWidth()) or 0
-		if width > words then words = width end
-	end
-	words = math.min(YOU_NAME_W, math.max(40, math.ceil(words)))
-	local left = YOU_PAD + YOU_SEAL + YOU_GAP + words + 14
+	local inner = YOU_SEAL / 2 + YOU_GAP
 	local right = YOU_PAD + (crests > 0 and crests * (YOU_CREST + 4) + 4 or 0)
-	local rows = { { self.health, self.healthText, YOU_BAR_APART }, { self.mana, self.manaText, -YOU_BAR_APART } }
-	for _, row in ipairs(rows) do
-		local meter, value, y = row[1], row[2], row[3]
-		value:ClearAllPoints()
-		value:SetPoint("RIGHT", card, "RIGHT", -right, y)
-		meter:ClearAllPoints()
-		meter:SetPoint("LEFT", card, "LEFT", left, y)
-		meter:SetPoint("RIGHT", card, "RIGHT", -(right + YOU_VALUE_W + 6), y)
-	end
+	local wing = YOU_W / 2 - inner
+	-- Left wing: the name, health's number by the portrait, its bar below.
+	self.healthText:ClearAllPoints()
+	self.healthText:SetJustifyH("RIGHT")
+	self.healthText:SetPoint("RIGHT", card, "CENTER", -inner, YOU_BAR_APART)
+	self.health:ClearAllPoints()
+	self.health:SetPoint("LEFT", card, "LEFT", YOU_PAD, -YOU_BAR_APART)
+	self.health:SetPoint("RIGHT", card, "CENTER", -inner, -YOU_BAR_APART)
+	-- Right wing, its mirror: mana's number by the portrait, your class
+	-- at the far end, short of the shield and class mark.
+	self.manaText:ClearAllPoints()
+	self.manaText:SetJustifyH("LEFT")
+	self.manaText:SetPoint("LEFT", card, "CENTER", inner, YOU_BAR_APART)
+	self.mana:ClearAllPoints()
+	self.mana:SetPoint("LEFT", card, "CENTER", inner, -YOU_BAR_APART)
+	self.mana:SetPoint("RIGHT", card, "RIGHT", -right, -YOU_BAR_APART)
+	self.youSub:ClearAllPoints()
+	self.youSub:SetPoint("RIGHT", card, "RIGHT", -right, YOU_BAR_APART)
+	self.youSub:SetWidth(math.max(20, wing - right - YOU_VALUE_W - 6))
 end
 
 -- With the art: health and mana sit down in the leather either side of
@@ -1707,7 +1714,7 @@ function Console:BuildRing(seal, portrait, size)
 		-- A small chip at the portrait's lower left.
 		Stoa:SetFont(plate.text, "sans", Stoa.typeSize.caption)
 		plate:SetHeight(14)
-		plate:SetPoint("CENTER", portrait, "BOTTOMLEFT", 3, 4)
+		plate:SetPoint("CENTER", portrait, "BOTTOM", 0, 1)
 	else
 		plate:SetPoint("CENTER", portrait, "BOTTOM", 0, -TICK_GAP + 1)
 	end
