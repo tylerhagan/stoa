@@ -95,12 +95,14 @@ local auraLeft = Stoa.aura.left
 
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.
+-- Base cooldowns, for timing from your own casts in combat until the game
+-- has shown the real ones (talents shorten Mind Blast).
+local COOLDOWN_GUESS = { blast = 8, death = 12 }
+
+-- Off cooldown: the game's reading, else the Cooldown Manager's, else
+-- timed from your own last cast.
 local function ready(key)
-	local info = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(SPELLS[key])
-	if type(info) ~= "table" then return nil end
-	local start, duration = Stoa:PlainNumber(info.startTime), Stoa:PlainNumber(info.duration)
-	if not start or not duration then return nil end
-	return start == 0 or duration <= 1.5 or (start + duration - GetTime()) <= 0.3
+	return Stoa.Sign.ready(SPELLS[key], COOLDOWN_GUESS[key])
 end
 
 local function hostileTarget()

@@ -126,14 +126,41 @@ function Sign.readyAt(spellID)
 	return start + duration, duration, true
 end
 
+-- Your own casts time the cooldowns the game hides in combat: when each
+-- spell was last cast, and how long its cooldown was the last time the
+-- game showed it (out of combat, say), by name so every rank counts.
+local castAt, cooldownOf = {}, {}
+
+local function learnCooldown(spellID)
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+	if not name then return end
+	local _, duration, readable = Sign.readyAt(spellID)
+	if readable and duration and duration > 1.5 then cooldownOf[name] = duration end
+	return name
+end
+
+Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(_, _, spellID)
+	if not spellID or Stoa:IsSecret(spellID) then return end
+	local name = learnCooldown(spellID)
+	if name then castAt[name] = GetTime() end
+end)
+
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
--- the game won't say.
-function Sign.ready(spellID)
+-- the game won't say and your casts can't tell. `guess` is a cooldown
+-- length to time from your last cast before the game has shown one.
+function Sign.ready(spellID, guess)
 	local managed = Stoa.Manager and Stoa.Manager:Ready(spellID)
 	if managed ~= nil then return managed end
-	local ends, _, readable = Sign.readyAt(spellID)
-	if not readable then return nil end
-	return not ends or ends - GetTime() <= 0.3
+	local ends, duration, readable = Sign.readyAt(spellID)
+	if readable then
+		if duration and duration > 1.5 then learnCooldown(spellID) end
+		return not ends or ends - GetTime() <= 0.3
+	end
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+	local length = name and (cooldownOf[name] or guess)
+	if not length then return nil end
+	local at = castAt[name]
+	return not at or GetTime() - at >= length - 0.3
 end
 
 function Sign.hostileTarget()
