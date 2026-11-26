@@ -337,8 +337,7 @@ end
 
 -- The card (Slate) --------------------------------------------------------------
 -- At rest on Slate the pet has a card of its own left of yours, the mirror
--- of the target's on the right: the name over what it is doing, the health
--- bar with its power line, the mood and the percent under it. It belongs to
+-- of the target's on the right, contents flipped too. It belongs to
 -- the console and fades with it; clicks go to the coin's button, laid over
 -- it on the screen (see BuildCoin).
 local CARD_H, CARD_PAD, CARD_GAP = 50, 11, 10
@@ -361,26 +360,28 @@ function Pet:BuildCard()
 	console.SlatePlate(card)
 	console:AddPage(card)
 
-	local name = UI.text(card, "serif", Stoa.typeSize.label, "text", "LEFT")
-	name:SetPoint("TOPLEFT", CARD_PAD, -10)
+	-- The target card's layout flipped: the name and stance on the right,
+	-- next to you, the bar on the left with its percent at the outer end.
+	local name = UI.text(card, "serif", Stoa.typeSize.label, "text", "RIGHT")
+	name:SetPoint("TOPRIGHT", -CARD_PAD, -10)
 	name:SetWidth(CARD_NAME_W)
 	name:SetWordWrap(false)
 	local doing = UI.caption(card, "")
-	doing:SetPoint("TOPLEFT", CARD_PAD, -30)
+	doing:SetPoint("TOPRIGHT", -CARD_PAD, -30)
 	doing:SetWidth(CARD_NAME_W)
-	doing:SetJustifyH("LEFT")
+	doing:SetJustifyH("RIGHT")
 	doing:SetWordWrap(false)
-	local left = CARD_PAD + CARD_NAME_W + CARD_NAME_GAP
+	local right = CARD_PAD + CARD_NAME_W + CARD_NAME_GAP
 	local hp = UI.bar(card, 10, 8, "health")
-	hp:SetPoint("TOPLEFT", left, -13)
-	hp:SetPoint("RIGHT", -CARD_PAD, 0)
+	hp:SetPoint("TOPLEFT", CARD_PAD, -13)
+	hp:SetPoint("RIGHT", -right, 0)
 	local power = UI.bar(card, 10, 3, "accent")
 	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -3)
 	power:SetPoint("RIGHT", hp, "RIGHT")
 	local word = UI.caption(card, "")
-	word:SetPoint("LEFT", card, "TOPLEFT", left, -37)
-	local percent = UI.text(card, "sans", Stoa.typeSize.body, "muted", "RIGHT")
-	percent:SetPoint("RIGHT", card, "TOPRIGHT", -CARD_PAD, -37)
+	word:SetPoint("RIGHT", card, "TOPRIGHT", -right, -37)
+	local percent = UI.text(card, "sans", Stoa.typeSize.body, "muted", "LEFT")
+	percent:SetPoint("LEFT", card, "TOPLEFT", CARD_PAD, -37)
 	card.name, card.doing, card.hp, card.power, card.word, card.percent = name, doing, hp, power, word, percent
 	card:Hide()
 	self.card = card
