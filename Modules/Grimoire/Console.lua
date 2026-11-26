@@ -489,7 +489,7 @@ Console.SLATE_TOP = SLATE_TOP
 -- over the world above it rather than in an empty band of card.
 local SLATE_BARS_TOP = -40
 -- The air kept between two cards, and the least a card pads its content.
-local SLATE_AIR, SLATE_PAD_LEAST = 20, 6
+local SLATE_AIR, SLATE_PAD_LEAST, SLATE_AIR_LEAST = 20, 6, 10
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
 	if self.slateCard then
@@ -511,7 +511,10 @@ function Console:PlaceWells(zones, top)
 		table.sort(rects, function(a, b) return a.left < b.left end)
 		for n = 2, #rects do
 			local a, b = rects[n - 1], rects[n]
-			local short = SLATE_AIR - (b.left - a.right)
+			-- Where two cards are tight, the air between them thins first
+			-- (to SLATE_AIR_LEAST); only then do the cards pad less, so
+			-- numbers don't end up against a card's edge.
+			local short = SLATE_AIR_LEAST - (b.left - a.right)
 			if short > 0 then
 				-- Each gives half, but never past its own content.
 				a.right = math.max(a.to + SLATE_PAD_LEAST, a.right - short / 2)
