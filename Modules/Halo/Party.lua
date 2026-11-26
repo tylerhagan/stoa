@@ -564,7 +564,7 @@ function Party:UpdateCard(card)
 		-- Slate marks your target in the accent, quietly: no white outline.
 		if UI.slate() then
 			local ar, ag, ab = Stoa:Color("accent")
-			card.state:Set(ar, ag, ab, 0.7)
+			card.state:Set(ar, ag, ab, 0.4)
 		else
 			card.state:Set(Stoa:Color("text"))
 		end

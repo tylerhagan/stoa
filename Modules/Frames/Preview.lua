@@ -121,7 +121,7 @@ local function fill(card, sample)
 	elseif sample.target then
 		if slate then
 			local r, g, b = Stoa:Color("accent")
-			card.state:Set(r, g, b, 0.7)
+			card.state:Set(r, g, b, 0.4)
 		else
 			card.state:Set(Stoa:Color("text"))
 		end
