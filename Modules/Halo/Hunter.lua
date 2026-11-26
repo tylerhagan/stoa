@@ -41,6 +41,10 @@ function Hunter:Active()
 end
 
 function Hunter:NoteCast(name)
+	-- An aspect cast in a fight counts as up from then on.
+	for _, key in ipairs(ASPECTS) do
+		if name == nameOf(key) then self.aspectOn = true end
+	end
 	for key in pairs(SPELLS) do
 		if name == nameOf(key) then self.casts:Note(key, key == "mark" or key == "serpentSting") end
 	end
@@ -69,16 +73,38 @@ function Hunter:UpdateCoins()
 end
 
 -- Whether one of your aspects is up; nil when you know none yet.
+-- The game can keep your own buffs from being read by name in a fight, so
+-- an aspect is looked for three ways (as a stance, by its spell, by its
+-- name), and what was last seen out of a fight stands in when none of
+-- them answers during one.
+local function aspectSeen(key)
+	local id = SPELLS[key]
+	if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+		local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, id)
+		if ok and aura then return true end
+	end
+	return Sign.aura("player", nameOf(key), "HELPFUL") ~= nil
+end
+
 function Hunter:AspectUp()
-	local known = false
+	local known, seen = false, false
 	for _, key in ipairs(ASPECTS) do
 		if Sign.knows(SPELLS[key]) then
 			known = true
-			if Sign.aura("player", nameOf(key), "HELPFUL") then return true end
+			if aspectSeen(key) then seen = true break end
 		end
 	end
 	if not known then return nil end
-	return false
+	if not seen and GetShapeshiftForm then
+		local form = GetShapeshiftForm()
+		if not Stoa:IsSecret(form) and form and form > 0 then seen = true end
+	end
+	if seen then
+		self.aspectOn = true
+	elseif not InCombatLockdown() then
+		self.aspectOn = false
+	end
+	return self.aspectOn and true or false
 end
 
 function Hunter:UpdateCaption()
