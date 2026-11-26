@@ -1401,7 +1401,7 @@ local function slotHandle(parent, heading)
 		heading:SetAlpha(1)
 		heading:SetTextColor(Stoa:Color("text"))
 		GameTooltip:SetOwner(own, "ANCHOR_TOP")
-		GameTooltip:AddLine(own.empty and "Add a page" or "Change this page")
+		GameTooltip:AddLine(own.empty and not own.dock and "Add a page" or "Change this page")
 		GameTooltip:AddLine("Click to choose what this slot holds.", 0.7, 0.7, 0.7)
 		GameTooltip:Show()
 	end)
@@ -2977,6 +2977,29 @@ function Console:EmptyHandle(n)
 	return handle
 end
 
+-- A dock slot's caption names what it waits for ("METER 2") and shows
+-- while that window is missing; with the window there it is seen only
+-- under the mouse, like an empty slot's.
+local function dockWindow(kind)
+	local n = kind:match("%d+$")
+	local frame = _G[(kind:find("^meter") and "DamageMeterSessionWindow" or "DetailsBaseFrame") .. (n or "")]
+	return type(frame) == "table" and frame.IsVisible and frame:IsVisible()
+end
+function Console:SettleDockHandles()
+	for _, handle in pairs(self.emptyHandles or {}) do
+		local kind = handle.dock
+		local label = "Add a page"
+		if kind then
+			for _, entry in ipairs(self.SLOT_KINDS) do
+				if entry[1] == kind then label = entry[2] end
+			end
+		end
+		handle.heading:SetText(label:upper())
+		handle.empty = not kind or dockWindow(kind) or false
+		if not handle:IsMouseOver() then handle.heading:SetAlpha(handle.empty and 0 or 1) end
+	end
+end
+
 -- What the slots hold, in order. Something chosen twice counts once.
 function Console:Slots()
 	local list, seen = {}, {}
@@ -3099,15 +3122,30 @@ function Console:FitPages()
 			handle.heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
 		else
 			docks[key] = { right = inset + total - x - w, top = self:OpenHeight() + pageTop, width = w, height = page:GetHeight() }
+			-- A slot kept for a window that isn't there (no second meter
+			-- window made, Details not loaded) would be a blank with
+			-- nothing to click: it keeps a caption to change it by.
+			usedEmpty[i] = key
+			local handle = self:EmptyHandle(i)
+			handle.heading:ClearAllPoints()
+			handle.heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
 		end
 		x = x + w + gap
 	end
 	for key, col in pairs(cols) do col:SetShown(shown[key] == true) end
-	for n, handle in pairs(self.emptyHandles or {}) do
-		handle:SetShown(usedEmpty[n] == true)
-		handle.heading:SetShown(usedEmpty[n] == true)
-	end
 	self:PlaceDocks(docks)
+	for n, handle in pairs(self.emptyHandles or {}) do
+		local used = usedEmpty[n]
+		handle:SetShown(used ~= nil)
+		handle.heading:SetShown(used ~= nil)
+		handle.dock = used ~= true and used or nil
+	end
+	self:SettleDockHandles()
+	-- The game and Details set their windows up a little after login.
+	if next(docks) and not self.dockRecheck and C_Timer and C_Timer.After then
+		self.dockRecheck = true
+		C_Timer.After(6, function() xpcall(self.SettleDockHandles, Stoa.catch, self) end)
+	end
 	page:SetWidth(math.max(1, total))
 	if self.slimCard then self.slimCard:SetSize(page:GetWidth() + CARD_PAD * 2, page:GetHeight() + CARD_PAD * 2) end
 	if Stoa.modules.Tally and Stoa.modules.Tally.Fit then Stoa.modules.Tally:Fit() end
