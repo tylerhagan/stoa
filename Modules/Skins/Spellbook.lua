@@ -113,6 +113,9 @@ local function trainerWord(frame, book)
 	-- top row is taken by its school tabs, which grow with your spells.
 	local maximise = frame.MaximizeMinimizeButton
 	local close = frame.CloseButton
+	-- Slate: the pop-out button as the quiet plus and minus other windows wear.
+	local windows = Stoa.modules.Windows
+	if maximise and UI.slate() and windows and windows.DressMaxMin then windows.DressMaxMin(maximise) end
 	if maximise then
 		word:SetPoint("RIGHT", maximise, "LEFT", -14, 0)
 	elseif close then

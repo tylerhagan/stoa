@@ -334,12 +334,40 @@ function Map:DressLog()
 	end
 end
 
+-- Slate: the map's filter button (the magnifier in a gold ring). Its ring
+-- and backing go clear and the icon is drawn grey, warming to the accent
+-- under the mouse, like the header's other marks.
+function Map:DressFilter()
+	local button = WorldMapFrame and WorldMapFrame.WorldMapTrackingOptionsButton
+	if not button or button.stoaDressed or not UI.slate() then return end
+	if button.IsForbidden and button:IsForbidden() then return end
+	button.stoaDressed = true
+	local icon = button.Icon
+	local function quiet()
+		for _, region in ipairs({ button:GetRegions() }) do
+			if region ~= icon and isTexture(region) then region:SetAlpha(0) end
+		end
+	end
+	quiet()
+	button:HookScript("OnShow", quiet)
+	if not (icon and icon.SetDesaturated) then return end
+	icon:SetDesaturated(true)
+	local function paint(over)
+		local r, g, b = Stoa:Color(over and "accent" or "muted")
+		icon:SetVertexColor(r, g, b)
+	end
+	button:HookScript("OnEnter", function() paint(true) end)
+	button:HookScript("OnLeave", function() paint(false) end)
+	paint(false)
+end
+
 function Map:SetupDress()
 	if self.dressHooked or not WorldMapFrame then return end
 	self.dressHooked = true
 	local function dress()
 		Map:DressCrumbs()
 		Map:DressLog()
+		Map:DressFilter()
 	end
 	WorldMapFrame:HookScript("OnShow", Stoa:Guard(dress, "Map"))
 	if rawget(_G, "NavBar_AddButton") then
