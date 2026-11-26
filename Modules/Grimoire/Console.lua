@@ -1328,6 +1328,7 @@ local COLUMN_GAP = 40
 -- A page's caption is the handle of its slot: a chevron shows beside it
 -- under the mouse, and a click lists what the slot can hold. Only the
 -- caption takes the click, never the page.
+local SLOT_DOT, SLOT_DOT_GAP = 5, 4
 local function slotHandle(parent, heading)
 	local handle = CreateFrame("Button", nil, parent)
 	handle:SetPoint("TOPLEFT", heading, "TOPLEFT", -4, 5)
@@ -1338,28 +1339,65 @@ local function slotHandle(parent, heading)
 	local chevron = UI.glyph(handle, "Chevron", 10, "text")
 	chevron:SetPoint("LEFT", heading, "RIGHT", 5, 0)
 	chevron:Hide()
-	-- Slate: the chevron stays beside the caption, small, dim and pointing
-	-- down, so the caption reads as something that opens a list; under the
-	-- mouse it takes the accent. Not where the slot can't be changed.
+	-- Slate: no chevron. A row of dots stands at the card's top right, one
+	-- for each of STOA's pages the slot can hold, the one it holds lit: the
+	-- card reads as one of several before the mouse is near. The lit dot
+	-- takes the accent under the mouse. Not where the slot can't change.
 	local slate = UI.slate()
-	local function rest(own)
-		if not slate then return chevron:Hide() end
+	local dots = {}
+	local function rest(own, hot)
+		chevron:Hide()
+		if not slate then return end
+		local held
+		for kind, col in pairs(Console.pageColumns or {}) do
+			if col == own.column then held = kind end
+		end
+		local show = held and not (Console.slimCard or Console.db.freeRight)
+		local n = 0
+		if show then
+			for _, entry in ipairs(Console.SLOT_KINDS) do
+				if entry[4] == "STOA" or entry[4] == "Level 60" then
+					n = n + 1
+					local dot = dots[n]
+					if not dot then
+						dot = UI.circle(own, "ARTWORK", 1, SLOT_DOT)
+						dot:SetTexture("Interface\\Buttons\\WHITE8x8")
+						dots[n] = dot
+					end
+					dot.stoaKind = entry[1]
+				end
+			end
+		end
 		local r, g, b = Stoa:Color("muted")
-		chevron:SetVertexColor(r, g, b, 0.55)
-		chevron:SetShown(not (own.empty or Console.slimCard or Console.db.freeRight))
+		local ar, ag, ab = Stoa:Color("accent")
+		for i, dot in ipairs(dots) do
+			dot:SetShown(i <= n)
+			if i <= n then
+				dot:ClearAllPoints()
+				dot:SetPoint("RIGHT", heading, "LEFT", COLUMN_WIDTH - (n - i) * (SLOT_DOT + SLOT_DOT_GAP), 0)
+				if dot.stoaKind ~= held then
+					-- Darker than the card, so the other pages read as
+					-- holes pressed into it rather than marks drawn on it.
+					dot:SetVertexColor(0, 0, 0, hot and 0.7 or 0.5)
+				elseif hot then
+					dot:SetVertexColor(ar, ag, ab, 1)
+				else
+					dot:SetVertexColor(r, g, b, 0.9)
+				end
+			end
+		end
+		-- Ready's count of jobs stands clear of the dots.
+		local badge = own.column and own.column.stoaBadge
+		if badge then
+			badge:ClearAllPoints()
+			badge:SetPoint("TOPRIGHT", own.column, "TOPRIGHT", n > 0 and -(n * (SLOT_DOT + SLOT_DOT_GAP) + 4) or 0, 2)
+		end
 	end
-	if slate then
-		chevron:SetSize(8, 8)
-		chevron:SetRotation(-math.pi / 2)
-		chevron:SetPoint("LEFT", heading, "RIGHT", 6, 0)
-		handle:SetScript("OnShow", rest)
-	end
+	if slate then handle:SetScript("OnShow", function(own) rest(own) end) end
 	handle.Rest = rest
-	rest(handle)
 	handle:SetScript("OnEnter", function(own)
 		if not Console:CanPick() then return end
-		chevron:Show()
-		if slate then chevron:SetVertexColor(Stoa:Color("accent")) end
+		if slate then rest(own, true) else chevron:Show() end
 		heading:SetAlpha(1)
 		heading:SetTextColor(Stoa:Color("text"))
 		GameTooltip:SetOwner(own, "ANCHOR_TOP")
@@ -1390,7 +1428,9 @@ local function column(col, label)
 	rule:SetWidth(COLUMN_WIDTH)
 	-- Slate: the card is the section, so no rule under its heading.
 	if UI.slate() then rule:SetAlpha(0) end
-	slotHandle(col, heading).column = col
+	local handle = slotHandle(col, heading)
+	handle.column = col
+	handle:Rest()
 	return rule
 end
 
@@ -2166,6 +2206,7 @@ function Console:BuildSlateJobs(col, role)
 	local count = UI.badge(col, nil, "accent")
 	count:SetPoint("TOPRIGHT", col, "TOPRIGHT", 0, 2)
 	count:Hide()
+	col.stoaBadge = count
 	local rows = {}
 	for i = 1, SLATE_JOB_ROWS do
 		local row = CreateFrame("Button", nil, col)
