@@ -162,6 +162,8 @@ function Console:SetRiding(on)
 		if self.rideTicker then self.rideTicker:Cancel() self.rideTicker = nil end
 	end
 	self:Refold()
+	-- The chat's foot steps up over the travel line, and back down after.
+	if self.ReplaceChat then self:ReplaceChat() end
 	-- The target leaves its seat on the open console's rim for its Halo spot.
 	local halo = Stoa.modules.Halo
 	if halo and halo.enabled and halo.PlaceTarget then halo:PlaceTarget() end

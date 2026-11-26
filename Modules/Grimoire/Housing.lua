@@ -61,6 +61,8 @@ end
 -- it for the typing box and above it for Blizzard's own tabs.
 local SLIM_CHAT_LIFT = 38
 local SLIM_CHAT_HEIGHT = 150
+-- Air between the travel line and the chat's last line on a ride.
+local RIDE_CHAT_GAP = 10
 
 local function placeChat()
 	local chat = ChatFrame1
@@ -77,6 +79,9 @@ local function placeChat()
 	-- Stoa's typing strip sits under the messages, inside the console.
 	local look = Stoa.modules.ChatLook
 	if look and look.db and look.db.enabled ~= false and look.db.input then bottom = bottom + 8 end
+	-- On a ride the console is the travel line: the chat's foot stands
+	-- clear of it, and its top stays where it was.
+	if Console.riding and Console.RIDE_HEIGHT then bottom = math.max(bottom, Console.RIDE_HEIGHT + RIDE_CHAT_GAP) end
 	local top = artOn() and ART_CHAT_GAP or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
 	chat:ClearAllPoints()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), bottom)
