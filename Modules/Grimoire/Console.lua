@@ -814,13 +814,13 @@ function Console:BuildSeal(frame)
 		self.youForm = { ring = formRing, wash = wash }
 		Stoa:On("STOA_FORM_LOOK", function(look) self:PaintForm(look) end)
 		self:PaintForm(Stoa.Forms and Stoa.Forms.look)
-		-- The form chips stand just right of the card, level with it, in
-		-- place of the seal's lower right (where the card's words are).
+		-- The form chips stand just left of the card, level with it and
+		-- running outwards; the target rests on its right (Halo.lua).
 		-- Pinned to the seal's button, which stays put on the screen.
 		local forms = Stoa.Forms
 		if forms and forms.SetChipSpot and not InCombatLockdown() then
 			local chip = forms.CHIP_SIZE or 30
-			forms:SetChipSpot(button, "CENTER", YOU_W / 2 + 8 + chip / 2 - sealX, 0, chip + 6)
+			forms:SetChipSpot(button, "CENTER", -(YOU_W / 2 + 8 + chip / 2), 0, -(chip + 6))
 		end
 		self:BuildYou(card)
 		return

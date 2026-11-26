@@ -382,7 +382,7 @@ local TWIN_W, TWIN_NAME_W, TWIN_GAP = 340, 124, 12
 -- Its target's target is a line inside it, under the bar, left of the numbers.
 local TWIN_TOT_W, TWIN_TOT_H = 104, 14
 local TWIN_BAR_Y, TWIN_NUM_Y = -13, -37
-local SLATE_REST_GAP = 10   -- Slate: from your card (or its last form chip) to the target
+local SLATE_REST_GAP = 10   -- Slate: from your card to the target
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
@@ -450,13 +450,10 @@ function Halo:PlaceTarget()
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", matte and console.MATTE_DOCK_X or UI.PLAQUE_SOCKET_X, console:OpenHeight() + TARGET_DOCK_Y)
 			self.targetTextLeft = matte and console.MATTE_DOCK_TEXT or TARGET_DOCK_TEXT
 		elseif console.youCard and console.YOU_CARD then
-			-- Slate: a twin of your card, on its line, past the form chips.
-			local you, forms, chips = console.YOU_CARD, Stoa.Forms, 0
-			for _, chip in ipairs(forms and forms.chips or {}) do
-				if chip:IsShown() then chips = chips + 1 end
-			end
-			local step = (forms and forms.CHIP_SIZE or 30) + 6
-			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", you.width / 2 + SLATE_REST_GAP + chips * step, console:OpenHeight() + you.y - you.height / 2)
+			-- Slate: a twin of your card, on its line, right beside it (the
+			-- form chips stand on the card's other side).
+			local you = console.YOU_CARD
+			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", you.width / 2 + SLATE_REST_GAP, console:OpenHeight() + you.y - you.height / 2)
 			self.targetTextLeft = nil
 			self.targetTwin = self:SlabWanted()
 		else
