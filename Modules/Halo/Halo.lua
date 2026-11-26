@@ -1639,10 +1639,27 @@ function Halo:BuildRest()
 end
 
 -- Blizzard frames that repeat what the seal and Halo show.
+-- The game hands some of these back to the screen itself: Edit Mode puts
+-- the cast bar on the screen again whenever a layout is applied (a fresh
+-- profile, a layout switch), which left two cast bars. So each frame is
+-- watched and put away again when that happens.
+local function putAway(blizzard)
+	if blizzard:GetParent() ~= UI.hidden then blizzard:SetParent(UI.hidden) end
+end
+
 local function hideBlizzard(frames)
 	return function()
 		for _, blizzard in ipairs(frames) do
-			if blizzard then blizzard:SetParent(UI.hidden) end
+			if blizzard then
+				putAway(blizzard)
+				if not blizzard.stoaPutAway then
+					blizzard.stoaPutAway = true
+					hooksecurefunc(blizzard, "SetParent", function(frame, parent)
+						if parent == UI.hidden then return end
+						Stoa:AfterCombat(function() xpcall(putAway, Stoa.catch, frame) end)
+					end)
+				end
+			end
 		end
 	end
 end

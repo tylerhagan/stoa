@@ -16,6 +16,10 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Dungeon companion**: a boss the game names a little differently from the list (Handler Ashka for War Handler Ashka) is now ticked on its own row, not added as a second one. Bosses that end no encounter (Bossman Toof) are now also found dead as the fight ends from your party's targets and the nameplates in view, from the game's own boss-kill signal, and from the dungeon's lock where the game keeps one.
 
+- **Chat while riding**: the chat no longer goes clear and turns into a short fading feed on the travel line. It stays your normal chat, standing above the line.
+
+- **Two cast bars**: the game's own cast bar could come back beside STOA's after a fresh profile or an Edit Mode layout change. STOA now puts it away again whenever the game brings it back.
+
 ## 2.1.0
 
 - **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.
