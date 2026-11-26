@@ -205,10 +205,28 @@ local function trackerFonts()
 	end
 end
 
+local function stripColour(words)
+	return (words:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
 local function titleColour(block)
 	local header = block and block.HeaderText
 	if not header then return end
 	header:SetTextColor(Stoa:Color(block.isHighlighted and "accent" or "text"))
+	-- Slate: one calm colour for every title. Colours another addon writes
+	-- into the title itself (quest levels by difficulty, say) come out,
+	-- and come back while the mouse is on the quest.
+	if not UI.slate() then return end
+	local words = header:GetText()
+	if type(words) ~= "string" or Stoa:IsSecret(words) then return end
+	if words:find("|c", 1, true) then
+		block.stoaTitle, block.stoaPlain = words, stripColour(words)
+	elseif block.stoaPlain ~= words then
+		block.stoaTitle, block.stoaPlain = nil, nil
+	end
+	if not block.stoaTitle then return end
+	local want = block.isHighlighted and block.stoaTitle or block.stoaPlain
+	if want ~= words then header:SetText(want) end
 end
 
 local function dressBlock(block)

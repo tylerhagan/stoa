@@ -845,14 +845,7 @@ function Console:BuildSeal(frame)
 		self.youForm = { ring = formRing, wash = wash }
 		Stoa:On("STOA_FORM_LOOK", function(look) self:PaintForm(look) end)
 		self:PaintForm(Stoa.Forms and Stoa.Forms.look)
-		-- The form chips stand just left of the card, level with it and
-		-- running outwards; the target rests on its right (Halo.lua).
-		-- Pinned to the seal's button, which stays put on the screen.
-		local forms = Stoa.Forms
-		if forms and forms.SetChipSpot and not InCombatLockdown() then
-			local chip = forms.CHIP_SIZE or 30
-			forms:SetChipSpot(button, "CENTER", -(YOU_W / 2 + 8 + chip / 2), 0, -(chip + 6))
-		end
+		self:PlaceFormChips()
 		self:BuildYou(card)
 		return
 	end
@@ -2492,6 +2485,73 @@ local function rect(frame, scale)
 	return left * k, bottom * k, (left + width) * k, (bottom + height) * k
 end
 
+-- Slate's form chips (Shadowform, a druid's forms). Where the player's
+-- bars leave a gap under the portrait (room kept for a stance bar or the
+-- large medallion), the chips sit in it. Otherwise they stand just left of
+-- the card, level with it and running outwards; the target rests on its
+-- right (Halo.lua). Pinned to the seal's button, which stays put.
+local GAP_BUTTONS = { "ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
+	"MultiBar5Button", "MultiBar6Button", "MultiBar7Button" }
+local GAP_REACH, GAP_DEEP, GAP_PAD = 320, 150, 6
+function Console:PlaceFormChips()
+	local forms, seal = Stoa.Forms, _G.StoaSealButton
+	if not (self.youCard and seal and forms and forms.SetChipSpot) or InCombatLockdown() then return end
+	local size = forms.CHIP_SIZE or 30
+	local pitch = size + 6
+	local count = 0
+	for _, chip in ipairs(forms.chips or {}) do
+		if chip.spellID then count = count + 1 end
+	end
+	count = math.max(count, 1)
+	local x, y, step = -(YOU_W / 2 + 8 + size / 2), 0, -pitch
+
+	local scale = seal:GetEffectiveScale()
+	local sl, sb, sr, st = rect(seal, scale)
+	if sl then
+		local cx, cy = (sl + sr) / 2, (sb + st) / 2
+		-- The first row of buttons under the card, either side of centre.
+		local row = {}
+		local rowTop
+		for _, prefix in ipairs(GAP_BUTTONS) do
+			for i = 1, 12 do
+				local button = _G[prefix .. i]
+				if button and button.IsVisible and button:IsVisible() then
+					local l, b, r, t = rect(button, scale)
+					if l and t < cy - YOU_H / 2 + 4 and t > cy - GAP_DEEP and r > cx - GAP_REACH and l < cx + GAP_REACH then
+						row[#row + 1] = { l, b, r, t }
+						if not rowTop or t > rowTop then rowTop = t end
+					end
+				end
+			end
+		end
+		local left, right, bottom
+		for _, box in ipairs(row) do
+			if rowTop - box[4] < 6 then
+				bottom = box[2]
+				if box[3] <= cx then
+					left = math.max(left or box[3], box[3])
+				elseif box[1] >= cx then
+					right = math.min(right or box[1], box[1])
+				else
+					-- A button under the portrait: no gap.
+					left, right = nil, nil
+					break
+				end
+			end
+		end
+		local run = count * pitch - 6
+		if left and right and right - left >= run + GAP_PAD * 2 then
+			x = (left + right) / 2 - cx - (run - size) / 2
+			y = (rowTop + bottom) / 2 - cy
+			step = pitch
+		end
+	end
+	local was = self.formSpot
+	if was and math.abs(was[1] - x) < 0.5 and math.abs(was[2] - y) < 0.5 and was[3] == step then return end
+	self.formSpot = { x, y, step }
+	forms:SetChipSpot(seal, "CENTER", x, y, step)
+end
+
 -- How far either side of the console's centre the pages must stay out of.
 function Console:CentreClear()
 	local frame = self.frame
@@ -2897,6 +2957,7 @@ function Console:FitPages()
 		local leftClear = self:CentreClear()
 		self:PlaceDividers(width, leftClear, rightClear)
 	end
+	if self.youCard then self:PlaceFormChips() end
 end
 
 -- Runs a moment after anything that moves the centre or the screen.
