@@ -503,7 +503,7 @@ function Console:PlaceWells(zones, top)
 		local rects = {}
 		for i, zone in ipairs(spans) do
 			if zone and zone[2] - zone[1] > 40 then
-				local pad = math.min(SLATE_PAD, math.floor(((zone.gap or 40) - SLATE_AIR) / 2))
+				local pad = math.min(zone.pad or SLATE_PAD, math.floor(((zone.gap or 40) - SLATE_AIR) / 2))
 				pad = math.max(SLATE_PAD_LEAST, pad)
 				rects[#rects + 1] = { i = i, left = zone[1] - pad, right = zone[2] + pad, from = zone[1], to = zone[2] }
 			end
@@ -2869,7 +2869,10 @@ end
 local PAGE_GAPS = { COLUMN_GAP, 24 }
 -- Slate: each page is a card; the air between them matches the chat and
 -- At a glance cards on the left.
-local SLATE_PAGE_GAPS = { COLUMN_GAP + 4, 30 }
+local SLATE_PAGE_GAPS = { COLUMN_GAP + 16, COLUMN_GAP + 4, 30 }
+-- The page cards pad their words a little more than the rest, for
+-- breathing room, where the gap between columns allows it.
+local SLATE_PAGE_PAD = 16
 
 function Console:FitPages()
 	local frame, page, cols = self.frame, self.rightPage, self.pageColumns
@@ -2930,7 +2933,7 @@ function Console:FitPages()
 		local w = slotWidth(key)
 		if key ~= "empty" then
 			local left = width - inset - total + x
-			spans[#spans + 1] = { left, left + w, gap = gap }
+			spans[#spans + 1] = { left, left + w, gap = gap, pad = SLATE_PAGE_PAD }
 		end
 		if cols[key] then
 			shown[key] = true
