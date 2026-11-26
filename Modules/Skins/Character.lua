@@ -868,6 +868,14 @@ local function dressListRow(row, token)
 	if forbiddenRow(row) or row.stoaList then return end
 	row.stoaList = true
 	local content = row.Content
+	if not content and not row.StateIcon then
+		-- A plain sub-heading (currency groups): just its word.
+		if row.Text and row.Text.SetTextColor then
+			Stoa:SetFont(row.Text, "sans", Stoa.typeSize.body)
+			row.Text:SetTextColor(Stoa:Color("muted"))
+		end
+		return
+	end
 	if not content then
 		-- A heading: its bar goes, the word takes the accent over a rule.
 		for _, region in ipairs({ row:GetRegions() }) do
@@ -902,6 +910,14 @@ local function dressListRow(row, token)
 		Stoa:SetFont(content.Name, "sans", Stoa.typeSize.body)
 		content.Name:SetTextColor(Stoa:Color("text"))
 	end
+	-- A statistic's value, a currency's count.
+	for _, key in ipairs({ "Value", "Count" }) do
+		local figure = content[key]
+		if figure and figure.SetTextColor then
+			Stoa:SetFont(figure, "sans", Stoa.typeSize.body)
+			figure:SetTextColor(Stoa:Color("text"))
+		end
+	end
 	-- The chosen and hovered row: a flat wash in place of the painted one
 	-- (Blizzard still sets how strong it is, and red for a faction at war).
 	local wash = content.BackgroundHighlight
@@ -914,7 +930,58 @@ end
 local LISTS = {
 	{ frame = "SkillsFrame", pane = "SkillDetailFrame", bar = "RankBar", token = "accent" },
 	{ frame = "ReputationFrame", pane = "ReputationDetailFrame", bar = "StandingBar" },
+	{ frame = "TokenFrame", pane = "DetailFrame" },
+	{ frame = "StatisticsFrame" },
 }
+
+-- Blizzard's gold words (labels, captions) read as quiet ones, and its
+-- typeface as STOA's, through a pane and the frames inside it. Words in
+-- any other colour (white values, red warnings) keep theirs.
+local function sizeFor(height)
+	local sizes = Stoa.typeSize
+	return height <= 11 and sizes.caption or height <= 13 and sizes.body or height <= 15 and sizes.label or sizes.name
+end
+local function quietWords(frame, depth)
+	if forbiddenRow(frame) or not frame.GetRegions then return end
+	for _, region in ipairs({ frame:GetRegions() }) do
+		if region.GetObjectType and region:GetObjectType() == "FontString" then
+			if not region.stoaWord then
+				region.stoaWord = true
+				local _, height = region:GetFont()
+				Stoa:SetFont(region, "sans", sizeFor(tonumber(height) or 12))
+			end
+			local r, g, b = region:GetTextColor()
+			if r and r > 0.9 and g > 0.7 and g < 0.9 and b < 0.2 then region:SetTextColor(Stoa:Color("muted")) end
+		end
+	end
+	if (depth or 0) > 0 and frame.GetChildren then
+		for _, child in ipairs({ frame:GetChildren() }) do quietWords(child, depth - 1) end
+	end
+end
+
+-- The honour page: its gold words, the glow line under your rank and the
+-- brown reward button.
+local function dressRank()
+	local page = rawget(_G, "PVPRankFrame")
+	if forbiddenRow(page) then return end
+	local function words() guarded(quietWords, page, 4) end
+	if not page.stoaRank then
+		page.stoaRank = true
+		local main = page.MainInfoFrame
+		if type(main) == "table" and main.Line and main.Line.SetAlpha then main.Line:SetAlpha(0) end
+		local windows = Stoa.modules.Windows
+		local pane = page.DetailFrame
+		if type(pane) == "table" and not forbiddenRow(pane) then
+			if pane.Divider and pane.Divider.SetAlpha then pane.Divider:SetAlpha(0) end
+			if windows and windows.DressButtonsIn then guarded(windows.DressButtonsIn, pane, 3) end
+			if windows and windows.DressScrollBar then guarded(windows.DressScrollBar, pane.DescriptionScrollBar) end
+			if pane.Refresh then hooksecurefunc(pane, "Refresh", words) end
+		end
+		page:HookScript("OnShow", words)
+		if page.Update then hooksecurefunc(page, "Update", words) end
+	end
+	words()
+end
 local function dressLists()
 	local windows = Stoa.modules.Windows
 	for _, list in ipairs(LISTS) do
@@ -949,9 +1016,16 @@ local function dressLists()
 					end
 				end
 				if pane.Divider and pane.Divider.SetAlpha then pane.Divider:SetAlpha(0) end
+				-- The pane's gold labels (its tick boxes), now and each
+				-- time Blizzard fills it again.
+				local function words() guarded(quietWords, pane, 3) end
+				if pane.Refresh then hooksecurefunc(pane, "Refresh", words) end
+				pane:HookScript("OnShow", words)
+				words()
 			end
 		end
 	end
+	guarded(dressRank)
 end
 
 local function seatDetailPanes(frame)
