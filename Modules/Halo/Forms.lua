@@ -11,6 +11,8 @@
 --     auras and druid forms can use the same row in the stance bar's place;
 --     for now only the classes in CHIPS get it.
 --
+-- A medallion that wants the chips elsewhere calls Forms:SetChipSpot.
+--
 -- Other pieces can wear the look too: STOA_FORM_LOOK fires with the look
 -- (its `ring` and `shade` colours) on the way in and with nil on the way
 -- out, and Stoa.Forms.look holds the one on now. The Slate player card
@@ -344,8 +346,14 @@ function Forms:LayoutChips()
 		chip:SetAttribute("spell", name)
 		chip.icon:SetTexture(C_Spell.GetSpellTexture(spellID))
 		chip:ClearAllPoints()
-		-- Off the seal's lower right, mirroring the pet coin, running out.
-		chip:SetPoint("CENTER", anchor, "BOTTOMRIGHT", (i - 1) * (CHIP + 6), 12)
+		local spot = self.chipSpot
+		if spot then
+			-- Placed by the medallion's owner (Slate's player card).
+			chip:SetPoint("CENTER", spot.frame, spot.point, spot.x + (i - 1) * spot.step, spot.y)
+		else
+			-- Off the seal's lower right, mirroring the pet coin, running out.
+			chip:SetPoint("CENTER", anchor, "BOTTOMRIGHT", (i - 1) * (CHIP + 6), 12)
+		end
 		chip:SetFrameLevel(console.seal:GetFrameLevel() + 6)
 		-- The console folds in a fight and the chips go with it.
 		RegisterStateDriver(chip, "visibility", "[combat] hide; show")
@@ -358,6 +366,17 @@ function Forms:LayoutChips()
 	end
 	self:UpdateChips()
 end
+
+-- Where the chip row sits, for a medallion that wants it somewhere else
+-- (Slate's player card): the first chip's centre on `point` of `frame`,
+-- offset x, y, each next one `step` further along x (negative runs left).
+-- Pass nil to go back to the seal's lower right. Takes effect out of a
+-- fight, like every change to the chips.
+function Forms:SetChipSpot(frame, point, x, y, step)
+	self.chipSpot = frame and { frame = frame, point = point or "CENTER", x = x or 0, y = y or 0, step = step or (CHIP + 6) } or nil
+	if self.enabled or self.chips then self:LayoutChips() end
+end
+Forms.CHIP_SIZE = CHIP
 
 function Forms:UpdateChips()
 	for _, chip in ipairs(self.chips or {}) do
