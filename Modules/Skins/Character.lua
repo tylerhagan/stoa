@@ -602,6 +602,17 @@ end
 
 local function hideArt()
 	local scene = CharacterModelScene
+	-- Slate: the model's turn and zoom buttons lose their gold and sit back.
+	local control = scene and scene.ControlFrame
+	if control and UI.slate() and not control.stoaQuiet and control.GetChildren then
+		control.stoaQuiet = true
+		for _, button in ipairs({ control:GetChildren() }) do
+			for _, region in ipairs({ button:GetRegions() }) do
+				if region.SetDesaturated then region:SetDesaturated(true) end
+			end
+		end
+		control:SetAlpha(0.7)
+	end
 	if scene then
 		for _, key in ipairs({ "BackgroundTopLeft", "BackgroundTopRight", "BackgroundBotLeft", "BackgroundBotRight", "BackgroundOverlay" }) do
 			local region = scene[key]

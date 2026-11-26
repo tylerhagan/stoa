@@ -1011,6 +1011,9 @@ function Bags:OnEnable()
 	local function placeSearch(frame)
 		local box = BagItemSearchBox
 		if not (box and box.anchorBag == frame) then return end
+		-- Slate: the dark field the spellbook's search has, not the tan one.
+		local windows = Stoa.modules.Windows
+		if UI.slate() and windows and windows.DressSearch then guarded(windows.DressSearch, box) end
 		box:ClearAllPoints()
 		box:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -37)
 		local clean = BagItemAutoSortButton
