@@ -945,6 +945,17 @@ function Tally:DrawFigure(row, key)
 		if name ~= kind then figure:Hide() end
 	end
 	local valueWidth = plain(row.value:GetStringWidth()) or 30
+	-- The label comes first: where a long value leaves no room for both
+	-- the whole label and the figure ("Gold rate" read "Gold..."), the
+	-- figure steps aside.
+	if FIGURES[kind] then
+		row.label:SetWidth(0)
+		local need = plain(row.label:GetStringWidth()) or 0
+		if need > COLUMN_WIDTH - valueWidth - 8 - FIGURE_WIDTH - 6 then
+			if row.figures[kind] then row.figures[kind]:Hide() end
+			kind = nil
+		end
+	end
 	if not FIGURES[kind] then
 		row.label:SetWidth(COLUMN_WIDTH - valueWidth - 8)
 		return
