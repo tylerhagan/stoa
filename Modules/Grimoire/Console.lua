@@ -2402,6 +2402,43 @@ function Console:UpdateKitLines()
 	self:SettleNext()
 end
 
+-- Slate: the two lines under the pace read like every other row on the
+-- cards, a quiet label on the left and its figure on the right ("Akiris
+-- Reed" and "0/10", "To train" and "2 spells"). The note itself becomes
+-- the figure, set to the right; the label is a second string beside it.
+local function splitLine(console, note, key, label, value)
+	local labels = console.nextLabels or {}
+	console.nextLabels = labels
+	local fs = labels[key]
+	if not fs then
+		fs = text(note:GetParent(), "sans", Stoa.typeSize.body, "muted")
+		fs:SetWordWrap(false)
+		fs:SetPoint("LEFT", note, "LEFT")
+		Stoa:SetFont(note, "sans", Stoa.typeSize.body)
+		labels[key] = fs
+	end
+	if label then
+		note:SetText(value)
+		note:SetJustifyH("RIGHT")
+		fs:SetText(label)
+		local taken = Stoa:PlainNumber(note:GetStringWidth()) or 0
+		fs:SetWidth(math.max(20, COLUMN_WIDTH - taken - 10))
+	else
+		note:SetJustifyH("LEFT")
+		fs:SetText("")
+	end
+	return fs
+end
+
+local function questParts(line)
+	local count, what = line:match("^(%d+/%d+)%s+(.+)$")
+	if count then return what, count end
+	what, count = line:match("^(.-):?%s+(%d+/%d+)$")
+	if count and what ~= "" then return what, count end
+	what = line:match("^Hand in: (.+)$")
+	if what then return what, "Hand in" end
+end
+
 -- Under the pace, the nearest quest then the trainer line, each full width.
 -- The rows flow up: with the pace (or its words) hidden, the quest takes
 -- their place, and the trainer takes the quest's when there's no quest.
@@ -2433,6 +2470,25 @@ function Console:SettleNext()
 	-- In the well there is one line's room under the pace: the quest has
 	-- it, and the trainer's line waits (Ready's small jobs name it too).
 	note:SetShown(training and not (self.paceTight and paced and quest))
+	if UI.slate() and not self.db.slim then
+		local label, value
+		if quest then
+			local line = self.questLine
+			if not line or self.questSplit ~= questNote:GetText() then line = questNote:GetText() end
+			self.questLine = line
+			label, value = questParts(line)
+		end
+		splitLine(self, questNote, "quest", label, value):SetShown(quest and label ~= nil)
+		self.questSplit = questNote:GetText()
+		label, value = nil, nil
+		if training and self.trainerKind == "now" then
+			label, value = "To train", (full:gsub(" to train", "", 1))
+		elseif training and self.trainerKind == "next" then
+			local rest = full:match("^Next training: (.+)$")
+			if rest then label, value = "Next training", rest end
+		end
+		splitLine(self, note, "trainer", label, value):SetShown(note:IsShown() and label ~= nil)
+	end
 	self:UpdateSlim()
 end
 
