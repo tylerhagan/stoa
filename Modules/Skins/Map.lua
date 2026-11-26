@@ -189,6 +189,141 @@ function Map:SeatCrumbs()
 	bar:SetPoint("TOPLEFT", spacer, "TOPLEFT", 8, -25)
 end
 
+-- A dressed map's breadcrumbs: Blizzard's red and gold arrow plates go, the
+-- zone names stay as plain words (the one you are on lit, the way back
+-- quiet), with a chevron for each menu of neighbours.
+local function isTexture(region)
+	return region.GetObjectType and region:GetObjectType() == "Texture"
+end
+
+local function fadeTextures(frame)
+	if type(frame) ~= "table" or not frame.GetRegions then return end
+	for _, region in ipairs({ frame:GetRegions() }) do
+		if isTexture(region) then region:SetAlpha(0) end
+	end
+end
+
+local function paintCrumb(button)
+	local text = button.text or (button.GetFontString and button:GetFontString())
+	if not text then return end
+	local bar = button:GetParent()
+	local list = bar and bar.navList
+	local last = type(list) == "table" and list[#list] == button
+	local token = (button.IsMouseOver and button:IsMouseOver() and not last) and "accent" or last and "text" or "muted"
+	text:SetTextColor(Stoa:Color(token))
+end
+
+local function dressCrumb(button)
+	if type(button) ~= "table" or (button.IsForbidden and button:IsForbidden()) then return end
+	if not button.stoaCrumb then
+		button.stoaCrumb = true
+		fadeTextures(button)
+		local text = button.text or (button.GetFontString and button:GetFontString())
+		if text then Stoa:SetFont(text, "sans", Stoa.typeSize.body) end
+		local arrow = button.MenuArrowButton
+		if type(arrow) == "table" and arrow.CreateTexture then
+			fadeTextures(arrow)
+			if arrow.Art then arrow.Art:SetAlpha(0) end
+			local glyph = Stoa.UI.glyph(arrow, "Chevron", 10, "muted")
+			glyph:SetPoint("CENTER", 0, 0)
+			glyph:SetRotation(-math.pi / 2)
+			arrow:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color("accent")) end)
+			arrow:HookScript("OnLeave", function() glyph:SetVertexColor(Stoa:Color("muted")) end)
+		end
+		button:HookScript("OnEnter", paintCrumb)
+		button:HookScript("OnLeave", paintCrumb)
+	end
+	paintCrumb(button)
+end
+
+function Map:DressCrumbs()
+	local map = WorldMapFrame
+	local bar = map and map.NavBar
+	if not (bar and map.BorderFrame and map.BorderFrame.stoaHeader) then return end
+	if bar.IsForbidden and bar:IsForbidden() then return end
+	if not bar.stoaCrumbs then
+		bar.stoaCrumbs = true
+		fadeTextures(bar)
+		if bar.overlay and bar.overlay.SetAlpha then bar.overlay:SetAlpha(0) end
+		if bar.Inset and bar.Inset.SetAlpha then bar.Inset:SetAlpha(0) end
+	end
+	dressCrumb(bar.home)
+	dressCrumb(bar.overflow)
+	for _, button in ipairs(type(bar.navList) == "table" and bar.navList or {}) do dressCrumb(button) end
+end
+
+-- The quest log beside the map: its painted frame and filigree go, the
+-- search field and scrollbar are STOA's, zone headings lose their plate and
+-- the quest count reads as a quiet caption.
+local function dressLogHeader(header)
+	if type(header) ~= "table" or header.stoaLogHead or (header.IsForbidden and header:IsForbidden()) then return end
+	header.stoaLogHead = true
+	for _, region in ipairs({ header:GetRegions() }) do
+		if isTexture(region) then
+			local layer = region:GetDrawLayer()
+			if layer == "HIGHLIGHT" then
+				region:SetTexture(Stoa.UI.WHITE)
+				region:SetVertexColor(1, 1, 1, 0.05)
+			elseif layer == "BACKGROUND" or layer == "BORDER" then
+				region:SetAlpha(0)
+			end
+		end
+	end
+	local rule = header:CreateTexture(nil, "BORDER")
+	rule:SetTexture(Stoa.UI.WHITE)
+	rule:SetHeight(1)
+	rule:SetPoint("BOTTOMLEFT", 4, 1)
+	rule:SetPoint("BOTTOMRIGHT", -4, 1)
+	Stoa.UI.tint(rule, "hairline")
+end
+
+function Map:DressLog()
+	local map = WorldMapFrame
+	local scroll = rawget(_G, "QuestScrollFrame")
+	if not (map and map.BorderFrame and map.BorderFrame.stoaHeader and type(scroll) == "table") then return end
+	if scroll.IsForbidden and scroll:IsForbidden() then return end
+	if not scroll.stoaLog then
+		scroll.stoaLog = true
+		local windows = Stoa.modules.Windows
+		fadeTextures(scroll.BorderFrame)
+		if scroll.Edge then scroll.Edge:SetAlpha(0) end
+		if windows then
+			if windows.DressSearch then xpcall(windows.DressSearch, Stoa.catch, scroll.SearchBox) end
+			if windows.DressScrollBar then xpcall(windows.DressScrollBar, Stoa.catch, scroll.ScrollBar) end
+		end
+		local count = rawget(_G, "QuestLogQuestCount")
+		if type(count) == "table" and count.SetTextColor then
+			Stoa:SetFont(count, "sans", Stoa.typeSize.caption)
+			count:SetTextColor(Stoa:Color("muted"))
+			-- The count's own framed plate, where it has one.
+			local holder = count:GetParent()
+			if holder ~= scroll and holder ~= scroll.BorderFrame then fadeTextures(holder) end
+		end
+	end
+	local pool = scroll.headerFramePool
+	if type(pool) == "table" and pool.EnumerateActive then
+		for header in pool:EnumerateActive() do dressLogHeader(header) end
+	end
+end
+
+function Map:SetupDress()
+	if self.dressHooked or not WorldMapFrame then return end
+	self.dressHooked = true
+	local function dress()
+		Map:DressCrumbs()
+		Map:DressLog()
+	end
+	WorldMapFrame:HookScript("OnShow", Stoa:Guard(dress, "Map"))
+	if rawget(_G, "NavBar_AddButton") then
+		hooksecurefunc("NavBar_AddButton", function(bar)
+			if bar == WorldMapFrame.NavBar then Map:DressCrumbs() end
+		end)
+	end
+	if rawget(_G, "QuestLogQuests_Update") then
+		hooksecurefunc("QuestLogQuests_Update", function() Map:DressLog() end)
+	end
+end
+
 function Map:SetupLevels()
 	if not WorldMapFrame then return end
 	if self.levelsHooked then return end
@@ -236,6 +371,7 @@ local function setup()
 	Map:SetupFade()
 	Map:SetupLevels()
 	Map:ShowMapLevels()
+	Map:SetupDress()
 end
 
 function Map:OnEnable()
