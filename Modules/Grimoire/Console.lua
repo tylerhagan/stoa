@@ -103,11 +103,15 @@ local setUnitBar, classColor = UI.setUnitBar, UI.classColor
 
 -- The slim console is always plain: the leather is cut for the full height.
 function Console:Art()
-	return self.db.art and not self.db.slim and not self:Matte()
+	return self.db.art and not self.db.slim and not self:Matte() and not self:Slate()
 end
 
 function Console:Matte()
 	return UI.matte()
+end
+
+function Console:Slate()
+	return UI.slate()
 end
 
 function Console:Build()
@@ -179,6 +183,8 @@ function Console:Build()
 		self.flatParts = { bg, leftEdge, rightEdge, inner }
 	elseif self:Matte() then
 		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch, archSize, archY)
+	elseif self:Slate() then
+		self:BuildSlate(frame, { bg, leftEdge, rightEdge, inner, archRing, arch, bridge })
 	end
 
 	if matte and not slim then self:BuildTargetCone(frame) end
@@ -204,6 +210,64 @@ end
 function Console:OpenHeight()
 	if self.db.slim then return SLIM_HEIGHT end
 	return self:Art() and ART_HEIGHT or self.db.height
+end
+
+-- Slate: no slab along the bottom. Full is the console's zones (chat, At
+-- a glance, the bars, each page) as separate rounded cards standing over
+-- the world, placed by PlaceDividers and fading with the pages; Slim is
+-- one rounded bar lifted off the screen's edges. Both are flat: the
+-- panel colour and a fine light edge, in the card pieces every STOA card
+-- wears, so Slate adds no art.
+local SLATE_EDGE = 0.12
+local SLATE_INSET, SLATE_LIFT = 10, 6
+
+local function slatePlate(owner, layer)
+	local fill = UI.sliced(owner, layer or "BACKGROUND", "CardFill.tga")
+	local edge = UI.sliced(owner, layer or "BACKGROUND", "CardEdge.tga")
+	if not fill then
+		fill = owner:CreateTexture(nil, layer or "BACKGROUND")
+		fill:SetAllPoints()
+		fill:SetColorTexture(1, 1, 1)
+	end
+	fill:SetDrawLayer(layer or "BACKGROUND", -3)
+	UI.tint(fill, "panel")
+	if edge then
+		edge:SetDrawLayer(layer or "BACKGROUND", -2)
+		UI.tint(edge, "text", SLATE_EDGE)
+	end
+	return fill, edge
+end
+
+function Console:BuildSlate(frame, drawn)
+	for _, part in ipairs(drawn) do
+		UI.unpaint(part)
+		part:Hide()
+	end
+	self.archParts = {}
+	if self.db.slim then
+		-- One rounded bar, off the screen's edges. It stays through a
+		-- fight, folded to the spine's height.
+		frame:ClearAllPoints()
+		frame:SetPoint("BOTTOMLEFT", SLATE_INSET, SLATE_LIFT)
+		frame:SetPoint("BOTTOMRIGHT", -SLATE_INSET, SLATE_LIFT)
+		slatePlate(frame)
+		return
+	end
+	-- Up to four zone cards and one per page column, made as they're needed.
+	self.wells = {}
+	self.slateCard = function(i)
+		local well = self.wells[i]
+		if well then return well end
+		local fill, edge = slatePlate(frame)
+		well = { fill, edge }
+		for _, part in ipairs(well) do
+			part:ClearAllPoints()
+			part:Hide()
+			self:AddPage(part)
+		end
+		self.wells[i] = well
+		return well
+	end
 end
 
 -- The matte console: the drawn panel made near solid, a grain over it one
@@ -371,8 +435,32 @@ end
 local WELL_PAD, WELL_BOTTOM = 12, 8
 -- The bars' well starts lower, under the bezel's foot.
 local WELL_BARS, WELL_BARS_TOP = 3, -48
+local SLATE_PAD, SLATE_BOTTOM = 10, 8
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
+	if self.slateCard then
+		-- Zones first, then the page columns, each its own card.
+		local spans = {}
+		for i = 1, 3 do spans[#spans + 1] = zones[i] or false end
+		for _, span in ipairs(self.columnSpans or {}) do spans[#spans + 1] = span end
+		local used = {}
+		for i, zone in ipairs(spans) do
+			if zone and zone[2] - zone[1] > 40 then
+				local well = self.slateCard(i)
+				used[i] = true
+				local pad = math.min(SLATE_PAD, math.floor(((zone.gap or 40) - 8) / 2))
+				for _, part in ipairs(well) do
+					part:ClearAllPoints()
+					part:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - pad + 0.5), top + 8)
+					part:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + pad + 0.5), SLATE_BOTTOM)
+				end
+			end
+		end
+		for i, well in pairs(self.wells) do
+			for _, part in ipairs(well) do part:SetShown(used[i] == true) end
+		end
+		return
+	end
 	for i, well in ipairs(self.wells) do
 		local zone = zones[i]
 		local on = zone and zone[2] - zone[1] > 40
@@ -809,13 +897,17 @@ function Console:BuildSlim(frame)
 	card:HookScript("OnShow", function(own) own.stoaRise:Play() end)
 	card:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -inset + CARD_PAD, CARD_LIFT)
 	card:EnableMouse(true)
-	local fill = card:CreateTexture(nil, "BACKGROUND")
-	fill:SetAllPoints()
-	paint(fill, "panel")
-	for _, edge in ipairs({ { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" } }) do
-		local rule = line(card)
-		rule:SetPoint(edge[1])
-		rule:SetPoint(edge[2])
+	if self:Slate() then
+		slatePlate(card)
+	else
+		local fill = card:CreateTexture(nil, "BACKGROUND")
+		fill:SetAllPoints()
+		paint(fill, "panel")
+		for _, edge in ipairs({ { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" } }) do
+			local rule = line(card)
+			rule:SetPoint(edge[1])
+			rule:SetPoint(edge[2])
+		end
 	end
 	card:Hide()
 	self.slimCard = card
@@ -2212,7 +2304,7 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 			not self.db.freeRight and pageWidth > 1 and { width - inset - pageWidth, width - inset },
 		}, top)
 	end
-	local on = self.db.dividers ~= false
+	local on = self.db.dividers ~= false and not self:Slate()
 	for i, div in ipairs(dividers) do
 		local spot = spots[i]
 		if on and spot and spot[2] - spot[1] >= DIVIDER_ROOM then
@@ -2434,9 +2526,16 @@ function Console:FitPages()
 	local total = span(chosen, gap)
 	local shown, docks, x = {}, {}, 0
 	local usedEmpty = {}
+	-- Slate: where each column lies from the console's left, for its card.
+	local spans = {}
+	self.columnSpans = spans
 	local _, pageTop = self:PageInset()
 	for i, key in ipairs(chosen) do
 		local w = slotWidth(key)
+		if key ~= "empty" then
+			local left = width - inset - total + x
+			spans[#spans + 1] = { left, left + w, gap = gap }
+		end
 		if cols[key] then
 			shown[key] = true
 			cols[key]:ClearAllPoints()

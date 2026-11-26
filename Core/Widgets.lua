@@ -128,8 +128,9 @@ end
 -- The Painted ornament (Stoa.db.ornament): leather and brass frames on the
 -- few one-of-a-kind pieces instead of fine lines.
 function UI.ornate()
-	-- Matte has no leather or brass: it wears its own moulded pieces.
-	return Stoa.db and Stoa.db.ornament == "painted" and Stoa.db.material ~= "matte"
+	-- Matte and Slate have no leather or brass: Matte wears its own
+	-- moulded pieces, Slate only flat panels and fine lines.
+	return Stoa.db and Stoa.db.ornament == "painted" and (Stoa.db.material or "leather") == "leather"
 end
 
 -- Draws a texture exactly where it lies rather than on the nearest pixel,
@@ -1120,6 +1121,14 @@ function UI.matte()
 	return Stoa.db ~= nil and Stoa.db.material == "matte"
 end
 
+-- The Slate material: modern and flat. Leather's rounded panels without
+-- the leather, brass or shine, Inter for every word (Tokens.lua), and the
+-- console split into separate rounded cards (Console:BuildSlate). It adds
+-- no art of its own.
+function UI.slate()
+	return Stoa.db ~= nil and Stoa.db.material == "slate"
+end
+
 function UI.grainAlpha()
 	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.soft
 end
@@ -1315,7 +1324,8 @@ function UI.emboss(frame, header)
 	sheen:SetDrawLayer("BACKGROUND", -4)
 	-- Matte has no shine: the header is the same moulded block as the
 	-- rest, with only a trace of light at its top.
-	UI.gradient(sheen, "text", UI.matte() and 0.02 or 0.07, "VERTICAL", 0, 1)
+	-- Slate is flat: a breath of light, no more.
+	UI.gradient(sheen, "text", UI.matte() and 0.02 or UI.slate() and 0.035 or 0.07, "VERTICAL", 0, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 3)
 	top:SetTexture(UI.WHITE)
 	UI.pixel(top, "height")

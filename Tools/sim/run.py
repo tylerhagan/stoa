@@ -69,12 +69,16 @@ if os.environ.get("SIM_EXTRA"):  # a scratch Lua file run after the toc, to try 
 for f in files:
     loader(open(os.path.join(ROOT, f), encoding="utf-8").read(), f, ns)
 
-# STOA_SIM_SETUP=slim, minimal, matte, matteslim, matteminimal or pages (the level 60 slot pages) starts the run on that console setting (as a
+# STOA_SIM_SETUP=slim, minimal, matte, matteslim, slate, slateslim, matteminimal or pages (the level 60 slot pages) starts the run on that console setting (as a
 # saved account would), so those builds are exercised too.
 if os.environ.get("STOA_SIM_SETUP") == "slim":
     lua.execute("StoaDB = { modules = { Grimoire = { slim = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "matte":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', grain = 'satin', modules = { Halo = { arcStyle = 'visor' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slate":
+    lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { arcStyle = 'line' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slateslim":
+    lua.execute("StoaDB = { theme = 'Ember', material = 'slate', modules = { Grimoire = { slim = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "matteslim":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { slim = true }, Halo = { arcStyle = 'gauge' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "pages":
@@ -1405,7 +1409,18 @@ end
 -- Console dividers: a hairline in each wide gap, none in a narrow one.
 do
 	local console = Stoa.modules.Grimoire
-	if console and console.dividers and console.PlaceDividers then
+	if console and console.dividers and console.PlaceDividers and console:Slate() then
+		-- Slate: no lines; the zones and each page column are cards.
+		local ok, e = xpcall(function()
+			console:FitPages()
+			console:PlaceDividers(3440, 400, 400)
+			assert(not console.dividers[3]:IsShown(), "Slate drew a line between cards")
+			local shown = 0
+			for _, well in pairs(console.wells or {}) do if well[1]:IsShown() then shown = shown + 1 end end
+			assert(shown >= 2, "Slate: only " .. shown .. " console cards")
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Slate console cards: " .. e end
+	elseif console and console.dividers and console.PlaceDividers then
 		local ok, e = xpcall(function()
 			console:PlaceDividers(3440, 400, 400)
 			assert(console.dividers[3]:IsShown(), "no line between the bars and the pages")
