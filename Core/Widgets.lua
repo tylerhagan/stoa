@@ -438,7 +438,7 @@ end
 
 function UI.classColor(unit)
 	local _, classFile = UnitClass(unit)
-	if not Stoa:Theme().classTint or not classFile or Stoa:IsSecret(classFile) then
+	if not Stoa:ClassTint() or not classFile or Stoa:IsSecret(classFile) then
 		return Stoa:Color("text")
 	end
 	local color = RAID_CLASS_COLORS[classFile]

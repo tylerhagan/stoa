@@ -108,7 +108,7 @@ local function healthToken(frame)
 	if not known(UnitIsConnected(unit)) or known(UnitIsDead(unit)) then return "muted", 0.6 end
 	if known(UnitIsPlayer(unit)) and known(UnitCanAttack("player", unit)) then
 		local _, class = UnitClass(unit)
-		local color = Stoa:Theme().classTint and known(class) and RAID_CLASS_COLORS[class]
+		local color = Stoa:ClassTint() and known(class) and RAID_CLASS_COLORS[class]
 		if color then return color end
 		return "health"
 	end
@@ -143,7 +143,7 @@ local function colourName(frame)
 	end
 	if known(UnitIsPlayer(unit)) then
 		local _, class = UnitClass(unit)
-		local color = Stoa:Theme().classTint and known(class) and RAID_CLASS_COLORS[class]
+		local color = Stoa:ClassTint() and known(class) and RAID_CLASS_COLORS[class]
 		if color then
 			frame.name:SetVertexColor(color.r, color.g, color.b)
 			return

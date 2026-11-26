@@ -70,7 +70,7 @@ local PARTS = {
 }
 
 local EVERYDAY = setOf(
-	"Style", "Matte grain", "Theme", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
+	"Style", "Matte grain", "Theme", "Class colours on names", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
 	"Console size", "Leather console", "Hold chat in the console", "Travel line while riding", "At a glance, beside the chat", "Lines at a glance",
 	"In combat", "Target of target", "Focus", "Combat bar under the Halo", "Combat rows", "Proc art beside the Halo",
 	"Show STOA party cards", "Show STOA raid frames", "Show sample frames", "Click-casting", "Click bindings", "Threat meter",
@@ -287,6 +287,9 @@ local function build()
 		list = true, cmd = "/stoa vision", words = "colour blind color blind cvd deuteranopia protanopia tritanopia accessibility",
 		change = function(_, v) Stoa:SetVision(v) end,
 	})
+	choice(db, "classNames", "Class colours on names", "Names on party and raid cards, the target, nameplates, the threat list and meters in their class colour. As the theme sets follows the theme: Bone and the class themes colour names; Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override that.", "theme", {
+		{ "theme", "As the theme sets" }, { "on", "Always" }, { "off", "Never" },
+	}, { words = "class color colour names party raid nameplates", change = function() Stoa:Fire("STOA_THEME_CHANGED", Stoa.db.theme) end })
 	choice(db, "textSize", "Text size", "Every STOA size together: words, numbers, tooltips and pages. Whatever you pick, the smallest text keeps at least 13 pixels on the screen, so a low UI scale never shrinks a caption past reading.", "standard", {
 		{ "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" },
 	}, { reload = true, words = "font size scale readable small big" })

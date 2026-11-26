@@ -87,7 +87,7 @@ function Tooltip:UnitColour(unit)
 	if known(UnitIsPlayer(unit)) then
 		local _, class = UnitClass(unit)
 		class = known(class)
-		local colour = class and Stoa:Theme().classTint and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+		local colour = class and Stoa:ClassTint() and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
 		if colour then return colour.r, colour.g, colour.b end
 		if known(UnitCanAttack("player", unit)) then return hostileText() end
 		return Stoa:Color("text")

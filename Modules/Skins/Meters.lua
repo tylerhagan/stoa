@@ -86,7 +86,7 @@ local function colourEntry(entry)
 	local name = entry.GetName and entry:GetName()
 	if name and name.SetTextColor then
 		local class = entry.classFilename
-		local color = (docked or Stoa:Theme().classTint) and class and not Stoa:IsSecret(class) and RAID_CLASS_COLORS[class]
+		local color = (docked or Stoa:ClassTint()) and class and not Stoa:IsSecret(class) and RAID_CLASS_COLORS[class]
 		if color then
 			name:SetTextColor(color.r, color.g, color.b)
 		else

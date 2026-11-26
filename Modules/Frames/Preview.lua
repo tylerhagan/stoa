@@ -38,7 +38,7 @@ local raidPreview
 local function fill(card, sample)
 	local UI = Stoa.UI
 	card.name:SetText(sample.name)
-	local color = Stoa:Theme().classTint and RAID_CLASS_COLORS[sample.class]
+	local color = Stoa:ClassTint() and RAID_CLASS_COLORS[sample.class]
 	if color then
 		card.name:SetTextColor(color.r, color.g, color.b)
 	else

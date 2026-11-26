@@ -4,6 +4,10 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
 
+## 2.1.1
+
+- **Class colours on names**: a new choice on Settings > Look. As the theme sets (the default) keeps things as they were: Bone and the class themes colour names by class, while Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override the theme, on party and raid cards, the target, nameplates, tooltips, the threat list, meters and the roster.
+
 ## 2.1.0
 
 - **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.
