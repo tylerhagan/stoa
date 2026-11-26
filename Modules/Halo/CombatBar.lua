@@ -18,7 +18,7 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
-local Bar = Stoa:NewModule("CombatBar", { count = 12, rows = "2", healerRows = "1" })
+local Bar = Stoa:NewModule("CombatBar", { count = 12, rows = "2", healerRows = "1", nextPress = true })
 -- Each spec keeps its own number of rows.
 Stoa:SpecSettings(Bar, { "rows", "healerRows" })
 
@@ -337,8 +337,9 @@ function Bar.RefreshAlpha(button)
 end
 
 -- Outlines the button holding the named spell, or none. Spell ranks have
--- their own IDs, so buttons are matched by name.
+-- their own IDs, so buttons are matched by name. Off in Settings, none.
 function Bar:SetNext(spellName)
+	if self.db and self.db.nextPress == false then spellName = nil end
 	for _, button in ipairs(self.all or {}) do
 		local match = false
 		if spellName and button.slot and GetActionInfo and button:IsVisible() then
