@@ -383,6 +383,7 @@ local TWIN_W, TWIN_NAME_W, TWIN_GAP = 340, 124, 12
 local TWIN_TOT_W, TWIN_TOT_H = 104, 14
 local TWIN_BAR_Y, TWIN_NUM_Y = -13, -37
 local SLATE_REST_GAP = 10   -- Slate: from your card to the target
+local TWIN_W_LEAST, TWIN_W_MOST = 260, 440
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
@@ -414,6 +415,15 @@ function Halo:PlaceTargetAuras()
 		icons[1]:SetPoint("TOPLEFT", self.target, "BOTTOMLEFT", TARGET_PAD, -6 - step)
 	end
 	icons.placed = true
+end
+
+-- The twin runs from your card to the right end of the bars' card under
+-- it, so the two cards' ends line up.
+function Halo:TwinWidth()
+	local console = Stoa.modules.Grimoire
+	local right, you = console and console.barsCardRight, console and console.YOU_CARD
+	if not (right and you) then return TWIN_W end
+	return math.max(TWIN_W_LEAST, math.min(TWIN_W_MOST, right - you.width / 2 - SLATE_REST_GAP))
 end
 
 function Halo:PlaceTarget()
@@ -498,7 +508,8 @@ function Halo:LayoutTarget(curve)
 	if not (target and target.hp) then return end
 	local docked = curve ~= nil
 	local slab = not docked and self.targetSlab or false
-	local twin = slab and self.targetTwin or false
+	local twin = slab and self.targetTwin and self:TwinWidth() or false
+	local twinW = twin or TWIN_W
 	if docked == target.laidDocked and slab == target.laidSlab and twin == target.laidTwin and (not docked or curve == target.laidCurve) then return end
 	target.laidDocked, target.laidCurve, target.laidSlab, target.laidTwin = docked, curve, slab, twin
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
@@ -508,8 +519,8 @@ function Halo:LayoutTarget(curve)
 	-- Slim: the slab's rows, at the Halo or docked in Matte.
 	local slim = slab or docked and self:DockSlim() or false
 	local left = docked and self.targetTextLeft or SLAB_PAD
-	local twinBar = TWIN_W - SLAB_PAD * 2 - TWIN_NAME_W - TWIN_GAP
-	local barW = twin and TWIN_W - SLAB_PAD * 2 or slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
+	local twinBar = twinW - SLAB_PAD * 2 - TWIN_NAME_W - TWIN_GAP
+	local barW = twin and twinW - SLAB_PAD * 2 or slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
 	target.nameWidth = twin and TWIN_NAME_W - 22 or slab and SLAB_NAME_W or TARGET_BAR_W
 	-- Matte's full plaque: a slimmer square bar with its numbers beside it.
 	local beside = not slim and target.hp.square or false
@@ -565,7 +576,7 @@ function Halo:LayoutTarget(curve)
 	target.markCorner = slab and 2 or slim and left + barW or false
 	if target.mark then self:PlaceTargetMark() end
 	if twin then
-		target:SetSize(TWIN_W, SLAB_HEIGHT)
+		target:SetSize(twinW, SLAB_HEIGHT)
 		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -10)
 		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
 		target.cue:SetPoint("TOPLEFT", SLAB_PAD, -30)

@@ -30,6 +30,7 @@ local function hideSquareArt(button)
 end
 
 local MASK = UI.MEDIA .. "Textures\\ButtonMask"
+local SLATE_ICON_INSET = 3
 
 -- Swaps Blizzard's icon mask for Stoa's rounded square.
 local function roundMask(button, icon)
@@ -51,6 +52,15 @@ function Bars:Skin(button)
 	local icon = button.icon or button.Icon
 	if icon then icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
 	local mask = roundMask(button, icon)
+	-- Slate: the icon sits a little inside its socket, as on the mock-up,
+	-- so each button reads as a framed slot rather than a bright tile.
+	if UI.slate() and icon then
+		icon:ClearAllPoints()
+		icon:SetPoint("TOPLEFT", SLATE_ICON_INSET, -SLATE_ICON_INSET)
+		icon:SetPoint("BOTTOMRIGHT", -SLATE_ICON_INSET, SLATE_ICON_INSET)
+		mask:ClearAllPoints()
+		mask:SetAllPoints(icon)
+	end
 
 	-- Highlight, pressed and checked states follow the rounded shape.
 	for _, getter in ipairs({ "GetHighlightTexture", "GetPushedTexture", "GetCheckedTexture" }) do
@@ -64,6 +74,10 @@ function Bars:Skin(button)
 
 	local cooldown = button.cooldown or button.Cooldown
 	if cooldown and cooldown.SetSwipeTexture then cooldown:SetSwipeTexture(MASK) end
+	if UI.slate() and icon and cooldown and cooldown.SetAllPoints then
+		cooldown:ClearAllPoints()
+		cooldown:SetAllPoints(icon)
+	end
 
 	local hotkey = button.HotKey
 	if hotkey then

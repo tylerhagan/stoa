@@ -487,6 +487,8 @@ local SLATE_PAD, SLATE_TOP, SLATE_BOTTOM = 10, -8, 8
 -- The bars' card hugs the bars, so the portrait, health and mana stand
 -- over the world above it rather than in an empty band of card.
 local SLATE_BARS_TOP = -40
+-- The air kept between two cards, and the least a card pads its content.
+local SLATE_AIR, SLATE_PAD_LEAST = 20, 6
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
 	if self.slateCard then
@@ -495,17 +497,45 @@ function Console:PlaceWells(zones, top)
 		for i = 1, 3 do spans[#spans + 1] = zones[i] or false end
 		for _, span in ipairs(self.columnSpans or {}) do spans[#spans + 1] = span end
 		local used = {}
+		-- Each card's edges first, then air between neighbours: the cards
+		-- float, with the world between them, not one band.
+		local rects = {}
 		for i, zone in ipairs(spans) do
 			if zone and zone[2] - zone[1] > 40 then
-				local well = self.slateCard(i)
-				used[i] = true
-				local pad = math.min(SLATE_PAD, math.floor(((zone.gap or 40) - 8) / 2))
-				for _, part in ipairs(well) do
-					local out, drop = part.stoaOutset or 0, part.stoaDrop or 0
-					part:ClearAllPoints()
-					part:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - pad + 0.5) - out, (i == WELL_BARS and SLATE_BARS_TOP or SLATE_TOP) + out - drop)
-					part:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + pad + 0.5) + out, SLATE_BOTTOM - out - drop)
+				local pad = math.min(SLATE_PAD, math.floor(((zone.gap or 40) - SLATE_AIR) / 2))
+				pad = math.max(SLATE_PAD_LEAST, pad)
+				rects[#rects + 1] = { i = i, left = zone[1] - pad, right = zone[2] + pad, from = zone[1], to = zone[2] }
+			end
+		end
+		table.sort(rects, function(a, b) return a.left < b.left end)
+		for n = 2, #rects do
+			local a, b = rects[n - 1], rects[n]
+			local short = SLATE_AIR - (b.left - a.right)
+			if short > 0 then
+				-- Each gives half, but never past its own content.
+				a.right = math.max(a.to + SLATE_PAD_LEAST, a.right - short / 2)
+				b.left = math.min(b.from - SLATE_PAD_LEAST, b.left + short / 2)
+			end
+		end
+		for _, rect in ipairs(rects) do
+			local i = rect.i
+			local well = self.slateCard(i)
+			used[i] = true
+			if i == WELL_BARS then
+				-- The resting target ends where this card does (Halo.lua).
+				local width = Stoa:PlainNumber(self.frame:GetWidth())
+				local right = width and math.floor(rect.right + 0.5) - width / 2
+				if right and right ~= self.barsCardRight then
+					self.barsCardRight = right
+					local halo = Stoa.modules.Halo
+					if halo and halo.enabled and halo.PlaceTarget and not InCombatLockdown() then halo:PlaceTarget() end
 				end
+			end
+			for _, part in ipairs(well) do
+				local out, drop = part.stoaOutset or 0, part.stoaDrop or 0
+				part:ClearAllPoints()
+				part:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(rect.left + 0.5) - out, (i == WELL_BARS and SLATE_BARS_TOP or SLATE_TOP) + out - drop)
+				part:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(rect.right + 0.5) + out, SLATE_BOTTOM - out - drop)
 			end
 		end
 		for i, well in pairs(self.wells) do
@@ -2773,6 +2803,8 @@ end
 -- Which right-page columns fit, right to left. Company goes first; then
 -- Journey at the level cap, Ready while you level.
 local PAGE_GAPS = { COLUMN_GAP, 24 }
+-- Slate: wider first, so each page's card stands apart.
+local SLATE_PAGE_GAPS = { COLUMN_GAP + 16, COLUMN_GAP, 30 }
 
 function Console:FitPages()
 	local frame, page, cols = self.frame, self.rightPage, self.pageColumns
@@ -2814,7 +2846,7 @@ function Console:FitPages()
 		return total
 	end
 	for _, order in ipairs(orders) do
-		for _, g in ipairs(PAGE_GAPS) do
+		for _, g in ipairs(self:Slate() and not self.slimCard and SLATE_PAGE_GAPS or PAGE_GAPS) do
 			if span(order, g) <= room then
 				chosen, gap = order, g
 				break
