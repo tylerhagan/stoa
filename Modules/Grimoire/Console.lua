@@ -231,9 +231,14 @@ local function slatePlate(owner, layer)
 	end
 	fill:SetDrawLayer(layer or "BACKGROUND", -3)
 	UI.tint(fill, "panel")
+	-- A tint waits for the next theme pass, and a card made later (At a
+	-- glance shows once its numbers are in) would stay white till then.
+	fill:SetVertexColor(Stoa:Color("panel"))
 	if edge then
 		edge:SetDrawLayer(layer or "BACKGROUND", -2)
 		UI.tint(edge, "text", SLATE_EDGE)
+		local r, g, b = Stoa:Color("text")
+		edge:SetVertexColor(r, g, b, SLATE_EDGE)
 	end
 	return fill, edge
 end
