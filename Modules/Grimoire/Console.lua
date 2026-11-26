@@ -1503,13 +1503,16 @@ function Console:BuildFellowship(frame, space)
 	local Figures = Stoa.Figures
 	local gear = CreateFrame("Button", nil, readyCol)
 	gear:SetSize(COLUMN_WIDTH, 12)
-	gear:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -8)
+	-- Slate: a little lower, so Gear and Bags share their lines with
+	-- Journey's two rows on the card beside them.
+	gear:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, UI.slate() and -12 or -8)
 	local gearLabel = text(gear, "sans", Stoa.typeSize.body, "muted")
 	gearLabel:SetPoint("LEFT")
 	gearLabel:SetText("Gear")
 	local gearValue = text(gear, "sans", Stoa.typeSize.body, "text", "RIGHT")
 	gearValue:SetPoint("RIGHT")
-	local cells = Figures.segments(gear, 10, COLUMN_WIDTH - 40 - 36, 6)
+	-- Room for "100%" with air before it.
+	local cells = Figures.segments(gear, 10, COLUMN_WIDTH - 40 - 44, 6)
 	cells:SetPoint("LEFT", gear, "LEFT", 40, 0)
 	gear.cells, gear.value = cells, gearValue
 	-- Bags: one column per bag, the free count to the right.
@@ -1571,7 +1574,9 @@ function Console:BuildFellowship(frame, space)
 	-- stand a little closer and all of them stay inside it.
 	local tight = not self:Art()
 	local level = text(journeyCol, "serif", Stoa.typeSize.page, "text")
-	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, tight and -4 or -6)
+	-- Slate's cards have the room, and there the lead line of every card
+	-- (role, level, a page's title) stands at one height.
+	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, (tight and not UI.slate()) and -4 or -6)
 	-- Earned in the text colour, rest in blue behind it, and an accent mark
 	-- where an hour at your pace would take you.
 	-- Your share of the level on the same row, at the column's right edge.
