@@ -398,10 +398,52 @@ function UI.eyebrow(parent, label)
 	return fs
 end
 
+-- Slate: a bar's fill is never one flat colour. It runs from a deeper
+-- shade at its start to a lighter one at its end, as on the mock-up
+-- (health #3fa86a to #5cc487). Whatever colours the bar afterwards keeps
+-- the shading, since it rides on SetStatusBarColor itself.
+local SHADE_FROM, SHADE_TO = 0.8, 1.14
+function UI.barShade(sb)
+	local set = sb.SetStatusBarColor
+	if not (set and CreateColor) then return end
+	sb.SetStatusBarColor = function(self, r, g, b, a)
+		set(self, r, g, b, a)
+		local tex = self:GetStatusBarTexture()
+		if not (tex and tex.SetGradient) or type(r) ~= "number" or Stoa:IsSecret(r) then return end
+		local upright = self.GetOrientation and self:GetOrientation() == "VERTICAL"
+		a = a or 1
+		pcall(tex.SetGradient, tex, upright and "VERTICAL" or "HORIZONTAL",
+			CreateColor(r * SHADE_FROM, g * SHADE_FROM, b * SHADE_FROM, a),
+			CreateColor(math.min(1, r * SHADE_TO), math.min(1, g * SHADE_TO), math.min(1, b * SHADE_TO), a))
+	end
+end
+
+-- Slate: light falls on the top of a card. A faint wash along its top
+-- edge that fades out down it (the mock-up's panels run from a lighter
+-- top to the panel colour, with a breath of the accent on windows).
+-- It spans the card's upper half, whatever the card's size, so it can
+-- never reach past a small one.
+local LIGHT_INSET = 5
+function UI.topLight(frame, token, alpha, anchor)
+	if not (frame and frame.CreateTexture) then return nil end
+	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+	if not tex then return nil end
+	tex:SetTexture(UI.WHITE)
+	anchor = anchor or frame
+	tex:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -LIGHT_INSET, -1)
+	tex:SetPoint("BOTTOMLEFT", anchor, "LEFT", LIGHT_INSET, 0)
+	token, alpha = token or "text", alpha or 0.045
+	UI.gradient(tex, token, alpha, "VERTICAL", 0, 1)
+	local r, g, b = Stoa:Color(token)
+	UI.setGradient(tex, { "VERTICAL", 0, 1 }, r, g, b, alpha)
+	return tex
+end
+
 function UI.bar(parent, width, height, token)
 	local sb = CreateFrame("StatusBar", nil, parent)
 	sb:SetSize(width, height)
 	sb:SetStatusBarTexture(UI.WHITE)
+	if UI.slate() then UI.barShade(sb) end
 	UI.paint(sb, token)
 	local track = sb:CreateTexture(nil, "BACKGROUND")
 	track:SetAllPoints()
@@ -1078,6 +1120,10 @@ function UI.roundPanel(frame, alpha, kind)
 	end
 	frame.stoaPanelEdge = edge
 	frame.stoaPanelBg = bg
+	-- Slate: a breath of the accent at the top of a window.
+	if kind == "window" and UI.slate() and (alpha or 1) > 0 then
+		frame.stoaTopLight = UI.topLight(frame, "accent", 0.06)
+	end
 	UI.mould(frame)
 	UI.applyTheme()
 	return bg
@@ -1418,6 +1464,13 @@ function UI.surface(frame, kind, opts)
 		UI.mould(frame, outset)
 	end
 	if spec.stone and not opts.noStone then UI.stone(frame, frame.stoaHeader, frame.stoaFooter) end
+	if spec.edge and UI.slate() then
+		if kind == "panel" then
+			frame.stoaTopLight = UI.topLight(frame, "accent", 0.06)
+		else
+			frame.stoaTopLight = UI.topLight(frame, "text", 0.045)
+		end
+	end
 	frame.stoaSurface = fill
 	frame.stoaSurfaceKind = kind
 	UI.applyTheme()
@@ -1477,6 +1530,8 @@ function UI.badge(parent, word, token)
 	if wash then
 		wash:SetDrawLayer("BACKGROUND", 1)
 		badge.wash = wash
+		-- And a fine edge in the same colour, as the mock-up's chips have.
+		badge.edge = UI.pillEdge(badge, 0)
 	end
 	local text = badge:CreateFontString(nil, "OVERLAY")
 	Stoa:SetFont(text, "sans", Stoa.typeSize.caption)
@@ -1492,6 +1547,7 @@ function UI.badge(parent, word, token)
 		local r, g, b = Stoa:Color(newToken or Stoa:StateToken(newWord))
 		text:SetTextColor(r, g, b)
 		if self.wash then self.wash:SetVertexColor(r, g, b, 0.16) end
+		if self.edge then self.edge:Set(r, g, b, 0.38) end
 		local width = text:GetStringWidth()
 		if Stoa:IsSecret(width) or not width or width <= 0 then width = #newWord * 7 end
 		self:SetWidth(math.floor(width + UI.BADGE.pad * 2 + 0.5))
@@ -2480,6 +2536,7 @@ function UI.styleCard(card, styleName)
 	local pad = style.pad
 	-- A strip has no panel or edge; every other style gets them back.
 	if card.stoaSurface then card.stoaSurface:SetShown(not style.strip) end
+	if card.stoaTopLight then card.stoaTopLight:SetShown(not style.strip) end
 	if card.stoaKeyLines then card.stoaKeyLines:SetShown(not style.strip) end
 	if card.stoaPanelEdge then
 		for _, tex in ipairs(card.stoaPanelEdge.edges or {}) do tex:SetShown(not style.strip) end

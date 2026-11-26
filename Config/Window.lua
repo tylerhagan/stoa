@@ -112,7 +112,12 @@ local function makeSegments(parent, entry)
 			button.lift:SetShown(button.chosen)
 			-- Slate: the chosen one washed in the accent, as on its mock-up.
 			if UI.slate() then colour(button.lift, "accent", 0.16) else colour(button.lift, "text", 0.12) end
-			if button.chosen then button.edge:Set(Stoa:Color("accent")) else button.edge:Clear() end
+			if button.chosen then
+				local er, eg, eb = Stoa:Color("accent")
+				button.edge:Set(er, eg, eb, UI.slate() and 0.6 or 1)
+			else
+				button.edge:Clear()
+			end
 			colour(button.text, button.chosen and "accent" or "muted")
 		end
 	end
@@ -778,7 +783,12 @@ function builders.glance(row, entry)
 			for _, button in ipairs(self.places.buttons) do
 				button.chosen = button.value == place
 				button.lift:SetShown(button.chosen)
-				if button.chosen then button.edge:Set(Stoa:Color("accent")) else button.edge:Clear() end
+				if button.chosen then
+				local er, eg, eb = Stoa:Color("accent")
+				button.edge:Set(er, eg, eb, UI.slate() and 0.6 or 1)
+			else
+				button.edge:Clear()
+			end
 				colour(button.text, button.chosen and "accent" or "muted")
 			end
 			y = y - 34

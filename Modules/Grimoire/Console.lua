@@ -224,7 +224,7 @@ local SLATE_EDGE = 0.045
 -- A soft drop shadow under each card (Tools/art/slate_shadow.py), so it
 -- stands over bright ground without a dark ring round it: laid
 -- SLATE_SHADOW out from the card and SLATE_DROP lower.
-local SLATE_SHADOW, SLATE_SHADOW_A, SLATE_DROP, SLATE_SHADOW_SLICE = 22, 0.45, 3, 28
+local SLATE_SHADOW, SLATE_SHADOW_A, SLATE_DROP, SLATE_SHADOW_SLICE = 22, 0.45, 6, 28
 local SLATE_INSET, SLATE_LIFT = 10, 6
 
 -- The portrait stands a little higher, clear of the bars' card.
@@ -269,7 +269,9 @@ local function slatePlate(owner, layer)
 		shadow:SetPoint("TOPLEFT", -SLATE_SHADOW, SLATE_SHADOW - SLATE_DROP)
 		shadow:SetPoint("BOTTOMRIGHT", SLATE_SHADOW, -SLATE_SHADOW - SLATE_DROP)
 	end
-	return fill, edge, shadow
+	-- Follows the fill wherever the card is placed.
+	local light = UI.topLight(owner, "text", 0.045, fill)
+	return fill, edge, shadow, light
 end
 
 function Console:BuildSlate(frame, drawn)
@@ -298,12 +300,14 @@ function Console:BuildSlate(frame, drawn)
 		local holder = CreateFrame("Frame", nil, frame)
 		holder:SetAllPoints(frame)
 		holder:SetFrameLevel(frame:GetFrameLevel())
-		local fill, edge, shadow = slatePlate(holder)
+		local fill, edge, shadow, light = slatePlate(holder)
 		well = { fill, edge, shadow }
+		well.light = light
 		for _, part in ipairs(well) do
 			part:ClearAllPoints()
 			part:Hide()
 		end
+		if light then light:Hide() end
 		self:AddPage(holder)
 		self.wells[i] = well
 		return well
@@ -504,6 +508,7 @@ function Console:PlaceWells(zones, top)
 		end
 		for i, well in pairs(self.wells) do
 			for _, part in ipairs(well) do part:SetShown(used[i] == true) end
+			if well.light then well.light:SetShown(used[i] == true) end
 		end
 		return
 	end

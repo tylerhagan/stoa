@@ -496,6 +496,7 @@ local function dressTab(tab, index)
 		chip:SetPoint("BOTTOMRIGHT", 0, TAB_CHIP_INSET - 2)
 		chip:SetFrameLevel(math.max(0, tab:GetFrameLevel() - 1))
 		chip.fill = UI.pillFill(chip, 0)
+		chip.edge = UI.pillEdge(chip, 0)
 		tab.stoaChip = chip
 	end
 	tab:HookScript("OnEnter", function(self)
@@ -526,6 +527,7 @@ function Character:PaintTabs()
 			if tab.stoaChip then
 				local r, g, b = Stoa:Color("accent")
 				tab.stoaChip.fill:SetVertexColor(r, g, b, 0.16)
+				tab.stoaChip.edge:Set(r, g, b, 0.55)
 				tab.stoaChip:SetShown(on and true or false)
 			end
 		end
