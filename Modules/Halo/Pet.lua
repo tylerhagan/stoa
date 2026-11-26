@@ -257,11 +257,17 @@ function Pet:BuildPlaque()
 		name:SetPoint("TOPRIGHT", -pad, -10)
 		name:SetWidth(nameW)
 		name:SetJustifyH("RIGHT")
+		-- One line under the name, kept to the name's column: the stance,
+		-- or who the pet is on.
 		on:ClearAllPoints()
 		on:SetPoint("TOPRIGHT", -pad, -30)
-		on:SetWidth(0)
+		on:SetWidth(nameW)
+		on:SetJustifyH("RIGHT")
 		foot:ClearAllPoints()
-		foot:SetPoint("RIGHT", on, "LEFT", -4, 0)
+		foot:SetPoint("TOPRIGHT", -pad, -30)
+		foot:SetWidth(nameW)
+		foot:SetJustifyH("RIGHT")
+		foot:SetWordWrap(false)
 		hp:ClearAllPoints()
 		hp:SetPoint("TOPLEFT", pad, -13)
 		hp:SetSize(280 - pad - barRight, 8)
@@ -337,7 +343,7 @@ function Pet:UpdatePlaque()
 
 	frame.name:SetText(self.demo and "Ashmane" or UnitName(unit()))
 	UI.setUnitBar(frame.hp, unit(), "health")
-	UI.setHealthPercent(frame.percent, unit())
+	UI.setHealthPercent(frame.percent, unit(), nil, frame.card)
 	UI.setUnitBar(frame.power, unit(), "power")
 	local powerType = plain(UnitPowerType(unit()))
 	tint(frame.power, powerType == 0 and "mana" or "accent", powerType == 0 and 1 or 0.75)
@@ -370,6 +376,13 @@ function Pet:UpdatePlaque()
 	else
 		if command and mood ~= 1 then foot[#foot + 1] = command end
 		frame.on:SetText("")
+	end
+	if frame.card then
+		-- The card's one line: who it is on, else to feed it, else the stance.
+		local onName = plain(target) and mood ~= 1 and plain(UnitName("pettarget"))
+		frame.on:SetText(onName and ("On " .. onName) or "")
+		frame.foot:SetText(onName and "" or mood == 1 and "FEED IT" or stance or "")
+		return
 	end
 	frame.foot:SetText(Stoa.UI.join(foot))
 end
