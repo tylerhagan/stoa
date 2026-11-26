@@ -209,6 +209,16 @@ local function titleColour(block)
 	local header = block and block.HeaderText
 	if not header then return end
 	header:SetTextColor(Stoa:Color(block.isHighlighted and "accent" or "text"))
+	-- Slate: one calm colour for every title. Colours another addon
+	-- writes into the title itself (quest levels by difficulty, say)
+	-- would override it, so they come out; the words stay.
+	if UI.slate() then
+		local words = header:GetText()
+		if type(words) == "string" and not Stoa:IsSecret(words) and words:find("|c", 1, true) then
+			words = words:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+			header:SetText(words)
+		end
+	end
 end
 
 local function dressBlock(block)
@@ -223,10 +233,13 @@ local function dressHeader(header, collapsed)
 	if not header or header.stoaDressed then return end
 	header.stoaDressed = true
 	bury(header.Background)
-	if header.Text then header.Text:SetTextColor(Stoa:Color("text")) end
+	-- Slate: section names in the accent with no rule, like its cards.
+	local slate = UI.slate()
+	if header.Text then header.Text:SetTextColor(Stoa:Color(slate and "accent" or "text")) end
 	local line = UI.line(header)
 	line:SetPoint("BOTTOMLEFT", 7, 2)
 	line:SetPoint("BOTTOMRIGHT", -2, 2)
+	line:SetShown(not slate)
 	UI.applyTheme()
 	if header.MinimizeButton then
 		local fold = UI.foldGlyph(header.MinimizeButton)

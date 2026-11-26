@@ -272,7 +272,7 @@ local function slatePlate(owner, layer)
 		shadow:SetPoint("BOTTOMRIGHT", SLATE_SHADOW, -SLATE_SHADOW - SLATE_DROP)
 	end
 	-- Follows the fill wherever the card is placed.
-	local light = UI.topLight(owner, "text", 0.045, fill)
+	local light = UI.topLight(owner, "text", 0.07, fill)
 	return fill, edge, shadow, light
 end
 
