@@ -466,6 +466,7 @@ function UI.topLight(frame, token, alpha, anchor)
 		cap:SetPoint("TOPLEFT", anchor, "TOPLEFT", inset, -from)
 		cap:SetPoint("BOTTOMRIGHT", anchor, "TOPRIGHT", -inset, -to)
 		UI.paint(cap, token, alpha)
+		cap.stoaCap = true
 		local toe = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
 		toe:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", inset, from)
 		toe:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", -inset, to)
@@ -475,8 +476,24 @@ function UI.topLight(frame, token, alpha, anchor)
 	end
 	for _, method in ipairs({ "SetShown", "Show", "Hide" }) do
 		hooksecurefunc(tex, method, function(self)
-			for _, part in ipairs(parts) do part:SetShown(self:IsShown()) end
+			for _, part in ipairs(parts) do part:SetShown(self:IsShown() and not part.stoaDropped) end
 		end)
+	end
+	-- A window with a header band: the light falls on the content under
+	-- the band, so the band stays one even tone from top to bottom (a
+	-- raised band otherwise showed dark above the frame's top and lit
+	-- below it).
+	tex.stoaUnder = function(band)
+		tex:ClearAllPoints()
+		tex:SetPoint("TOPRIGHT", band, "BOTTOMRIGHT", -LIGHT_INSET, 0)
+		tex:SetPoint("LEFT", anchor, "LEFT", LIGHT_INSET, 0)
+		tex:SetPoint("BOTTOM", anchor, "LEFT", 0, 0)
+		for _, part in ipairs(parts) do
+			if part.stoaCap then
+				part.stoaDropped = true
+				part:Hide()
+			end
+		end
 	end
 	return tex
 end
@@ -1165,6 +1182,7 @@ function UI.roundPanel(frame, alpha, kind)
 	-- Slate: a breath of the accent at the top of a window.
 	if kind == "window" and UI.slate() and (alpha or 1) > 0 then
 		frame.stoaTopLight = UI.topLight(frame, "accent", 0.085)
+		if frame.stoaHeader then frame.stoaTopLight.stoaUnder(frame.stoaHeader) end
 	end
 	UI.mould(frame)
 	UI.applyTheme()
@@ -1403,6 +1421,7 @@ function UI.band(frame, size, family, plain)
 		UI.tint(header, tint.token, tint.alpha)
 		UI.shadowLine(frame, header)
 	end
+	if frame.stoaTopLight and frame.stoaTopLight.stoaUnder then frame.stoaTopLight.stoaUnder(header) end
 	UI.applyTheme()
 	return header
 end
@@ -1512,6 +1531,7 @@ function UI.surface(frame, kind, opts)
 		else
 			frame.stoaTopLight = UI.topLight(frame, "text", 0.07)
 		end
+		if frame.stoaTopLight and frame.stoaHeader then frame.stoaTopLight.stoaUnder(frame.stoaHeader) end
 	end
 	frame.stoaSurface = fill
 	frame.stoaSurfaceKind = kind

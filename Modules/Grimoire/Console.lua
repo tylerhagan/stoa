@@ -1723,7 +1723,8 @@ local GLOW_SPREAD = 22
 -- Slate's card: its fine edge lights with experience, clockwise from the
 -- portrait's shoulder, as the dial does round a medallion. Short
 -- lengths laid end to end along the edge and round its corners.
-local EDGE_PARTS = 120
+local EDGE_PART = 7
+local EDGE_CORNER_PARTS = 4
 local EDGE_THICK = 1.5
 local EDGE_INSET = 0.75
 local EDGE_CORNER = 6
@@ -1751,25 +1752,26 @@ function Console:BuildEdge(card)
 	}
 	local whole = 0
 	for _, run in ipairs(runs) do whole = whole + run[1] end
-	local length = whole / EDGE_PARTS
-	local parts = {}
-	for i = 1, EDGE_PARTS do
-		local at = (i - 0.5) * length
-		local x, y, angle = 0, h, 0
-		for _, run in ipairs(runs) do
-			if at <= run[1] then
-				x, y, angle = run[2](at)
-				break
-			end
-			at = at - run[1]
+	-- Straight runs in even lengths; each corner in short ones, so no
+	-- length pokes out past the curve.
+	local parts, before = {}, 0
+	for index, run in ipairs(runs) do
+		local corner = index % 2 == 0
+		local count = corner and EDGE_CORNER_PARTS or math.max(1, math.floor(run[1] / EDGE_PART + 0.5))
+		local length = run[1] / count
+		for i = 1, count do
+			local at = (i - 0.5) * length
+			local x, y, angle = run[2](at)
+			local part = card:CreateTexture(nil, "OVERLAY", nil, 2)
+			part:SetTexture(UI.WHITE)
+			part:SetSize(length, EDGE_THICK)
+			part:SetPoint("CENTER", card, "CENTER", x, y)
+			if part.SetRotation then part:SetRotation(angle) end
+			UI.unsnap(part)
+			part.stoaAt = (before + at) / whole
+			parts[#parts + 1] = part
 		end
-		local part = card:CreateTexture(nil, "OVERLAY", nil, 2)
-		part:SetTexture(UI.WHITE)
-		part:SetSize(length, EDGE_THICK)
-		part:SetPoint("CENTER", card, "CENTER", x, y)
-		if part.SetRotation then part:SetRotation(angle) end
-		UI.unsnap(part)
-		parts[i] = part
+		before = before + run[1]
 	end
 	self.ringEdge = true
 	return parts
@@ -1888,7 +1890,7 @@ function Console:UpdateRing()
 	-- rested stretch is dashed, and at the cap the whole edge glows low.
 	local edge = self.ringEdge
 	for i, tick in ipairs(ticks) do
-		local at = (i - 0.5) / #ticks
+		local at = tick.stoaAt or (i - 0.5) / #ticks
 		if at <= done then
 			tick:SetVertexColor(ar, ag, ab, done >= 1 and (edge and 0.3 or 0.55) or 0.9)
 		elseif at <= rested then
