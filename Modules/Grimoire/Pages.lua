@@ -345,15 +345,25 @@ end
 
 local function buildCooldowns(col, kit)
 	local page = scaffold(col, kit, "Cooldowns")
-	-- The big line breathes once when something comes off cooldown.
-	local pulse = page.big:CreateAnimationGroup()
-	local dim = pulse:CreateAnimation("Alpha")
-	dim:SetFromAlpha(1); dim:SetToAlpha(0.35); dim:SetDuration(0.18); dim:SetOrder(1)
-	local lift = pulse:CreateAnimation("Alpha")
-	lift:SetFromAlpha(0.35); lift:SetToAlpha(1); lift:SetDuration(0.3); lift:SetOrder(2)
-	local function whole() page.big:SetAlpha(1) end
-	pulse:SetScript("OnFinished", whole)
-	pulse:SetScript("OnStop", whole)
+	-- The big line breathes once when something comes off cooldown. Done by
+	-- hand on a frame of its own: an animation group on the line itself
+	-- left the line unseen on some logins, played or not.
+	local breath = CreateFrame("Frame", nil, col)
+	breath:Hide()
+	local DIM, DOWN, UP = 0.35, 0.18, 0.3
+	breath:SetScript("OnUpdate", function(self, elapsed)
+		self.t = (self.t or 0) + elapsed
+		local t = self.t
+		if t >= DOWN + UP then
+			page.big:SetAlpha(1)
+			self:Hide()
+		elseif t < DOWN then
+			page.big:SetAlpha(1 - (1 - DIM) * (t / DOWN))
+		else
+			page.big:SetAlpha(DIM + (1 - DIM) * ((t - DOWN) / UP))
+		end
+	end)
+	breath:SetScript("OnHide", function() page.big:SetAlpha(1) end)
 	local wasReady
 	local update = keep(col, 5, function()
 		local list = shelved()
@@ -369,9 +379,8 @@ local function buildCooldowns(col, kit)
 			page.note:SetText(soonest and ("next " .. span(soonest)) or "")
 		end
 		tint(page.big, ready > 0 and "accent" or "text")
-		-- Whatever the pulse left behind, the line is always fully shown.
-		if not pulse:IsPlaying() then page.big:SetAlpha(1) end
-		if wasReady and ready > wasReady then pulse:Play() end
+		if not breath:IsShown() then page.big:SetAlpha(1) end
+		if wasReady and ready > wasReady then breath.t = 0 breath:Show() end
 		wasReady = ready
 		for _, trinket in ipairs(trinkets()) do list[#list + 1] = trinket end
 		for i = 1, ROWS do
