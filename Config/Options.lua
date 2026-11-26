@@ -440,6 +440,8 @@ local function build()
 	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", addonGlobal = "DoesItDie", change = refresh("Lethal", "Update") })
 	group = "Shadow priest"
 	toggle(of("Shadow"), "followSequence", "Follow a cast sequence macro", "With a /castsequence macro on your bars, the next-press outline follows it: the macro lights up, and so does the spell button its next step will cast. Off goes back to STOA's own order (DoTs, Mind Blast, Death, Mind Flay).", true, { id = "shadowSequence", classes = setOf("PRIEST"), words = "castsequence macro rotation priority", change = refresh("Shadow", "UpdateNext") })
+	toggle(of("Forms"), "looks", "Shadowform's own look", "In Shadowform the medallion's ring and dial and the Halo's signature ring turn violet, a dark shade breathes slowly round the medallion, and a faint violet haze sits behind the Halo. Stepping in sends one quick dark pulse across the console; stepping out puts everything back.", true, { id = "formLooks", classes = setOf("PRIEST"), words = "shadowform violet purple form", change = function() if Stoa.Forms and Stoa.Forms.enabled then Stoa.Forms:UpdateLook(false) end end })
+	toggle(of("Forms"), "chips", "Form chip on the medallion", "Out of a fight, a small round chip off the medallion's lower right, lit while you're in Shadowform. Click it to shift in or out; right-click leaves.", true, { id = "formChips", classes = setOf("PRIEST"), reload = true, words = "shadowform stance form button" })
 	group = "Your pet"
 	local pet = of("Pet")
 	local petRefresh = function() if Stoa.Pet and Stoa.Pet.enabled then Stoa.Pet:UpdateAll() end end
