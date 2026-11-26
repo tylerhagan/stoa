@@ -498,9 +498,11 @@ function Party:UpdateCard(card)
 	UI.setPips(card, pips)
 
 	-- Bar and percent turn amber when low, and the border says why.
-	local r, g, b = Stoa:Color(low and "danger" or "health")
+	-- Slate: red, as its health is green.
+	local lowToken = UI.slate() and "hostile" or "danger"
+	local r, g, b = Stoa:Color(low and lowToken or "health")
 	card.hp:SetStatusBarColor(r, g, b)
-	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+	card.percent:SetTextColor(Stoa:Color(low and lowToken or "text"))
 	if ready then
 		UI.cellWord(card, ready[1], readyToken)
 	elseif coming then
@@ -510,7 +512,7 @@ function Party:UpdateCard(card)
 	elseif dispel then
 		UI.cellWord(card, dispel.word, dispel.token)
 	elseif low then
-		UI.cellWord(card, "LOW", "danger")
+		UI.cellWord(card, "LOW", lowToken)
 	end
 
 	card.glow:Clear()
@@ -518,15 +520,21 @@ function Party:UpdateCard(card)
 	-- A strip rests faint while its player is fine. Health the game keeps
 	-- secret in a fight can't be judged, so the strip stays at full strength.
 	if UI.stripRest(card, fraction and not (gone or dispel or low or ready or isTarget or card.hover)) then
-		if low then card.name:SetTextColor(Stoa:Color("danger")) end
+		if low then card.name:SetTextColor(Stoa:Color(lowToken)) end
 	elseif dispel then
 		local dr, dg, db = Stoa:Color(dispel.token)
 		card.state:Set(dr, dg, db)
 		card.glow:Set(dr, dg, db, 0.22)
 	elseif low then
-		card.state:Set(Stoa:Color("danger"))
+		card.state:Set(Stoa:Color(lowToken))
 	elseif flag(UnitIsUnit(unit, "target")) then
-		card.state:Set(Stoa:Color("text"))
+		-- Slate marks your target in the accent, quietly: no white outline.
+		if UI.slate() then
+			local ar, ag, ab = Stoa:Color("accent")
+			card.state:Set(ar, ag, ab, 0.7)
+		else
+			card.state:Set(Stoa:Color("text"))
+		end
 	else
 		card.state:Clear()
 	end
@@ -991,8 +999,9 @@ function Party:UpdateWatch()
 	UI.setHealthPercent(watch.percent, unit, fraction, true)
 	UI.setHealthAmount(watch.amount, unit)
 	local low = word == "LOW"
-	watch.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
-	watch.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+	local lowToken = UI.slate() and "hostile" or "danger"
+	watch.hp:SetStatusBarColor(Stoa:Color(low and lowToken or "health"))
+	watch.percent:SetTextColor(Stoa:Color(low and lowToken or "text"))
 	local level = Stoa.safe.plain(UnitLevel(unit))
 	watch.plaque:SetLevel(not watch.slab and level and (level < 0 and "??" or tostring(level)) or nil)
 	self:UpdateWatchPower(unit)

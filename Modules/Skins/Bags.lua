@@ -31,17 +31,25 @@ local EPIC = (Enum and Enum.ItemQuality and Enum.ItemQuality.Epic) or 4
 local COMMON = (Enum and Enum.ItemQuality and Enum.ItemQuality.Common) or 1
 
 -- Quality colour for an edge, or nil for grey and white (they keep the
--- plain hairline).
+-- plain hairline). Slate takes the game's pure green and blue a step
+-- toward the text colour, so they sit with the rest of the type.
+local SLATE_QUALITY_SOFTEN = 0.28
+local function soften(r, g, b)
+	if not UI.slate() then return r, g, b end
+	local tr, tg, tb = Stoa:Color("text")
+	local k = SLATE_QUALITY_SOFTEN
+	return r + (tr - r) * k, g + (tg - g) * k, b + (tb - b) * k
+end
 function Item.qualityColour(quality)
 	quality = Stoa:PlainNumber(quality)
 	if not quality or quality <= COMMON then return nil end
 	if C_Item and C_Item.GetItemQualityColor then
 		local ok, r, g, b = pcall(C_Item.GetItemQualityColor, quality)
-		if ok and type(r) == "number" then return r, g, b end
+		if ok and type(r) == "number" then return soften(r, g, b) end
 	end
 	local colours = ITEM_QUALITY_COLORS
 	local c = type(colours) == "table" and colours[quality]
-	if type(c) == "table" and type(c.r) == "number" then return c.r, c.g, c.b end
+	if type(c) == "table" and type(c.r) == "number" then return soften(c.r, c.g, c.b) end
 end
 
 -- Effective item level of a link, only for things you can wear or wield.

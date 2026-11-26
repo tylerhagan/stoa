@@ -270,7 +270,7 @@ local function sideWords(button, side, width)
 		popout:HookScript("OnShow", place)
 		popout:HookScript("OnHide", place)
 	end
-	button.stoaSide = { name = name, sub = sub }
+	button.stoaSide = { name = name, sub = sub, side = side }
 	return button.stoaSide
 end
 
@@ -280,6 +280,7 @@ local function slotWord(button)
 end
 
 -- Fills a slot's side words (layout on).
+local SIDE_CHIP_GAP = 7
 local function fillSide(button, link, quality, level, word)
 	local side = button.stoaSide
 	if not side then return end
@@ -287,6 +288,7 @@ local function fillSide(button, link, quality, level, word)
 		side.name:SetText(slotWord(button))
 		side.name:SetTextColor(Stoa:Color("muted"))
 		side.sub:SetText("")
+		if side.chip then side.chip:Hide() end
 		return
 	end
 	side.name:SetText(link:match("%[(.-)%]") or "")
@@ -297,8 +299,26 @@ local function fillSide(button, link, quality, level, word)
 		local pattern = rawget(_G, "ITEM_LEVEL")
 		words[#words + 1] = type(pattern) == "string" and pattern:find("%%d") and pattern:format(level) or ("Item level " .. level)
 	end
+	-- Slate: the slot's name under the item, and its level on a chip.
+	local chipped = UI.slate() and level
+	if chipped then words = { slotWord(button) } end
 	if word then words[#words + 1] = Stoa:Hex(word == "BROKEN" and "accent" or "danger") .. word .. "|r" end
 	side.sub:SetText(UI.join(words))
+	if chipped then
+		if not side.chip then
+			side.chip = UI.badge(side.sub:GetParent(), nil, "muted")
+		end
+		side.chip:Set(tostring(level), "muted")
+		local width = Stoa:PlainNumber(side.sub:GetStringWidth()) or 0
+		side.chip:ClearAllPoints()
+		if side.side == "LEFT" then
+			side.chip:SetPoint("LEFT", side.sub, "LEFT", width + SIDE_CHIP_GAP, 0)
+		else
+			side.chip:SetPoint("RIGHT", side.sub, "RIGHT", -(width + SIDE_CHIP_GAP), 0)
+		end
+	elseif side.chip then
+		side.chip:Hide()
+	end
 end
 Character.fillSide = fillSide
 
@@ -450,6 +470,7 @@ end
 
 -- The tabs: Blizzard's own buttons, their art hidden, as words along the
 -- header band's right, gold under the one you're on.
+local TAB_CHIP_INSET, TAB_CHIP_PAD, TAB_CHIP_GAP = 3, 11, 4
 local function dressTab(tab, index)
 	if tab.stoaWord then return end
 	for _, region in ipairs({ tab:GetRegions() }) do
@@ -468,6 +489,15 @@ local function dressTab(tab, index)
 	under:SetPoint("BOTTOMRIGHT", 0, 0)
 	under:SetColorTexture(1, 1, 1)
 	tab.stoaWord, tab.stoaUnder = word, under
+	-- Slate: the tab you're on is a soft chip in the accent, no rule.
+	if UI.slate() then
+		local chip = CreateFrame("Frame", nil, tab)
+		chip:SetPoint("TOPLEFT", 0, -TAB_CHIP_INSET)
+		chip:SetPoint("BOTTOMRIGHT", 0, TAB_CHIP_INSET - 2)
+		chip:SetFrameLevel(math.max(0, tab:GetFrameLevel() - 1))
+		chip.fill = UI.pillFill(chip, 0)
+		tab.stoaChip = chip
+	end
 	tab:HookScript("OnEnter", function(self)
 		if not Character.TabOn(self) then self.stoaWord:SetTextColor(Stoa:Color("text")) end
 		-- The tab's own name label is the word itself now.
@@ -492,7 +522,12 @@ function Character:PaintTabs()
 			local on = Character.TabOn(tab)
 			tab.stoaWord:SetTextColor(Stoa:Color(on and "accent" or "muted"))
 			tab.stoaUnder:SetVertexColor(Stoa:Color("accent"))
-			tab.stoaUnder:SetShown(on and true or false)
+			tab.stoaUnder:SetShown(on and not tab.stoaChip and true or false)
+			if tab.stoaChip then
+				local r, g, b = Stoa:Color("accent")
+				tab.stoaChip.fill:SetVertexColor(r, g, b, 0.16)
+				tab.stoaChip:SetShown(on and true or false)
+			end
 		end
 	end
 end
@@ -507,9 +542,10 @@ function Character:PlaceTabs()
 		dressTab(tab, i)
 		if tab:IsShown() then
 			tab:ClearAllPoints()
-			tab:SetSize(math.ceil(tab.stoaWord:GetStringWidth()) + 4, 28)
+			local chip = tab.stoaChip
+			tab:SetSize(math.ceil(tab.stoaWord:GetStringWidth()) + (chip and TAB_CHIP_PAD * 2 or 4), 28)
 			if previous then
-				tab:SetPoint("RIGHT", previous, "LEFT", -18, 0)
+				tab:SetPoint("RIGHT", previous, "LEFT", chip and -TAB_CHIP_GAP or -18, 0)
 			else
 				tab:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -52, -15)
 			end
