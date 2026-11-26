@@ -162,6 +162,57 @@ function Sign.assisted()
 	end
 end
 
+-- Spells found by name, for Forever spells whose IDs STOA doesn't carry:
+-- the ID of the one you know, or nil. Read again when spells change.
+local byName = {}
+Stoa:On("SPELLS_CHANGED", function() wipe(byName) end)
+
+function Sign.spell(name)
+	if not name then return nil end
+	local id = byName[name]
+	if id == nil then
+		id = false
+		local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(name)
+		local found = type(info) == "table" and info.spellID
+		if found and not Stoa:IsSecret(found) and Sign.knows(found) then id = found end
+		byName[name] = id
+	end
+	return id or nil
+end
+
+-- A spell you know, by name, that is off cooldown and usable now (rage,
+-- energy, a reactive strike's opening). A cooldown the game hides counts
+-- as not ready, so the outline doesn't claim what it can't see.
+function Sign.can(name)
+	local id = Sign.spell(name)
+	if not id or not Sign.ready(id) then return false end
+	if C_Spell and C_Spell.IsSpellUsable then
+		local ok, usable = pcall(C_Spell.IsSpellUsable, id)
+		if ok and usable ~= nil and not Stoa:IsSecret(usable) and not usable then return false end
+	end
+	return true
+end
+
+-- A spell you know, by name, that the game says you can use now: for
+-- strikes with no real cooldown that open up (Execute, Revenge, Overpower).
+function Sign.usable(name)
+	local id = Sign.spell(name)
+	if not id or not (C_Spell and C_Spell.IsSpellUsable) then return false end
+	local ok, usable = pcall(C_Spell.IsSpellUsable, id)
+	return ok and not Stoa:IsSecret(usable) and usable == true
+end
+
+-- Whether your own debuff of this name is missing from the target.
+function Sign.missing(name)
+	return not Sign.aura("target", name, "HARMFUL|PLAYER")
+end
+
+-- Your mana, 0 to 1, or nil when hidden.
+function Sign.manaShare()
+	local mana, most = Stoa:PlainNumber(UnitPower("player", 0)), Stoa:PlainNumber(UnitPowerMax("player", 0))
+	if mana and most and most > 0 then return mana / most end
+end
+
 function Sign.inCombat()
 	return Stoa:GetState() == Stoa.STATE_COMBAT
 end

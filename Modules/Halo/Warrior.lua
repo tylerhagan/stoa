@@ -9,6 +9,14 @@
 -- not a greyed-out button. Overpower, Revenge, Execute and Victory Rush
 -- are procs (Procs.lua).
 --
+-- Next press (Warcraft Tavern's Forever guides, 2026-11-26). Heroic
+-- Strike and Cleave are off the global cooldown, so they stay out of it.
+--   Arms: Battle Shout, Sunder to 5, Overpower, Rend, Mortal Strike,
+--   Slam, Spearing Strike. Fury: Battle Shout, Sunder to 5, Execute,
+--   Bloodthirst, Whirlwind, Rend, Spearing Strike. Protection: Taunt when
+--   needed, Battle Shout, Thunder Clap, Demoralizing Shout, Sunder to 5,
+--   Revenge, Rend, Shield Slam.
+--
 -- Forever's guides don't give every number yet, so the timers below are
 -- the classic ones; wherever the game shows them, its own wins.
 local _, ns = ...
@@ -116,23 +124,53 @@ local function usable(key)
 	return Sign.knows(SPELLS[key]) and Sign.ready(SPELLS[key]) ~= false
 end
 
+local function named(name)
+	local id = Sign.spell(name)
+	return id and C_Spell.GetSpellName(id)
+end
+
+local function opens(name)
+	return Sign.usable(name) and named(name)
+end
+
 function Warrior:NextPress()
 	if not Sign.hostileTarget() then return nil end
 	local state = self.state or {}
+	local sunder = Sign.knows(SPELLS.sunder) and (self.sunders or 0) < SUNDER_MAX
+	local shout = Sign.knows(SPELLS.battleShout) and not Sign.aura("player", nameOf("battleShout"), "HELPFUL")
+	local rend = Sign.knows(SPELLS.rend) and Sign.missing(nameOf("rend"))
 	if self:Tank() then
 		if Sign.wantsTaunt() and usable("taunt") then return nameOf("taunt") end
-		if Sign.knows(SPELLS.sunder) and (self.sunders or 0) < SUNDER_MAX then return nameOf("sunder") end
-		if state.demoShout == "off" then return nameOf("demoShout") end
+		if shout then return nameOf("battleShout") end
 		if state.thunderClap == "off" then return nameOf("thunderClap") end
-		if usable("shieldSlam") and Sign.ready(SPELLS.shieldSlam) then return nameOf("shieldSlam") end
-		return Sign.assisted() or nameOf("heroicStrike")
+		if state.demoShout == "off" then return nameOf("demoShout") end
+		if sunder then return nameOf("sunder") end
+		local revenge = opens("Revenge")
+		if revenge then return revenge end
+		if rend then return nameOf("rend") end
+		if Sign.knows(SPELLS.shieldSlam) and Sign.ready(SPELLS.shieldSlam) then return nameOf("shieldSlam") end
+		return Sign.assisted() or (Sign.knows(SPELLS.sunder) and nameOf("sunder")) or nil
 	end
-	if state.battleShout == "off" and Sign.knows(SPELLS.battleShout) then return nameOf("battleShout") end
-	if state.rend == "off" then return nameOf("rend") end
-	if usable("mortalStrike") and Sign.ready(SPELLS.mortalStrike) then return nameOf("mortalStrike") end
-	if usable("bloodthirst") and Sign.ready(SPELLS.bloodthirst) then return nameOf("bloodthirst") end
-	if Sign.knows(SPELLS.sunder) and (self.sunders or 0) < SUNDER_MAX then return nameOf("sunder") end
-	return Sign.assisted() or nameOf("heroicStrike")
+	if shout then return nameOf("battleShout") end
+	if sunder then return nameOf("sunder") end
+	if Sign.knows(SPELLS.bloodthirst) then
+		local execute = opens("Execute")
+		if execute then return execute end
+		if Sign.ready(SPELLS.bloodthirst) then return nameOf("bloodthirst") end
+		local whirlwind = Sign.can("Whirlwind") and named("Whirlwind")
+		if whirlwind then return whirlwind end
+		if rend then return nameOf("rend") end
+	else
+		local overpower = opens("Overpower")
+		if overpower then return overpower end
+		if rend then return nameOf("rend") end
+		if Sign.knows(SPELLS.mortalStrike) and Sign.ready(SPELLS.mortalStrike) then return nameOf("mortalStrike") end
+		if Stoa.creatureIs("target", "Giant", "Dragonkin") and Sign.can("Spearing Strike") then return named("Spearing Strike") end
+		local slam = Sign.spell("Slam") and named("Slam")
+		if slam and Sign.knows(SPELLS.mortalStrike) then return slam end
+	end
+	local spear = Sign.can("Spearing Strike") and named("Spearing Strike")
+	return spear or Sign.assisted() or nil
 end
 
 -- Lifecycle ----------------------------------------------------------------------

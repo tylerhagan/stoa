@@ -389,7 +389,9 @@ local function build()
 	local function relayout() Stoa:AfterCombat(function() Stoa.modules.CombatBar:Layout() end) end
 	choice(of("CombatBar"), "rows", "Combat rows", "How many rows show under the Halo when you tank or deal damage: your main bar, then bottom-left, then bottom-right. Extra rows line up under the first and show only the buttons you've filled.", "2", rowChoices, { scope = "Per spec", words = "action bar buttons", change = relayout })
 	choice(of("CombatBar"), "healerRows", "Combat rows when healing", "The same, for healing. One keeps the group frames close under your spells.", "1", rowChoices, { scope = "Per spec", change = relayout })
-	toggle(of("CombatBar"), "nextPress", "Outline the next press", "In combat, an accent outline on the combat bar button STOA suggests pressing next, from your spec's priority (DoTs and debuffs first, then cooldowns, then filler). Off, no button is ever outlined.", true, { id = "nextPress", words = "next press highlight rotation priority suggestion glow outline", change = function() Stoa.modules.CombatBar:SetNext(nil) end })
+	choice(of("CombatBar"), "nextPress", "Outline the next press", "In combat, an accent outline on the combat bar button to press next. STOA's order follows your spec's guide priority: DoTs and debuffs first, then cooldowns and procs, then your filler. The game's suggestion uses Forever's own pick instead. Off never outlines a button.", "stoa", {
+		{ "stoa", "STOA's order" }, { "game", "The game's suggestion" }, { "off", "Off" },
+	}, { id = "nextPress", words = "next press highlight rotation priority suggestion glow outline assisted", change = function() Stoa.modules.CombatBar:SetNext(nil) end })
 	toggle(of("ActionBars"), "combatHide", "Hand the bars to the Halo in combat", "With the combat bar on, the console's action bars step aside in combat and only the compact bar under the Halo shows. Your keybinds keep working.", true, {
 		change = function(_, v) Stoa.modules.ActionBars:SetOption("combatHide", v) end,
 	})

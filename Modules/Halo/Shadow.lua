@@ -309,7 +309,8 @@ end
 
 -- A cast sequence macro's next step when one is on your bars, else the
 -- guide's single-target order: DoTs when they're off, Mind Blast and
--- Shadow Word: Death when ready, Embrace when it's off, Mind Flay to fill.
+-- Shadow Word: Death when ready, Embrace when it's off, Mind Flay to fill
+-- (Warcraft Tavern's Forever guide, checked 2026-11-26).
 function Shadow:NextPress()
 	if not self:Active() or not hostileTarget() then return nil end
 	local state = self.state or {}
@@ -327,6 +328,7 @@ function Shadow:NextPress()
 	for _, key in ipairs({ "blast", "death" }) do
 		if knows(SPELLS[key]) and ready(key) then return nameOf(key) end
 	end
+	if wants("embrace") then return nameOf("embrace") end
 	-- Cooldowns are hidden in combat, so for the rest the game's own
 	-- suggestion is asked, where there is one.
 	if C_AssistedCombat and C_AssistedCombat.GetNextCastSpell then
@@ -336,7 +338,6 @@ function Shadow:NextPress()
 			if name then return name end
 		end
 	end
-	if wants("embrace") then return nameOf("embrace") end
 	if knows(SPELLS.flay) then return nameOf("flay") end
 end
 
