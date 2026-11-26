@@ -12,6 +12,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Unit tooltips in a dungeon fight**: when the game hides which unit a tooltip is for, STOA now reads what the mouse is over instead of leaving the game's lines undressed.
 
+- **`/stoa report` remembers blocked actions**: the last few times the game said an interface action failed because of an addon are kept past a reload, with the addon and the function it named, so the report still shows them afterwards.
+
 ## 2.1.0
 
 - **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.
