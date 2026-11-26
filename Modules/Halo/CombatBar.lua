@@ -167,7 +167,7 @@ function Bar:PlaceAnchor()
 		self.shift = TOP - top
 		anchor:SetPoint("TOP", halo, "BOTTOM", 0, top)
 	else
-		anchor:SetPoint("TOP", UIParent, "CENTER", 0, -60 + TOP)
+		anchor:SetPoint("TOP", UIParent, "CENTER", 0, -40 + TOP)
 	end
 	self.anchored = halo ~= nil
 end

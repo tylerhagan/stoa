@@ -20,6 +20,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Two cast bars**: the game's own cast bar could come back beside STOA's after a fresh profile or an Edit Mode layout change. STOA now puts it away again whenever the game brings it back.
 
+- **Halo sits higher**: the ring's default spot is 20 units higher, so your character stands in the middle of it instead of riding high. A Halo you have moved yourself stays where you put it.
+
 ## 2.1.0
 
 - **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.

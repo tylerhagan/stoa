@@ -175,7 +175,7 @@ function Procs:BuildArt()
 	if halo then
 		holder:SetPoint("CENTER", halo, "CENTER")
 	else
-		holder:SetPoint("CENTER", UIParent, "CENTER", 0, -60)
+		holder:SetPoint("CENTER", UIParent, "CENTER", 0, -40)
 	end
 	holder:SetScale(self.db.scale or 1)
 	self.art = holder

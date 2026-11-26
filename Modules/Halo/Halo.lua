@@ -179,7 +179,7 @@ end
 function Halo:Build()
 	local frame = CreateFrame("Frame", "StoaHalo", UIParent)
 	frame:SetSize(SIZE, SIZE)
-	frame:SetPoint("CENTER", UIParent, "CENTER", 0, -60)
+	frame:SetPoint("CENTER", UIParent, "CENTER", 0, -40)
 	frame:SetScale(self.db.scale)
 	frame:SetFrameStrata("LOW")
 	frame:EnableMouse(false)
