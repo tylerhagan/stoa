@@ -299,7 +299,18 @@ local function colourTabs(frame)
 		local selected = tabSelected(tab)
 		local text = tab.Text or (tab.GetFontString and tab:GetFontString())
 		if text then text:SetTextColor(Stoa:Color(selected and "text" or "muted")) end
-		if tab.stoaShade then
+		if tab.stoaShade and UI.slate() then
+			-- Slate: the chosen tab washed in the accent, its word in the
+			-- accent, no underline (the mock-up's segmented control).
+			if selected then
+				local r, g, b = Stoa:Color("accent")
+				tab.stoaShade:SetVertexColor(r, g, b, 0.14)
+				if text then text:SetTextColor(r, g, b) end
+			else
+				tab.stoaShade:SetVertexColor(0, 0, 0, TAB_SHADE.other)
+			end
+			tab.stoaUnderline:Hide()
+		elseif tab.stoaShade then
 			tab.stoaShade:SetVertexColor(0, 0, 0, selected and TAB_SHADE.selected or TAB_SHADE.other)
 			tab.stoaUnderline:SetShown(selected)
 		end

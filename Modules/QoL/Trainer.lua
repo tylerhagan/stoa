@@ -157,7 +157,8 @@ local function money(copper)
 	local out = {}
 	if gold > 0 then out[#out + 1] = gold .. "g" end
 	if silver > 0 then out[#out + 1] = silver .. "s" end
-	if rest > 0 or #out == 0 then out[#out + 1] = rest .. "c" end
+	-- Copper is dropped once there's gold: the line has one column's room.
+	if (rest > 0 and gold == 0) or #out == 0 then out[#out + 1] = rest .. "c" end
 	return Stoa:TintMoney(table.concat(out, " "))
 end
 

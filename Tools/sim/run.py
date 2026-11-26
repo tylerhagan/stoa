@@ -1460,8 +1460,17 @@ do
 			local list = console:Jobs()
 			assert(#list == 5, "jobs: " .. #list)
 			console:UpdateJobs()
-			assert(console.roleNote:IsShown(), "the jobs line is hidden")
-			assert(console.roleNote.words:GetText() == "5 small jobs", "line reads " .. tostring(console.roleNote.words:GetText()))
+			if console.slateJobs then
+				-- Slate lists them as rows with a count chip instead.
+				local jobs = console.slateJobs
+				assert(not console.roleNote:IsShown(), "Slate showed the one-line note over its rows")
+				assert(jobs.rows[1]:IsShown() and jobs.rows[2]:IsShown(), "Slate's job rows are hidden")
+				assert(jobs.count:IsShown() and jobs.count.word == "5", "Slate's count chip reads " .. tostring(jobs.count.word))
+				assert(not console.gear:IsShown(), "Slate's gear row stayed under the jobs")
+			else
+				assert(console.roleNote:IsShown(), "the jobs line is hidden")
+				assert(console.roleNote.words:GetText() == "5 small jobs", "line reads " .. tostring(console.roleNote.words:GetText()))
+			end
 			console:ShowJobs(console.roleNote)
 			GetActionInfo = function(slot) if slot == 7 then return "spell", 42 end end
 			Stoa.Spells.name = function(id) return id == 42 and "Holy Fire" or nil end
@@ -1473,6 +1482,10 @@ do
 			if tips then tips.db.enabled = false end
 			console:UpdateJobs()
 			assert(not console.roleNote:IsShown(), "the line shows with nothing to do")
+			if console.slateJobs then
+				assert(not console.slateJobs.rows[1]:IsShown() and not console.slateJobs.count:IsShown(), "Slate's job rows stayed with nothing to do")
+				assert(console.gear:IsShown(), "Slate's gear row didn't come back")
+			end
 			if tips then tips.db.enabled = true end
 			C_ClassTalents, C_Item.GetItemCount, GetInventoryItemID, GetActionInfo, Stoa.missingBuffs, Stoa.Spells.each, Stoa.Spells.name = unpack(real, 1, 7)
 		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)

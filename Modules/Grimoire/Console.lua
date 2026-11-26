@@ -1286,6 +1286,7 @@ function Console:BuildFellowship(frame, space)
 	groupBuffs:SetWidth(COLUMN_WIDTH)
 	groupBuffs:SetWordWrap(false)
 	self.roleWord, self.roleNote, self.gear, self.bags, self.groupBuffs = role, note, gear, bags, groupBuffs
+	if UI.slate() then self:BuildSlateJobs(readyCol, role) end
 
 	-- Journey.
 	local journey = column(journeyCol, "Journey")
@@ -1849,6 +1850,64 @@ function Console:Jobs()
 	return list
 end
 
+-- Slate: the small jobs are listed on the Ready card itself, as rows
+-- under the role, with their count in a chip beside the heading (the
+-- mock-up's Ready card). Two rows fit; the chip and the hover say the
+-- rest. While there are jobs the gear row steps aside (worn gear is a
+-- job of its own) and the bags close up under the rows.
+local SLATE_JOB_ROWS, SLATE_JOB_H = 2, 15
+
+function Console:BuildSlateJobs(col, role)
+	local count = UI.badge(col, nil, "accent")
+	count:SetPoint("TOPRIGHT", col, "TOPRIGHT", 0, 2)
+	count:Hide()
+	local rows = {}
+	for i = 1, SLATE_JOB_ROWS do
+		local row = CreateFrame("Button", nil, col)
+		row:SetSize(COLUMN_WIDTH, SLATE_JOB_H)
+		row:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -6 - (i - 1) * SLATE_JOB_H)
+		local mark = UI.glyph(row, "DiamondSmall", 8, "accent")
+		mark:SetPoint("LEFT", 0, 0)
+		local words = text(row, "sans", Stoa.typeSize.body, "text")
+		words:SetPoint("LEFT", mark, "RIGHT", 6, 0)
+		words:SetPoint("RIGHT")
+		words:SetWordWrap(false)
+		row.mark, row.words = mark, words
+		row:SetScript("OnEnter", function(own) self:ShowJobs(own) end)
+		row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		row:Hide()
+		rows[i] = row
+	end
+	self.slateJobs = { count = count, rows = rows }
+end
+
+-- Fills the Slate job rows; true when they show (the one-line note waits).
+function Console:ShowSlateJobs(list)
+	local jobs = self.slateJobs
+	if not jobs then return false end
+	local any = list and #list > 0 and not InCombatLockdown()
+	jobs.count:Set(any and tostring(#list) or nil, "accent")
+	local last
+	for i, row in ipairs(jobs.rows) do
+		local job = any and list[i]
+		if job then
+			row.words:SetText(job[1])
+			row.words:SetTextColor(Stoa:Color(job[3] and "danger" or "text"))
+			row.mark:SetVertexColor(Stoa:Color(job[3] and "danger" or "accent"))
+			row:Show()
+			last = row
+		else
+			row:Hide()
+		end
+	end
+	-- Gear steps aside while the rows show; the bags hang from whichever
+	-- is last.
+	self.gear:SetShown(not any)
+	self.bags:ClearAllPoints()
+	self.bags:SetPoint("TOPLEFT", any and last or self.gear, "BOTTOMLEFT", 0, any and -6 or -9)
+	return any and true or false
+end
+
 -- Shows the Ready line with a quick fade (one animation, made once).
 function Console:ShowNote(note)
 	if note:IsShown() then return end
@@ -1862,10 +1921,18 @@ end
 function Console:UpdateJobs()
 	local note = self.roleNote
 	if not (note and note.words) then return end
-	if InCombatLockdown() then note:Hide() return end
+	if InCombatLockdown() then
+		note:Hide()
+		self:ShowSlateJobs(nil)
+		return
+	end
 	local list = self:Jobs()
 	self.jobList = list
 	note.tip = nil
+	if self:ShowSlateJobs(list) then
+		note:Hide()
+		return
+	end
 	if #list == 0 then
 		-- Nothing to do: a tip's few words instead, muted, the rest on hover.
 		local tips = Stoa.modules.Tips
