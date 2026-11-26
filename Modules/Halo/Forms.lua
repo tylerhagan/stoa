@@ -55,7 +55,7 @@ local BREATH = 1.8       -- seconds each way
 local BREATH_LOW, BREATH_HIGH = 0.35, 1
 -- The entering wave: two bands of smoke running out from the seal
 -- to the console's ends.
-local WAVE = 0.24
+local WAVE = 0.45
 local WAVE_W = 260
 local WAVE_ALPHA = 0.7
 -- RingGlow.tga's light peaks this far out from its centre (Tools/art/ring_glow.py).
