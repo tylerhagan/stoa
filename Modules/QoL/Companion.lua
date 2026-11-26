@@ -103,6 +103,38 @@ function Companion:CheckCorpse(unit)
 	end
 end
 
+-- As a fight ends the dead boss is rarely your own target when you heal:
+-- it is the tank's, or still stands as a nameplate. Every unit that may be
+-- it is looked at, then and a moment later (the death can land after the
+-- fight's end does).
+function Companion:CheckCorpses()
+	if not self.data then return end
+	local units = { "target", "focus", "mouseover" }
+	for i = 1, 4 do units[#units + 1] = "party" .. i .. "target" end
+	for i = 1, 5 do units[#units + 1] = "boss" .. i end
+	local plates = C_NamePlate and C_NamePlate.GetNamePlates and call(C_NamePlate.GetNamePlates)
+	for _, plate in ipairs(type(plates) == "table" and plates or {}) do
+		local unit = plate.namePlateUnitToken or (plate.UnitFrame and plate.UnitFrame.unit)
+		if type(unit) == "string" then units[#units + 1] = unit end
+	end
+	for _, unit in ipairs(units) do pcall(self.CheckCorpse, self, unit) end
+end
+
+-- What the game itself has down for this run, where it keeps a lock for
+-- the dungeon: each boss it marks killed is ticked.
+function Companion:CheckLock()
+	if not (GetInstanceLockTimeRemaining and GetInstanceLockTimeRemainingEncounter) then return end
+	local _, _, total = call(GetInstanceLockTimeRemaining)
+	for i = 1, plain(total) or 0 do
+		local name, _, dead = call(GetInstanceLockTimeRemainingEncounter, i)
+		if dead and type(name) == "string" and not Stoa:IsSecret(name) and name ~= "" then
+			local where = self:Where()
+			local run = where and self:Run(where)
+			if run and not run.killed[name:lower()] then self:Killed(name) end
+		end
+	end
+end
+
 function Companion:Quests(where)
 	local list = {}
 	local log = C_QuestLog
@@ -609,7 +641,18 @@ function Companion:OnEnable()
 	Stoa:On("QUEST_LOG_UPDATE", function() if self.data then soon() end end)
 	Stoa:On("PLAYER_REGEN_DISABLED", soon)
 	Stoa:On("PLAYER_REGEN_ENABLED", function()
-		pcall(self.CheckCorpse, self, "target")
+		local function look()
+			pcall(self.CheckCorpses, self)
+			pcall(self.CheckLock, self)
+			soon()
+		end
+		look()
+		C_Timer.After(2, look)
+	end)
+	-- Some bosses send this and no end of an encounter.
+	Stoa:On("BOSS_KILL", function(_, name)
+		if type(name) ~= "string" or Stoa:IsSecret(name) or name == "" then return end
+		self:Killed(name)
 		soon()
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() pcall(self.CheckCorpse, self, "target") end)
