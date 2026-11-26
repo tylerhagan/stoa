@@ -25,7 +25,7 @@ Stoa.Options = Options
 
 Options.PAGES = {
 	{ "parts", "Build your STOA", "Start here. Pick a layout (Full, Slim or None), then switch on only the parts you want: anything you switch off goes back to the game's own. This page is the quick start; each part's finer settings are on its own page in the list on the left.", "Quick start" },
-	{ "look", "Look", "The style (Leather or Matte black), then theme and colour. These change everything else, so they come first." },
+	{ "look", "Look", "The style (Leather, Matte black or Slate), then theme and colour. These change everything else, so they come first." },
 	{ "console", "Console", "The console along the bottom of the screen and what it holds." },
 	{ "combat", "Combat", "What happens when a fight starts: the Halo, the combat bar and what they show." },
 	{ "group", "Group", "Party and raid cards, healing clicks, and tools for tanks and leaders." },

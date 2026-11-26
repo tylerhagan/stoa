@@ -809,6 +809,151 @@ local function seatStatPanes(frame)
 	end
 end
 
+-- The skills and reputation lists: Blizzard's brown heading bars, framed
+-- bars and gold words become STOA's own (a heading word over a hairline,
+-- flat bars, quiet text). Only the look of Blizzard's rows changes; what
+-- they hold and what a click does stay Blizzard's.
+local LIST_BAR_H = 14
+local function forbiddenRow(frame)
+	return type(frame) ~= "table" or (frame.IsForbidden and frame:IsForbidden())
+end
+
+-- One of Blizzard's framed progress bars as a flat track and fill. Its own
+-- fill is masked art sized by SetFillWidth, so STOA's follows that width.
+local function dressListBar(bar, token)
+	if forbiddenRow(bar) or bar.stoaBar or not (bar.Fill and bar.FillArea and bar.CreateTexture) then return end
+	bar.stoaBar = true
+	local r, g, b = bar.Fill:GetVertexColor()
+	for _, region in ipairs({ bar:GetRegions() }) do
+		if region ~= bar.Fill and region.GetObjectType and region:GetObjectType() == "Texture" then region:SetAlpha(0) end
+	end
+	local track = bar:CreateTexture(nil, "BACKGROUND")
+	track:SetTexture(UI.WHITE)
+	track:SetVertexColor(0, 0, 0, 0.38)
+	track:SetPoint("LEFT", bar.FillArea, "LEFT", 0, 0)
+	track:SetPoint("RIGHT", bar.FillArea, "RIGHT", 0, 0)
+	track:SetHeight(LIST_BAR_H)
+	local fill = bar:CreateTexture(nil, "BORDER")
+	fill:SetTexture(UI.WHITE)
+	fill:SetPoint("LEFT", bar.FillArea, "LEFT", 0, 0)
+	fill:SetHeight(LIST_BAR_H)
+	bar.stoaFill = fill
+	local function width(_, w)
+		w = tonumber(w) or 0
+		fill:SetShown(w > 0)
+		fill:SetWidth(math.max(w, 0.001))
+	end
+	local function colour(red, green, blue)
+		if token then red, green, blue = Stoa:Color(token) end
+		fill:SetVertexColor(red or 1, green or 1, blue or 1, 0.62)
+		-- Recolouring Blizzard's fill brings it back, so it goes again.
+		bar.Fill:SetAlpha(0)
+	end
+	if bar.SetFillWidth then hooksecurefunc(bar, "SetFillWidth", width) end
+	if bar.UpdateBarColor then
+		hooksecurefunc(bar, "UpdateBarColor", function(self)
+			if token then colour() else colour(self.Fill:GetVertexColor()) end
+		end)
+	end
+	if bar.SetFillTextureByColorType then hooksecurefunc(bar, "SetFillTextureByColorType", function() colour(r, g, b) end) end
+	width(nil, (bar.fillPercent or 0) * (bar.FillArea:GetWidth() or 0))
+	colour(r, g, b)
+	if bar.Text then
+		Stoa:SetFont(bar.Text, "sans", Stoa.typeSize.caption)
+		bar.Text:SetTextColor(Stoa:Color("text"))
+	end
+end
+
+local function dressListRow(row, token)
+	if forbiddenRow(row) or row.stoaList then return end
+	row.stoaList = true
+	local content = row.Content
+	if not content then
+		-- A heading: its bar goes, the word takes the accent over a rule.
+		for _, region in ipairs({ row:GetRegions() }) do
+			if region.GetObjectType and region:GetObjectType() == "Texture" then region:SetAlpha(0) end
+		end
+		if row.Name then
+			Stoa:SetFont(row.Name, "sans", Stoa.typeSize.caption)
+			row.Name:SetTextColor(Stoa:Color("accent"))
+			row.Name:ClearAllPoints()
+			row.Name:SetPoint("BOTTOMLEFT", 4, 8)
+		end
+		local rule = row:CreateTexture(nil, "BORDER")
+		rule:SetTexture(UI.WHITE)
+		rule:SetHeight(1)
+		rule:SetPoint("BOTTOMLEFT", 2, 3)
+		rule:SetPoint("BOTTOMRIGHT", -2, 3)
+		UI.tint(rule, "hairline")
+		local glyph = UI.glyph(row, "Minus", 10, "muted")
+		glyph:SetPoint("RIGHT", -8, -3)
+		local function fold(self)
+			local data = self.elementData
+			glyph:SetTexture(UI.MEDIA .. "Textures\\Glyph" .. ((type(data) == "table" and data.isCollapsed) and "Plus" or "Minus"))
+			if self.StateIcon then self.StateIcon:SetAlpha(0) end
+		end
+		if row.Initialize then hooksecurefunc(row, "Initialize", fold) end
+		row:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color("accent")) end)
+		row:HookScript("OnLeave", function() glyph:SetVertexColor(Stoa:Color("muted")) end)
+		fold(row)
+		return
+	end
+	if content.Name then
+		Stoa:SetFont(content.Name, "sans", Stoa.typeSize.body)
+		content.Name:SetTextColor(Stoa:Color("text"))
+	end
+	-- The chosen and hovered row: a flat wash in place of the painted one
+	-- (Blizzard still sets how strong it is, and red for a faction at war).
+	local wash = content.BackgroundHighlight
+	for _, region in ipairs((wash and wash.TextureRegions) or {}) do
+		if region.SetTexture then region:SetTexture(UI.WHITE) end
+	end
+	dressListBar(content.ReputationBar or content.SkillsBar, token)
+end
+
+local LISTS = {
+	{ frame = "SkillsFrame", pane = "SkillDetailFrame", bar = "RankBar", token = "accent" },
+	{ frame = "ReputationFrame", pane = "ReputationDetailFrame", bar = "StandingBar" },
+}
+local function dressLists()
+	local windows = Stoa.modules.Windows
+	for _, list in ipairs(LISTS) do
+		local page = rawget(_G, list.frame)
+		local box = type(page) == "table" and page.ScrollBox
+		if box and not forbiddenRow(box) and not box.stoaListRows then
+			box.stoaListRows = true
+			local function each(_, row) guarded(dressListRow, row, list.token) end
+			if ScrollUtil and ScrollUtil.AddAcquiredFrameCallback then
+				ScrollUtil.AddAcquiredFrameCallback(box, each, box, true)
+			elseif box.ForEachFrame then
+				box:ForEachFrame(function(row) each(nil, row) end)
+			end
+			-- The painted lines closing the list top and bottom.
+			for _, child in ipairs({ box:GetChildren() }) do
+				if child ~= box.ScrollTarget and child.GetRegions then
+					for _, region in ipairs({ child:GetRegions() }) do
+						if region.GetAtlas and region:GetAtlas() == "UI-Character-Info-ScrollLine-Long" then region:SetAlpha(0) end
+					end
+				end
+			end
+			if windows and windows.DressScrollBar then guarded(windows.DressScrollBar, page.ScrollBar) end
+			local pane = page[list.pane]
+			if type(pane) == "table" and not forbiddenRow(pane) then
+				guarded(dressListBar, pane[list.bar], list.token)
+				if windows and windows.DressScrollBar then guarded(windows.DressScrollBar, pane.DescriptionScrollBar) end
+				for _, key in ipairs({ "Title", "Subtitle" }) do
+					local text = pane[key]
+					if text and text.SetTextColor then
+						Stoa:SetFont(text, "sans", key == "Title" and Stoa.typeSize.body or Stoa.typeSize.caption)
+						text:SetTextColor(Stoa:Color(key == "Title" and "text" or "muted"))
+					end
+				end
+				if pane.Divider and pane.Divider.SetAlpha then pane.Divider:SetAlpha(0) end
+			end
+		end
+	end
+end
+
 local function seatDetailPanes(frame)
 	if not (frame.stoaHeader and frame.RightPaneHost) then return end
 	for _, name in ipairs(DETAIL_PAGES) do
@@ -816,7 +961,7 @@ local function seatDetailPanes(frame)
 		if page and page.GetChildren then
 			for _, child in ipairs({ page:GetChildren() }) do seatPane(child, frame) end
 		end
-	end
+	end	guarded(dressLists)
 end
 
 local laidOut

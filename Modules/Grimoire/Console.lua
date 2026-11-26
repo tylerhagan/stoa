@@ -1711,6 +1711,61 @@ local TICK_LENGTH = 5
 local TICK_GAP = 7
 local GLOW_SPREAD = 22
 
+-- Slate's card: its fine edge lights with experience, clockwise from the
+-- portrait's shoulder, as the dial does round a medallion. Short
+-- lengths laid end to end along the edge and round its corners.
+local EDGE_PARTS = 120
+local EDGE_THICK = 1.5
+local EDGE_INSET = 0.75
+local EDGE_CORNER = 6
+
+function Console:BuildEdge(card)
+	local w, h = card:GetWidth() / 2 - EDGE_INSET, card:GetHeight() / 2 - EDGE_INSET
+	local r = math.min(EDGE_CORNER, h)
+	local arc = math.pi / 2 * r
+	local flatW, flatH = w - r, 2 * (h - r)
+	-- The portrait stands over the top edge's middle: the run starts at
+	-- its right shoulder and ends at its left, so none of it hides.
+	local half = YOU_SEAL / 2
+	local skip = (h < half and math.sqrt(half * half - h * h) or 0) + 3
+	-- Each run: its length, then where and which way a point along it lies.
+	local runs = {
+		{ flatW - skip, function(d) return skip + d, h, 0 end },
+		{ arc, function(d) local a = math.pi / 2 - d / r return w - r + math.cos(a) * r, h - r + math.sin(a) * r, a - math.pi / 2 end },
+		{ flatH, function(d) return w, h - r - d, -math.pi / 2 end },
+		{ arc, function(d) local a = -d / r return w - r + math.cos(a) * r, -(h - r) + math.sin(a) * r, a - math.pi / 2 end },
+		{ 2 * flatW, function(d) return w - r - d, -h, math.pi end },
+		{ arc, function(d) local a = -math.pi / 2 - d / r return -(w - r) + math.cos(a) * r, -(h - r) + math.sin(a) * r, a - math.pi / 2 end },
+		{ flatH, function(d) return -w, -(h - r) + d, math.pi / 2 end },
+		{ arc, function(d) local a = math.pi - d / r return -(w - r) + math.cos(a) * r, h - r + math.sin(a) * r, a - math.pi / 2 end },
+		{ flatW - skip, function(d) return -(w - r) + d, h, 0 end },
+	}
+	local whole = 0
+	for _, run in ipairs(runs) do whole = whole + run[1] end
+	local length = whole / EDGE_PARTS
+	local parts = {}
+	for i = 1, EDGE_PARTS do
+		local at = (i - 0.5) * length
+		local x, y, angle = 0, h, 0
+		for _, run in ipairs(runs) do
+			if at <= run[1] then
+				x, y, angle = run[2](at)
+				break
+			end
+			at = at - run[1]
+		end
+		local part = card:CreateTexture(nil, "OVERLAY", nil, 2)
+		part:SetTexture(UI.WHITE)
+		part:SetSize(length, EDGE_THICK)
+		part:SetPoint("CENTER", card, "CENTER", x, y)
+		if part.SetRotation then part:SetRotation(angle) end
+		UI.unsnap(part)
+		parts[i] = part
+	end
+	self.ringEdge = true
+	return parts
+end
+
 function Console:BuildRing(seal, portrait, size)
 	local radius = size / 2 + TICK_GAP
 	local ticks = {}
@@ -1725,9 +1780,11 @@ function Console:BuildRing(seal, portrait, size)
 		ticks[i] = tick
 	end
 	self.ringTicks = ticks
-	-- Slate: a plain ring (experience reads on the Journey card).
+	-- Slate: no dial. On its card the card's own edge lights instead
+	-- (BuildEdge); the plain seal elsewhere goes without.
 	if UI.slate() then
 		for _, tick in ipairs(ticks) do tick:Hide() end
+		if self.youCard then self.ringTicks = self:BuildEdge(self.youCard) end
 	end
 
 	-- The level in the display serif, a size up from the badge's caption, on
@@ -1818,14 +1875,17 @@ function Console:UpdateRing()
 	local ar, ag, ab = Stoa:Color("accent")
 	local mr, mg, mb = Stoa:Color("mana")
 	local tr, tg, tb = Stoa:Color("text")
+	-- The card's edge: what's left to earn stays the card's own line, the
+	-- rested stretch is dashed, and at the cap the whole edge glows low.
+	local edge = self.ringEdge
 	for i, tick in ipairs(ticks) do
-		local at = (i - 0.5) / TICKS
+		local at = (i - 0.5) / #ticks
 		if at <= done then
-			tick:SetVertexColor(ar, ag, ab, done >= 1 and 0.55 or 0.9)
+			tick:SetVertexColor(ar, ag, ab, done >= 1 and (edge and 0.3 or 0.55) or 0.9)
 		elseif at <= rested then
-			tick:SetVertexColor(mr, mg, mb, 0.75)
+			tick:SetVertexColor(mr, mg, mb, (edge and i % 2 == 0) and 0 or 0.75)
 		else
-			tick:SetVertexColor(tr, tg, tb, 0.16)
+			tick:SetVertexColor(tr, tg, tb, edge and 0 or 0.16)
 		end
 	end
 end

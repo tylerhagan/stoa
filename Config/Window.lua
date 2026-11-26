@@ -1199,7 +1199,11 @@ function Window:Build()
 		local text = search:GetText()
 		searchHint:SetShown(text == "" and not search:HasFocus())
 		clear:SetShown(text ~= "")
-		searchEdge:Set(Stoa:Color(search:HasFocus() and "accent" or "hairline"))
+		local focus = search:HasFocus()
+		local r, g, b, a = Stoa:Color(focus and "accent" or "hairline")
+		-- Slate: a resting edge that only just shows, not an outline.
+		if not focus and UI.slate() then a = (a or 1) * 0.4 end
+		searchEdge:Set(r, g, b, a)
 	end
 	search:SetScript("OnTextChanged", function(box)
 		local text = strtrim(box:GetText() or "")

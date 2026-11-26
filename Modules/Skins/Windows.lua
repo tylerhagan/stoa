@@ -819,6 +819,46 @@ local function dressMerchant()
 	end
 	hide(MerchantBuyBackItemSlotTexture)
 	hide(MerchantBuyBackItemNameFrame)
+	-- The page turners: Blizzard's framed arrows and gold words become a
+	-- chevron and a quiet word, dim when there is no page that way.
+	local page = rawget(_G, "MerchantPageText")
+	if page and page.SetTextColor then
+		Stoa:SetFont(page, "sans", Stoa.typeSize.caption)
+		page:SetTextColor(Stoa:Color("muted"))
+	end
+	for name, turn in pairs({ MerchantPrevPageButton = math.pi, MerchantNextPageButton = 0 }) do
+		local button = rawget(_G, name)
+		if type(button) == "table" and button.CreateTexture and not forbidden(button) and not button.stoaTurn then
+			button.stoaTurn = true
+			local words = {}
+			for _, region in ipairs({ button:GetRegions() }) do
+				local kind = region.GetObjectType and region:GetObjectType()
+				if kind == "Texture" then
+					region:SetAlpha(0)
+				elseif kind == "FontString" then
+					Stoa:SetFont(region, "sans", Stoa.typeSize.body)
+					words[#words + 1] = region
+				end
+			end
+			local glyph = UI.glyph(button, "Chevron", 12, "text")
+			glyph:SetPoint("CENTER")
+			glyph:SetRotation(turn)
+			local function paint()
+				local on = not button.IsEnabled or button:IsEnabled()
+				local token = on and (button:IsMouseOver() and "accent" or "text") or "muted"
+				local r, g, b = Stoa:Color(token)
+				glyph:SetVertexColor(r, g, b, on and 1 or 0.4)
+				for _, word in ipairs(words) do word:SetTextColor(r, g, b, on and 1 or 0.4) end
+			end
+			button:HookScript("OnEnter", paint)
+			button:HookScript("OnLeave", paint)
+			button:HookScript("OnShow", paint)
+			for _, method in ipairs({ "Enable", "Disable", "SetEnabled" }) do
+				if button[method] then hooksecurefunc(button, method, paint) end
+			end
+			paint()
+		end
+	end
 end
 
 -- One trainer row (and the skill-step row above the list): Blizzard's

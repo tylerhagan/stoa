@@ -121,7 +121,11 @@ end
 
 -- Tints a texture that has its own image (not a flat colour) with a token.
 function UI.tint(tex, token, alpha)
-	table.insert(themed, { region = tex, token = token, alpha = alpha, vertex = true })
+	local entry = { region = tex, token = token, alpha = alpha, vertex = true }
+	table.insert(themed, entry)
+	-- At once as well: a part built late (a list row on first open) would
+	-- otherwise stay white until the next theme pass.
+	if Stoa.db then paintOne(entry) end
 	return tex
 end
 
