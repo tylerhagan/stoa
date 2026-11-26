@@ -33,12 +33,15 @@ local function artOn()
 	return Console:Art() or (Console:Matte() and not Console.db.slim)
 end
 
--- Slate: the tabs are small pills inside the chat card, the picked one
--- in the accent (Blizzard's own row stays, working, unseen).
+-- Slate: the tabs are small chips standing just over the chat card, as
+-- Leather's stand on its rim, so the card is all messages. The picked one
+-- is in the accent (Blizzard's own row stays, working, unseen).
 local function pillsOn()
 	return Console:Slate() and not Console.db.slim
 end
-local PILL_H, PILL_PAD, PILL_GAP, PILL_DROP = 20, 10, 6, 14
+local PILL_H, PILL_PAD, PILL_GAP, PILL_LIFT = 22, 11, 4, 4
+-- With the chips out of the card, the messages start just under its top.
+local SLATE_CHAT_TOP = 18
 
 local function tabFile(kind)
 	return UI.MEDIA .. "Textures\\ChatTab" .. (Console:Matte() and "Matte" or "") .. kind
@@ -89,7 +92,7 @@ local function placeChat()
 	-- On a ride the console is the travel line: the chat's foot stands
 	-- clear of it, and its top stays where it was.
 	if Console.riding and Console.RIDE_HEIGHT then bottom = math.max(bottom, Console.RIDE_HEIGHT + RIDE_CHAT_GAP) end
-	local top = artOn() and ART_CHAT_GAP or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
+	local top = (pillsOn() and SLATE_CHAT_TOP) or (artOn() and ART_CHAT_GAP) or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
 	chat:ClearAllPoints()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), bottom)
 	chat:SetSize(Console:ChatWidth(), Console:OpenHeight() - bottom - top)
@@ -238,8 +241,12 @@ local function paintPill(tab)
 	local hover = tab:IsMouseOver()
 	if tab.selected and tab.chatFrame then unread[tab.chatFrame] = nil end
 	local waiting = not tab.selected and tab.chatFrame and unread[tab.chatFrame]
+	-- Each chip is the panel's own dark, so its word reads over the world;
+	-- the picked one takes a breath of the accent and an accent line.
 	local r, g, b = Stoa:Color(tab.selected and "accent" or "text")
-	tab.fill:SetVertexColor(r, g, b, tab.selected and 0.14 or (hover and 0.06 or 0))
+	local pr, pg, pb = Stoa:Color("panel")
+	local mix = tab.selected and 0.16 or (hover and 0.07 or 0)
+	tab.fill:SetVertexColor(pr + (r - pr) * mix, pg + (g - pg) * mix, pb + (b - pb) * mix, 0.94)
 	tab.edge:Set(r, g, b, tab.selected and 0.45 or (hover and 0.14 or 0))
 	tab.label:SetTextColor(Stoa:Color((tab.selected or hover or waiting) and "text" or "muted"))
 	tab:SetFrameLevel(strip:GetFrameLevel() + 1)
@@ -392,8 +399,8 @@ local function buildTabs()
 	-- Blizzard's invisible tabs underneath.
 	strip:SetFrameStrata("MEDIUM")
 	if pillsOn() then
-		-- Inside the chat card, over the messages.
-		strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight() - PILL_DROP - PILL_H)
+		-- Standing just over the chat card's top edge.
+		strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight() + (Console.SLATE_TOP or 0) + PILL_LIFT)
 		strip:SetSize(CHAT_WIDTH, PILL_H)
 	else
 		strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight())

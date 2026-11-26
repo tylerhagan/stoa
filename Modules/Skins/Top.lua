@@ -371,6 +371,9 @@ function Top:SeatHeader()
 	elseif style and style.housing then
 		-- Matte: the row sits on the housing's top rim and takes its width.
 		width = (Stoa:PlainNumber(map:GetWidth()) or 0) + style.housing * 2 - 4
+	elseif style and style.slateCard then
+		-- Slate: the row runs the map's full width inside its card.
+		width = (Stoa:PlainNumber(map:GetWidth()) or 0) - 4
 	end
 	seating = true
 	strip:ClearAllPoints()
@@ -379,7 +382,7 @@ function Top:SeatHeader()
 	-- Where the zone button is its own piece inside the strip, it grows with
 	-- it, keeping its left inset on both sides.
 	local zone = cluster.ZoneTextButton
-	if style and style.housing and zone and zone ~= strip and width and width > 0 then
+	if style and (style.housing or style.slateCard) and zone and zone ~= strip and width and width > 0 then
 		local stripLeft, zoneLeft = Stoa:PlainNumber(strip:GetLeft()), Stoa:PlainNumber(zone:GetLeft())
 		local inset = stripLeft and zoneLeft and math.max(zoneLeft - stripLeft, 0) or 0
 		zone:SetWidth(width - inset * 2)

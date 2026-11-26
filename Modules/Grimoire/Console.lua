@@ -481,9 +481,10 @@ end
 local WELL_PAD, WELL_BOTTOM = 12, 8
 -- The bars' well starts lower, under the bezel's foot.
 local WELL_BARS, WELL_BARS_TOP = 3, -48
--- The cards stand from a little under the console's top (room for the
--- chat's tabs inside the chat card) to SLATE_BOTTOM over the screen's foot.
+-- The cards stand from a little under the console's top to SLATE_BOTTOM
+-- over the screen's foot. The chat's tabs stand on the chat card's top.
 local SLATE_PAD, SLATE_TOP, SLATE_BOTTOM = 10, -8, 8
+Console.SLATE_TOP = SLATE_TOP
 -- The bars' card hugs the bars, so the portrait, health and mana stand
 -- over the world above it rather than in an empty band of card.
 local SLATE_BARS_TOP = -40

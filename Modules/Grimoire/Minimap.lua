@@ -136,6 +136,8 @@ function MinimapStyle:Square(map, frame, painted)
 		-- and below for where you stand, and one fine edge; no accent.
 		local card = CreateFrame("Frame", nil, frame)
 		card:SetFrameLevel(math.max(frame:GetFrameLevel() - 1, 0))
+		-- The zone row above the map runs the map's full width (Top.lua).
+		self.slateCard = true
 		card:SetPoint("TOPLEFT", frame, "TOPLEFT", -SLATE_SIDE, SLATE_ABOVE)
 		card:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", SLATE_SIDE, -SLATE_BELOW)
 		local fill = UI.sliced(card, "BACKGROUND", "CardFill.tga")
