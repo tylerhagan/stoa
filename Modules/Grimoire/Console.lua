@@ -229,6 +229,14 @@ local SLATE_INSET, SLATE_LIFT = 10, 6
 
 -- The portrait stands a little higher, clear of the bars' card.
 local SLATE_SEAL_Y = 14
+-- Slate, full: the medallion is a card of your own over the bars' card,
+-- like the others: your portrait flat at its left with your level, your
+-- name and class, then health and mana as thin bars with their numbers,
+-- and your shield and class mark at its right end while they show.
+local YOU_W, YOU_H, YOU_Y = 360, 50, -9
+local YOU_SEAL, YOU_PAD, YOU_GAP = 36, 10, 14
+local YOU_NAME_W, YOU_VALUE_W, YOU_CREST = 104, 34, 18
+local YOU_BAR_H, YOU_BAR_APART = 4, 8
 
 local function slatePlate(owner, layer)
 	local fill = UI.sliced(owner, layer or "BACKGROUND", "CardFill.tga")
@@ -600,7 +608,8 @@ end
 function Console:PaintGlass()
 	local glass = self.glass
 	if not glass then return end
-	glass:SetShown(self.db.daylight ~= false)
+	-- Slate's card keeps the portrait flat.
+	glass:SetShown(self.db.daylight ~= false and not self.youCard)
 	local light = Stoa.daylight
 	local m = light and light.mix or 0
 	local r, g, b = 1, 0.98, 0.94
@@ -621,12 +630,25 @@ function Console:BuildSeal(frame)
 	-- and the arch's own gold ring stands in for the seal's outer rings.
 	local art, slim = self:Art(), self.db.slim
 	local matteSeal = self:Matte() and not slim
-	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or matteSeal and MATTE_SEAL or SEAL_SIZE
+	local you = self:Slate() and not slim
+	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or matteSeal and MATTE_SEAL or you and YOU_SEAL or SEAL_SIZE
+	local card
+	if you then
+		card = CreateFrame("Frame", nil, frame)
+		card:SetSize(YOU_W, YOU_H)
+		card:SetPoint("CENTER", frame, "TOP", 0, YOU_Y)
+		card:SetFrameLevel(frame:GetFrameLevel() + 1)
+		slatePlate(card)
+		self:AddPage(card)
+		self.youCard = card
+	end
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
 	-- Slim: the seal sits in the line, its head just over the top edge.
-	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or self:Slate() and SLATE_SEAL_Y or 6
-	seal:SetPoint("CENTER", frame, "TOP", 0, sealY)
+	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or you and YOU_Y or self:Slate() and SLATE_SEAL_Y or 6
+	local sealX = you and -(YOU_W / 2 - YOU_PAD - YOU_SEAL / 2 - 2) or 0
+	seal:SetPoint("CENTER", frame, "TOP", sealX, sealY)
+	if card then seal:SetFrameLevel(card:GetFrameLevel() + 1) end
 	self.seal = seal
 
 	-- Click the seal to target yourself; right click for your unit menu.
@@ -635,7 +657,7 @@ function Console:BuildSeal(frame)
 	-- away in combat when the console folds.
 	local button = CreateFrame("Button", "StoaSealButton", UIParent, "SecureUnitButtonTemplate")
 	button:SetSize(size, size)
-	button:SetPoint("CENTER", UIParent, "BOTTOM", 0, self:OpenHeight() + sealY)
+	button:SetPoint("CENTER", UIParent, "BOTTOM", sealX, self:OpenHeight() + sealY)
 	button:SetFrameStrata("LOW")
 	button:SetAttribute("unit", "player")
 	button:SetAttribute("type1", "target")
@@ -676,7 +698,7 @@ function Console:BuildSeal(frame)
 			bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
 			bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
 			bezel:SetPoint("CENTER")
-		else
+		elseif not you then
 			local outer = circle(seal, "BORDER", 0, size + (matte and 14 or 12), not matte and "hairline" or nil)
 			if matte then outer:SetColorTexture(0, 0, 0, 0.85) end
 			outer:SetPoint("CENTER")
@@ -703,7 +725,7 @@ function Console:BuildSeal(frame)
 	-- Halo's settings; slim leaves them to the Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db then
-		local crest = art and 29 or matteSeal and CREST_SOCKET_MARK or 22
+		local crest = art and 29 or matteSeal and CREST_SOCKET_MARK or you and YOU_CREST or 22
 		self.crestSize, self.crestPortrait = crest, portrait
 		if matteSeal then
 			-- A small round socket for each, set in the shell between the
@@ -732,7 +754,12 @@ function Console:BuildSeal(frame)
 	-- the rested blue the experience bar uses.
 	local rest = UI.badge(seal, "RESTING")
 	rest:SetFrameLevel(seal:GetFrameLevel() + 4)
-	rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1) + 4)
+	if card then
+		-- On the card's top edge: the portrait is too small to carry it.
+		rest:SetPoint("CENTER", card, "TOP", 0, 0)
+	else
+		rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1) + 4)
+	end
 	rest:Hide()
 	self.restMark = rest
 
@@ -756,6 +783,11 @@ function Console:BuildSeal(frame)
 
 	if art then
 		self:BuildResources(frame)
+		return
+	end
+
+	if card then
+		self:BuildYou(card)
 		return
 	end
 
@@ -802,6 +834,60 @@ function Console:BuildSeal(frame)
 		manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
 	end
 	self:BuildManaPlay(mana, manaCap)
+end
+
+-- Slate's card for you: name and class beside the portrait, then health
+-- over mana, each a thin bar with its number at the right.
+function Console:BuildYou(card)
+	local left = YOU_PAD + YOU_SEAL + YOU_GAP
+	local name = text(card, "sans", Stoa.typeSize.body, "text", "LEFT")
+	name:SetPoint("BOTTOMLEFT", card, "LEFT", left, 1)
+	name:SetWidth(YOU_NAME_W)
+	name:SetWordWrap(false)
+	local sub = text(card, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	sub:SetPoint("TOPLEFT", card, "LEFT", left, -3)
+	sub:SetWidth(YOU_NAME_W)
+	sub:SetWordWrap(false)
+	self.youName, self.youSub = name, sub
+
+	local function meter(token, colour)
+		local value = text(card, "sans", Stoa.typeSize.caption, colour, "RIGHT")
+		value:SetWidth(YOU_VALUE_W)
+		value:SetWordWrap(false)
+		return bar(card, 60, YOU_BAR_H, token), value
+	end
+	local health, healthText = meter("health", "text")
+	local mana, manaText = meter("mana", "mana")
+	self.health, self.healthText = health, healthText
+	self.mana, self.manaText = mana, manaText
+	-- The card fades as one, so its parts need no fade of their own.
+	self.resourceParts = {}
+	self:PlaceYouBars(0)
+	-- The mana bar's five second rule and spirit ticks; their caption
+	-- has no place on the card.
+	local manaCap = caption(card, "Mana")
+	manaCap:Hide()
+	self:BuildManaPlay(mana, manaCap)
+	-- The shield and class mark were placed before the bars were made.
+	self:PlaceCrest()
+end
+
+-- The bars run from the name to the card's right end, short of your
+-- shield and class mark while they show there.
+function Console:PlaceYouBars(crests)
+	local card = self.youCard
+	if not (card and self.health) then return end
+	local left = YOU_PAD + YOU_SEAL + YOU_GAP + YOU_NAME_W + 8
+	local right = YOU_PAD + (crests > 0 and crests * (YOU_CREST + 4) + 4 or 0)
+	local rows = { { self.health, self.healthText, YOU_BAR_APART }, { self.mana, self.manaText, -YOU_BAR_APART } }
+	for _, row in ipairs(rows) do
+		local meter, value, y = row[1], row[2], row[3]
+		value:ClearAllPoints()
+		value:SetPoint("RIGHT", card, "RIGHT", -right, y)
+		meter:ClearAllPoints()
+		meter:SetPoint("LEFT", card, "LEFT", left, y)
+		meter:SetPoint("RIGHT", card, "RIGHT", -(right + YOU_VALUE_W + 6), y)
+	end
 end
 
 -- With the art: health and mana sit down in the leather either side of
@@ -1486,6 +1572,16 @@ function Console:PlaceCrest()
 	for _, gauge in ipairs(order) do
 		if gauge and not gauge:IsShown() then shown[#shown + 1] = gauge end
 	end
+	if self.youCard then
+		-- At the card's right end, the bars drawn in to make room.
+		local n = 0
+		for _, gauge in ipairs(shown) do
+			gauge:SetPoint("RIGHT", self.youCard, "RIGHT", -YOU_PAD - n * (size + 4) + nudge, nudge)
+			if gauge:IsShown() then n = n + 1 end
+		end
+		self:PlaceYouBars(n)
+		return
+	end
 	if self:Art() then
 		local step = size + 4
 		for i, gauge in ipairs(shown) do
@@ -1544,7 +1640,14 @@ function Console:BuildRing(seal, portrait, size)
 	plate.fill:SetVertexColor(0, 0, 0, 0.95)
 	plate:Set("1", "accent")
 	plate:SetFrameLevel(seal:GetFrameLevel() + 5)
-	plate:SetPoint("CENTER", portrait, "BOTTOM", 0, -TICK_GAP + 1)
+	if self.youCard then
+		-- A small chip at the portrait's lower left.
+		Stoa:SetFont(plate.text, "sans", Stoa.typeSize.caption)
+		plate:SetHeight(14)
+		plate:SetPoint("CENTER", portrait, "BOTTOMLEFT", 3, 4)
+	else
+		plate:SetPoint("CENTER", portrait, "BOTTOM", 0, -TICK_GAP + 1)
+	end
 	self.levelPlate = plate
 
 	-- A soft halo (Tools/art/ring_glow.py), empty over the face.
@@ -1666,6 +1769,10 @@ function Console:UpdateSeal()
 		label = ("%s  %s%s|r"):format(label, Stoa:Hex("danger"), words)
 	end
 	self.roleText:SetText(label)
+	if self.youName then
+		self.youName:SetText(UnitName("player") or "")
+		self.youSub:SetText(UnitClass("player") or "")
+	end
 	if self.roleWord then
 		self.roleWord:SetText(role and Stoa.ROLE_LABELS[role] or "")
 		self:UpdateJobs()
@@ -2161,7 +2268,8 @@ function Console:SetOpen(open, instant)
 
 	local pagesAlpha = open and 1 or 0
 	-- The slim seal is small already, so it shrinks less into the spine.
-	local sealScale = open and 1 or ((self.db.slim or riding) and 0.6 or 0.4)
+	-- Slate's card for you fades whole, its portrait with it.
+	local sealScale = (open or self.youCard) and 1 or ((self.db.slim or riding) and 0.6 or 0.4)
 	if self.slimCard and not open then self.slimCard:Hide() end
 	-- Combat rows that reach down to the folded seal (a raid grid over
 	-- three rows) take its place: it fades out for the fight.
@@ -2213,7 +2321,7 @@ function Console:SetOpen(open, instant)
 		self.seal:SetScale(scale + (sealScale - scale) * progress)
 		-- On the slim line the seal goes altogether in a fight; shrunk, it
 		-- only peeked over the folded line.
-		if self.db.slim or crowded then self.seal:SetAlpha(open and progress or 1 - progress) end
+		if self.db.slim or crowded or self.youCard then self.seal:SetAlpha(open and progress or 1 - progress) end
 		-- The shrunk seal is too small to read a shield on; the Halo has it.
 		if self.sealShield then self.sealShield:SetAlpha(open and progress or 1 - progress) end
 		if self.sealMark then self.sealMark:SetAlpha(open and progress or 1 - progress) end
@@ -2297,8 +2405,12 @@ function Console:CentreClear()
 		left = math.max(left, centre - l)
 		right = math.max(right, r - centre)
 	end
-	take(self.health)
-	take(self.mana)
+	if self.youCard then
+		take(self.youCard)
+	else
+		take(self.health)
+		take(self.mana)
+	end
 	for _, name in ipairs(CENTRE_BARS) do
 		local bar = _G[name]
 		if bar and bar.IsShown and bar:IsShown() then take(bar, true) end
