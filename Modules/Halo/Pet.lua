@@ -31,6 +31,9 @@ local COIN_SPACE = UI.PLAQUE_COIN_SPACE
 local ROW_SIZE, ROW_GAP, ROW_BREAK = 26, 5, 8
 local COIN = 46
 local LOW = 0.35
+-- When the game shows the pet row and the pet coin.
+local ROW_RULE = "[combat,@pet,exists,nopossessbar] show; hide"
+local COIN_RULE = "[combat] hide; [@pet,exists] show; hide"
 
 -- Spells that say you play with a pet: Call Pet and Revive Pet, the
 -- Warlock's summons.
@@ -73,7 +76,14 @@ function Pet:Keeper()
 	end
 end
 
+-- The demo (/stoa pet demo) draws every piece with your own character
+-- standing in for a pet, so the look can be judged without one.
+local function unit()
+	return Pet.demo and "player" or "pet"
+end
+
 local function hasPet()
+	if Pet.demo then return true end
 	return plain(UnitExists("pet")) and true or false
 end
 
@@ -85,6 +95,7 @@ local function healthFraction(unit)
 end
 
 function Pet:Mood()
+	if self.demo then return 3 end
 	if not (C_PetInfo and C_PetInfo.GetPetHappiness) or not hasPet() then return nil end
 	local ok, happiness = pcall(C_PetInfo.GetPetHappiness)
 	happiness = ok and plain(happiness)
@@ -93,6 +104,7 @@ end
 
 -- The pet bar's current stance and command, from Blizzard's tokens.
 function Pet:Stance()
+	if self.demo then return "DEFENSIVE", "FOLLOWING" end
 	if not GetPetActionInfo then return nil end
 	local stance, command
 	for i = 1, (NUM_PET_ACTION_SLOTS or 10) do
@@ -270,29 +282,29 @@ end
 function Pet:UpdatePlaque()
 	local frame = self.plaqueFrame
 	if not frame then return end
-	local show = self.db.plaque and hasPet() and (Stoa:GetState() == Stoa.STATE_COMBAT or Stoa.previewing)
+	local show = self.db.plaque and hasPet() and (Stoa:GetState() == Stoa.STATE_COMBAT or Stoa.previewing or self.demo)
 	frame:SetAlpha(show and 1 or 0)
 	if not hasPet() then return end
 
-	local level = plain(UnitLevel("pet"))
-	local family = plain(UnitCreatureFamily and UnitCreatureFamily("pet"))
-	local kind = plain(UnitCreatureType("pet"))
+	local level = plain(UnitLevel(unit()))
+	local family = plain(UnitCreatureFamily and UnitCreatureFamily(unit()))
+	local kind = plain(UnitCreatureType(unit()))
 	local words = { self:Keeper() == "WARLOCK" and "DEMON" or "PET" }
 	if level then words[#words + 1] = "LEVEL " .. level end
 	if family and family ~= "" then words[#words + 1] = family:upper()
 	elseif kind then words[#words + 1] = kind:upper() end
 	frame.caption:SetText(Stoa.UI.join(words))
 
-	frame.name:SetText(UnitName("pet"))
-	UI.setUnitBar(frame.hp, "pet", "health")
-	UI.setHealthPercent(frame.percent, "pet")
-	UI.setUnitBar(frame.power, "pet", "power")
-	local powerType = plain(UnitPowerType("pet"))
+	frame.name:SetText(self.demo and "Ashmane" or UnitName(unit()))
+	UI.setUnitBar(frame.hp, unit(), "health")
+	UI.setHealthPercent(frame.percent, unit())
+	UI.setUnitBar(frame.power, unit(), "power")
+	local powerType = plain(UnitPowerType(unit()))
 	tint(frame.power, powerType == 0 and "mana" or "accent", powerType == 0 and 1 or 0.75)
 
 	-- One word at the top right: dead, low, else the mood.
-	local dead = plain(UnitIsDead("pet"))
-	local fraction = healthFraction("pet")
+	local dead = plain(UnitIsDead(unit()))
+	local fraction = healthFraction(unit())
 	local mood = self:Mood()
 	local word, token = "", "muted"
 	if dead then
@@ -351,10 +363,20 @@ function Pet:UpdateArc()
 	local show = self.db.arc and hasPet()
 	sb:SetShown(show)
 	if not show then return end
-	UI.setUnitBar(sb, "pet", "health")
-	local fraction = healthFraction("pet")
+	UI.setUnitBar(sb, unit(), "health")
+	local fraction = healthFraction(unit())
 	tint(sb, fraction and fraction < LOW and "danger" or "accent", 0.7)
 end
+
+-- What the demo's row holds: attack, follow, stay, four spells, then
+-- aggressive, defensive, passive.
+local ICONS = "Interface\\Icons\\"
+local DEMO_ICONS = {
+	ICONS .. "Ability_GhoulFrenzy", ICONS .. "Ability_Tracking", ICONS .. "Spell_Nature_TimeStop",
+	ICONS .. "Ability_Physical_Taunt", ICONS .. "Ability_Racial_Cannibalize", ICONS .. "Ability_Druid_Dash",
+	ICONS .. "Ability_Druid_Rake",
+	ICONS .. "Ability_Racial_BloodRage", ICONS .. "Ability_Defend", ICONS .. "Ability_Seal",
+}
 
 -- The pet row -----------------------------------------------------------------
 -- Secure buttons that click Blizzard's own pet buttons, so left casts and
@@ -405,7 +427,7 @@ function Pet:BuildRow()
 	local label = UI.caption(row, "Pet")
 	label:SetPoint("RIGHT", row, "LEFT", -8, 0)
 	UI.legible(label)
-	RegisterStateDriver(row, "visibility", "[combat,@pet,exists,nopossessbar] show; hide")
+	RegisterStateDriver(row, "visibility", ROW_RULE)
 	Stoa:RegisterMover("petrow", row, "Pet row", { default = function() self:PlaceRow() end })
 	self:PlaceRow()
 end
@@ -432,6 +454,9 @@ function Pet:UpdateRow()
 	for i, button in ipairs(self.rowButtons) do
 		local _, texture, isToken, isActive, allowed, enabled = GetPetActionInfo(i)
 		if isToken and texture then texture = _G[texture] end
+		if self.demo and not texture then
+			texture, isActive, allowed, enabled = DEMO_ICONS[i], i == 2 or i == 9, i == 4, i == 4
+		end
 		button.icon:SetTexture(texture)
 		button:SetAlpha(texture and 1 or 0.25)
 		local active = plain(isActive)
@@ -526,7 +551,7 @@ function Pet:BuildCoin()
 		GameTooltip:Show()
 	end)
 	coin:SetScript("OnLeave", GameTooltip_Hide)
-	RegisterStateDriver(coin, "visibility", "[combat] hide; [@pet,exists] show; hide")
+	RegisterStateDriver(coin, "visibility", COIN_RULE)
 	coin.portrait, coin.ring, coin.mood, coin.nameText, coin.track = portrait, ring, mood, name, track
 	self.coin = coin
 end
@@ -535,8 +560,8 @@ function Pet:UpdateCoin()
 	local coin = self.coin
 	if not coin then return end
 	if not hasPet() then return end
-	SetPortraitTexture(coin.portrait, "pet")
-	local fraction = healthFraction("pet")
+	SetPortraitTexture(coin.portrait, unit())
+	local fraction = healthFraction(unit())
 	local r, g, b = Stoa:Color(fraction and fraction < LOW and "danger" or "health")
 	if fraction then
 		coin.ring:SetSwipeColor(r, g, b, 1)
@@ -548,7 +573,7 @@ function Pet:UpdateCoin()
 	local mood = self:Mood()
 	coin.mood:SetText(mood and MOODS[mood] or "")
 	coin.mood:SetTextColor(Stoa:Color(mood and MOOD_TOKEN[mood] or "muted"))
-	coin.nameText:SetText((plain(UnitName("pet")) or ""):upper())
+	coin.nameText:SetText(self.demo and "ASHMANE" or (plain(UnitName(unit())) or ""):upper())
 	coin.mood:SetShown(self.db.coin)
 	coin.nameText:SetShown(self.db.coin)
 
@@ -634,6 +659,39 @@ end
 
 function Pet:UpdateCells()
 	for _, cell in ipairs(self.cells or {}) do self:UpdateCell(cell) end
+end
+
+-- The demo ----------------------------------------------------------------------
+-- The row and the coin are shown by the game from whether a pet exists;
+-- the demo takes that rule off them while it runs and puts it back after.
+-- Feeding and pet commands do nothing in it: there is no pet to take them.
+function Pet:SetDemo(on)
+	if InCombatLockdown() then
+		Stoa:Print("The pet demo can be switched once you're out of the fight.")
+		return
+	end
+	self.demo = on and true or nil
+	for frame, rule in pairs({ [self.row or false] = ROW_RULE, [self.coin or false] = COIN_RULE }) do
+		if frame then
+			if on then
+				UnregisterStateDriver(frame, "visibility")
+				frame:Show()
+			else
+				RegisterStateDriver(frame, "visibility", rule)
+			end
+		end
+	end
+	xpcall(self.UpdateAll, Stoa.catch, self)
+	Stoa:Print(on and "Pet demo on: your own character stands in for a pet. /stoa pet demo again to end it."
+		or "Pet demo off.")
+end
+
+Stoa.commands.pet = function(rest)
+	if (rest or ""):lower():match("^%s*demo") then
+		Pet:SetDemo(not Pet.demo)
+	else
+		Stoa:Print("/stoa pet demo shows STOA's pet pieces without a pet.")
+	end
 end
 
 -- Lifecycle -------------------------------------------------------------------
