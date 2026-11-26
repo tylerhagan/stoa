@@ -787,6 +787,20 @@ function Console:BuildSeal(frame)
 	end
 
 	if card then
+		-- A form's look (Forms.lua: Shadowform) tints the card: the
+		-- portrait's ring in the form's bright colour, and its dark one
+		-- washed over the card.
+		local formRing = circle(seal, "BORDER", 3, size + 4)
+		formRing:SetPoint("CENTER")
+		formRing:Hide()
+		local wash = UI.sliced(card, "BACKGROUND", "CardFill.tga")
+		if wash then
+			wash:SetDrawLayer("BACKGROUND", -1)
+			wash:Hide()
+		end
+		self.youForm = { ring = formRing, wash = wash }
+		Stoa:On("STOA_FORM_LOOK", function(look) self:PaintForm(look) end)
+		self:PaintForm(Stoa.Forms and Stoa.Forms.look)
 		self:BuildYou(card)
 		return
 	end
@@ -870,6 +884,20 @@ function Console:BuildYou(card)
 	self:BuildManaPlay(mana, manaCap)
 	-- The shield and class mark were placed before the bars were made.
 	self:PlaceCrest()
+end
+
+local YOU_FORM_WASH = 0.4
+function Console:PaintForm(look)
+	local parts = self.youForm
+	if not parts then return end
+	local ring = type(look) == "table" and look.ring
+	local shade = type(look) == "table" and look.shade
+	parts.ring:SetShown(ring and true or false)
+	if ring then parts.ring:SetVertexColor(ring[1], ring[2], ring[3], 1) end
+	if parts.wash then
+		parts.wash:SetShown(shade and true or false)
+		if shade then parts.wash:SetVertexColor(shade[1], shade[2], shade[3], YOU_FORM_WASH) end
+	end
 end
 
 -- The bars run from the name to the card's right end, short of your
