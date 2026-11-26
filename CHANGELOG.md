@@ -4,6 +4,24 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
 
+## 2.1.1
+
+- **Class colours on names**: a new choice on Settings > Look. As the theme sets (the default) keeps things as they were: Bone and the class themes colour names by class, while Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override the theme, on party and raid cards, the target, nameplates, tooltips, the threat list, meters and the roster.
+
+- **Cooldowns page**: a cooldown with no name no longer takes a row, the hearthstone is no longer listed a second time as ready on your other characters, and the headline keeps its full strength. The page also stops adding to STOA's list of themed parts every few seconds.
+
+- **Unit tooltips in a dungeon fight**: when the game hides which unit a tooltip is for, STOA now reads what the mouse is over instead of leaving the game's lines undressed.
+
+- **`/stoa report` remembers blocked actions**: the last few times the game said an interface action failed because of an addon are kept past a reload, with the addon and the function it named, so the report still shows them afterwards.
+
+- **Dungeon companion**: a boss the game names a little differently from the list (Handler Ashka for War Handler Ashka) is now ticked on its own row, not added as a second one. Bosses that end no encounter (Bossman Toof) are now also found dead as the fight ends from your party's targets and the nameplates in view, from the game's own boss-kill signal, and from the dungeon's lock where the game keeps one.
+
+- **Chat while riding**: the chat no longer goes clear and turns into a short fading feed on the travel line. It stays your normal chat, standing above the line.
+
+- **Two cast bars**: the game's own cast bar could come back beside STOA's after a fresh profile or an Edit Mode layout change. STOA now puts it away again whenever the game brings it back.
+
+- **Halo sits higher**: the ring's default spot is 20 units higher, so your character stands in the middle of it instead of riding high. A Halo you have moved yourself stays where you put it.
+
 ## 2.1.0
 
 - **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.

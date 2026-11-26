@@ -103,6 +103,38 @@ function Companion:CheckCorpse(unit)
 	end
 end
 
+-- As a fight ends the dead boss is rarely your own target when you heal:
+-- it is the tank's, or still stands as a nameplate. Every unit that may be
+-- it is looked at, then and a moment later (the death can land after the
+-- fight's end does).
+function Companion:CheckCorpses()
+	if not self.data then return end
+	local units = { "target", "focus", "mouseover" }
+	for i = 1, 4 do units[#units + 1] = "party" .. i .. "target" end
+	for i = 1, 5 do units[#units + 1] = "boss" .. i end
+	local plates = C_NamePlate and C_NamePlate.GetNamePlates and call(C_NamePlate.GetNamePlates)
+	for _, plate in ipairs(type(plates) == "table" and plates or {}) do
+		local unit = plate.namePlateUnitToken or (plate.UnitFrame and plate.UnitFrame.unit)
+		if type(unit) == "string" then units[#units + 1] = unit end
+	end
+	for _, unit in ipairs(units) do pcall(self.CheckCorpse, self, unit) end
+end
+
+-- What the game itself has down for this run, where it keeps a lock for
+-- the dungeon: each boss it marks killed is ticked.
+function Companion:CheckLock()
+	if not (GetInstanceLockTimeRemaining and GetInstanceLockTimeRemainingEncounter) then return end
+	local _, _, total = call(GetInstanceLockTimeRemaining)
+	for i = 1, plain(total) or 0 do
+		local name, _, dead = call(GetInstanceLockTimeRemainingEncounter, i)
+		if dead and type(name) == "string" and not Stoa:IsSecret(name) and name ~= "" then
+			local where = self:Where()
+			local run = where and self:Run(where)
+			if run and not run.killed[name:lower()] then self:Killed(name) end
+		end
+	end
+end
+
 function Companion:Quests(where)
 	local list = {}
 	local log = C_QuestLog
@@ -145,15 +177,38 @@ function Companion:Gather()
 	local down = 0
 	local nextBoss
 	local listed = {}
+	for _, boss in ipairs(bosses) do listed[boss.name:lower()] = true end
+	-- The game doesn't always name a fight as the list names its boss
+	-- ("Handler Ashka" for War Handler Ashka). A kill that isn't on the
+	-- list ticks the one listed boss whose name holds it, or is held by it,
+	-- as whole words; with none or several it stays a row of its own.
+	local alias, claimed = {}, {}
+	for _, name in ipairs(run.fell or {}) do
+		local want = name:lower()
+		if not listed[want] then
+			local found, several
+			for _, boss in ipairs(bosses) do
+				local have = boss.name:lower()
+				local held = (" " .. have .. " "):find(" " .. want .. " ", 1, true) or (" " .. want .. " "):find(" " .. have .. " ", 1, true)
+				if held and not claimed[have] then
+					if found then several = true else found = have end
+				end
+			end
+			if found and not several then
+				alias[want] = true
+				claimed[found] = true
+			end
+		end
+	end
 	for _, boss in ipairs(bosses) do
-		listed[boss.name:lower()] = true
-		boss.dead = run.killed[boss.name:lower()] or false
+		local have = boss.name:lower()
+		boss.dead = (run.killed[have] or claimed[have]) and true or false
 		if boss.dead then down = down + 1 elseif not nextBoss then nextBoss = boss end
 	end
 	-- A kill STOA's list doesn't have (a new dungeon, or the game names the
 	-- boss differently) still shows, ticked off, after the listed ones.
 	for _, name in ipairs(run.fell or {}) do
-		if not listed[name:lower()] then
+		if not listed[name:lower()] and not alias[name:lower()] then
 			bosses[#bosses + 1] = { name = name, dead = true }
 			down = down + 1
 		end
@@ -586,7 +641,18 @@ function Companion:OnEnable()
 	Stoa:On("QUEST_LOG_UPDATE", function() if self.data then soon() end end)
 	Stoa:On("PLAYER_REGEN_DISABLED", soon)
 	Stoa:On("PLAYER_REGEN_ENABLED", function()
-		pcall(self.CheckCorpse, self, "target")
+		local function look()
+			pcall(self.CheckCorpses, self)
+			pcall(self.CheckLock, self)
+			soon()
+		end
+		look()
+		C_Timer.After(2, look)
+	end)
+	-- Some bosses send this and no end of an encounter.
+	Stoa:On("BOSS_KILL", function(_, name)
+		if type(name) ~= "string" or Stoa:IsSecret(name) or name == "" then return end
+		self:Killed(name)
 		soon()
 	end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() pcall(self.CheckCorpse, self, "target") end)

@@ -29,6 +29,7 @@ Report.errors = kept
 local blocked, blockedByKey = {}, {}
 Report.blocked = blocked
 local MAX_BLOCKED = 20
+local MAX_KEPT_BLOCKED = 8
 
 local function noteBlocked(event, addon, func)
 	local key = tostring(addon) .. ":" .. tostring(func)
@@ -47,6 +48,14 @@ local function noteBlocked(event, addon, func)
 		entry.where = ("%s, %s, mouse over %s"):format(date and date("%H:%M:%S") or "?", InCombatLockdown() and "in combat" or "out of combat", over)
 		blockedByKey[key] = entry
 		if #blocked < MAX_BLOCKED then blocked[#blocked + 1] = entry end
+		-- Kept past a reload too: the reload that follows one of these used
+		-- to wipe the only record of it. The last few, newest last.
+		if Stoa.db then
+			local log = Stoa.db.blockedLog
+			if type(log) ~= "table" then log = {} Stoa.db.blockedLog = log end
+			log[#log + 1] = ("%s  %s calling %s%s, %s"):format(date and date("%d %b") or "?", entry.addon, entry.func, entry.forbidden and " (forbidden)" or "", entry.where)
+			while #log > MAX_KEPT_BLOCKED do table.remove(log, 1) end
+		end
 	end
 	entry.count = entry.count + 1
 end
@@ -244,6 +253,12 @@ function Report:Text()
 			add("  x", entry.count, " ", entry.addon, " calling ", entry.func, entry.forbidden and " (forbidden)" or "")
 			if entry.where then add("     first at ", entry.where) end
 		end
+		add("")
+	end
+	local earlier = Stoa.db and Stoa.db.blockedLog
+	if type(earlier) == "table" and #earlier > 0 then
+		add("Blocked actions kept from this and earlier sessions (newest last):")
+		for _, text in ipairs(earlier) do add("  ", tostring(text)) end
 		add("")
 	end
 	if #kept == 0 then

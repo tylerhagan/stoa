@@ -23,9 +23,12 @@ Stoa.WhatsNew = WhatsNew
 local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
-		edition = "2.1.0",
+		edition = "2.1.1",
 		title = "New in STOA 2.1",
 		lines = {
+			{ "Class colours on names", "A new choice under Settings > Look. Always colours names by class on party and raid cards, the target, nameplates and tooltips in any theme; Never keeps them plain. As the theme sets leaves things as they were." },
+			{ "Chat stays put on a ride", "On a mount or a flight the chat is now your normal chat, standing above the travel line. It no longer goes clear or turns into a short fading feed." },
+			{ "The Halo sits higher", "The ring's default spot is a little higher, so your character stands in the middle of it. A Halo you moved yourself stays where you put it." },
 			{ "Pages for level 60", "Three new pages for the console's right side. Click a page's caption on the console to change it, or pick from the tiles under Settings > Console. Reputation leads with the standing that moved last. Cooldowns lists profession and item cooldowns of an hour or more across your characters, with your on-use trinkets below. This week shows what you're saved to and when it opens." },
 			{ "When your bags are full", "If the game says your inventory is full, a small card names your least valuable stacks. Click one to destroy it and make room; anything that isn't grey asks twice. /stoa fullbags previews it." },
 			{ "Windows without the rings", "In Leather, the stone and its rings are gone from behind windows. The body now sits a step below the header, like the console's wells. Settings > Look > Depth in windows." },
@@ -54,7 +57,6 @@ local NOTES = {
 			{ "Halo arc styles", "Tube is the new look of the two arcs, with Gauge, Line, Blade or Visor under Settings > Halo." },
 			{ "A shorter setup", "The welcome page asks two things about how much STOA you want: the console (Full, Slim or None) and everything around it (Standard or Quiet). A new Target and frames step sets the target, party, nameplates and text size. /stoa welcome opens it." },
 			{ "Quiet does more", "Quiet now makes the target and party thin strips that fade out of combat, as well as putting away tooltip details, the quest line and At a glance." },
-			{ "Chat on a ride", "On a mount or a flight the chat comes back while you type and for a few seconds after, and whispers from any chat window show in the feed." },
 		},
 	},
 	{

@@ -409,6 +409,16 @@ function Stoa:Theme()
 	return blended[key]
 end
 
+-- Whether names wear class colours. Each theme has its own answer (the
+-- plain ones and the colour vision modes say no); the player's choice on
+-- the Look page overrides it either way.
+function Stoa:ClassTint()
+	local pick = self.db and self.db.classNames
+	if pick == "on" then return true end
+	if pick == "off" then return false end
+	return self:Theme().classTint and true or false
+end
+
 function Stoa:SetVision(name)
 	if name ~= "Standard" and not self.visions[name] then return end
 	self.db.vision = name

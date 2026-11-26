@@ -1,19 +1,16 @@
 -- Stoa Grimoire: riding. On a mount or a flight out of a fight, the console
 -- folds to a slim travel line: your speed on the left with the zone beside
 -- it, and the next stop of the quest you follow on the right, with how far
--- it is and a bar filling as you close in. Chat steps back to a feed like
--- the loot feed: the newest few lines over the line, each fading after a
--- few seconds. The action bars and pages fade back. A fight, getting off or
--- landing brings the full console back; pressing Enter to type brings the
--- chat back while you write.
+-- it is and a bar filling as you close in. Chat stays as it is, standing
+-- above the line as it does over the folded console. The action bars and
+-- pages fade back. A fight, getting off or landing brings the full console
+-- back.
 --
 -- Lean: one check on the mount and taxi events, and a speed and distance
 -- read twice a second only while riding. The full console only; Slim is a
 -- line already.
 local _, ns = ...
 local Stoa = ns.Stoa
--- Hooks on the game's code are guarded (Core/Report.lua).
-local hooksecurefunc = Stoa.SafeHook
 local UI = Stoa.UI
 local Console = Stoa.modules.Grimoire
 
@@ -144,145 +141,6 @@ local function fadeBars(alpha)
 	end
 end
 
--- The chat feed --------------------------------------------------------------
--- The chat windows go clear (and let clicks through to the world), and the
--- newest lines of the main window show above the line instead, fading out.
-
-local FEED_LINES = 4
-local FEED_SECONDS = 10
-local FEED_FADE = 2
-local FEED_WIDTH = 440
-
-local function chatParts()
-	local parts = {}
-	for i = 1, (NUM_CHAT_WINDOWS or 10) do
-		local frame = _G["ChatFrame" .. i]
-		if frame then parts[#parts + 1] = frame end
-	end
-	for i = 1, (NUM_CHAT_WINDOWS or 10) do
-		local box = _G["ChatFrame" .. i .. "EditBox"]
-		if box then parts[#parts + 1] = box end
-	end
-	for _, name in ipairs({ "StoaChatRail", "StoaChatTabs" }) do
-		if _G[name] then parts[#parts + 1] = _G[name] end
-	end
-	return parts
-end
-
-local function typing()
-	if ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow() then return true end
-	local box = ChatFrame1EditBox
-	return box and box.HasFocus and box:HasFocus()
-end
-
--- How long the chat stays after you stop typing, for the answer to come.
-local CHAT_LINGER = 12
-
--- Enter (or anything that opens a chat box) brings the whole chat back with
--- the lines already said: the game had faded those out while it was clear.
-function Console:WakeChat()
-	if not self.riding then return end
-	self.chatWake = (self.chatWake or 0) + 1
-	self:ClearChat(false)
-	for i = 1, (NUM_CHAT_WINDOWS or 10) do
-		local frame = _G["ChatFrame" .. i]
-		if frame and frame.ResetAllFadeTimes and frame.IsShown and frame:IsShown() then frame:ResetAllFadeTimes() end
-	end
-end
-
-function Console:RestChat()
-	if not self.riding then return end
-	self.chatWake = (self.chatWake or 0) + 1
-	local wake = self.chatWake
-	C_Timer.After(CHAT_LINGER, function()
-		if self.riding and self.chatWake == wake and not typing() then self:ClearChat(true) end
-	end)
-end
-
-function Console:ClearChat(clear)
-	if InCombatLockdown() then clear = false end
-	for _, part in ipairs(chatParts()) do
-		if not (part.IsForbidden and part:IsForbidden()) then
-			if clear then
-				if part.stoaRideAlpha == nil then
-					part.stoaRideAlpha = part:GetAlpha()
-					part.stoaRideMouse = part.IsMouseEnabled and part:IsMouseEnabled()
-				end
-				part:SetAlpha(0)
-				if part.stoaRideMouse then part:EnableMouse(false) end
-			elseif part.stoaRideAlpha ~= nil then
-				part:SetAlpha(part.stoaRideAlpha)
-				if part.stoaRideMouse then part:EnableMouse(true) end
-				part.stoaRideAlpha, part.stoaRideMouse = nil, nil
-			end
-		end
-	end
-	-- The dark plate behind the folded chat goes with the words, so an empty
-	-- box doesn't hang over the view; typing brings both back.
-	if self.chatShade then self.chatShade:GetParent():SetShown(not clear) end
-	if self.feed then self.feed:SetShown(clear) end
-end
-
-function Console:BuildFeed()
-	local feed = CreateFrame("Frame", "StoaRideFeed", UIParent)
-	feed:SetSize(FEED_WIDTH, 120)
-	feed:SetFrameStrata("LOW")
-	feed:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (self:PageInset()), RIDE_HEIGHT + 12)
-	feed.rows, feed.entries = {}, {}
-	for i = 1, FEED_LINES do
-		local fs = UI.text(feed, "sans", Stoa.typeSize.body, "text", "LEFT")
-		UI.legible(fs)
-		fs:SetWidth(FEED_WIDTH)
-		fs:SetWordWrap(true)
-		fs:SetMaxLines(2)
-		if i == 1 then
-			fs:SetPoint("BOTTOMLEFT", feed, "BOTTOMLEFT", 0, 0)
-		else
-			fs:SetPoint("BOTTOMLEFT", feed.rows[i - 1], "TOPLEFT", 0, 4)
-		end
-		fs:Hide()
-		feed.rows[i] = fs
-	end
-	feed:Hide()
-	self.feed = feed
-end
-
--- Newest at the bottom, nearest the line; each fades out at the end.
-function Console:RenderFeed()
-	local feed = self.feed
-	if not feed then return end
-	local now = GetTime()
-	local live = {}
-	for _, entry in ipairs(feed.entries) do
-		if now - entry.at < FEED_SECONDS then live[#live + 1] = entry end
-	end
-	feed.entries = live
-	for i, fs in ipairs(feed.rows) do
-		local entry = live[#live - (i - 1)]
-		if entry then
-			fs:SetText(entry.text)
-			fs:SetTextColor(entry.r, entry.g, entry.b)
-			local left = FEED_SECONDS - (now - entry.at)
-			fs:SetAlpha(left < FEED_FADE and math.max(left / FEED_FADE, 0) or 1)
-			fs:Show()
-		else
-			fs:SetText("")
-			fs:Hide()
-		end
-	end
-end
-
-function Console:FeedLine(text, r, g, b)
-	local feed = self.feed
-	if not (self.riding and feed) or type(text) ~= "string" or Stoa:IsSecret(text) then return end
-	-- A line two windows both show is listed once.
-	local last = feed.entries[#feed.entries]
-	if last and last.text == text and GetTime() - last.at < 0.5 then return end
-	table.insert(feed.entries, { text = text, r = tonumber(r) or 1, g = tonumber(g) or 1, b = tonumber(b) or 1, at = GetTime() })
-	while #feed.entries > FEED_LINES do table.remove(feed.entries, 1) end
-	self:RenderFeed()
-end
-
 -- Into or out of the travel line. The console's own fold does the motion;
 -- this decides its height and what rides on it.
 function Console:SetRiding(on)
@@ -293,21 +151,19 @@ function Console:SetRiding(on)
 	fadeBars(on and 0 or 1)
 	local bars = Stoa.modules.ActionBars
 	if bars and bars.enabled and bars.UpdateTray then xpcall(bars.UpdateTray, Stoa.catch, bars) end
-	if on and not self.feed then self:BuildFeed() end
-	if self.feed then self.feed.entries = {} self:RenderFeed() end
-	self:ClearChat(on and not typing())
 	if on then
 		self:FillRide()
 		UI.softShow(self.ride, true)
 		self.rideTicker = self.rideTicker or C_Timer.NewTicker(TICK, function()
 			xpcall(self.FillRide, Stoa.catch, self)
-			xpcall(self.RenderFeed, Stoa.catch, self)
 		end)
 	else
 		if self.ride then self.ride:Hide() end
 		if self.rideTicker then self.rideTicker:Cancel() self.rideTicker = nil end
 	end
 	self:Refold()
+	-- The chat's foot steps up over the travel line, and back down after.
+	if self.ReplaceChat then self:ReplaceChat() end
 	-- The target leaves its seat on the open console's rim for its Halo spot.
 	local halo = Stoa.modules.Halo
 	if halo and halo.enabled and halo.PlaceTarget then halo:PlaceTarget() end
@@ -324,31 +180,6 @@ Stoa:On("STOA_READY", function()
 	end
 	-- A fight takes the travel line away before anything else.
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Console:SetRiding(false) end)
-	-- The newest lines of every chat window feed the travel line's list
-	-- (whispers often live in a window of their own). The combat log's
-	-- window is left out.
-	for i = 1, (NUM_CHAT_WINDOWS or 10) do
-		local frame = _G["ChatFrame" .. i]
-		if frame and frame.AddMessage and i ~= 2 then
-			hooksecurefunc(frame, "AddMessage", function(_, text, r, g, b)
-				if Console.riding then xpcall(Console.FeedLine, Stoa.catch, Console, text, r, g, b) end
-			end)
-		end
-	end
-	-- Typing brings the chat back until you're done.
-	-- It stays a while after, so a conversation reads as one.
-	local function wake() xpcall(Console.WakeChat, Stoa.catch, Console) end
-	local function rest() xpcall(Console.RestChat, Stoa.catch, Console) end
-	if ChatEdit_ActivateChat and ChatEdit_DeactivateChat then
-		hooksecurefunc("ChatEdit_ActivateChat", wake)
-		hooksecurefunc("ChatEdit_DeactivateChat", rest)
-	else
-		local box = ChatFrame1EditBox
-		if box and box.HookScript then
-			box:HookScript("OnEditFocusGained", wake)
-			box:HookScript("OnEditFocusLost", rest)
-		end
-	end
 	Console:CheckRiding()
 end)
 

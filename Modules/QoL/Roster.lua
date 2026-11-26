@@ -29,7 +29,7 @@ local function classFileOf(className)
 end
 
 local function classColour(file)
-	local color = file and Stoa:Theme().classTint and RAID_CLASS_COLORS and RAID_CLASS_COLORS[file]
+	local color = file and Stoa:ClassTint() and RAID_CLASS_COLORS and RAID_CLASS_COLORS[file]
 	if color then return color.r, color.g, color.b end
 	return Stoa:Color("text")
 end

@@ -70,7 +70,7 @@ local PARTS = {
 }
 
 local EVERYDAY = setOf(
-	"Style", "Matte grain", "Theme", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
+	"Style", "Matte grain", "Theme", "Class colours on names", "Colour vision", "Text size", "Ornament", "Rounded action buttons",
 	"Console size", "Leather console", "Hold chat in the console", "Travel line while riding", "At a glance, beside the chat", "Lines at a glance",
 	"In combat", "Target of target", "Focus", "Combat bar under the Halo", "Combat rows", "Proc art beside the Halo",
 	"Show STOA party cards", "Show STOA raid frames", "Show sample frames", "Click-casting", "Click bindings", "Threat meter",
@@ -287,6 +287,9 @@ local function build()
 		list = true, cmd = "/stoa vision", words = "colour blind color blind cvd deuteranopia protanopia tritanopia accessibility",
 		change = function(_, v) Stoa:SetVision(v) end,
 	})
+	choice(db, "classNames", "Class colours on names", "Names on party and raid cards, the target, nameplates, the threat list and meters in their class colour. As the theme sets follows the theme: Bone and the class themes colour names; Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override that.", "theme", {
+		{ "theme", "As the theme sets" }, { "on", "Always" }, { "off", "Never" },
+	}, { words = "class color colour names party raid nameplates", change = function() Stoa:Fire("STOA_THEME_CHANGED", Stoa.db.theme) end })
 	choice(db, "textSize", "Text size", "Every STOA size together: words, numbers, tooltips and pages. Whatever you pick, the smallest text keeps at least 13 pixels on the screen, so a low UI scale never shrinks a caption past reading.", "standard", {
 		{ "standard", "Standard" }, { "larger", "Larger" }, { "largest", "Largest" },
 	}, { reload = true, words = "font size scale readable small big" })
@@ -340,7 +343,7 @@ local function build()
 	})
 	toggle(console, "dividers", "Lines between the console's sections", "A faint line between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	toggle(console, "daylight", "Light from the time of day", "The console's gold catches the sky's colour from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk, moonlit blue at night, with a faint glass reflection on your portrait. Off keeps the gold as it is. /stoa daylight 23 previews an hour.", true, { words = "time of day daylight night dusk dawn", change = function() local c = Stoa.modules.Grimoire; if c and c.UpdateDaylight then c:UpdateDaylight() end end })
-	toggle(console, "riding", "Travel line while riding", "On a mount or a flight, out of a fight, the console folds to a slim line with your speed, the zone, and how far the quest you follow is. Chat lifts above it and the action bars fade. A fight or getting off brings the full console back. Not on the Slim console. /stoa ride previews it.", true, { words = "mount mounted riding travel flight taxi speed", cmd = "/stoa ride", change = function() local c = Stoa.modules.Grimoire; if c and c.CheckRiding then c:CheckRiding() end end })
+	toggle(console, "riding", "Travel line while riding", "On a mount or a flight, out of a fight, the console folds to a slim line with your speed, the zone, and how far the quest you follow is. Chat stays as it is, above the line, and the action bars fade. A fight or getting off brings the full console back. Not on the Slim console. /stoa ride previews it.", true, { words = "mount mounted riding travel flight taxi speed", cmd = "/stoa ride", change = function() local c = Stoa.modules.Grimoire; if c and c.CheckRiding then c:CheckRiding() end end })
 	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner without their stone frames, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
 	group = "At a glance"
 	toggle(of("Tally"), "enabled", "At a glance, beside the chat", "Up to eight numbers you choose (stats, gear, gold, professions, other addons' feeds) to the right of chat on the console.", true, { id = "glanceOn", reload = true, words = "tally numbers data text broker titan" })

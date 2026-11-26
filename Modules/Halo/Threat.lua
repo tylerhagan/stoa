@@ -146,7 +146,7 @@ local function paintRow(row, entry)
 	row.bar:SetVertexColor(r, g, b, mine and 0.55 or 0.3)
 	row.bar:SetWidth(math.max(ROW_HEIGHT, WIDTH * math.min(entry.percent, 100) / 100))
 	row.name:SetText(entry.name)
-	local color = Stoa:Theme().classTint and entry.class and RAID_CLASS_COLORS[entry.class]
+	local color = Stoa:ClassTint() and entry.class and RAID_CLASS_COLORS[entry.class]
 	if color then
 		row.name:SetTextColor(color.r, color.g, color.b)
 	else
