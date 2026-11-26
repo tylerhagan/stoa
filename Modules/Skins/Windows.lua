@@ -763,7 +763,7 @@ local BASE_FONTS = {
 	"SystemFont_Shadow_Small", "SystemFont_Shadow_Small2", "SystemFont_Shadow_Med1", "SystemFont_Shadow_Med2",
 	"SystemFont_Shadow_Med3", "SystemFont_Shadow_Large", "SystemFont_Shadow_Large2", "SystemFont_Shadow_Huge1",
 	"SystemFont_Shadow_Huge2", "SystemFont_Outline_Small", "SystemFont_Outline", "SystemFont_Shadow_Outline_Small",
-	"Game10Font_o1", "Game11Font", "Game12Font", "Game13Font", "Game13FontShadow", "Game15Font", "Game16Font",
+	"Game10Font_o1", "Game11Font", "Game12Font", "Game13Font", "Game13FontShadow", "Game15Font", "Game15Font_Shadow", "Game16Font",
 	"Game18Font", "Game20Font", "Game24Font", "Game27Font", "ObjectiveFont", "ObjectiveTrackerFont12",
 	"ObjectiveTrackerFont13", "ObjectiveTrackerFont14", "ObjectiveTrackerHeaderFont", "ObjectiveTrackerLineFont",
 	"QuestFont_Large", "QuestFont_Shadow_Small", "QuestFont_Huge", "QuestFont_Shadow_Huge", "QuestFont_Super_Huge",

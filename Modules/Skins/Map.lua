@@ -287,7 +287,20 @@ local function dressLogHeader(header)
 		rule:SetPoint("BOTTOMRIGHT", -4, 1)
 		Stoa.UI.tint(rule, "hairline")
 		header.stoaRule = rule
+		-- Its fold button: Blizzard's framed arrow as STOA's quiet plus
+		-- and minus (the heading tells its state when it is filled in).
+		local toggle = header.CollapseButton
+		if type(toggle) == "table" and toggle.CreateTexture and Stoa.UI.foldGlyph and header.UpdateCollapsedState then
+			local set = Stoa.UI.foldGlyph(toggle)
+			local function fold(_, _, info)
+				if toggle.Icon and toggle.Icon.SetAlpha then toggle.Icon:SetAlpha(0) end
+				set(type(info) == "table" and info.isCollapsed and true or false)
+			end
+			hooksecurefunc(header, "UpdateCollapsedState", function(...) xpcall(fold, Stoa.catch, ...) end)
+			header.stoaFold = function() if toggle.Icon and toggle.Icon.SetAlpha then toggle.Icon:SetAlpha(0) end end
+		end
 	end
+	if header.stoaFold then header.stoaFold() end
 	-- Each time: Blizzard sets a heading's art again as it reuses it.
 	logHeaderArt(header)
 end
