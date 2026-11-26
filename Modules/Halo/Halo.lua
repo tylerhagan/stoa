@@ -375,6 +375,11 @@ local TARGET_DOCK_TEXT = 60
 -- Without the console's art there's no medallion to fit round: the plaque
 -- rests a little above the console instead.
 local TARGET_REST_Y = 14
+-- Slate, resting: a twin of your card. The name over the race and class
+-- on the left, the health bar (its power line under it) on the right with
+-- the numbers below.
+local TWIN_W, TWIN_NAME_W, TWIN_GAP = 300, 124, 12
+local TWIN_BAR_Y, TWIN_NUM_Y = -13, -37
 local SLATE_REST_GAP = 10   -- Slate: from your card (or its last form chip) to the target
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
@@ -425,6 +430,7 @@ function Halo:PlaceTarget()
 	end
 	local console = Stoa.modules.Grimoire
 	local edge = console and console.enabled and console.frame
+	self.targetTwin = false
 	target:ClearAllPoints()
 	-- In a group the cards sit under the Halo, over the resting spot, so
 	-- the plaque keeps its Halo spot there in and out of combat.
@@ -450,6 +456,7 @@ function Halo:PlaceTarget()
 			local step = (forms and forms.CHIP_SIZE or 30) + 6
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", you.width / 2 + SLATE_REST_GAP + chips * step, console:OpenHeight() + you.y - you.height / 2)
 			self.targetTextLeft = nil
+			self.targetTwin = self:SlabWanted()
 		else
 			local gap = 150 * (console.ART_SCALE or 0.556) + 22
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
@@ -492,30 +499,38 @@ function Halo:LayoutTarget(curve)
 	if not (target and target.hp) then return end
 	local docked = curve ~= nil
 	local slab = not docked and self.targetSlab or false
-	if docked == target.laidDocked and slab == target.laidSlab and (not docked or curve == target.laidCurve) then return end
-	target.laidDocked, target.laidCurve, target.laidSlab = docked, curve, slab
+	local twin = slab and self.targetTwin or false
+	if docked == target.laidDocked and slab == target.laidSlab and twin == target.laidTwin and (not docked or curve == target.laidCurve) then return end
+	target.laidDocked, target.laidCurve, target.laidSlab, target.laidTwin = docked, curve, slab, twin
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
+	target.cue:SetJustifyH(twin and "LEFT" or "RIGHT")
+	target.cue:SetWidth(twin and TWIN_NAME_W or 0)
+	target.cue:SetWordWrap(false)
 	-- Slim: the slab's rows, at the Halo or docked in Matte.
 	local slim = slab or docked and self:DockSlim() or false
 	local left = docked and self.targetTextLeft or SLAB_PAD
-	local barW = slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
-	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
+	local twinBar = TWIN_W - SLAB_PAD * 2 - TWIN_NAME_W - TWIN_GAP
+	local barW = twin and TWIN_W - SLAB_PAD * 2 or slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
+	target.nameWidth = twin and TWIN_NAME_W - 22 or slab and SLAB_NAME_W or TARGET_BAR_W
 	-- Matte's full plaque: a slimmer square bar with its numbers beside it.
 	local beside = not slim and target.hp.square or false
 	local short = slim or beside
-	target.hp:SetSize(short and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or beside and FULL_MATTE_BAR_H or TARGET_BAR_H)
+	target.hp:SetSize(twin and twinBar or short and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or beside and FULL_MATTE_BAR_H or TARGET_BAR_H)
 	if target.hp.rim then target.hp.rim:SetShown(not slim) end
 	-- Leather's rounded bar: its ends keep their shape at either size.
 	if target.hp.fitMask then target.hp:fitMask() end
 	-- On the slab the power line runs the health line's full length.
-	target.power:SetWidth(short and barW - SLAB_NUM_W or barW - 16)
+	target.power:SetWidth(twin and twinBar or short and barW - SLAB_NUM_W or barW - 16)
 	target.power:ClearAllPoints()
 	target.power:SetPoint("TOP", target.hp, "BOTTOM", 0, slim and -3 or -4)
 	-- The numbers: inside the bar, or beside the name over the slim one.
 	local percent, amount = target.hp.percent, target.hp.amount
 	percent:ClearAllPoints()
 	amount:ClearAllPoints()
-	if slim then
+	if twin then
+		percent:SetPoint("RIGHT", target, "TOPLEFT", left + barW, TWIN_NUM_Y)
+		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
+	elseif slim then
 		percent:SetPoint("RIGHT", target, "TOPLEFT", left + barW, (slab and -29 or DOCK_SLIM_BAR_Y) - 4)
 		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
 	elseif beside then
@@ -550,7 +565,13 @@ function Halo:LayoutTarget(curve)
 	-- docked (where that corner is behind the dial) over the bar's end.
 	target.markCorner = slab and 2 or slim and left + barW or false
 	if target.mark then self:PlaceTargetMark() end
-	if slab then
+	if twin then
+		target:SetSize(TWIN_W, SLAB_HEIGHT)
+		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -10)
+		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
+		target.cue:SetPoint("TOPLEFT", SLAB_PAD, -30)
+		target.hp:SetPoint("TOPLEFT", SLAB_PAD + TWIN_NAME_W + TWIN_GAP, TWIN_BAR_Y)
+	elseif slab then
 		target:SetSize(SLAB_WIDTH, SLAB_HEIGHT)
 		-- The level leads the line, the name beside it, the cue at the end.
 		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -10)
