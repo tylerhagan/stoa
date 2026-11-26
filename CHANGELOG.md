@@ -4,6 +4,14 @@ Each release has a `## <version>` heading matching the `## Version:` line in `St
 
 Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which builds `Stoa-<version>.zip`, publishes a GitHub Release and uploads the same zip to CurseForge (project 1772375, newest WoW Forever game version) when the `CF_API_KEY` secret is set, and to Wago Addons when the `WAGO_API_TOKEN` secret is set.
 
+## 2.1.2
+
+- **Outline the next press, your way**: Settings > Combat > Combat bar > Outline the next press is now a choice. STOA's order (the default) keeps STOA's priority, The game's suggestion outlines Forever's own pick instead, and Off never outlines a button.
+
+- **Up-to-date next press for every spec**: STOA's order now follows Warcraft Tavern's current Forever guides for every damage and tank spec, with Forever's new spells. Warlocks get a list per tree (Banes, your last Curse, Wrack, Conflagrate, Incinerate, Demonic Brand), fire mages Pyroblast at 3 Heating Up and Scorch to 5 stacks, arcane Arcane Wrath, rogues their spec's builder and finishers (Mutilate, Venom, Hemorrhage, Shank, Death Mark), hunters Aimed Shot, Sniper Shot and hawks, shamans Lava Burst and instant Lightning Bolt on Maelstrom, warriors separate Arms, Fury and Protection lists, paladins Judgement first, Consecration and the Unsealed Wrath swap, and ferals the guide's Bite and Shifting Power thresholds. Heroic Strike is no longer outlined, since it doesn't use the global cooldown.
+
+- **Next press in a fight**: the game hides cooldowns from addons in combat, so Mind Blast, Shadow Word: Death, Judgement and other cooldowns never read as ready and the outline fell back to the game's suggestion. STOA now times them from your own casts, with the length the game last showed out of combat.
+
 ## 2.1.1
 
 - **Class colours on names**: a new choice on Settings > Look. As the theme sets (the default) keeps things as they were: Bone and the class themes colour names by class, while Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override the theme, on party and raid cards, the target, nameplates, tooltips, the threat list, meters and the roster.
