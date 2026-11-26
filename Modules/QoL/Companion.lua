@@ -145,15 +145,38 @@ function Companion:Gather()
 	local down = 0
 	local nextBoss
 	local listed = {}
+	for _, boss in ipairs(bosses) do listed[boss.name:lower()] = true end
+	-- The game doesn't always name a fight as the list names its boss
+	-- ("Handler Ashka" for War Handler Ashka). A kill that isn't on the
+	-- list ticks the one listed boss whose name holds it, or is held by it,
+	-- as whole words; with none or several it stays a row of its own.
+	local alias, claimed = {}, {}
+	for _, name in ipairs(run.fell or {}) do
+		local want = name:lower()
+		if not listed[want] then
+			local found, several
+			for _, boss in ipairs(bosses) do
+				local have = boss.name:lower()
+				local held = (" " .. have .. " "):find(" " .. want .. " ", 1, true) or (" " .. want .. " "):find(" " .. have .. " ", 1, true)
+				if held and not claimed[have] then
+					if found then several = true else found = have end
+				end
+			end
+			if found and not several then
+				alias[want] = true
+				claimed[found] = true
+			end
+		end
+	end
 	for _, boss in ipairs(bosses) do
-		listed[boss.name:lower()] = true
-		boss.dead = run.killed[boss.name:lower()] or false
+		local have = boss.name:lower()
+		boss.dead = (run.killed[have] or claimed[have]) and true or false
 		if boss.dead then down = down + 1 elseif not nextBoss then nextBoss = boss end
 	end
 	-- A kill STOA's list doesn't have (a new dungeon, or the game names the
 	-- boss differently) still shows, ticked off, after the listed ones.
 	for _, name in ipairs(run.fell or {}) do
-		if not listed[name:lower()] then
+		if not listed[name:lower()] and not alias[name:lower()] then
 			bosses[#bosses + 1] = { name = name, dead = true }
 			down = down + 1
 		end

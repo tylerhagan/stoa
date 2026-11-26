@@ -14,6 +14,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **`/stoa report` remembers blocked actions**: the last few times the game said an interface action failed because of an addon are kept past a reload, with the addon and the function it named, so the report still shows them afterwards.
 
+- **Dungeon companion**: a boss the game names a little differently from the list (Handler Ashka for War Handler Ashka) is now ticked on its own row, not added as a second one.
+
 ## 2.1.0
 
 - **No gold dividers on the action bar**: on STOA's own Edit Mode layout the game drew gold dividers between the main bar's buttons. They are hidden with the rest of the bar art.
