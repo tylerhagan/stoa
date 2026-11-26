@@ -10,6 +10,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Cooldowns page headline**: the big line (1 ready, None ready) could stay unseen. Its small pulse is now drawn another way.
 
+- **Welcome page, for healers**: with a healing spec picked, the roles step now says that your party cards cast on a click with their own bindings, what the click grid is, and where to change and move them.
+
 ## 2.1.1
 
 - **Class colours on names**: a new choice on Settings > Look. As the theme sets (the default) keeps things as they were: Bone and the class themes colour names by class, while Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override the theme, on party and raid cards, the target, nameplates, tooltips, the threat list, meters and the roster.

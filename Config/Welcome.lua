@@ -382,6 +382,14 @@ function builders.specs(self, step)
 	local hint = lede(step, "Healers get their group frames beside the Halo and click-casting; tanks get a threat word and their own combat rows.")
 	hint:SetPoint("TOPLEFT", 0, -208)
 	Stoa:SetFont(hint, "sans", Stoa.typeSize.body)
+	-- For a healing spec only: what the cards do under the mouse, and where
+	-- to change it. The feature healers praise most and find last.
+	local label = UI.caption(step, "Healing by click")
+	label:SetPoint("TOPLEFT", 0, -262)
+	local clicks = lede(step, "Your party cards cast when you click them, with their own bindings that leave your action bar keys alone. The click grid beside the cards shows what each click casts. Change them under Settings > Click bindings or /stoa clicks, and move the cards and the grid with /stoa unlock.")
+	clicks:SetPoint("TOPLEFT", 0, -280)
+	Stoa:SetFont(clicks, "sans", Stoa.typeSize.body)
+	self.healerWords = { label, clicks }
 end
 
 -- A look drawn small from the art STOA already ships (no screenshot): a
@@ -1473,6 +1481,8 @@ function Welcome:Refresh()
 			choose(row.buttons, role)
 			row.note:SetText(isDefault and CLASS_DEFAULT_WORD or "")
 		end
+		local heals = playsHealer()
+		for _, part in ipairs(self.healerWords or {}) do part:SetShown(heals) end
 	elseif current == "look" then
 		local matte = Stoa.db.material == "matte"
 		choose(self.materialCards, matte and "matte" or "leather")
