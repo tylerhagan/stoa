@@ -240,7 +240,7 @@ local function paintPill(tab)
 	local waiting = not tab.selected and tab.chatFrame and unread[tab.chatFrame]
 	local r, g, b = Stoa:Color(tab.selected and "accent" or "text")
 	tab.fill:SetVertexColor(r, g, b, tab.selected and 0.14 or (hover and 0.06 or 0))
-	tab.edge:Set(r, g, b, tab.selected and 0.55 or (hover and 0.2 or 0.12))
+	tab.edge:Set(r, g, b, tab.selected and 0.45 or (hover and 0.14 or 0))
 	tab.label:SetTextColor(Stoa:Color((tab.selected or hover or waiting) and "text" or "muted"))
 	tab:SetFrameLevel(strip:GetFrameLevel() + 1)
 	if tab.dot then

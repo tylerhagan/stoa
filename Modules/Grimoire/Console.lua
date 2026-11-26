@@ -218,7 +218,9 @@ end
 -- one rounded bar lifted off the screen's edges. Both are flat: the
 -- panel colour and a fine light edge, in the card pieces every STOA card
 -- wears, so Slate adds no art.
-local SLATE_EDGE = 0.12
+-- Only a breath of light at the edge: the cards are shaped by their fill
+-- and shadow, not an outline (a brighter line read as white over the world).
+local SLATE_EDGE = 0.045
 -- A soft dark falloff round each card, so it stands over bright ground.
 local SLATE_SHADOW, SLATE_SHADOW_A = 3, 0.4
 local SLATE_INSET, SLATE_LIFT = 10, 6
