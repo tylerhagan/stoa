@@ -198,7 +198,7 @@ function Pet:BuildPlaque()
 	local hp = UI.bar(column, width, 7, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -8)
 	-- The slab's line is shorter (see below): 244 less its pads and percent.
-	UI.engrave(hp, UI.slabCards() and 176 or width)
+	if not UI.slate() then UI.engrave(hp, UI.slabCards() and 176 or width) end
 	local power = UI.bar(column, width, 3, "accent")
 	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -8)
 	local foot = UI.caption(column, "")
@@ -238,6 +238,41 @@ function Pet:BuildPlaque()
 		power:SetWidth(barW)
 		foot:ClearAllPoints()
 		foot:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", pad, -6)
+	end
+	-- Slate: the resting card again (see BuildCard), so the pet looks the
+	-- same in a fight as out of one. The name and what it is doing (or who
+	-- it is on) on the right, toward the Halo; the bar on the left with
+	-- its percent at the outer end and one word at the inner end.
+	if UI.slate() then
+		local pad, nameW = 11, 124
+		local barRight = pad + nameW + 12
+		frame.slab, frame.card = true, true
+		frame:SetSize(280, 50)
+		frame.plaque:SetPlain(true)
+		column:ClearAllPoints()
+		column:SetAllPoints(frame)
+		caption:Hide()
+		Stoa:SetFont(name, "serif", Stoa.typeSize.label)
+		name:ClearAllPoints()
+		name:SetPoint("TOPRIGHT", -pad, -10)
+		name:SetWidth(nameW)
+		name:SetJustifyH("RIGHT")
+		on:ClearAllPoints()
+		on:SetPoint("TOPRIGHT", -pad, -30)
+		on:SetWidth(0)
+		foot:ClearAllPoints()
+		foot:SetPoint("RIGHT", on, "LEFT", -4, 0)
+		hp:ClearAllPoints()
+		hp:SetPoint("TOPLEFT", pad, -13)
+		hp:SetSize(280 - pad - barRight, 8)
+		power:ClearAllPoints()
+		power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -3)
+		power:SetWidth(280 - pad - barRight)
+		Stoa:SetFont(percent, "sans", Stoa.typeSize.body)
+		percent:ClearAllPoints()
+		percent:SetPoint("LEFT", frame, "TOPLEFT", pad, -37)
+		word:ClearAllPoints()
+		word:SetPoint("RIGHT", frame, "TOPRIGHT", -barRight, -37)
 	end
 	frame.caption, frame.word, frame.name, frame.percent = caption, word, name, percent
 	frame.hp, frame.power, frame.foot, frame.on = hp, power, foot, on
@@ -285,6 +320,8 @@ function Pet:UpdatePlaque()
 	local frame = self.plaqueFrame
 	if not frame then return end
 	-- The demo shows it at rest too, unless Slate's card is there to look at.
+	-- Slate's card by the Halo only shows in a fight: at rest the console's
+	-- own card stands in for it, even in the demo.
 	local show = self.db.plaque and hasPet() and (Stoa:GetState() == Stoa.STATE_COMBAT or Stoa.previewing or (self.demo and not self.card))
 	frame:SetAlpha(show and 1 or 0)
 	if not hasPet() then return end
@@ -324,7 +361,7 @@ function Pet:UpdatePlaque()
 
 	local stance, command = self:Stance()
 	local foot = {}
-	if mood == 1 then foot[#foot + 1] = "DOES LESS DAMAGE, FEED IT"
+	if mood == 1 then foot[#foot + 1] = frame.card and "FEED IT" or "DOES LESS DAMAGE, FEED IT"
 	elseif stance then foot[#foot + 1] = stance end
 	local target = UnitExists("pettarget")
 	if plain(target) and mood ~= 1 then
