@@ -62,6 +62,9 @@ local WAVE_ALPHA = 0.7
 local GLOW_PEAK = 55 / 77
 local SEAL_SHADE_OUT = 24   -- the smoke's peak, beyond the face's edge
 local HALO_HAZE_ALPHA = 0.5
+-- How far up and down from the middle the Halo's haze reaches, as a share
+-- of its texture: about where the arcs end.
+local HAZE_REACH = 0.29
 
 local function knows(spellID)
 	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
@@ -193,14 +196,30 @@ function Forms:BuildLook()
 		if slot and slot.icon and not UI.ornate() then
 			parts.haloBand = band(slot, slot.icon, 4)
 		end
-		-- A haze of the form's smoke along the Halo's arcs.
-		local haze = halo.frame:CreateTexture(nil, "BACKGROUND", nil, -8)
-		haze:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
+		-- A haze of the form's smoke along the Halo's arcs, and only there:
+		-- the ring glow cut into four quarters that fade out towards the
+		-- arcs' ends, so the top and the bottom stay open.
+		local haze = CreateFrame("Frame", nil, halo.frame)
+		haze:SetAllPoints()
+		haze:SetFrameLevel(halo.frame:GetFrameLevel())
 		-- It peaks on the arcs, just inside the frame's edge.
 		local size = halo.frame:GetWidth() * 0.96 / GLOW_PEAK
-		haze:SetSize(size, size)
-		haze:SetPoint("CENTER")
-		haze:SetBlendMode("BLEND")
+		local reach = HAZE_REACH
+		haze.pieces = {}
+		for _, q in ipairs({
+			{ "BOTTOMRIGHT", 0, 0.5, 0.5 - reach, 0.5, 1, 0 },
+			{ "TOPRIGHT", 0, 0.5, 0.5, 0.5 + reach, 0, 1 },
+			{ "BOTTOMLEFT", 0.5, 1, 0.5 - reach, 0.5, 1, 0 },
+			{ "TOPLEFT", 0.5, 1, 0.5, 0.5 + reach, 0, 1 },
+		}) do
+			local piece = haze:CreateTexture(nil, "BACKGROUND", nil, -8)
+			piece:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
+			piece:SetTexCoord(q[2], q[3], q[4], q[5])
+			piece:SetSize(size / 2, size * reach)
+			piece:SetPoint(q[1], haze, "CENTER")
+			piece.fade = { "VERTICAL", q[6], q[7] }
+			haze.pieces[#haze.pieces + 1] = piece
+		end
 		haze:Hide()
 		parts.haloHaze = haze
 	end
@@ -244,7 +263,9 @@ function Forms:ApplyLook(look, entering)
 		end
 		if parts.haloHaze then
 			local sr, sg, sb = unpack(look.shade)
-			parts.haloHaze:SetVertexColor(sr, sg, sb, HALO_HAZE_ALPHA)
+			for _, piece in ipairs(parts.haloHaze.pieces) do
+				UI.setGradient(piece, piece.fade, sr, sg, sb, HALO_HAZE_ALPHA)
+			end
 			parts.haloHaze:Show()
 		end
 		for _, band in ipairs(parts.waveBands or {}) do
