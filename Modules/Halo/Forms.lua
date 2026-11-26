@@ -2,10 +2,9 @@
 --
 --   * A look per form (only Shadowform has one so far): while you're in it
 --     the console seal's ring and dial and the Halo's signature ring take
---     the form's colour, a glow of it breathes round the seal, and a faint
---     haze of it sits behind the Halo. Entering sends a wave of its light
---     out from the seal to the console's ends; leaving snaps everything
---     back at once.
+--     the form's colour, its smoke breathes round the seal, and a haze of
+--     it sits behind the Halo. Entering sends a wave of smoke out from the
+--     seal to the console's ends; leaving snaps everything back at once.
 --   * A row of form chips off the medallion's lower right (the pet coin
 --     sits lower left): one round chip per form, lit while you're in it.
 --     Click to shift in or out, right-click to leave. Built so paladin
@@ -38,8 +37,10 @@ Stoa.Forms = Forms
 -- pieces that wash over (Slate's player card).
 local LOOKS = {
 	[15473] = { -- Shadowform
-		ring = { 0.60, 0.40, 1.00 },
-		shade = { 0.20, 0.05, 0.42 },
+		-- Smoke: pale ash on the rings, near-black smoke round them, the
+		-- faintest cool tint so it reads as shadow, not as grey.
+		ring = { 0.62, 0.60, 0.68 },
+		shade = { 0.03, 0.02, 0.05 },
 	},
 }
 
@@ -51,16 +52,16 @@ local CHIPS = {
 
 local CHIP = 30
 local BREATH = 1.8       -- seconds each way
-local BREATH_LOW, BREATH_HIGH = 0.12, 0.95
--- The entering wave: two bands of violet light running out from the seal
+local BREATH_LOW, BREATH_HIGH = 0.35, 1
+-- The entering wave: two bands of smoke running out from the seal
 -- to the console's ends.
 local WAVE = 0.24
 local WAVE_W = 260
-local WAVE_ALPHA = 0.55
+local WAVE_ALPHA = 0.7
 -- RingGlow.tga's light peaks this far out from its centre (Tools/art/ring_glow.py).
 local GLOW_PEAK = 55 / 77
-local SEAL_SHADE_OUT = 16   -- the glow's peak, beyond the face's edge
-local HALO_HAZE_ALPHA = 0.35
+local SEAL_SHADE_OUT = 24   -- the smoke's peak, beyond the face's edge
+local HALO_HAZE_ALPHA = 0.5
 
 local function knows(spellID)
 	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
@@ -124,13 +125,13 @@ function Forms:BuildLook()
 		local seal, face = console.seal, console.portrait
 		parts.sealBand = band(seal, face, 4)
 		-- The breath round the seal: the ring glow's soft halo in the form's
-		-- colour, lit (ADD) so it reads on dark leather too.
+		-- smoke.
 		local shade = seal:CreateTexture(nil, "BORDER", nil, 3)
 		shade:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
 		local size = (face:GetWidth() / 2 + SEAL_SHADE_OUT) / GLOW_PEAK * 2
 		shade:SetSize(size, size)
 		shade:SetPoint("CENTER", face, "CENTER")
-		shade:SetBlendMode("ADD")
+		shade:SetBlendMode("BLEND")
 		shade:SetAlpha(0)
 		shade:Hide()
 		parts.sealShade, parts.breath = shade, breathe(shade)
@@ -138,7 +139,7 @@ function Forms:BuildLook()
 		hooksecurefunc(console, "UpdateRing", function() self:PaintTicks() end)
 		parts.console = console
 
-		-- The wave: two bands of the form's light leave the seal and run out
+		-- The wave: two bands of the form's smoke leave the seal and run out
 		-- to either end of the console, fading as they go. Clipped to the
 		-- console so they never spill over the world.
 		local veil = CreateFrame("Frame", nil, console.frame)
@@ -156,7 +157,7 @@ function Forms:BuildLook()
 			local light = holder:CreateTexture(nil, "OVERLAY")
 			light:SetAllPoints()
 			light:SetTexture(UI.WHITE)
-			light:SetBlendMode("ADD")
+			light:SetBlendMode("BLEND")
 			light.sign = sign
 			local group = holder:CreateAnimationGroup()
 			local fade = group:CreateAnimation("Alpha")
@@ -192,14 +193,14 @@ function Forms:BuildLook()
 		if slot and slot.icon and not UI.ornate() then
 			parts.haloBand = band(slot, slot.icon, 4)
 		end
-		-- A faint haze of the form's colour along the Halo's arcs.
+		-- A haze of the form's smoke along the Halo's arcs.
 		local haze = halo.frame:CreateTexture(nil, "BACKGROUND", nil, -8)
 		haze:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
-		-- Its light peaks on the arcs, just inside the frame's edge.
+		-- It peaks on the arcs, just inside the frame's edge.
 		local size = halo.frame:GetWidth() * 0.96 / GLOW_PEAK
 		haze:SetSize(size, size)
 		haze:SetPoint("CENTER")
-		haze:SetBlendMode("ADD")
+		haze:SetBlendMode("BLEND")
 		haze:Hide()
 		parts.haloHaze = haze
 	end
@@ -237,18 +238,19 @@ function Forms:ApplyLook(look, entering)
 			end
 		end
 		if parts.sealShade then
-			parts.sealShade:SetVertexColor(r, g, b)
+			parts.sealShade:SetVertexColor(unpack(look.shade))
 			parts.sealShade:Show()
 			if not parts.breath:IsPlaying() then parts.breath:Play() end
 		end
 		if parts.haloHaze then
-			parts.haloHaze:SetVertexColor(r, g, b, HALO_HAZE_ALPHA)
+			local sr, sg, sb = unpack(look.shade)
+			parts.haloHaze:SetVertexColor(sr, sg, sb, HALO_HAZE_ALPHA)
 			parts.haloHaze:Show()
 		end
 		for _, band in ipairs(parts.waveBands or {}) do
 			-- The leading edge bright, trailing off towards the seal.
 			local light = band.light
-			UI.setGradient(light, { "HORIZONTAL", light.sign > 0 and 0 or 1, light.sign > 0 and 1 or 0 }, r, g, b, WAVE_ALPHA)
+			UI.setGradient(light, { "HORIZONTAL", light.sign > 0 and 0 or 1, light.sign > 0 and 1 or 0 }, look.shade[1], look.shade[2], look.shade[3], WAVE_ALPHA)
 		end
 		self:PaintTicks()
 		-- The pulse only marks the moment you step in, and only where it
