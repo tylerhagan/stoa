@@ -1523,6 +1523,24 @@ function Console:BuildFellowship(frame, space)
 	local of = text(bags, "sans", Stoa.typeSize.caption, "muted")
 	of:SetPoint("BOTTOMLEFT", columns, "BOTTOMRIGHT", 8, -1)
 	bags.columns, bags.free, bags.of = columns, free, of
+	-- Slate: the bags are a row like Gear above them, "Bags" on the left
+	-- and "5 free of 26" on the right, on the same 16 pitch as every other
+	-- line on the cards.
+	if UI.slate() then
+		bags:SetHeight(12)
+		bags:ClearAllPoints()
+		bags:SetPoint("TOPLEFT", gear, "BOTTOMLEFT", 0, -4)
+		columns:SetAlpha(0)
+		local bagsLabel = text(bags, "sans", Stoa.typeSize.body, "muted")
+		bagsLabel:SetPoint("LEFT")
+		bagsLabel:SetText("Bags")
+		Stoa:SetFont(of, "sans", Stoa.typeSize.body)
+		of:ClearAllPoints()
+		of:SetPoint("RIGHT")
+		Stoa:SetFont(free, "sans", Stoa.typeSize.body)
+		free:ClearAllPoints()
+		free:SetPoint("RIGHT", of, "LEFT", -4, 0)
+	end
 	-- Hover explains, click opens (the same as At a glance's lines).
 	for button, key in pairs({ [gear] = "durability", [bags] = "bags" }) do
 		button:SetScript("OnEnter", function(own)
@@ -2200,7 +2218,7 @@ end
 -- mock-up's Ready card). Two rows fit; the chip and the hover say the
 -- rest. While there are jobs the gear row steps aside (worn gear is a
 -- job of its own) and the bags close up under the rows.
-local SLATE_JOB_ROWS, SLATE_JOB_H = 2, 15
+local SLATE_JOB_ROWS, SLATE_JOB_H = 2, 16
 
 function Console:BuildSlateJobs(col, role)
 	local count = UI.badge(col, nil, "accent")
@@ -2250,7 +2268,7 @@ function Console:ShowSlateJobs(list)
 	-- is last.
 	self.gear:SetShown(not any)
 	self.bags:ClearAllPoints()
-	self.bags:SetPoint("TOPLEFT", any and last or self.gear, "BOTTOMLEFT", 0, any and -6 or -9)
+	self.bags:SetPoint("TOPLEFT", any and last or self.gear, "BOTTOMLEFT", 0, -4)
 	return any and true or false
 end
 
