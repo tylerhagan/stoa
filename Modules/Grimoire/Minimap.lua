@@ -20,6 +20,8 @@ local PAINTED = {
 	round = { file = "MinimapFrameRing", scale = 1.332 },
 }
 
+-- Slate: how far the minimap's card runs past the map on each side.
+local SLATE_SIDE, SLATE_ABOVE, SLATE_BELOW = 8, 26, 22
 -- Matte: how far the housing's rim and its black lip stand out from the map.
 local HOUSING_RIM, HOUSING_LIP = 13, 4
 
@@ -68,6 +70,13 @@ function MinimapStyle:Style()
 		self:Square(map, frame, painted)
 	elseif painted then
 		self:Painted(map, "round")
+	elseif UI.slate() then
+		-- Slate: a plain dark ring and one fine line, no accent.
+		local size = map:GetWidth()
+		local outer = UI.circle(frame, "BACKGROUND", 0, size + 12, "hairline")
+		outer:SetPoint("CENTER")
+		local plate = UI.circle(frame, "BACKGROUND", 1, size + 10, "panel")
+		plate:SetPoint("CENTER")
 	elseif UI.matte() then
 		-- The round map: the same housing as two discs.
 		local size = map:GetWidth()
@@ -120,6 +129,19 @@ function MinimapStyle:Square(map, frame, painted)
 	end
 	if UI.matte() then
 		self:MatteHousing(frame)
+		return
+	end
+	if UI.slate() then
+		-- Slate: the map on a rounded card, with room above for the zone
+		-- and below for where you stand, and one fine edge; no accent.
+		local card = CreateFrame("Frame", nil, frame)
+		card:SetFrameLevel(math.max(frame:GetFrameLevel() - 1, 0))
+		card:SetPoint("TOPLEFT", frame, "TOPLEFT", -SLATE_SIDE, SLATE_ABOVE)
+		card:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", SLATE_SIDE, -SLATE_BELOW)
+		local fill = UI.sliced(card, "BACKGROUND", "CardFill.tga")
+		if fill then UI.tint(fill, "panel") end
+		local edge = UI.sliced(card, "BORDER", "CardEdge.tga")
+		if edge then UI.tint(edge, "hairline") end
 		return
 	end
 	local gap = UI.sliced(frame, "BACKGROUND", "WindowFill.tga", 4)

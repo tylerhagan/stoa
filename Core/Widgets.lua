@@ -384,6 +384,17 @@ function UI.caption(parent, label)
 	return fs
 end
 
+-- A card's heading: the caption, in the accent under Slate (the small
+-- coloured capitals that head each card there), muted otherwise.
+function UI.eyebrow(parent, label)
+	local fs = UI.caption(parent, label)
+	if UI.slate() then
+		UI.unpaint(fs)
+		UI.paint(fs, "accent")
+	end
+	return fs
+end
+
 function UI.bar(parent, width, height, token)
 	local sb = CreateFrame("StatusBar", nil, parent)
 	sb:SetSize(width, height)

@@ -33,6 +33,13 @@ local function artOn()
 	return Console:Art() or (Console:Matte() and not Console.db.slim)
 end
 
+-- Slate: the tabs are small pills inside the chat card, the picked one
+-- in the accent (Blizzard's own row stays, working, unseen).
+local function pillsOn()
+	return Console:Slate() and not Console.db.slim
+end
+local PILL_H, PILL_PAD, PILL_GAP, PILL_DROP = 20, 10, 6, 14
+
 local function tabFile(kind)
 	return UI.MEDIA .. "Textures\\ChatTab" .. (Console:Matte() and "Matte" or "") .. kind
 end
@@ -227,7 +234,31 @@ local function showsWhispers(chatFrame)
 	return ChatFrame_ContainsMessageGroup ~= nil and ChatFrame_ContainsMessageGroup(chatFrame, "WHISPER")
 end
 
+local function paintPill(tab)
+	local hover = tab:IsMouseOver()
+	if tab.selected and tab.chatFrame then unread[tab.chatFrame] = nil end
+	local waiting = not tab.selected and tab.chatFrame and unread[tab.chatFrame]
+	local r, g, b = Stoa:Color(tab.selected and "accent" or "text")
+	tab.fill:SetVertexColor(r, g, b, tab.selected and 0.14 or (hover and 0.06 or 0))
+	tab.edge:Set(r, g, b, tab.selected and 0.55 or (hover and 0.2 or 0.12))
+	tab.label:SetTextColor(Stoa:Color((tab.selected or hover or waiting) and "text" or "muted"))
+	tab:SetFrameLevel(strip:GetFrameLevel() + 1)
+	if tab.dot then
+		tab.dot:SetVertexColor(Stoa:Color("accent"))
+		if waiting then
+			if not tab.dot:IsShown() then
+				tab.dot:Show()
+				tab.pulse:Play()
+			end
+		else
+			tab.pulse:Stop()
+			tab.dot:Hide()
+		end
+	end
+end
+
 local function paintTab(tab)
+	if tab.pill then return paintPill(tab) end
 	-- Matte: a key under a click goes down like the selected one.
 	local kind = (tab.selected or tab.down) and "Open" or "Closed"
 	if tab.kind ~= kind then
@@ -257,14 +288,22 @@ end
 
 local function makeTab()
 	local tab = CreateFrame("Button", nil, strip)
-	tab:SetHeight(tabRise())
 	tab:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
-	tab.base = capped(tab, 1)
-	tab.lines = capped(tab, 2, true)
+	local pill = pillsOn()
+	if pill then
+		tab.pill = true
+		tab:SetHeight(PILL_H)
+		tab.fill = UI.pillFill(tab, 0)
+		tab.edge = UI.pillEdge(tab, 0)
+	else
+		tab:SetHeight(tabRise())
+		tab.base = capped(tab, 1)
+		tab.lines = capped(tab, 2, true)
+	end
 	local label = tab:CreateFontString(nil, "OVERLAY")
-	Stoa:SetFont(label, "sans", Stoa.typeSize.body)
+	Stoa:SetFont(label, "sans", pill and Stoa.typeSize.caption or Stoa.typeSize.body)
 	label:SetShadowOffset(0, 0)
-	label:SetPoint("CENTER", 0, -3)
+	label:SetPoint("CENTER", 0, pill and 0 or -3)
 	tab.label = label
 	local dot = UI.glyph(tab, "Dot", 10, "accent")
 	dot:SetPoint("LEFT", label, "RIGHT", 4, 0)
@@ -334,11 +373,11 @@ local function refreshTabs()
 		tab.label:Show()
 		local width = tab.label:GetStringWidth()
 		if type(width) ~= "number" then width = 40 end
-		tab:SetWidth(width + TAB_TEXT_PAD * 2)
+		tab:SetWidth(width + (tab.pill and PILL_PAD or TAB_TEXT_PAD) * 2)
 		tab:ClearAllPoints()
 		tab:SetPoint("BOTTOMLEFT", strip, "BOTTOMLEFT", x, 0)
 		-- The matte keys stand in one bank, side against side.
-		x = x + tab:GetWidth() + (Console:Matte() and 0 or TAB_GAP)
+		x = x + tab:GetWidth() + (Console:Matte() and 0 or tab.pill and PILL_GAP or TAB_GAP)
 		tab.selected = chatFrame == selected
 		paintTab(tab)
 		tab:Show()
@@ -352,8 +391,14 @@ local function buildTabs()
 	-- Above the chat frames, so these take the clicks rather than
 	-- Blizzard's invisible tabs underneath.
 	strip:SetFrameStrata("MEDIUM")
-	strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight())
-	strip:SetSize(CHAT_WIDTH, tabRise())
+	if pillsOn() then
+		-- Inside the chat card, over the messages.
+		strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight() - PILL_DROP - PILL_H)
+		strip:SetSize(CHAT_WIDTH, PILL_H)
+	else
+		strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight())
+		strip:SetSize(CHAT_WIDTH, tabRise())
+	end
 	Console.tabArt = Console.tabArt or {}
 	table.insert(Console.tabArt, strip)
 	-- Blizzard's tab row stays where it is, working, just unseen.
@@ -1086,7 +1131,7 @@ function Console:House()
 		if housesChat(db) then
 			safely(placeChat)
 			safely(guardChat)
-			if artOn() then safely(buildTabs) end
+			if artOn() or pillsOn() then safely(buildTabs) end
 		elseif db.houseChat then
 			safely(clearChat)
 			-- The other addon and Edit Mode place the chat a moment after login.
@@ -1126,7 +1171,7 @@ function Console:House()
 		EventRegistry:RegisterCallback("EditMode.Exit", apply, self)
 	end
 
-	if housesChat(db) and artOn() then
+	if housesChat(db) and (artOn() or pillsOn()) then
 		-- Read-only hooks: Stoa's tabs follow the dock, nothing is changed.
 		for _, name in ipairs({ "FCFDock_UpdateTabs", "FCFDock_SelectWindow", "FCF_SetWindowName", "FCF_OpenNewWindow", "FCF_Close", "FCF_DockFrame", "FCF_UnDockFrame" }) do
 			if _G[name] then hooksecurefunc(name, safeRefresh) end

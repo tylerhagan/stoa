@@ -219,6 +219,8 @@ end
 -- panel colour and a fine light edge, in the card pieces every STOA card
 -- wears, so Slate adds no art.
 local SLATE_EDGE = 0.12
+-- A soft dark falloff round each card, so it stands over bright ground.
+local SLATE_SHADOW, SLATE_SHADOW_A = 3, 0.4
 local SLATE_INSET, SLATE_LIFT = 10, 6
 
 local function slatePlate(owner, layer)
@@ -240,7 +242,13 @@ local function slatePlate(owner, layer)
 		local r, g, b = Stoa:Color("text")
 		edge:SetVertexColor(r, g, b, SLATE_EDGE)
 	end
-	return fill, edge
+	local shadow = UI.sliced(owner, layer or "BACKGROUND", "CardGlow.tga", SLATE_SHADOW)
+	if shadow then
+		shadow:SetDrawLayer(layer or "BACKGROUND", -4)
+		shadow:SetVertexColor(0, 0, 0, SLATE_SHADOW_A)
+		shadow.stoaOutset = SLATE_SHADOW
+	end
+	return fill, edge, shadow
 end
 
 function Console:BuildSlate(frame, drawn)
@@ -263,8 +271,8 @@ function Console:BuildSlate(frame, drawn)
 	self.slateCard = function(i)
 		local well = self.wells[i]
 		if well then return well end
-		local fill, edge = slatePlate(frame)
-		well = { fill, edge }
+		local fill, edge, shadow = slatePlate(frame)
+		well = { fill, edge, shadow }
 		for _, part in ipairs(well) do
 			part:ClearAllPoints()
 			part:Hide()
@@ -440,7 +448,9 @@ end
 local WELL_PAD, WELL_BOTTOM = 12, 8
 -- The bars' well starts lower, under the bezel's foot.
 local WELL_BARS, WELL_BARS_TOP = 3, -48
-local SLATE_PAD, SLATE_BOTTOM = 10, 8
+-- The cards stand from a little under the console's top (room for the
+-- chat's tabs inside the chat card) to SLATE_BOTTOM over the screen's foot.
+local SLATE_PAD, SLATE_TOP, SLATE_BOTTOM = 10, -8, 8
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
 	if self.slateCard then
@@ -455,9 +465,10 @@ function Console:PlaceWells(zones, top)
 				used[i] = true
 				local pad = math.min(SLATE_PAD, math.floor(((zone.gap or 40) - 8) / 2))
 				for _, part in ipairs(well) do
+					local out = part.stoaOutset or 0
 					part:ClearAllPoints()
-					part:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - pad + 0.5), top + 8)
-					part:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + pad + 0.5), SLATE_BOTTOM)
+					part:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(zone[1] - pad + 0.5) - out, SLATE_TOP + out)
+					part:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(zone[2] + pad + 0.5) + out, SLATE_BOTTOM - out)
 				end
 			end
 		end
@@ -1125,7 +1136,7 @@ local function slotHandle(parent, heading)
 	end)
 	handle:SetScript("OnLeave", function(own)
 		chevron:Hide()
-		heading:SetTextColor(Stoa:Color("muted"))
+		heading:SetTextColor(Stoa:Color(UI.slate() and "accent" or "muted"))
 		if own.empty then heading:SetAlpha(0) end
 		GameTooltip:Hide()
 	end)
@@ -1137,11 +1148,13 @@ local function slotHandle(parent, heading)
 end
 
 local function column(col, label)
-	local heading = caption(col, label)
+	local heading = UI.eyebrow(col, label)
 	heading:SetPoint("TOPLEFT", col, "TOPLEFT", 0, 0)
 	local rule = line(col)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
 	rule:SetWidth(COLUMN_WIDTH)
+	-- Slate: the card is the section, so no rule under its heading.
+	if UI.slate() then rule:SetAlpha(0) end
 	slotHandle(col, heading).column = col
 	return rule
 end

@@ -864,11 +864,12 @@ function Tally:Build(console)
 	page:SetScript("OnClick", function(button) self:OpenPicker(button) end)
 	self.page = page
 
-	local heading = UI.caption(page, "At a glance")
+	local heading = UI.eyebrow(page, "At a glance")
 	heading:SetPoint("TOPLEFT")
 	local rule = UI.line(page)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
 	rule:SetPoint("RIGHT", page, "RIGHT")
+	if UI.slate() then rule:SetAlpha(0) end
 	-- Where you are, quietly, after the heading.
 	local where = UI.text(page, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	where:SetPoint("LEFT", heading, "RIGHT", 8, 0)

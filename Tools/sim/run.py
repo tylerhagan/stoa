@@ -1418,6 +1418,7 @@ do
 			local shown = 0
 			for _, well in pairs(console.wells or {}) do if well[1]:IsShown() then shown = shown + 1 end end
 			assert(shown >= 2, "Slate: only " .. shown .. " console cards")
+			if console:HousesChat() then assert(_G.StoaChatTabs, "Slate: no chat pills") end
 		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Slate console cards: " .. e end
 	elseif console and console.dividers and console.PlaceDividers then
