@@ -14,6 +14,8 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Flight map**: the flight map was left in the game's own frame. STOA now dresses it when you open a flight master.
 
+- **One-line tooltips**: a tooltip with only a title showed a sliver of the body under its header. A one-line tooltip is now all header.
+
 ## 2.1.1
 
 - **Class colours on names**: a new choice on Settings > Look. As the theme sets (the default) keeps things as they were: Bone and the class themes colour names by class, while Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override the theme, on party and raid cards, the target, nameplates, tooltips, the threat list, meters and the roster.
