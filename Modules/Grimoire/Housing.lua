@@ -769,7 +769,13 @@ local function menuWord(row, label, click)
 		text:SetPoint("RIGHT")
 		word:SetSize(math.max(text:GetStringWidth() or 0, 24) + 4, MENU_WORD_ROOM - 4)
 	end
-	word:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+	if Console:Slate() and not Console.db.slim then
+		-- Standing just over the cards' top edge, level with the chat's
+		-- tab chips, rather than floating at the row's middle.
+		word:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, (Console.SLATE_TOP or 0) + PILL_LIFT - MENU_LIFT)
+	else
+		word:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+	end
 	word:EnableMouse(click ~= nil)
 	if click then word:SetScript("OnClick", click) end
 	return word

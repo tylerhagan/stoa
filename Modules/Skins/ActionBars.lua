@@ -81,8 +81,15 @@ function Bars:Skin(button)
 
 	local hotkey = button.HotKey
 	if hotkey then
-		Stoa:SetFont(hotkey, "sans", Stoa.typeSize.micro, "OUTLINE")
+		-- Slate: quiet labels, a soft shadow under them instead of a hard
+		-- outline round every letter.
+		local slate = UI.slate()
+		Stoa:SetFont(hotkey, "sans", Stoa.typeSize.micro, slate and "" or "OUTLINE")
 		hotkey:SetTextColor(Stoa:Color("muted"))
+		if slate then
+			hotkey:SetShadowColor(0, 0, 0, 0.9)
+			hotkey:SetShadowOffset(1, -1)
+		end
 	end
 	local count = button.Count
 	if count then Stoa:SetFont(count, "sans", Stoa.typeSize.body, "OUTLINE") end
