@@ -27,6 +27,9 @@ local plain = function(v) return Stoa.safe.plain(v) end
 
 local PLAQUE_WIDTH, PLAQUE_HEIGHT = 294, 112
 local PAD = 12
+-- Slate's companion ring: its size, and where on the pet's arc it sits
+-- (degrees below the Halo's left).
+local RING, RING_AT = 38, 68
 local COIN_SPACE = UI.PLAQUE_COIN_SPACE
 local ROW_SIZE, ROW_GAP, ROW_BREAK = 26, 5, 8
 local COIN = 46
@@ -175,7 +178,8 @@ function Pet:BuildPlaque()
 	frame:SetSize(PLAQUE_WIDTH, PLAQUE_HEIGHT)
 	frame:SetAlpha(0)
 	frame:EnableMouse(false)
-	frame.plaque = UI.plaque(frame, "RIGHT")
+	-- Slate draws no plate: the pet is a ring on the Halo (see below).
+	if not UI.slate() then frame.plaque = UI.plaque(frame, "RIGHT") end
 
 	-- The words sit in a column centred top to bottom, with room between
 	-- each group (caption, name, bars, the line underneath).
@@ -211,7 +215,7 @@ function Pet:BuildPlaque()
 	-- Matte: the target slab's twin. The name and mood on one line over
 	-- a slim health line with its percent at the right end; the caption
 	-- stands on top of the block and the stance line hangs under it.
-	frame.slab = UI.slabCards()
+	frame.slab = UI.slabCards() and not UI.slate()
 	if frame.slab then
 		local pad, numW = 11, 46
 		local barW = 244 - pad * 2 - numW
@@ -239,46 +243,41 @@ function Pet:BuildPlaque()
 		foot:ClearAllPoints()
 		foot:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", pad, -6)
 	end
-	-- Slate: the resting card again (see BuildCard), so the pet looks the
-	-- same in a fight as out of one. The name and what it is doing (or who
-	-- it is on) on the right, toward the Halo; the bar on the left with
-	-- its percent at the outer end and one word at the inner end.
+	-- Slate: a companion ring at the foot of the pet's arc on the Halo, as
+	-- if the arc grew out of it. The portrait in a ring that carries the
+	-- pet's colour (red when it is low), its name and one line beside it
+	-- inside the Halo, the percent under the ring. No plate at all.
 	if UI.slate() then
-		local pad, nameW = 11, 124
-		local barRight = pad + nameW + 12
-		frame.slab, frame.card = true, true
-		frame:SetSize(280, 50)
-		frame.plaque:SetPlain(true)
-		column:ClearAllPoints()
-		column:SetAllPoints(frame)
+		frame.ring = true
+		frame:SetSize(RING, RING)
 		caption:Hide()
-		Stoa:SetFont(name, "serif", Stoa.typeSize.label)
+		word:Hide()
+		hp:Hide()
+		power:Hide()
+		local gap = UI.circle(frame, "BACKGROUND", 0, RING, "panel", 1)
+		gap:SetPoint("CENTER")
+		local band = UI.circle(frame, "BORDER", 0, RING - 2, "accent", 1)
+		band:SetPoint("CENTER")
+		local face = CreateFrame("Frame", nil, frame)
+		face:SetAllPoints()
+		face:SetFrameLevel(frame:GetFrameLevel() + 2)
+		local inset = UI.circle(face, "BACKGROUND", 0, RING - 6, "panel", 1)
+		inset:SetPoint("CENTER")
+		local portrait = UI.circle(face, "ARTWORK", 0, RING - 8)
+		portrait:SetPoint("CENTER")
+		frame.band, frame.portrait = band, portrait
+		Stoa:SetFont(name, "serif", Stoa.typeSize.label, "OUTLINE")
 		name:ClearAllPoints()
-		name:SetPoint("TOPRIGHT", -pad, -10)
-		name:SetWidth(nameW)
-		name:SetJustifyH("RIGHT")
-		-- One line under the name, kept to the name's column: the stance,
-		-- or who the pet is on.
-		on:ClearAllPoints()
-		on:SetPoint("TOPRIGHT", -pad, -30)
-		on:SetWidth(nameW)
-		on:SetJustifyH("RIGHT")
+		name:SetPoint("LEFT", frame, "RIGHT", 6, 9)
+		name:SetWidth(0)
 		foot:ClearAllPoints()
-		foot:SetPoint("TOPRIGHT", -pad, -30)
-		foot:SetWidth(nameW)
-		foot:SetJustifyH("RIGHT")
-		foot:SetWordWrap(false)
-		hp:ClearAllPoints()
-		hp:SetPoint("TOPLEFT", pad, -13)
-		hp:SetSize(280 - pad - barRight, 8)
-		power:ClearAllPoints()
-		power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -3)
-		power:SetWidth(280 - pad - barRight)
-		Stoa:SetFont(percent, "sans", Stoa.typeSize.body)
+		foot:SetPoint("BOTTOMLEFT", name, "TOPLEFT", 0, 4)
+		on:ClearAllPoints()
+		on:SetPoint("BOTTOMLEFT", name, "TOPLEFT", 0, 4)
+		on:SetWidth(0)
+		Stoa:SetFont(percent, "sans", Stoa.typeSize.caption, "OUTLINE")
 		percent:ClearAllPoints()
-		percent:SetPoint("LEFT", frame, "TOPLEFT", pad, -37)
-		word:ClearAllPoints()
-		word:SetPoint("RIGHT", frame, "TOPRIGHT", -barRight, -37)
+		percent:SetPoint("TOP", frame, "BOTTOM", 0, -3)
 	end
 	frame.caption, frame.word, frame.name, frame.percent = caption, word, name, percent
 	frame.hp, frame.power, frame.foot, frame.on = hp, power, foot, on
@@ -312,6 +311,12 @@ function Pet:PlacePlaque()
 	local frame, halo = self.plaqueFrame, _G.StoaHalo
 	if not frame or Stoa:HasSavedPosition("pet") then return end
 	frame:ClearAllPoints()
+	if frame.ring and halo then
+		-- At the foot of the pet's arc (see BuildArc for its size).
+		local radius, at = halo:GetHeight() * 0.44, math.rad(RING_AT)
+		frame:SetPoint("CENTER", halo, "CENTER", -radius * math.cos(at), -radius * math.sin(at))
+		return
+	end
 	if not halo then
 		frame:SetPoint("CENTER", UIParent, "CENTER", -300, 120)
 	elseif Stoa:GetRole() == "HEALER" then
@@ -343,7 +348,7 @@ function Pet:UpdatePlaque()
 
 	frame.name:SetText(self.demo and "Ashmane" or UnitName(unit()))
 	UI.setUnitBar(frame.hp, unit(), "health")
-	UI.setHealthPercent(frame.percent, unit(), nil, frame.card)
+	UI.setHealthPercent(frame.percent, unit(), nil, frame.ring)
 	UI.setUnitBar(frame.power, unit(), "power")
 	local powerType = plain(UnitPowerType(unit()))
 	tint(frame.power, powerType == 0 and "mana" or "accent", powerType == 0 and 1 or 0.75)
@@ -367,7 +372,7 @@ function Pet:UpdatePlaque()
 
 	local stance, command = self:Stance()
 	local foot = {}
-	if mood == 1 then foot[#foot + 1] = frame.card and "FEED IT" or "DOES LESS DAMAGE, FEED IT"
+	if mood == 1 then foot[#foot + 1] = "DOES LESS DAMAGE, FEED IT"
 	elseif stance then foot[#foot + 1] = stance end
 	local target = UnitExists("pettarget")
 	if plain(target) and mood ~= 1 then
@@ -377,11 +382,17 @@ function Pet:UpdatePlaque()
 		if command and mood ~= 1 then foot[#foot + 1] = command end
 		frame.on:SetText("")
 	end
-	if frame.card then
-		-- The card's one line: who it is on, else to feed it, else the stance.
-		local onName = plain(target) and mood ~= 1 and plain(UnitName("pettarget"))
-		frame.on:SetText(onName and ("On " .. onName) or "")
-		frame.foot:SetText(onName and "" or mood == 1 and "FEED IT" or stance or "")
+	if frame.ring then
+		SetPortraitTexture(frame.portrait, unit())
+		local r, g, b = Stoa:Color((dead or word == "LOW") and "danger" or "accent")
+		frame.band:SetVertexColor(r, g, b, 1)
+		frame.percent:SetTextColor(r, g, b)
+		-- One line over the name, the most pressing first.
+		local onName = plain(target) and plain(UnitName("pettarget"))
+		local line = dead and "DEAD" or word == "LOW" and "LOW" or mood == 1 and "FEED IT" or ""
+		frame.on:SetText(line == "" and onName and ("On " .. onName) or "")
+		frame.foot:SetText(line ~= "" and line or onName and "" or stance or "")
+		frame.foot:SetTextColor(Stoa:Color(line ~= "" and "danger" or "muted"))
 		return
 	end
 	frame.foot:SetText(Stoa.UI.join(foot))
