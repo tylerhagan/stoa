@@ -431,6 +431,7 @@ local LIGHT_INSET = 1
 -- { inset from each side, the depth the row ends at }: a 6px corner.
 local LIGHT_STEPS = { { 3, 2 }, { 2, 3 }, { 1.5, 4 } }
 local FOOT_SHADE = 0.22
+local LIGHT_SHARE = 0.55
 function UI.topLight(frame, token, alpha, anchor)
 	if not (frame and frame.CreateTexture) then return nil end
 	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
@@ -443,7 +444,8 @@ function UI.topLight(frame, token, alpha, anchor)
 	local depth = LIGHT_STEPS[#LIGHT_STEPS][2]
 	tex:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -LIGHT_INSET, -depth)
 	tex:SetPoint("BOTTOMLEFT", anchor, "LEFT", LIGHT_INSET, 0)
-	token, alpha = token or "text", alpha or 0.07
+	-- Kept well short of a gloss: a lit top, never a shine.
+	token, alpha = token or "text", (alpha or 0.07) * LIGHT_SHARE
 	UI.gradient(tex, token, alpha, "VERTICAL", 0, 1)
 	local r, g, b = Stoa:Color(token)
 	UI.setGradient(tex, { "VERTICAL", 0, 1 }, r, g, b, alpha)

@@ -1083,6 +1083,15 @@ function Console:BuildSlim(frame)
 	end)
 	left:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	self.slimLevel, self.slimXP, self.slimShare = level, xp, share
+	-- Slate: resting reads here as a word; a badge has no room on the
+	-- small seal.
+	if self:Slate() then
+		local rest = caption(left, "Resting")
+		rest:SetPoint("LEFT", share, "RIGHT", 14, 0)
+		rest:SetTextColor(Stoa:Color("mana"))
+		rest:Hide()
+		self.slimRest = rest
+	end
 
 	-- Right: the readouts, laid right to left so Company keeps the corner.
 	local right = CreateFrame("Frame", nil, frame)
@@ -1875,7 +1884,7 @@ function Console:UpdateRing()
 	local ar, ag, ab = Stoa:Color("accent")
 	local mr, mg, mb = Stoa:Color("mana")
 	local tr, tg, tb = Stoa:Color("text")
-	-- The card's edge: what's left to earn stays the card's own line, the
+	-- The card's edge: what's left to earn is a faint line, the
 	-- rested stretch is dashed, and at the cap the whole edge glows low.
 	local edge = self.ringEdge
 	for i, tick in ipairs(ticks) do
@@ -1885,7 +1894,7 @@ function Console:UpdateRing()
 		elseif at <= rested then
 			tick:SetVertexColor(mr, mg, mb, (edge and i % 2 == 0) and 0 or 0.75)
 		else
-			tick:SetVertexColor(tr, tg, tb, edge and 0 or 0.16)
+			tick:SetVertexColor(tr, tg, tb, edge and 0.14 or 0.16)
 		end
 	end
 end
@@ -1913,7 +1922,8 @@ end
 function Console:UpdateSeal()
 	SetPortraitTexture(self.portrait, "player")
 	local resting = IsResting and IsResting() and true or false
-	if self.restMark then self.restMark:SetShown(resting) end
+	if self.restMark then self.restMark:SetShown(resting and not self.slimRest) end
+	if self.slimRest then self.slimRest:SetShown(resting) end
 	if resting and self.wasResting == false then self:Moment("rest", 1) end
 	self.wasResting = resting
 	self:UpdateRing()
@@ -2558,9 +2568,25 @@ local GAP_BUTTONS = { "ActionButton", "MultiBarBottomLeftButton", "MultiBarBotto
 local GAP_REACH, GAP_DEEP, GAP_PAD = 320, 150, 6
 function Console:PlaceFormChips()
 	local forms, seal = Stoa.Forms, _G.StoaSealButton
-	if not (self.youCard and seal and forms and forms.SetChipSpot) or InCombatLockdown() then return end
+	if not (seal and forms and forms.SetChipSpot) or InCombatLockdown() then return end
 	local size = forms.CHIP_SIZE or 30
 	local pitch = size + 6
+	if not self.youCard then
+		-- Slate's slim line: the small seal has no room beside it, so the
+		-- chips sit on the line just past the mana bar's caption.
+		if not (self.db.slim and self:Slate()) then return end
+		local cap = self.resourceParts and self.resourceParts[6]
+		local scale = seal:GetEffectiveScale()
+		local sl, sb, sr, st = rect(seal, scale)
+		local cl, cb, cr, ct = rect(cap, scale)
+		if not (sl and cl) then return end
+		local x, y = cr - (sl + sr) / 2 + 16 + size / 2, (cb + ct) / 2 - (sb + st) / 2
+		local was = self.formSpot
+		if was and math.abs(was[1] - x) < 0.5 and math.abs(was[2] - y) < 0.5 then return end
+		self.formSpot = { x, y, pitch }
+		forms:SetChipSpot(seal, "CENTER", x, y, pitch)
+		return
+	end
 	local count = 0
 	for _, chip in ipairs(forms.chips or {}) do
 		if chip.spellID then count = count + 1 end
@@ -3024,7 +3050,7 @@ function Console:FitPages()
 		local leftClear = self:CentreClear()
 		self:PlaceDividers(width, leftClear, rightClear)
 	end
-	if self.youCard then self:PlaceFormChips() end
+	if self.youCard or self.db.slim then self:PlaceFormChips() end
 end
 
 -- Runs a moment after anything that moves the centre or the screen.

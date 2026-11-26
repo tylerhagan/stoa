@@ -850,6 +850,14 @@ local function dressMerchant()
 				glyph:SetVertexColor(r, g, b, on and 1 or 0.4)
 				for _, word in ipairs(words) do word:SetTextColor(r, g, b, on and 1 or 0.4) end
 			end
+			-- The word beside the arrow turns the page too.
+			local left, right = 0, 0
+			for _, word in ipairs(words) do
+				local reach = math.ceil(word:GetStringWidth() or 0) + 10
+				local wx, bx = word:GetCenter(), button:GetCenter()
+				if (wx and bx and wx < bx) or (not wx and turn == 0) then left = reach else right = reach end
+			end
+			if button.SetHitRectInsets then button:SetHitRectInsets(-left, -right, -4, -4) end
 			button:HookScript("OnEnter", paint)
 			button:HookScript("OnLeave", paint)
 			button:HookScript("OnShow", paint)
