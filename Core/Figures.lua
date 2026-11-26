@@ -234,6 +234,19 @@ function Figures.xp(parent, width, height)
 	local mark = fill(frame, "OVERLAY", slate and "text" or "accent")
 	mark:SetSize(2, height + 8)
 	frame.rested, frame.earned, frame.mark = rested, earned, mark
+	-- Slate, as on its mock-up: a lit knob where you are, and an open ring
+	-- where your rest runs out.
+	if slate then
+		local halo = UI.circle(frame, "OVERLAY", 1, height + 15, "accent", 0.22)
+		halo:SetPoint("CENTER", earned, "RIGHT")
+		local knob = UI.circle(frame, "OVERLAY", 2, height + 7, "accent")
+		knob:SetPoint("CENTER", earned, "RIGHT")
+		local ring = UI.circle(frame, "ARTWORK", 1, height + 7, "mana")
+		ring:SetPoint("CENTER", rested, "RIGHT")
+		local hole = UI.circle(frame, "ARTWORK", 2, height + 3, "panel", 1)
+		hole:SetPoint("CENTER", rested, "RIGHT")
+		frame.knob, frame.restRing = { halo, knob }, { ring, hole }
+	end
 	local least = slate and height or 1
 	local function share(tex, fraction)
 		fraction = math.max(0, math.min(1, fraction or 0))
@@ -245,6 +258,13 @@ function Figures.xp(parent, width, height)
 	function frame:Set(earnedShare, restedShare, hourShare)
 		share(self.earned, earnedShare)
 		share(self.rested, restedShare)
+		if self.knob then
+			local on = self.earned:IsShown()
+			for _, part in ipairs(self.knob) do part:SetShown(on) end
+			-- The ring only where rest reaches past what's earned.
+			local past = self.rested:IsShown() and (restedShare or 0) > (earnedShare or 0) + 0.02
+			for _, part in ipairs(self.restRing) do part:SetShown(past) end
+		end
 		self.mark:SetShown(hourShare ~= nil)
 		if hourShare then
 			self.mark:ClearAllPoints()
