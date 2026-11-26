@@ -347,9 +347,15 @@ function Forms:LayoutChips()
 		chip.icon:SetTexture(C_Spell.GetSpellTexture(spellID))
 		chip:ClearAllPoints()
 		local spot = self.chipSpot
+		local card = console.youCard and console.YOU_CARD
 		if spot then
 			-- Placed by the medallion's owner (Slate's player card).
 			chip:SetPoint("CENTER", spot.frame, spot.point, spot.x + (i - 1) * spot.step, spot.y)
+		elseif card and console.OpenHeight then
+			-- Slate's player card: just right of the card, on its centre
+			-- line. Pinned to the screen, not to the card, which fades in
+			-- a fight (the chips hide then anyway).
+			chip:SetPoint("CENTER", UIParent, "BOTTOM", card.width / 2 + 8 + CHIP / 2 + (i - 1) * (CHIP + 6), console:OpenHeight() + card.y)
 		else
 			-- Off the seal's lower right, mirroring the pet coin, running out.
 			chip:SetPoint("CENTER", anchor, "BOTTOMRIGHT", (i - 1) * (CHIP + 6), 12)
