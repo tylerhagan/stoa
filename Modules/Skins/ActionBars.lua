@@ -68,6 +68,18 @@ function Bars:Skin(button)
 		if tex then pcall(tex.AddMaskTexture, tex, mask) end
 	end
 
+	-- Slate: the icon and its mask sit inside the socket, which cut the
+	-- game's "this one is queued" frame away entirely (a next-swing attack
+	-- showed nothing when pressed). There it is a light wash over the icon.
+	local checked = button.GetCheckedTexture and button:GetCheckedTexture()
+	if UI.slate() and icon and checked then
+		checked:SetTexture(UI.WHITE)
+		checked:SetVertexColor(1, 1, 1, 0.32)
+		checked:SetBlendMode("ADD")
+		checked:ClearAllPoints()
+		checked:SetAllPoints(icon)
+	end
+
 	-- The socket: a dark rounded square with a hairline edge, seen through
 	-- an empty slot and framing a full one.
 	UI.roundPanel(button, 0.9)
