@@ -667,6 +667,8 @@ local function dressMacroSlot(button)
 	UI.well(button, 1)
 end
 
+local MACRO_TAB_DROP = 9
+
 -- Macros: the "Create Macros" line is the window's title, unnamed and in
 -- Blizzard's small yellow; it takes the title's place in the header.
 function AFTER.macro(frame)
@@ -698,6 +700,9 @@ function AFTER.macro(frame)
 	for _, tab in ipairs(frame.stoaTabs or {}) do
 		for _, part in ipairs(tab.stoaTabParts or {}) do part:Hide() end
 		tab.stoaWordOnly = true
+		-- The tabs ride over the header's foot; their words sit a little
+		-- below it, with air above.
+		tab.stoaWordDrop = MACRO_TAB_DROP
 	end
 	local windows = Stoa.modules.Windows
 	if windows and windows.ColourTabs then windows.ColourTabs(frame) end

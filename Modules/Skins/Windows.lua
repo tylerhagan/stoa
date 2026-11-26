@@ -306,7 +306,7 @@ local function colourTabs(frame)
 			tab.stoaUnderline:SetShown(selected)
 			if text then
 				text:ClearAllPoints()
-				text:SetPoint("CENTER", tab, "CENTER", 0, 0)
+				text:SetPoint("CENTER", tab, "CENTER", 0, -(tab.stoaWordDrop or 0))
 			end
 		elseif tab.stoaShade and UI.slate() then
 			-- Slate: the chosen tab washed in the accent, its word in the
