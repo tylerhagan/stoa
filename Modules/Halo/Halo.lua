@@ -378,7 +378,9 @@ local TARGET_REST_Y = 14
 -- Slate, resting: a twin of your card. The name over the race and class
 -- on the left, the health bar (its power line under it) on the right with
 -- the numbers below.
-local TWIN_W, TWIN_NAME_W, TWIN_GAP = 300, 124, 12
+local TWIN_W, TWIN_NAME_W, TWIN_GAP = 340, 124, 12
+-- Its target's target is a line inside it, under the bar, left of the numbers.
+local TWIN_TOT_W, TWIN_TOT_H = 104, 14
 local TWIN_BAR_Y, TWIN_NUM_Y = -13, -37
 local SLATE_REST_GAP = 10   -- Slate: from your card (or its last form chip) to the target
 
@@ -1098,7 +1100,12 @@ function Halo:PlaceTargetOfTarget(curve)
 		chip.label:SetPoint("TOPLEFT", textLeft, self:SlabWanted() and -11 or -6)
 	else
 		chip:SetFrameStrata("LOW")
-		if self.targetSlab then
+		if self.targetSlab and self.targetTwin then
+			chip:SetSize(TWIN_TOT_W, TWIN_TOT_H)
+			chip:SetPoint("TOPLEFT", target, "TOPLEFT", SLAB_PAD + TWIN_NAME_W + TWIN_GAP, TWIN_NUM_Y + TWIN_TOT_H / 2)
+			chip:SetFrameLevel(target:GetFrameLevel() + 5)
+			chip.label:SetPoint("LEFT")
+		elseif self.targetSlab then
 			-- Its panel reaches 10 past each edge: level with the slab's
 			-- top and foot, a small gap between the two blocks.
 			chip:SetSize(TOT_TIGHT_W, SLAB_HEIGHT - 20)
@@ -1112,11 +1119,17 @@ function Halo:PlaceTargetOfTarget(curve)
 	end
 	-- Matte: one line over the health line, docked or beside the slab.
 	chip:SetTight(docked and self:SlabWanted() or not docked and self.targetSlab or false)
+	-- Slate's twin: just a mark and the name, on the target's own card.
+	local inside = not docked and self.targetSlab and self.targetTwin or false
+	chip.said = chip.said or chip.label:GetText()
+	chip.label:SetText(inside and ">" or chip.said)
+	chip.hp:SetAlpha(inside and 0 or 1)
+	if inside then chip.name:SetWidth(TWIN_TOT_W - 14) end
 	if chip.slab then chip.slab:SetShown(docked) end
 	if chip.fill then
-		chip.fill:SetShown(not docked)
+		chip.fill:SetShown(not docked and not inside)
 		if chip.stoaMould then chip.stoaMould:SetShown(not docked) end
-		if docked or UI.matte() then chip.edge:Clear() else chip.edge:Set(Stoa:Color("hairline")) end
+		if docked or inside or UI.matte() then chip.edge:Clear() else chip.edge:Set(Stoa:Color("hairline")) end
 	end
 end
 

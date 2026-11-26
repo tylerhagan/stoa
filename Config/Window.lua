@@ -62,8 +62,32 @@ local function makeToggle(parent, entry)
 	local edge = UI.pillEdge(button, 0)
 	local knob = UI.circle(button, "ARTWORK", 1, 14)
 	knob:SetColorTexture(1, 1, 1, 1)
+	-- Slate: a full pill (two round ends and the stretch between them)
+	-- with a pale knob, as on its mock-up. Solid colours, since the three
+	-- pieces overlap.
+	local pill
+	if UI.slate() then
+		fill:Hide()
+		pill = { UI.circle(button, "BACKGROUND", 0, 20), UI.circle(button, "BACKGROUND", 0, 20), button:CreateTexture(nil, "BACKGROUND") }
+		pill[1]:SetPoint("LEFT")
+		pill[2]:SetPoint("RIGHT")
+		pill[3]:SetPoint("TOPLEFT", 10, 0)
+		pill[3]:SetPoint("BOTTOMRIGHT", -10, 0)
+		for _, part in ipairs(pill) do part:SetColorTexture(1, 1, 1, 1) end
+	end
 	function button:Refresh()
 		local on = Options.value(entry) and true or false
+		if pill then
+			local r, g, b = Stoa:Color(on and "accent" or "text")
+			-- Off: a dim grey; on: the accent a step down, so the knob reads.
+			local k = on and 0.82 or 0.2
+			for _, part in ipairs(pill) do part:SetVertexColor(r * k, g * k, b * k, 1) end
+			edge:Clear()
+			colour(knob, on and "text" or "muted", 1)
+			knob:ClearAllPoints()
+			knob:SetPoint(on and "RIGHT" or "LEFT", on and -3 or 3, 0)
+			return
+		end
 		colour(fill, on and "accent" or "text", on and 0.85 or 0.1)
 		if on then edge:Clear() else edge:Set(Stoa:Color("hairline")) end
 		colour(knob, on and "panel" or "muted", 1)
