@@ -2978,7 +2978,9 @@ end
 
 function Console:UpdateDaylight()
 	local light = nil
-	if self.db.daylight ~= false and GetGameTime then
+	-- The sky lights Leather's gold; Matte black and Slate have none.
+	local leather = Stoa.db and (Stoa.db.material or "leather") == "leather"
+	if leather and self.db.daylight ~= false and GetGameTime then
 		local hour, minute = GetGameTime()
 		if self.previewHour then hour, minute = self.previewHour, 0 end
 		if type(hour) == "number" then light = Console.lightAt(hour + (minute or 0) / 60) end
