@@ -339,6 +339,9 @@ local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 244, 50, 11
 local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
 local SLAB_BAR_H = 8
 local SLAB_NAME_W = SLAB_BAR_W - 30
+-- The most the type words take on the block's top line, so the name
+-- beside them always shows.
+local SLAB_CUE_MOST = 96
 -- Room at the bar's right end for the numbers.
 local SLAB_NUM_W = 84
 local FULL_MATTE_BAR_H = 10
@@ -1302,7 +1305,7 @@ function Halo:UpdateTarget()
 	elseif kind and not unspecified then
 		words[#words + 1] = kind:upper()
 	end
-	local slabKind
+	local slabKind, slabLast
 	if slab then
 		local marks = {}
 		if rank == "rare" or rank == "rareelite" then marks[#marks + 1] = slabWord("RARE", Stoa.silver) end
@@ -1312,6 +1315,7 @@ function Halo:UpdateTarget()
 		-- The trailing gap keeps KICK, which follows it, a word away.
 		target.rankWord:SetText(#marks > 0 and table.concat(marks, " ") .. "   " or "")
 		slabKind = UI.join({ unpack(words, 2) })
+		slabLast = #words > 2 and words[#words] or nil
 		words = { words[1] }
 	else
 		target.rankWord:SetText("")
@@ -1339,6 +1343,13 @@ function Halo:UpdateTarget()
 	if slab and not dead then cue = slabKind or "" end
 	if quiet and not dead then cue = flags and "PVP" or "" end
 	target.cue:SetText(cue)
+	-- On the block the name keeps its room: a long race and class drops
+	-- to the class alone, and anything still too long is cut short.
+	if slab and not self.targetTwin and not dead then
+		target.cue:SetWidth(0)
+		if (target.cue:GetStringWidth() or 0) > SLAB_CUE_MOST and slabLast then target.cue:SetText(slabLast) end
+		if (target.cue:GetStringWidth() or 0) > SLAB_CUE_MOST then target.cue:SetWidth(SLAB_CUE_MOST) end
+	end
 	if quiet and cue == "PVP" then
 		target.cue:SetTextColor(Stoa:Color("danger"))
 	else
