@@ -920,9 +920,34 @@ local function dressListRow(row, token)
 			figure:SetTextColor(Stoa:Color("text"))
 		end
 	end
+	local toggle = row.ToggleCollapseButton
+	-- Statistics, under Slate, read as a tree: a group's name stays in the
+	-- text colour beside its fold mark, and the lines under it are label
+	-- and figure like the console's rows, the label quiet, the figure
+	-- bright, an empty "--" dimmed, with a hairline down their left edge
+	-- that ties the lines of one group together.
+	if UI.slate() and content.Value and content.Name then
+		local guide = row:CreateTexture(nil, "BORDER")
+		guide:SetTexture(UI.WHITE)
+		guide:SetWidth(1)
+		guide:SetPoint("TOP", row, "TOP", 0, 0)
+		guide:SetPoint("BOTTOM", row, "BOTTOM", 0, 0)
+		guide:SetPoint("RIGHT", content.Name, "LEFT", -9, 0)
+		UI.tint(guide, "hairline")
+		local function level()
+			local group = type(toggle) == "table" and toggle.IsShown and toggle:IsShown()
+			guide:SetShown(not group)
+			content.Name:SetTextColor(Stoa:Color(group and "text" or "muted"))
+			local figure = content.Value:GetText()
+			local empty = figure == nil or figure == "" or figure == "--"
+			local r, g, b = Stoa:Color(empty and "muted" or "text")
+			content.Value:SetTextColor(r, g, b, empty and 0.5 or 1)
+		end
+		if row.Initialize then hooksecurefunc(row, "Initialize", function() guarded(level) end) end
+		guarded(level)
+	end
 	-- A group inside a list (boss kills): Blizzard's red fold button as
 	-- STOA's quiet plus and minus.
-	local toggle = row.ToggleCollapseButton
 	if type(toggle) == "table" and toggle.CreateTexture and UI.foldGlyph then
 		local set = UI.foldGlyph(toggle)
 		local function fold()
