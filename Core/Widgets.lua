@@ -423,7 +423,7 @@ end
 -- top to the panel colour, with a breath of the accent on windows).
 -- It spans the card's upper half, whatever the card's size, so it can
 -- never reach past a small one.
-local LIGHT_INSET = 5
+local LIGHT_INSET, LIGHT_CAP, LIGHT_CAP_INSET = 1, 5, 3
 local FOOT_SHADE = 0.22
 function UI.topLight(frame, token, alpha, anchor)
 	if not (frame and frame.CreateTexture) then return nil end
@@ -431,24 +431,46 @@ function UI.topLight(frame, token, alpha, anchor)
 	if not tex then return nil end
 	tex:SetTexture(UI.WHITE)
 	anchor = anchor or frame
-	tex:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -LIGHT_INSET, -1)
+	-- The light meets the card's sides. A square can't follow the round
+	-- corners, so it is stepped: a narrower flat cap over the corner rows,
+	-- the fade below it running edge to edge.
+	tex:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -LIGHT_INSET, -LIGHT_CAP)
 	tex:SetPoint("BOTTOMLEFT", anchor, "LEFT", LIGHT_INSET, 0)
 	token, alpha = token or "text", alpha or 0.07
 	UI.gradient(tex, token, alpha, "VERTICAL", 0, 1)
 	local r, g, b = Stoa:Color(token)
 	UI.setGradient(tex, { "VERTICAL", 0, 1 }, r, g, b, alpha)
+	local parts = {}
+	local cap = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+	if cap then
+		cap:SetTexture(UI.WHITE)
+		cap:SetPoint("TOPLEFT", anchor, "TOPLEFT", LIGHT_CAP_INSET, -1)
+		cap:SetPoint("BOTTOMRIGHT", anchor, "TOPRIGHT", -LIGHT_CAP_INSET, -LIGHT_CAP)
+		UI.paint(cap, token, alpha)
+		parts[#parts + 1] = cap
+	end
 	-- And shade gathers at its foot, so the card reads as a lit surface
 	-- rather than a flat black shape. It shows and hides with the light.
 	local foot = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
 	if foot then
 		foot:SetTexture(UI.WHITE)
 		foot:SetPoint("TOPLEFT", anchor, "LEFT", LIGHT_INSET, 0)
-		foot:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -LIGHT_INSET, 1)
+		foot:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -LIGHT_INSET, LIGHT_CAP)
 		UI.setGradient(foot, { "VERTICAL", 1, 0 }, 0, 0, 0, FOOT_SHADE)
-		for _, method in ipairs({ "SetShown", "Show", "Hide" }) do
-			hooksecurefunc(tex, method, function(self) foot:SetShown(self:IsShown()) end)
-		end
+		parts[#parts + 1] = foot
 		tex.stoaFoot = foot
+		local toe = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+		if toe then
+			toe:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", LIGHT_CAP_INSET, LIGHT_CAP)
+			toe:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -LIGHT_CAP_INSET, 1)
+			toe:SetColorTexture(0, 0, 0, FOOT_SHADE)
+			parts[#parts + 1] = toe
+		end
+	end
+	for _, method in ipairs({ "SetShown", "Show", "Hide" }) do
+		hooksecurefunc(tex, method, function(self)
+			for _, part in ipairs(parts) do part:SetShown(self:IsShown()) end
+		end)
 	end
 	return tex
 end

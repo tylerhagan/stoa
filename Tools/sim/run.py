@@ -485,7 +485,10 @@ do
 		Stoa.daylight = nil
 		console.previewHour = 1
 		console:UpdateDaylight()
-		if not (Stoa.daylight and Stoa.daylight.mix > 0.3) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: preview hour not shown" end
+		-- Only Leather has gold for the sky to light.
+		local leather = (Stoa.db.material or "leather") == "leather"
+		if leather and not (Stoa.daylight and Stoa.daylight.mix > 0.3) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: preview hour not shown" end
+		if not leather and Stoa.daylight then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: lit outside Leather" end
 		console.previewHour = nil
 		console:UpdateDaylight()
 	end
