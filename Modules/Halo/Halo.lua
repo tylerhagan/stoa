@@ -375,6 +375,7 @@ local TARGET_DOCK_TEXT = 60
 -- Without the console's art there's no medallion to fit round: the plaque
 -- rests a little above the console instead.
 local TARGET_REST_Y = 14
+local SLATE_REST_GAP = 10   -- Slate: from your card (or its last form chip) to the target
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
@@ -440,6 +441,15 @@ function Halo:PlaceTarget()
 		if self.targetDocks then
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", matte and console.MATTE_DOCK_X or UI.PLAQUE_SOCKET_X, console:OpenHeight() + TARGET_DOCK_Y)
 			self.targetTextLeft = matte and console.MATTE_DOCK_TEXT or TARGET_DOCK_TEXT
+		elseif console.youCard and console.YOU_CARD then
+			-- Slate: a twin of your card, on its line, past the form chips.
+			local you, forms, chips = console.YOU_CARD, Stoa.Forms, 0
+			for _, chip in ipairs(forms and forms.chips or {}) do
+				if chip:IsShown() then chips = chips + 1 end
+			end
+			local step = (forms and forms.CHIP_SIZE or 30) + 6
+			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", you.width / 2 + SLATE_REST_GAP + chips * step, console:OpenHeight() + you.y - you.height / 2)
+			self.targetTextLeft = nil
 		else
 			local gap = 150 * (console.ART_SCALE or 0.556) + 22
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
