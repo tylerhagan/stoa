@@ -237,6 +237,9 @@ local YOU_W, YOU_H, YOU_Y = 360, 50, -9
 local YOU_SEAL, YOU_PAD, YOU_GAP = 36, 10, 14
 local YOU_NAME_W, YOU_VALUE_W, YOU_CREST = 104, 34, 18
 local YOU_BAR_H, YOU_BAR_APART = 4, 8
+-- For pieces pinned to the screen beside the card (the form chips): its
+-- size and its centre's height over the console's top edge.
+Console.YOU_CARD = { width = YOU_W, height = YOU_H, y = YOU_Y }
 
 local function slatePlate(owner, layer)
 	local fill = UI.sliced(owner, layer or "BACKGROUND", "CardFill.tga")
@@ -905,7 +908,16 @@ end
 function Console:PlaceYouBars(crests)
 	local card = self.youCard
 	if not (card and self.health) then return end
-	local left = YOU_PAD + YOU_SEAL + YOU_GAP + YOU_NAME_W + 8
+	crests = crests or self.youCrests or 0
+	self.youCrests = crests
+	-- The words take the room they need, and the bars the rest.
+	local words = 0
+	for _, fs in ipairs({ self.youName, self.youSub }) do
+		local width = Stoa:PlainNumber(fs:GetStringWidth()) or 0
+		if width > words then words = width end
+	end
+	words = math.min(YOU_NAME_W, math.max(40, math.ceil(words)))
+	local left = YOU_PAD + YOU_SEAL + YOU_GAP + words + 14
 	local right = YOU_PAD + (crests > 0 and crests * (YOU_CREST + 4) + 4 or 0)
 	local rows = { { self.health, self.healthText, YOU_BAR_APART }, { self.mana, self.manaText, -YOU_BAR_APART } }
 	for _, row in ipairs(rows) do
@@ -1800,6 +1812,7 @@ function Console:UpdateSeal()
 	if self.youName then
 		self.youName:SetText(UnitName("player") or "")
 		self.youSub:SetText(UnitClass("player") or "")
+		self:PlaceYouBars()
 	end
 	if self.roleWord then
 		self.roleWord:SetText(role and Stoa.ROLE_LABELS[role] or "")
