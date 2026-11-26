@@ -751,6 +751,40 @@ local function questFonts()
 	face(QuestFontNormalSmall, sans, 12)
 end
 
+-- Slate sets every word in Inter. The game's own windows, tracker and
+-- lists draw from a handful of base fonts, so those take STOA's face and
+-- keep their own sizes and outlines. (Picking another Style reloads, which
+-- gives the game's faces back.)
+local BASE_FONTS = {
+	"SystemFont_Tiny", "SystemFont_Tiny2", "SystemFont_Small", "SystemFont_Small2", "SystemFont_Med1", "SystemFont_Med2",
+	"SystemFont_Med3", "SystemFont_Large", "SystemFont_Large2", "SystemFont_Huge1", "SystemFont_Huge2",
+	"SystemFont_Shadow_Small", "SystemFont_Shadow_Small2", "SystemFont_Shadow_Med1", "SystemFont_Shadow_Med2",
+	"SystemFont_Shadow_Med3", "SystemFont_Shadow_Large", "SystemFont_Shadow_Large2", "SystemFont_Shadow_Huge1",
+	"SystemFont_Shadow_Huge2", "SystemFont_Outline_Small", "SystemFont_Outline", "SystemFont_Shadow_Outline_Small",
+	"Game10Font_o1", "Game11Font", "Game12Font", "Game13Font", "Game13FontShadow", "Game15Font", "Game16Font",
+	"Game18Font", "Game20Font", "Game24Font", "Game27Font", "ObjectiveFont", "ObjectiveTrackerFont12",
+	"ObjectiveTrackerFont13", "ObjectiveTrackerFont14", "ObjectiveTrackerHeaderFont", "ObjectiveTrackerLineFont",
+	"QuestFont_Large", "QuestFont_Shadow_Small", "QuestFont_Huge", "QuestFont_Shadow_Huge", "QuestFont_Super_Huge",
+	"Fancy12Font", "Fancy14Font", "Fancy16Font", "Fancy18Font", "Fancy20Font", "Fancy22Font", "Fancy24Font",
+	"FriendsFont_Normal", "FriendsFont_Small", "FriendsFont_Large", "FriendsFont_UserText", "FriendsFont_11",
+	"GameFontNormal", "GameFontNormalSmall", "GameFontNormalMed1", "GameFontNormalMed2", "GameFontNormalMed3",
+	"GameFontNormalLarge", "GameFontNormalHuge", "GameFontHighlight", "GameFontHighlightSmall",
+	"GameFontHighlightSmall2", "GameFontHighlightMedium", "GameFontHighlightLarge", "GameFontHighlightHuge",
+	"GameFontDisable", "GameFontDisableSmall", "GameFontDisableLarge", "GameFontWhite", "GameFontWhiteSmall",
+	"MailFont_Large", "InvoiceFont_Med", "InvoiceFont_Small", "ReputationDetailFont", "AchievementFont_Small",
+}
+local function slateFonts()
+	local file = Stoa.fonts.sans[1]
+	if not file then return end
+	for _, name in ipairs(BASE_FONTS) do
+		local object = rawget(_G, name)
+		if type(object) == "table" and object.GetFont and object.SetFont then
+			local _, size, flags = object:GetFont()
+			if type(size) == "number" and size > 0 then pcall(object.SetFont, object, file[1], size, flags or "") end
+		end
+	end
+end
+
 local function dressQuest()
 	local frame = QuestFrame
 	if not frame then return end
@@ -1329,6 +1363,7 @@ end
 local guarded = Stoa.safe.guarded
 
 function Windows:OnEnable()
+	if UI.slate() then guarded(slateFonts) end
 	guarded(questFonts)
 	guarded(dressQuest)
 	guarded(dressGossip)

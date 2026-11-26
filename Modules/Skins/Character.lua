@@ -735,6 +735,8 @@ local function dressStats()
 			hooksecurefunc(box, "Update", each)
 			each()
 		end
+		local windows = Stoa.modules.Windows
+		if pane and windows and windows.DressScrollBar then guarded(windows.DressScrollBar, pane.ScrollBar) end
 		-- Role-first ordering is off: handing the pane a reordered list from
 		-- STOA's code tainted Blizzard's stats data, and opening the window
 		-- then broke the player frame's health text (secret values compared
@@ -918,6 +920,21 @@ local function dressListRow(row, token)
 			figure:SetTextColor(Stoa:Color("text"))
 		end
 	end
+	-- A group inside a list (boss kills): Blizzard's red fold button as
+	-- STOA's quiet plus and minus.
+	local toggle = row.ToggleCollapseButton
+	if type(toggle) == "table" and toggle.CreateTexture and UI.foldGlyph then
+		local set = UI.foldGlyph(toggle)
+		local function fold()
+			local data = row.elementData
+			local shut = row.IsCollapsed and row:IsCollapsed()
+			if shut == nil and type(data) == "table" then shut = data.isCollapsed end
+			set(shut and true or false)
+		end
+		if toggle.RefreshIcon then hooksecurefunc(toggle, "RefreshIcon", fold) end
+		if row.Initialize then hooksecurefunc(row, "Initialize", fold) end
+		guarded(fold)
+	end
 	-- The chosen and hovered row: a flat wash in place of the painted one
 	-- (Blizzard still sets how strong it is, and red for a faction at war).
 	local wash = content.BackgroundHighlight
@@ -956,6 +973,31 @@ local function quietWords(frame, depth)
 	end
 	if (depth or 0) > 0 and frame.GetChildren then
 		for _, child in ipairs({ frame:GetChildren() }) do quietWords(child, depth - 1) end
+	end
+end
+
+-- Blizzard's small tick boxes in a pane: the brown box goes grey and the
+-- gold tick takes the accent.
+local function dressTicks(frame)
+	if forbiddenRow(frame) or not frame.GetChildren then return end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		if not forbiddenRow(child) and child.GetObjectType and child:GetObjectType() == "CheckButton" and not child.stoaTick then
+			child.stoaTick = true
+			for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture" }) do
+				local tex = child[getter] and child[getter](child)
+				if tex and tex.SetDesaturated then
+					tex:SetDesaturated(true)
+					tex:SetVertexColor(0.75, 0.78, 0.82)
+				end
+			end
+			for _, getter in ipairs({ "GetCheckedTexture", "GetDisabledCheckedTexture" }) do
+				local tex = child[getter] and child[getter](child)
+				if tex and tex.SetDesaturated then
+					tex:SetDesaturated(true)
+					UI.tint(tex, "accent")
+				end
+			end
+		end
 	end
 end
 
@@ -1020,6 +1062,8 @@ local function dressLists()
 				-- time Blizzard fills it again.
 				local function words() guarded(quietWords, pane, 3) end
 				if pane.Refresh then hooksecurefunc(pane, "Refresh", words) end
+				guarded(dressTicks, pane)
+				if pane.Content then guarded(dressTicks, pane.Content) end
 				pane:HookScript("OnShow", words)
 				words()
 			end
