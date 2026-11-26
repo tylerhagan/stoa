@@ -768,8 +768,8 @@ function Console:BuildSeal(frame)
 	local rest = UI.badge(seal, "RESTING")
 	rest:SetFrameLevel(seal:GetFrameLevel() + 4)
 	if card then
-		-- On the card's top edge: the portrait is too small to carry it.
-		rest:SetPoint("CENTER", portrait, "TOP", 0, -1)
+		-- Just above the portrait, clear of your face.
+		rest:SetPoint("BOTTOM", portrait, "TOP", 0, 5)
 	else
 		rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1) + 4)
 	end
