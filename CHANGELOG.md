@@ -8,7 +8,7 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 - **Cooldowns page finds running profession cooldowns**: a transmute or Mooncloth cooldown that was started before STOA could see it (on an older version, or before a profile reset) now shows after the next login, not only after the next cast. Transmutes share one cooldown in the game, so they share one row named Transmute.
 
-- **Cooldowns page headline**: the big line (1 ready, None ready) could stay unseen. Its small pulse is now drawn another way.
+- **Cooldowns page headline**: the big line (1 ready, None ready) could stay unseen. Its small pulse is now drawn another way. It also runs the column's full width when there is no note beside it, so Nothing cooling is no longer cut off.
 
 - **Welcome page, for healers**: with a healing spec picked, the roles step now says that your party cards cast on a click with their own bindings, what the click grid is, and where to change and move them.
 

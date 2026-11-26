@@ -68,7 +68,13 @@ local function scaffold(col, kit, label, drop)
 		name:SetPoint("TOPRIGHT", value, "TOPLEFT", -8, 0)
 		rows[i] = { name = name, value = value }
 	end
-	return { big = big, note = note, rows = rows }
+	-- The big line runs up to the note, or the column's whole width when
+	-- there is none, so a long line ("Nothing cooling") isn't cut short.
+	local function fit()
+		local taken = plain(note:GetStringWidth()) or 0
+		big:SetWidth(kit.width - (taken > 0 and (taken + 8) or 0))
+	end
+	return { big = big, note = note, rows = rows, fit = fit }
 end
 
 -- Colours a line from the theme as it stands. Not UI.paint: these lines
@@ -161,12 +167,14 @@ local function buildReputation(col, kit)
 		if not first then
 			page.big:SetText("None yet")
 			page.note:SetText("")
+			page.fit()
 			bar:Hide()
 			for i = 1, ROWS do setRow(page.rows[i]) end
 			return
 		end
 		page.big:SetText(first.name)
 		page.note:SetText(rank(first))
+		page.fit()
 		bar:Show()
 		bar:Set(share(first), "accent")
 		local left = first.ceiling - first.standing
@@ -374,9 +382,11 @@ local function buildCooldowns(col, kit)
 		if #list == 0 then
 			page.big:SetText("Nothing cooling")
 			page.note:SetText("")
+			page.fit()
 		else
 			page.big:SetText(ready > 0 and (ready .. " ready") or "None ready")
 			page.note:SetText(soonest and ("next " .. span(soonest)) or "")
+			page.fit()
 		end
 		tint(page.big, ready > 0 and "accent" or "text")
 		if not breath:IsShown() then page.big:SetAlpha(1) end
@@ -426,6 +436,7 @@ local function buildWeek(col, kit)
 		page.big:SetText(mine == 0 and "All open" or (mine .. " saved"))
 		local reset = C_DateAndTime and C_DateAndTime.GetSecondsUntilWeeklyReset and plain(C_DateAndTime.GetSecondsUntilWeeklyReset())
 		page.note:SetText(reset and reset > 0 and ("resets " .. span(reset)) or "")
+		page.fit()
 		local last = #others > 0 and ROWS - 1 or ROWS
 		for i = 1, last do
 			local lock = list[i]
