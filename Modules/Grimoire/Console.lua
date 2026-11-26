@@ -276,6 +276,9 @@ local function slatePlate(owner, layer)
 	return fill, edge, shadow, light
 end
 
+-- Other modules' cards on the console (the pet's) wear the same plate.
+Console.SlatePlate = slatePlate
+
 function Console:BuildSlate(frame, drawn)
 	for _, part in ipairs(drawn) do
 		UI.unpaint(part)
