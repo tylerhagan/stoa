@@ -742,6 +742,8 @@ end
 -- Quest fonts in Stoa's type: titles in the display face, body in Inter.
 local function questFonts()
 	local display, sans = Stoa.fonts.serif[1], Stoa.fonts.sans[1]
+	-- Slate sets every word in the sans, titles too.
+	if UI.slate() then display = sans end
 	local function face(fontObject, file, size)
 		if fontObject and fontObject.SetFont then pcall(fontObject.SetFont, fontObject, file[1], size * file[2], "") end
 	end

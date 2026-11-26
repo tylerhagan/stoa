@@ -196,6 +196,8 @@ local function trackerFonts()
 		local fontObject, kind, extra = entry[1], entry[2], entry[3]
 		if fontObject and fontObject.GetFont then
 			local _, size = fontObject:GetFont()
+			-- Slate sets every word in the sans, headings too.
+			if Stoa.UI.slate() then kind = "sans" end
 			local candidate = Stoa.fonts[kind] and Stoa.fonts[kind][1]
 			if size and candidate then
 				pcall(fontObject.SetFont, fontObject, candidate[1], (size + extra) * candidate[2], "")

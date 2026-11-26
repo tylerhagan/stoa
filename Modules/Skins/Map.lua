@@ -255,26 +255,41 @@ end
 -- The quest log beside the map: its painted frame and filigree go, the
 -- search field and scrollbar are STOA's, zone headings lose their plate and
 -- the quest count reads as a quiet caption.
-local function dressLogHeader(header)
-	if type(header) ~= "table" or header.stoaLogHead or (header.IsForbidden and header:IsForbidden()) then return end
-	header.stoaLogHead = true
+local function logHeaderArt(header)
 	for _, region in ipairs({ header:GetRegions() }) do
 		if isTexture(region) then
-			local layer = region:GetDrawLayer()
-			if layer == "HIGHLIGHT" then
+			local atlas = region.GetAtlas and region:GetAtlas()
+			atlas = type(atlas) == "string" and atlas:lower() or ""
+			if region:GetDrawLayer() == "HIGHLIGHT" then
 				region:SetTexture(Stoa.UI.WHITE)
 				region:SetVertexColor(1, 1, 1, 0.05)
-			elseif layer == "BACKGROUND" or layer == "BORDER" then
+			elseif region ~= header.stoaRule and not (atlas:find("plus") or atlas:find("minus")) then
+				-- The plate, whichever layer or button state it is drawn in.
 				region:SetAlpha(0)
 			end
 		end
 	end
-	local rule = header:CreateTexture(nil, "BORDER")
-	rule:SetTexture(Stoa.UI.WHITE)
-	rule:SetHeight(1)
-	rule:SetPoint("BOTTOMLEFT", 4, 1)
-	rule:SetPoint("BOTTOMRIGHT", -4, 1)
-	Stoa.UI.tint(rule, "hairline")
+	local text = header.ButtonText or (header.GetFontString and header:GetFontString()) or header.Text
+	if text and text.SetTextColor then
+		Stoa:SetFont(text, "sans", Stoa.typeSize.label)
+		text:SetTextColor(Stoa:Color("accent"))
+	end
+end
+
+local function dressLogHeader(header)
+	if type(header) ~= "table" or (header.IsForbidden and header:IsForbidden()) then return end
+	if not header.stoaLogHead then
+		header.stoaLogHead = true
+		local rule = header:CreateTexture(nil, "BORDER")
+		rule:SetTexture(Stoa.UI.WHITE)
+		rule:SetHeight(1)
+		rule:SetPoint("BOTTOMLEFT", 4, 1)
+		rule:SetPoint("BOTTOMRIGHT", -4, 1)
+		Stoa.UI.tint(rule, "hairline")
+		header.stoaRule = rule
+	end
+	-- Each time: Blizzard sets a heading's art again as it reuses it.
+	logHeaderArt(header)
 end
 
 function Map:DressLog()
