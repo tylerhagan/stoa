@@ -217,6 +217,9 @@ end
 
 -- Experience --------------------------------------------------------------------
 
+-- Slate's rested stretch: dashes this wide, as far apart, and no more of
+-- them than this on one bar.
+local DASH, DASH_MOST = 3, 48
 function Figures.xp(parent, width, height)
 	local frame = CreateFrame("Frame", nil, parent)
 	frame:SetSize(width, height)
@@ -246,6 +249,7 @@ function Figures.xp(parent, width, height)
 		local hole = UI.circle(frame, "ARTWORK", 2, height + 3, "panel", 1)
 		hole:SetPoint("CENTER", rested, "RIGHT")
 		frame.knob, frame.restRing = { halo, knob }, { ring, hole }
+		frame.dashes = {}
 	end
 	local least = slate and height or 1
 	local function share(tex, fraction)
@@ -264,6 +268,29 @@ function Figures.xp(parent, width, height)
 			-- The ring only where rest reaches past what's earned.
 			local past = self.rested:IsShown() and (restedShare or 0) > (earnedShare or 0) + 0.02
 			for _, part in ipairs(self.restRing) do part:SetShown(past) end
+			-- And the rest between the two is a dotted stretch, not a
+			-- solid one: short dashes from the knob to the ring.
+			self.rested:Hide()
+			local from = width * math.max(0, math.min(1, earnedShare or 0)) + height / 2 + 6
+			local to = width * math.max(0, math.min(1, restedShare or 0)) - height / 2 - 4
+			local n = 0
+			if past then
+				local x = from
+				while x + DASH <= to and n < DASH_MOST do
+					n = n + 1
+					local dash = self.dashes[n]
+					if not dash then
+						dash = fill(self, "BORDER", "mana", 0.6)
+						dash:SetSize(DASH, math.max(2, height - 2))
+						self.dashes[n] = dash
+					end
+					dash:ClearAllPoints()
+					dash:SetPoint("LEFT", self, "LEFT", x, 0)
+					dash:Show()
+					x = x + DASH * 2
+				end
+			end
+			for i = n + 1, #self.dashes do self.dashes[i]:Hide() end
 		end
 		self.mark:SetShown(hourShare ~= nil)
 		if hourShare then
