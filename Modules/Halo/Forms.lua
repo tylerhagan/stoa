@@ -65,6 +65,8 @@ local HALO_HAZE_ALPHA = 0.5
 -- How far up and down from the middle the Halo's haze reaches, as a share
 -- of its texture: about where the arcs end.
 local HAZE_REACH = 0.29
+-- On the ground line the smoke is a stretched soft dot, so it needs more.
+local LINE_HAZE_ALPHA = 0.9
 
 local function knows(spellID)
 	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
@@ -210,9 +212,13 @@ function Forms:BuildLook()
 		local spec = line and halo.LINE
 		if spec then
 			for _, sign in ipairs({ -1, 1 }) do
-				local piece = haze:CreateTexture(nil, "BACKGROUND", nil, -8)
+				-- Over the line's seat (the Halo frame's own BACKGROUND art),
+				-- under the bars (their own frames), and wide and tall
+				-- enough that the soft dot's core reaches past the bar.
+				local piece = haze:CreateTexture(nil, "BORDER", nil, 0)
 				piece:SetTexture(UI.MEDIA .. "Textures\\SparkleGlow")
-				piece:SetSize(spec.width + 40, 36)
+				piece:SetSize(spec.width * 1.7, 72)
+				piece.alpha = LINE_HAZE_ALPHA
 				piece:SetPoint("CENTER", haze, "BOTTOM", sign * (spec.gap + spec.width / 2), spec.y)
 				haze.pieces[#haze.pieces + 1] = piece
 			end
@@ -281,7 +287,7 @@ function Forms:ApplyLook(look, entering)
 				if piece.fade then
 					UI.setGradient(piece, piece.fade, sr, sg, sb, HALO_HAZE_ALPHA)
 				else
-					piece:SetVertexColor(sr, sg, sb, HALO_HAZE_ALPHA)
+					piece:SetVertexColor(sr, sg, sb, piece.alpha or HALO_HAZE_ALPHA)
 				end
 			end
 			parts.haloHaze:Show()
