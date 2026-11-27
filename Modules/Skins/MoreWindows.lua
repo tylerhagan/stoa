@@ -1409,16 +1409,7 @@ local function dressSideTab(tab, glyph)
 	paintSideTab(tab)
 end
 
-function AFTER.professions(frame)
-	dressSideTab(frame.ProfessionsOverviewTab)
-	for _, tab in ipairs(frame.rightProfessionTabs or {}) do dressSideTab(tab) end
-end
-
--- Looking For Group. The parts on the bare parent first: its close becomes
--- the quiet cross, the side tabs dark tiles like the professions' ones, and
--- the big eye over the corner goes (as every window's portrait does).
--- Then each page's inside: wood, stone and gold bevels go, rows become
--- dark tiles, fields and ticks STOA's. Nothing is moved.
+-- A dark rounded tile with an edge, inset in its owner (rows and cards).
 local function lfgTile(row, left, top, right, bottom)
 	local fill = UI.sliced(row, "BACKGROUND", "CardFill.tga")
 	if not fill then return end
@@ -1435,6 +1426,127 @@ local function lfgTile(row, left, top, right, bottom)
 	return fill
 end
 
+-- The overview page: Blizzard's five painted cards (two professions, then
+-- cooking, fishing and first aid) become dark tiles with a fine rim. Names
+-- read in the text colour, the bronze icon frames and the bar's bronze
+-- rim go, the skill bar's swirl is one calm colour (the accent) and the
+-- red unlearn cross is grey until the mouse is on it. The spell buttons
+-- are secure and cast, so only their art and words change, never their
+-- place.
+local function professionWords(text, token)
+	if type(text) == "table" and text.SetTextColor then
+		text:SetTextColor(Stoa:Color(token))
+		if text.SetShadowOffset then text:SetShadowOffset(0, 0) end
+	end
+end
+
+local function quietRankBar(bar)
+	if type(bar) ~= "table" or forbidden(bar) then return end
+	alphaOff(bar.Border)
+	if bar.Background and bar.Background.SetVertexColor then bar.Background:SetVertexColor(0, 0, 0, 0.6) end
+	for _, key in ipairs({ "Fill", "Flare" }) do
+		local tex = bar[key]
+		if tex and tex.SetDesaturated then
+			tex:SetDesaturated(true)
+			tex:SetVertexColor(Stoa:Color("accent"))
+		end
+	end
+end
+
+local function dressSpellButton(button)
+	if type(button) ~= "table" or forbidden(button) then return end
+	alphaOff(button.IconBorder)
+	alphaOff(button.IconTextureOverlay)
+	if button.IconTexture and button.IconTexture.SetTexCoord then button.IconTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	-- Blizzard writes the name in yellow each time it draws the button
+	-- (and in its own blue for a passive, which stays).
+	local words = button.spellString
+	if words and words.GetTextColor then
+		local r, g, b = words:GetTextColor()
+		local n = NORMAL_FONT_COLOR
+		if n and math.abs(r - n.r) < 0.02 and math.abs(g - n.g) < 0.02 and math.abs(b - n.b) < 0.02 then professionWords(words, "text") end
+	end
+	if not button.stoaProfession then
+		button.stoaProfession = true
+		if type(button.UpdateButton) == "function" then
+			Stoa.SafeHook(button, "UpdateButton", function(own) dressSpellButton(own) end)
+		end
+	end
+end
+
+local function dressProfessionCard(card)
+	if type(card) ~= "table" or forbidden(card) then return end
+	alphaOff(card.Background)
+	professionWords(card.ProfessionName, "text")
+	professionWords(card.missingHeader, "text")
+	professionWords(card.missingText, "muted")
+	professionWords(card.specialization, "muted")
+	quietRankBar(card.StatusBar)
+	for _, button in ipairs(card.spellButtons or {}) do dressSpellButton(button) end
+	if card.stoaFill then return end
+	if not lfgTile(card, 3, 3, 3, 3) then return end
+	local r, g, b = Stoa:Color("panel")
+	card.stoaFill:SetVertexColor(r + 0.03, g + 0.03, b + 0.03, 0.9)
+	card.stoaEdge:Set(Stoa:Color("hairline"))
+	local bar = card.StatusBar
+	if type(bar) == "table" and type(bar.Update) == "function" then
+		Stoa.SafeHook(bar, "Update", function(own) quietRankBar(own) end)
+	end
+	local unlearn = card.UnlearnButton
+	if type(unlearn) == "table" and not forbidden(unlearn) then
+		local function paint(over)
+			for _, key in ipairs({ "Icon", "Overlay" }) do
+				local tex = unlearn[key]
+				if tex and tex.SetDesaturated then
+					tex:SetDesaturated(not over)
+					if over then tex:SetVertexColor(1, 1, 1) else tex:SetVertexColor(Stoa:Color("muted")) end
+				end
+			end
+		end
+		unlearn:HookScript("OnEnter", function() paint(true) end)
+		unlearn:HookScript("OnLeave", function() paint(false) end)
+		paint(false)
+	end
+end
+
+local PROFESSION_CARDS = { "PrimaryProfession1", "PrimaryProfession2", "SecondaryProfession1", "SecondaryProfession2", "SecondaryProfession3" }
+local function professionContent(root, depth)
+	if type(root) ~= "table" or forbidden(root) then return end
+	if type(root.ProfessionsContentFrame) == "table" then return root.ProfessionsContentFrame end
+	if depth <= 0 or not root.GetChildren then return end
+	for _, child in ipairs({ root:GetChildren() }) do
+		local found = professionContent(child, depth - 1)
+		if found then return found end
+	end
+end
+
+local function dressProfessionCards(frame)
+	local content = frame.stoaProfessionContent or professionContent(frame.BookPage, 2)
+	if not content then return end
+	if not frame.stoaProfessionContent then
+		frame.stoaProfessionContent = content
+		-- The cards are filled in again whenever a skill changes.
+		for _, owner in ipairs({ content:GetParent(), frame.BookPage }) do
+			if type(owner) == "table" and type(owner.Update) == "function" and not owner.stoaProfessionHook then
+				owner.stoaProfessionHook = true
+				Stoa.SafeHook(owner, "Update", function() dressProfessionCards(frame) end)
+			end
+		end
+	end
+	for _, key in ipairs(PROFESSION_CARDS) do xpcall(dressProfessionCard, Stoa.catch, content[key]) end
+end
+
+function AFTER.professions(frame)
+	dressSideTab(frame.ProfessionsOverviewTab)
+	for _, tab in ipairs(frame.rightProfessionTabs or {}) do dressSideTab(tab) end
+	xpcall(dressProfessionCards, Stoa.catch, frame)
+end
+
+-- Looking For Group. The parts on the bare parent first: its close becomes
+-- the quiet cross, the side tabs dark tiles like the professions' ones, and
+-- the big eye over the corner goes (as every window's portrait does).
+-- Then each page's inside: wood, stone and gold bevels go, rows become
+-- dark tiles, fields and ticks STOA's. Nothing is moved.
 local function paintLfgRow(row)
 	if not row.stoaFill then return end
 	local chosen = row.Selected and row.Selected:IsShown()
