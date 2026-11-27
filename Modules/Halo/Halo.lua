@@ -186,17 +186,63 @@ end
 -- The ground line: two straight bars on the Halo's bottom line, health
 -- left of the cooldown slot and power right of it. Health empties toward
 -- the slot's side last, so both bars are fullest where they meet.
-local LINE_W, LINE_H, LINE_GAP, LINE_Y = 120, 6, 28, 8
-Halo.LINE = { width = LINE_W, height = LINE_H, gap = LINE_GAP, y = LINE_Y }
+-- Two shapes share this geometry. "line": the bars are the frame, numbers
+-- at their outer ends. "numbers": the numbers are the frame, large over a
+-- hairline bar each, and the coins move under the bars (top is the room
+-- the shape takes above its bars; below says the coins go underneath).
+local LINES = {
+	line = { width = 120, height = 6, gap = 28, y = 8, top = 3 },
+	numbers = { width = 84, height = 3, gap = 28, y = 8, top = 34, below = true, numbers = true },
+}
+Halo.LINE = {}
+for key, value in pairs(LINES.line) do Halo.LINE[key] = value end
+local LINE = Halo.LINE
 
 function Halo:Line()
-	return self.db.shape == "line"
+	return LINES[self.db.shape] ~= nil
+end
+
+-- Called before anything is built, so every piece reads the chosen shape.
+function Halo:PickLine()
+	local spec = LINES[self.db.shape]
+	if not spec then return end
+	for key in pairs(LINE) do LINE[key] = nil end
+	for key, value in pairs(spec) do LINE[key] = value end
 end
 
 local LINE_ALPHA = 0.82
+
+-- The side rail: both bars as short uprights together on your right, with
+-- the numbers and coins beside them. x and bottom are from the Halo's
+-- centre; the health rail is the left of the two.
+Halo.RAIL = { x = 74, bottom = -52, width = 7, height = 96, gap = 5 }
+local RAIL = Halo.RAIL
+
+function Halo:Rail()
+	return self.db.shape == "rail"
+end
+
+local function railBar(parent, token, index)
+	local sb = CreateFrame("StatusBar", nil, parent)
+	sb:SetSize(RAIL.width, RAIL.height)
+	sb:SetOrientation("VERTICAL")
+	sb:SetStatusBarTexture(UI.WHITE)
+	if UI.slate() then UI.barShade(sb) end
+	UI.paint(sb, token)
+	local track = sb:CreateTexture(nil, "BACKGROUND")
+	track:SetPoint("TOPLEFT", -1, 1)
+	track:SetPoint("BOTTOMRIGHT", 1, -1)
+	track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+	sb:SetAlpha(LINE_ALPHA)
+	sb:SetMinMaxValues(0, 1)
+	sb:SetValue(1)
+	sb:SetPoint("BOTTOMLEFT", parent, "CENTER", RAIL.x + (index - 1) * (RAIL.width + RAIL.gap), RAIL.bottom)
+	return sb
+end
+
 local function lineBar(parent, token, reverse)
 	local sb = CreateFrame("StatusBar", nil, parent)
-	sb:SetSize(LINE_W, LINE_H)
+	sb:SetSize(LINE.width, LINE.height)
 	sb:SetStatusBarTexture(UI.WHITE)
 	if UI.slate() then UI.barShade(sb) end
 	UI.paint(sb, token)
@@ -212,9 +258,9 @@ local function lineBar(parent, token, reverse)
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
 	if reverse then
-		sb:SetPoint("RIGHT", parent, "BOTTOM", -LINE_GAP, LINE_Y)
+		sb:SetPoint("RIGHT", parent, "BOTTOM", -LINE.gap, LINE.y)
 	else
-		sb:SetPoint("LEFT", parent, "BOTTOM", LINE_GAP, LINE_Y)
+		sb:SetPoint("LEFT", parent, "BOTTOM", LINE.gap, LINE.y)
 	end
 	return sb
 end
@@ -222,7 +268,7 @@ end
 -- Hide while full: a bar that is full (rage: empty) says nothing, so it and
 -- its number go clear. A hidden value counts as not full.
 local function quiet(self, bar, text, current, max, emptyIsRest)
-	if not (self:Line() and self.db.lineQuiet) then return end
+	if not ((self:Line() or self:Rail()) and self.db.lineQuiet) then return end
 	local known = not Stoa:IsSecret(current) and not Stoa:IsSecret(max) and type(current) == "number" and type(max) == "number" and max > 0
 	local resting = known and ((emptyIsRest and current <= 0) or (not emptyIsRest and current >= max))
 	local alpha = resting and 0 or 1
@@ -242,9 +288,14 @@ function Halo:Build()
 	frame:SetAlpha(0)
 	self.frame = frame
 
+	self:PickLine()
 	local line = self:Line()
+	local rail = self:Rail()
 	local health, mana
-	if line then
+	if rail then
+		health = railBar(frame, "health", 1)
+		mana = railBar(frame, "mana", 2)
+	elseif line then
 		health = lineBar(frame, "health", true)
 		mana = lineBar(frame, "mana")
 	else
@@ -255,9 +306,19 @@ function Halo:Build()
 	end
 	self.health, self.mana = health, mana
 
-	local healthText = UI.text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	local manaText = UI.text(frame, "serif", Stoa.typeSize.title, "mana", "LEFT")
-	if line then
+	local numberSize = line and LINE.numbers and Stoa.typeSize.display or Stoa.typeSize.title
+	local healthText = UI.text(frame, "serif", numberSize, "text", "RIGHT")
+	local manaText = UI.text(frame, "serif", numberSize, "mana", "LEFT")
+	if rail then
+		-- Beside the rails, at their foot: health over power.
+		healthText:SetJustifyH("LEFT")
+		manaText:SetPoint("BOTTOMLEFT", mana, "BOTTOMRIGHT", 8, -2)
+		healthText:SetPoint("BOTTOMLEFT", manaText, "TOPLEFT", 0, 4)
+	elseif line and LINE.numbers then
+		-- The numbers are the frame: large, each over its hairline.
+		healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 5)
+		manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 5)
+	elseif line then
 		-- The numbers stand at the bars' outer ends.
 		healthText:SetPoint("RIGHT", health, "LEFT", -10, 0)
 		manaText:SetPoint("LEFT", mana, "RIGHT", 10, 0)
@@ -266,8 +327,8 @@ function Halo:Build()
 		manaText:SetPoint("BOTTOMLEFT", frame, "BOTTOM", SIZE * 0.3, 6)
 	end
 	-- The numbers are what you read mid-fight, so they get a fine outline.
-	Stoa:SetFont(healthText, "serif", Stoa.typeSize.title, "OUTLINE")
-	Stoa:SetFont(manaText, "serif", Stoa.typeSize.title, "OUTLINE")
+	Stoa:SetFont(healthText, "serif", numberSize, "OUTLINE")
+	Stoa:SetFont(manaText, "serif", numberSize, "OUTLINE")
 	self.healthText, self.manaText = healthText, manaText
 	self:BuildManaPlay(frame, mana, manaText)
 
@@ -317,18 +378,39 @@ function Halo:BuildManaPlay(frame, arcBar, manaText)
 	number:SetPoint("TOPLEFT", form, "BOTTOMLEFT", 0, -3)
 	form:Hide()
 	local db = self.db
+	if self:Rail() then
+		-- On the upright bar: a fraction along it is a height from its foot.
+		self.manaPlay = Stoa.Power.dress(arcBar, {
+			enabled = function(key) return db[key] end,
+			place = function(tex, f)
+				tex:ClearAllPoints()
+				tex:SetPoint("CENTER", arcBar, "BOTTOM", 0, f * RAIL.height)
+			end,
+			shade = function(tex, from, to)
+				tex:ClearAllPoints()
+				tex:SetPoint("BOTTOMLEFT", arcBar, "BOTTOMLEFT", 0, from * RAIL.height)
+				tex:SetPoint("TOPRIGHT", arcBar, "BOTTOMRIGHT", 0, to * RAIL.height)
+			end,
+			form = {
+				bar = form,
+				show = function(_, raw) number:SetText(raw) number:Show() end,
+				hide = function() number:Hide() end,
+			},
+		})
+		return
+	end
 	if self:Line() then
 		-- On the straight bar: a fraction along it is a distance from its left.
 		self.manaPlay = Stoa.Power.dress(arcBar, {
 			enabled = function(key) return db[key] end,
 			place = function(tex, f)
 				tex:ClearAllPoints()
-				tex:SetPoint("CENTER", arcBar, "LEFT", f * LINE_W, 0)
+				tex:SetPoint("CENTER", arcBar, "LEFT", f * LINE.width, 0)
 			end,
 			shade = function(tex, from, to)
 				tex:ClearAllPoints()
-				tex:SetPoint("TOPLEFT", arcBar, "TOPLEFT", from * LINE_W, 0)
-				tex:SetPoint("BOTTOMRIGHT", arcBar, "BOTTOMLEFT", to * LINE_W, 0)
+				tex:SetPoint("TOPLEFT", arcBar, "TOPLEFT", from * LINE.width, 0)
+				tex:SetPoint("BOTTOMRIGHT", arcBar, "BOTTOMLEFT", to * LINE.width, 0)
 			end,
 			form = {
 				bar = form,
@@ -1785,7 +1867,10 @@ function Halo:BuildRest()
 	rest:SetScale(self.db.scale)
 	rest:SetFrameStrata("LOW")
 	rest:EnableMouse(false)
-	if self:Line() then
+	if self:Rail() then
+		rest.health = railBar(rest, "health", 1)
+		rest.mana = railBar(rest, "mana", 2)
+	elseif self:Line() then
 		rest.health = lineBar(rest, "health", true)
 		rest.mana = lineBar(rest, "mana")
 	else

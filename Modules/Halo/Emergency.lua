@@ -105,7 +105,7 @@ function Emergency:Place()
 		local line = Stoa.Sign and Stoa.Sign.groundLine()
 		if line then
 			-- The ground line: at its outer end, past the health number.
-			button:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + 76), line.y)
+			button:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76)), line.y)
 		else
 			button:SetPoint("RIGHT", halo, "LEFT", -60, -40)
 		end

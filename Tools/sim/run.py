@@ -69,7 +69,7 @@ if os.environ.get("SIM_EXTRA"):  # a scratch Lua file run after the toc, to try 
 for f in files:
     loader(open(os.path.join(ROOT, f), encoding="utf-8").read(), f, ns)
 
-# STOA_SIM_SETUP=slim, minimal, matte, matteslim, slate, slatecompact, slateline, leatherline, slateslim, matteminimal or pages (the level 60 slot pages) starts the run on that console setting (as a
+# STOA_SIM_SETUP=slim, minimal, matte, matteslim, slate, slatecompact, slateline, slatenumbers, slaterail, leatherline, slateslim, matteminimal or pages (the level 60 slot pages) starts the run on that console setting (as a
 # saved account would), so those builds are exercised too.
 if os.environ.get("STOA_SIM_SETUP") == "slim":
     lua.execute("StoaDB = { modules = { Grimoire = { slim = true } } }")
@@ -81,6 +81,10 @@ elif os.environ.get("STOA_SIM_SETUP") == "slatecompact":
     lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { arcStyle = 'line', targetCompact = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "slateline":
     lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { shape = 'line', lineQuiet = true, restArcs = true } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slatenumbers":
+    lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { shape = 'numbers', restArcs = true } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slaterail":
+    lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { shape = 'rail', lineQuiet = true, restArcs = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "leatherline":
     lua.execute("StoaDB = { modules = { Halo = { shape = 'line' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "slateslim":

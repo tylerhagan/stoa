@@ -214,7 +214,7 @@ function SelfBuffs:Place()
 		local line = Stoa.Sign and Stoa.Sign.groundLine()
 		if line then
 			-- The ground line: in the same row, past the emergency button.
-			frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + 76 + 40 + 10), line.y)
+			frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76) + 40 + 10), line.y)
 		else
 			frame:SetPoint("RIGHT", halo, "LEFT", -60, 24)
 		end

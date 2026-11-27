@@ -312,11 +312,19 @@ function Pet:PlacePlaque()
 	if not frame or Stoa:HasSavedPosition("pet") then return end
 	frame:ClearAllPoints()
 	local module = Stoa.modules.Halo
+	if frame.ring and halo and module and module.Rail and module:Rail() then
+		-- Side rail: the ring hangs under the rails, its name beside it.
+		local rail = module.RAIL
+		frame:SetPoint("TOP", halo, "CENTER", rail.x + rail.width + rail.gap / 2, rail.bottom - 8)
+		frame.percent:ClearAllPoints()
+		frame.percent:SetPoint("LEFT", frame.name, "RIGHT", 6, 0)
+		return
+	end
 	if frame.ring and halo and module and module.Line and module:Line() then
 		-- Ground line: the ring stands on the outer end of the pet's
 		-- hairline, its name beside it over the bar.
 		local line = module.LINE
-		frame:SetPoint("BOTTOM", halo, "BOTTOM", -(line.gap + line.width) + RING / 2, line.y + line.height / 2 + 10)
+		frame:SetPoint("BOTTOM", halo, "BOTTOM", -(line.gap + line.width) + RING / 2, line.y + (line.top or line.height / 2) + 10)
 		frame.percent:ClearAllPoints()
 		frame.percent:SetPoint("LEFT", frame.name, "RIGHT", 6, 0)
 		return
@@ -511,11 +519,30 @@ function Pet:BuildArc()
 	if not halo then return end
 	-- Ground line: the pet's health is a hairline riding on your own bar.
 	local module = Stoa.modules.Halo
+	if module and module.Rail and module:Rail() then
+		-- Side rail: a third, thinner upright just inside your health.
+		local rail = module.RAIL
+		local sb = CreateFrame("StatusBar", nil, halo)
+		sb:SetSize(3, rail.height)
+		sb:SetOrientation("VERTICAL")
+		sb:SetPoint("BOTTOMRIGHT", halo, "CENTER", rail.x - 5, rail.bottom)
+		sb:SetStatusBarTexture(UI.WHITE)
+		UI.paint(sb, "accent", 0.7)
+		local track = sb:CreateTexture(nil, "BACKGROUND")
+		track:SetPoint("TOPLEFT", -1, 1)
+		track:SetPoint("BOTTOMRIGHT", 1, -1)
+		track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+		sb:SetMinMaxValues(0, 1)
+		sb:SetValue(0)
+		sb:Hide()
+		self.arcBar = sb
+		return
+	end
 	if module and module.Line and module:Line() then
 		local line = module.LINE
 		local sb = CreateFrame("StatusBar", nil, halo)
 		sb:SetSize(line.width, 3)
-		sb:SetPoint("BOTTOMRIGHT", halo, "BOTTOM", -line.gap, line.y + line.height / 2 + 4)
+		sb:SetPoint("BOTTOMRIGHT", halo, "BOTTOM", -line.gap, line.y + (line.top or line.height / 2) + 4)
 		sb:SetStatusBarTexture(UI.WHITE)
 		if sb.SetReverseFill then sb:SetReverseFill(true) end
 		UI.paint(sb, "accent", 0.7)
