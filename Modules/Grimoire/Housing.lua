@@ -71,9 +71,7 @@ end
 -- it for the typing box and above it for Blizzard's own tabs.
 local SLIM_CHAT_LIFT = 38
 local SLIM_CHAT_HEIGHT = 150
--- Air between the travel line and the chat's last line on a ride.
-local RIDE_CHAT_GAP = 10
--- Slate's ride card: its air over the travel line, and the room it keeps
+-- The ride card: its air over the travel line, and the room it keeps
 -- under the messages for the typing strip (the strip and the card's pad).
 local SLATE_RIDE_AIR, SLATE_RIDE_INPUT = 8, 28
 local CHAT_GROUND = {
@@ -99,14 +97,11 @@ local function placeChat()
 	-- On a ride the console is the travel line: the chat's foot stands
 	-- clear of it, and its top stays where it was.
 	if Console.riding and Console.RIDE_HEIGHT then
-		bottom = math.max(bottom, Console.RIDE_HEIGHT + RIDE_CHAT_GAP)
-		-- Slate: the chat rides in a card of its own (Console:ChatShade),
-		-- which holds the typing strip too and stands clear of the line.
-		-- Leather and Matte ride in a card as well, in their own panel.
-		do
-			local typing = look and look.db and look.db.enabled ~= false and look.db.input
-			bottom = Console.RIDE_HEIGHT + SLATE_RIDE_AIR + (typing and SLATE_RIDE_INPUT or 6)
-		end
+		-- The chat rides in a card of its own (Console:ChatShade), in
+		-- every style, which holds the typing strip too and stands clear
+		-- of the line.
+		local typing = look and look.db and look.db.enabled ~= false and look.db.input
+		bottom = Console.RIDE_HEIGHT + SLATE_RIDE_AIR + (typing and SLATE_RIDE_INPUT or 6)
 	end
 	local top = (pillsOn() and SLATE_CHAT_TOP) or (artOn() and ART_CHAT_GAP) or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
 	chat:ClearAllPoints()
