@@ -1170,9 +1170,39 @@ function Halo:HealthMood()
 		self.health:SetStatusBarColor(Stoa:Color(token))
 		self.healthText:SetTextColor(Stoa:Color(token == "health" and "text" or token))
 	end
+	self:SeatMood()
 	local last = self.healthShare
 	self.healthShare = share
 	if last and last - share >= HIT_SHARE then self:HealthHit() end
+end
+
+-- The dark seat under the signature (the tapered ground line) carries
+-- danger: red under a quarter health, amber while an enemy is on you (a
+-- tank holding one is the calm case), its own dark tone otherwise.
+function Halo:SeatMood()
+	local seat = self.signature and self.signature.seat
+	if not seat then return end
+	local token
+	if self.healthToken == "hostile" then
+		token = "hostile"
+	elseif self.seatAggro then
+		token = "danger"
+	end
+	if token == self.seatToken then return end
+	self.seatToken = token
+	if token then
+		local r, g, b = Stoa:Color(token)
+		seat:SetVertexColor(r, g, b)
+	else
+		seat:SetVertexColor(0.04, 0.05, 0.06)
+	end
+end
+
+function Halo:SeatThreat()
+	local status = InCombatLockdown() and UnitThreatSituation and UnitThreatSituation("player")
+	if Stoa:IsSecret(status) then status = nil end
+	self.seatAggro = status == 3 and Stoa:GetRole() ~= "TANK" or nil
+	self:SeatMood()
 end
 
 function Halo:UpdateHealth()
@@ -2187,7 +2217,11 @@ function Halo:OnEnable()
 	Stoa:OnUnit("UNIT_NAME_UPDATE", { "target" }, function(unit)
 		if unit == "target" then self:UpdateTarget() end
 	end)
-	Stoa:On("UNIT_THREAT_SITUATION_UPDATE", function() self:UpdateThreat() end)
+	Stoa:On("UNIT_THREAT_SITUATION_UPDATE", function()
+		self:UpdateThreat()
+		self:SeatThreat()
+	end)
+	Stoa:On("PLAYER_REGEN_ENABLED", function() self:SeatThreat() end)
 	Stoa:OnUnit("UNIT_THREAT_LIST_UPDATE", { "target" }, function() self:UpdateThreat() end)
 
 	local function onCast(channel)
