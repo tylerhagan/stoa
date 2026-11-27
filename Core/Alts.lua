@@ -39,7 +39,18 @@ local function record()
 	entry.faction = plain(UnitFactionGroup("player"))
 	local _, _, raceID = UnitRace("player")
 	entry.raceID, entry.sex = plain(raceID), plain(UnitSex("player"))
+	entry.guid = plain(UnitGUID("player"))
 	entry.seen = time()
+	-- A realm can change its name, which left this same character listed
+	-- twice. A note under another realm name for the same name, class, race
+	-- and sex (and not known to be someone else) is this one's old self.
+	for other, old in pairs(all) do
+		if other ~= key and old.name == name and old.class == entry.class
+			and old.raceID == entry.raceID and old.sex == entry.sex
+			and (not old.guid or not entry.guid or old.guid == entry.guid) then
+			all[other] = nil
+		end
+	end
 	return entry
 end
 
