@@ -251,7 +251,7 @@ end
 -- end). The bar reaches FLARE.reach closer than LINE.gap and stands
 -- FLARE.tall, so the mask has the room; everything placed from LINE's own
 -- numbers stays where it was. A hairline is too thin to flare.
-local FLARE = { tall = 12, reach = 5, art = { 128, 16 }, seat = 10 }
+local FLARE = { tall = 12, reach = 3, art = { 128, 16 }, seat = 128 }
 local function flared()
 	return UI.slate() and LINE.height >= 6
 end
@@ -491,9 +491,13 @@ function Halo:BuildSignature(frame)
 	-- The tapered ground line runs in under a dark seat in the groove's
 	-- tone, which makes the bars and the signature one object.
 	if self:Line() and not LINE.numbers and flared() then
-		local seat = UI.circle(slot, "BACKGROUND", 0, SIGNATURE_SIZE + 4 + FLARE.seat)
-		seat:SetColorTexture(0.04, 0.05, 0.06, 0.85)
-		seat:SetPoint("CENTER")
+		-- On the Halo itself, so it lies behind the bars: a disc and two
+		-- fading bands (LineSeat.tga), and the bars start at the disc's edge.
+		local seat = frame:CreateTexture(nil, "BACKGROUND")
+		seat:SetTexture(UI.MEDIA .. "Textures\\LineSeat")
+		seat:SetVertexColor(0.04, 0.05, 0.06)
+		seat:SetSize(FLARE.seat, FLARE.seat)
+		seat:SetPoint("CENTER", slot, "CENTER")
 		slot.seat = seat
 	end
 	local ring = UI.circle(slot, "BORDER", 0, SIGNATURE_SIZE + 4, "accent")

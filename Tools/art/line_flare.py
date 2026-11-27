@@ -1,7 +1,9 @@
 """Cut the ground line's flared masks (Slate): a blade that tapers the whole
 way, 6 tall at its round outer tip and widening evenly to 12 at the
-signature, where a circle bites its end just inside the dark seat the
-signature sits on (Halo:BuildSignature), so bars and signature are one piece. There is no
+signature, where a circle bites its end along the edge of the dark seat the
+signature sits on (Halo:BuildSignature), so bars and signature are one piece.
+LineSeat.tga is that seat, 128x128: a disc and two bands
+around it, each half as strong as the one inside it. There is no
 point where the swell begins, so it reads as one shape and not a bar with a
 limb. LineFlareRight.tga is the right-hand bar (inner end on the left) and
 LineFlareLeft.tga its mirror: the game does not flip a mask by its texture
@@ -16,8 +18,10 @@ import numpy as np
 from PIL import Image
 
 W, H, SCALE, UNIT = 256, 32, 4, 2
-INNER, THIN, WIDE, EASE = 3, 3, 6, 1
-CENTRE, BITE = -20, 23
+INNER, THIN, WIDE, EASE = 5, 3, 6, 1
+CENTRE, BITE = -20, 25
+# The seat: a dark disc under the signature and two fading bands around it.
+SEAT = ((25, 0.8), (31, 0.4), (37, 0.2))
 
 n = SCALE * UNIT
 x, y = np.meshgrid((np.arange(W * SCALE) + 0.5) / n, (np.arange(H * SCALE) + 0.5) / n)
@@ -36,3 +40,16 @@ img[..., 3] = np.round(alpha * 255).astype(np.uint8)
 out = sys.argv[1].rstrip("/\\")
 Image.fromarray(img, "RGBA").save(out + "/LineFlareRight.tga")
 Image.fromarray(img[:, ::-1].copy(), "RGBA").save(out + "/LineFlareLeft.tga")
+
+size = 128
+n = SCALE
+x, y = np.meshgrid((np.arange(size * SCALE) + 0.5) / n, (np.arange(size * SCALE) + 0.5) / n)
+r = np.hypot(x - size / 2, y - size / 2)
+level = np.zeros_like(r)
+for radius, strength in reversed(SEAT):
+    level[r <= radius] = strength
+alpha = level.reshape(size, SCALE, size, SCALE).mean(axis=(1, 3))
+img = np.zeros((size, size, 4), dtype=np.uint8)
+img[..., :3] = 255
+img[..., 3] = np.round(alpha * 255).astype(np.uint8)
+Image.fromarray(img, "RGBA").save(out + "/LineSeat.tga")
