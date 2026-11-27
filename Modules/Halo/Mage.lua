@@ -6,11 +6,12 @@
 --     Missile Barrage is up (Arcane Missiles outlined), and CLEARCAST
 --     (Arcane Blast outlined, as the guides spend it).
 --   Fire: coins FB (Fire Blast), C (Combustion) and, with Improved Scorch,
---     S for Fire Vulnerability on the target; HEATING UP after one crit
---     and HOT STREAK after two under them, Pyroblast outlined then.
+--     S for Fire Vulnerability on the target; HEATING UP while it stacks
+--     and HOT STREAK at three stacks, Pyroblast outlined then.
 --   Frost: coins N (Frost Nova), B (Ice Barrier) and IB (Ice Block);
 --     FINGERS n under them while Fingers of Frost is up, Ice Lance
---     outlined then and straight after each Frostbolt.
+--     outlined then and while Frostbite holds the target.
+-- The outline follows Warcraft Tavern's Forever guides (2026-11-26).
 -- Cooldown coins are pale gold when ready, bone while their effect is up
 -- and muted while they come back.
 --
@@ -61,8 +62,6 @@ local VULNERABILITY_LENGTH = 30
 -- The Hot Streak buff's name: the instant Pyroblast is ready.
 local HOT_STREAK_NAMES = { "Hot Streak!", "Hot Streak" }
 if not Stoa.english then HOT_STREAK_NAMES = { Stoa.Spells.unsureName(48108, "Hot Streak") } end
--- After a Frostbolt lands, Ice Lance is the press for this long.
-local LANCE_WINDOW = 1.5
 
 -- The deepest talents of each tree. The tree you know most of is yours.
 local TREES = {
@@ -119,8 +118,6 @@ function Mage:NoteCast(name)
 		if name == nameOf(key) then
 			-- Scorch is what keeps Fire Vulnerability up.
 			self.casts:Note(key == "scorch" and "vulnerability" or key, key == "scorch")
-			if key == "frostbolt" then self.lanceUntil = GetTime() + LANCE_WINDOW end
-			if key == "iceLance" or key == "iceLanceAlt" then self.lanceUntil = nil end
 		end
 	end
 end
@@ -152,12 +149,19 @@ function Mage:UpdateCoins()
 	self.state = state
 end
 
--- 2 with Hot Streak up, 1 while Heating Up, nil with neither.
+-- Heating Up stacks on each crit and makes Pyroblast quick at three.
+local PYRO_STACKS = 3
+-- Improved Scorch's Fire Vulnerability stacks to five.
+local SCORCH_STACKS = 5
+
+-- 2 with Hot Streak up or Heating Up at three, 1 while Heating Up, nil
+-- with neither.
 local function streak()
 	for _, name in ipairs(HOT_STREAK_NAMES) do
 		if Sign.aura("player", name, "HELPFUL") then return 2 end
 	end
-	if buff("heatingUp") then return 1 end
+	local heating = buff("heatingUp")
+	if heating then return (Sign.stacks(heating) or 1) >= PYRO_STACKS and 2 or 1 end
 end
 
 local function stacksOf(key)
@@ -192,20 +196,47 @@ local function ready(key)
 	return Sign.knows(SPELLS[key]) and Sign.ready(SPELLS[key])
 end
 
+-- Arcane: Missiles on Barrage once Arcane Blast has 2 stacks, Pyroblast at
+-- 3 Heating Up and Arcane Wrath at 4 stacks (3 when mana runs low), else
+-- Arcane Blast. Fire: Scorch until 5 Fire Vulnerability or ending, Pyroblast
+-- at 3 Heating Up, Fire Blast, Missiles on Barrage, Ice Lance on Fingers or
+-- Frostbite with Frostfire Bolt, else your main bolt. Frost: Ice Lance on
+-- Fingers or Frostbite, Missiles on Barrage, Frostbolt.
 function Mage:NextPress()
 	if not Sign.hostileTarget() then return nil end
 	local state = self.state or {}
+	local barrage = buff("missileBarrage") and Sign.knows(SPELLS.missiles)
+	local lance = iceLance()
+	local frozen = lance and (buff("fingers") or not Sign.missing("Frostbite"))
 	if self.tree == "arcane" then
-		if buff("missileBarrage") then return nameOf("missiles") end
+		local stacks = stacksOf("arcaneBlast") or 0
+		if barrage and stacks >= 2 then return nameOf("missiles") end
+		if streak() == 2 and stacks >= 3 and Sign.knows(SPELLS.pyroblast) then return nameOf("pyroblast") end
+		local mana = Sign.manaShare()
+		if stacks >= ((mana and mana < 0.35) and 3 or 4) and Sign.can("Arcane Wrath") then
+			return C_Spell.GetSpellName(Sign.spell("Arcane Wrath"))
+		end
 		if Sign.knows(SPELLS.arcaneBlast) then return nameOf("arcaneBlast") end
+		if barrage then return nameOf("missiles") end
 	elseif self.tree == "fire" then
+		if Sign.knows(SPELLS.improvedScorch) then
+			local vulnerable = Sign.aura("target", nameOf("vulnerability"), "HARMFUL")
+			if state.vulnerability == "off" or state.vulnerability == "ending" or (vulnerable and (Sign.stacks(vulnerable) or SCORCH_STACKS) < SCORCH_STACKS) then
+				return nameOf("scorch")
+			end
+		end
 		if streak() == 2 and Sign.knows(SPELLS.pyroblast) then return nameOf("pyroblast") end
-		if state.vulnerability == "off" then return nameOf("scorch") end
 		if ready("fireBlast") then return nameOf("fireBlast") end
+		if barrage then return nameOf("missiles") end
+		local frostfire = Sign.spell("Frostfire Bolt")
+		if frostfire then
+			if frozen then return lance end
+			return C_Spell.GetSpellName(frostfire)
+		end
 		return nameOf("fireball")
 	elseif self.tree == "frost" then
-		local lance = iceLance()
-		if lance and (buff("fingers") or (self.lanceUntil and GetTime() < self.lanceUntil)) then return lance end
+		if frozen then return lance end
+		if barrage then return nameOf("missiles") end
 		return nameOf("frostbolt")
 	end
 	return Sign.assisted()

@@ -102,11 +102,7 @@ local auraLeft = Stoa.aura.left
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.
 local function ready(key)
-	local info = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(SPELLS[key])
-	if type(info) ~= "table" then return nil end
-	local start, duration = Stoa:PlainNumber(info.startTime), Stoa:PlainNumber(info.duration)
-	if not start or not duration then return nil end
-	return start == 0 or duration <= 1.5 or (start + duration - GetTime()) <= 0.3
+	return Stoa.Sign.ready(SPELLS[key])
 end
 
 local function hostileTarget()
@@ -389,32 +385,67 @@ local function undeadOrDemon()
 	return Stoa.creatureIs("target", "Undead", "Demon")
 end
 
--- The guides' priority. Cooldowns are hidden in combat, so where it comes
--- down to what's ready the game's own suggestion is asked first.
+-- Whether your Consecration has run out (your own cast stands in for the
+-- ground effect, which has no aura).
+function Paladin:ConsecrationOff()
+	if not knows(SPELLS.consecration) then return false end
+	local cast = self.casts and self.casts.consecration
+	return not cast or GetTime() - cast >= Stoa.Sign.length(SPELLS.consecration, DURATIONS.consecration)
+end
+
+-- Warcraft Tavern's Forever priority (checked 2026-11-26). Cooldowns are
+-- hidden in combat, so where it comes down to what's ready the game's own
+-- suggestion is asked.
+--   Retribution: seal, Judgement of the Crusader, Seal of Righteousness at
+--   3 Unsealed Wrath, Judgement, Holy Strike, Consecration, Exorcism.
+--   Protection: Seal of Fury, Judgement (Swift Judgement when it's needed
+--   to taunt and on cooldown), Consecration, Holy Shield, Holy Strike,
+--   Exorcism.
 function Paladin:NextPress()
 	local role = self:Role()
 	if not role or not hostileTarget() then return nil end
 	local state = self.state or {}
+	local Sign = Stoa.Sign
+	local exorcism = undeadOrDemon() and knows(SPELLS.exorcism) and ready("exorcism")
 	if role == "TANK" then
 		if state.seal == "off" then
 			return knows(SPELLS.sealFury) and nameOf("sealFury") or self.mainSeal or nameOf("righteousness")
 		end
-		if self:WantsTaunt() then return nameOf("judgement") end
-		if state.holyShield == "off" then return nameOf("holyShield") end
-		if state.consecration == "off" then return nameOf("consecration") end
+		if self:WantsTaunt() then
+			if ready("judgement") == false and Sign.can("Swift Judgement") then return C_Spell.GetSpellName(Sign.spell("Swift Judgement")) end
+			return nameOf("judgement")
+		end
+		if knows(SPELLS.judgement) and ready("judgement") then return nameOf("judgement") end
+		if self:ConsecrationOff() and ready("consecration") ~= false then return nameOf("consecration") end
+		if state.holyShield == "off" and ready("holyShield") ~= false then return nameOf("holyShield") end
+		if knows(SPELLS.holyStrike) and ready("holyStrike") then return nameOf("holyStrike") end
+		if exorcism then return nameOf("exorcism") end
 	else
 		if state.seal == "off" then
-			return self.mainSeal or (knows(SPELLS.command) and nameOf("command")) or nameOf("righteousness")
+			return (knows(SPELLS.command) and nameOf("command")) or self.mainSeal or nameOf("righteousness")
 		end
 		if state.mark == "off" then
 			local seal = self:Seal()
 			if seal and MARKS[seal] then return nameOf("judgement") end
 			return nameOf("crusader")
 		end
-		if undeadOrDemon() and knows(SPELLS.exorcism) and ready("exorcism") then return nameOf("exorcism") end
-	end
-	for _, key in ipairs({ "holyStrike", "judgement" }) do
-		if knows(SPELLS[key]) and ready(key) then return nameOf(key) end
+		-- At 3 Unsealed Wrath, one swing under Righteousness, then back.
+		local wrath = Sign.aura("player", "Unsealed Wrath", "HELPFUL")
+		local full = wrath and (Sign.stacks(wrath) or 0) >= 3
+		local seal = self:Seal()
+		if full and knows(SPELLS.righteousness) and seal ~= nameOf("righteousness") then
+			self.wrathSwap = true
+			return nameOf("righteousness")
+		end
+		if self.wrathSwap and not full and seal == nameOf("righteousness") and knows(SPELLS.command) then
+			return nameOf("command")
+		end
+		if seal ~= nameOf("righteousness") then self.wrathSwap = nil end
+		for _, key in ipairs({ "judgement", "holyStrike" }) do
+			if knows(SPELLS[key]) and ready(key) then return nameOf(key) end
+		end
+		if self:ConsecrationOff() and ready("consecration") ~= false then return nameOf("consecration") end
+		if exorcism then return nameOf("exorcism") end
 	end
 	local suggested = assisted()
 	if suggested then return suggested end

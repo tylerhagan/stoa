@@ -7,9 +7,10 @@
 --   TOTEMS n under them: how many of your four are down in a fight. The
 --   game's own totem bar stays (Halo.lua keeps it out of the hidden player
 --   frame). Clearcasting is a proc (Procs.lua).
---   Next press: Flame Shock when it's down, Stormstrike for Enhancement,
---   then the game's own suggestion or Earth Shock when ready, else
---   Lightning Bolt.
+--   Next press (Warcraft Tavern's Forever guides, 2026-11-26): your shield
+--   and Flame Shock when they're down. Elemental: Lava Burst when ready,
+--   else Lightning Bolt. Enhancement: Stormstrike when ready, Lightning
+--   Bolt once Maelstrom Weapon makes it instant, else Earth Shock.
 --
 -- Forever's guides don't give every number yet, so the timers below are
 -- the classic ones; wherever the game shows them, its own wins.
@@ -113,15 +114,27 @@ local function usable(key)
 	return Sign.knows(SPELLS[key]) and Sign.ready(SPELLS[key]) ~= false
 end
 
+-- Whether Maelstrom Weapon has made Lightning Bolt instant: its buff is up
+-- and the bolt's cast time reads zero.
+local function instantBolt()
+	if not Sign.aura("player", "Maelstrom Weapon", "HELPFUL") then return false end
+	local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(SPELLS.lightningBolt)
+	local cast = type(info) == "table" and Stoa:PlainNumber(info.castTime)
+	return cast == 0
+end
+
 function Shaman:NextPress()
 	if self:Healer() or not Sign.hostileTarget() then return nil end
 	local state = self.state or {}
 	if state.shield == "off" and shieldKey() then return nameOf(shieldKey()) end
 	if state.flameShock == "off" then return nameOf("flameShock") end
-	if Stoa:GetRole() == "MELEE" and usable("stormstrike") and Sign.ready(SPELLS.stormstrike) then return nameOf("stormstrike") end
-	local suggested = Sign.assisted()
-	if suggested then return suggested end
-	if usable("earthShock") and Sign.ready(SPELLS.earthShock) then return nameOf("earthShock") end
+	if Stoa:GetRole() == "MELEE" then
+		if Sign.knows(SPELLS.stormstrike) and Sign.ready(SPELLS.stormstrike) then return nameOf("stormstrike") end
+		if instantBolt() then return nameOf("lightningBolt") end
+		if usable("earthShock") and Sign.ready(SPELLS.earthShock) then return nameOf("earthShock") end
+		return Sign.assisted() or nameOf("lightningBolt")
+	end
+	if Sign.can("Lava Burst") then return C_Spell.GetSpellName(Sign.spell("Lava Burst")) end
 	return nameOf("lightningBolt")
 end
 

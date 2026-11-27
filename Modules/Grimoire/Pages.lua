@@ -68,7 +68,13 @@ local function scaffold(col, kit, label, drop)
 		name:SetPoint("TOPRIGHT", value, "TOPLEFT", -8, 0)
 		rows[i] = { name = name, value = value }
 	end
-	return { big = big, note = note, rows = rows }
+	-- The big line runs up to the note, or the column's whole width when
+	-- there is none, so a long line ("Nothing cooling") isn't cut short.
+	local function fit()
+		local taken = plain(note:GetStringWidth()) or 0
+		big:SetWidth(kit.width - (taken > 0 and (taken + 8) or 0))
+	end
+	return { big = big, note = note, rows = rows, fit = fit }
 end
 
 -- Colours a line from the theme as it stands. Not UI.paint: these lines
@@ -161,12 +167,14 @@ local function buildReputation(col, kit)
 		if not first then
 			page.big:SetText("None yet")
 			page.note:SetText("")
+			page.fit()
 			bar:Hide()
 			for i = 1, ROWS do setRow(page.rows[i]) end
 			return
 		end
 		page.big:SetText(first.name)
 		page.note:SetText(rank(first))
+		page.fit()
 		bar:Show()
 		bar:Set(share(first), "accent")
 		local left = first.ceiling - first.standing
@@ -236,8 +244,19 @@ function Pages:ScanItems()
 	end
 end
 
+-- The profession cooldowns worth asking the game about at login, so one
+-- that was cast before STOA could see it (an older version, a reset
+-- profile) still shows. Transmutes share one cooldown, so they share one
+-- row: the first that is cooling stands for all of them.
+local TRANSMUTES = { 17187, 11479, 11480, 17559, 17560, 17561, 17562, 17563, 17564, 17565, 17566, 25146 }
+local CRAFTS = { 18560 } -- Mooncloth
+local TRANSMUTE_KEY = "spell:transmute"
+local TRANSMUTE_NAME = "Transmute"
+local isTransmute = {}
+for _, id in ipairs(TRANSMUTES) do isTransmute[id] = true end
+
 -- A spell you just cast that now cools for an hour or more: a profession
--- cooldown, mostly. No list of them is kept; the game says how long.
+-- cooldown, mostly. Any spell counts; the game says how long.
 function Pages:NoteSpell(spellID)
 	-- The hearthstone is an item: the bag pass notes it, quietly.
 	if spellID == HEARTH_SPELL then return end
@@ -246,7 +265,41 @@ function Pages:NoteSpell(spellID)
 	if type(info) ~= "table" then return end
 	local name = C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
 	if type(name) == "string" and not Stoa:IsSecret(name) then
-		noteCooldown("spell:" .. spellID, name, info.startTime, info.duration)
+		if isTransmute[spellID] then
+			noteCooldown(TRANSMUTE_KEY, TRANSMUTE_NAME, info.startTime, info.duration)
+		else
+			noteCooldown("spell:" .. spellID, name, info.startTime, info.duration)
+		end
+	end
+end
+
+-- The login pass over the list above. Out of combat only.
+function Pages:ScanSpells()
+	if InCombatLockdown() or not (C_Spell and C_Spell.GetSpellCooldown) then return end
+	local store = shelf()
+	if not store then return end
+	local function cooling(spellID)
+		local info = C_Spell.GetSpellCooldown(spellID)
+		return type(info) == "table" and (plain(info.duration) or 0) >= LONG
+	end
+	for _, id in ipairs(TRANSMUTES) do
+		-- A transmute an older version noted under its own spell moves to
+		-- the shared row, so the two never stand side by side.
+		local old = store["spell:" .. id]
+		if old then
+			local kept = store[TRANSMUTE_KEY]
+			if not kept or (old.ends or 0) > (kept.ends or 0) then store[TRANSMUTE_KEY] = { name = TRANSMUTE_NAME, ends = old.ends } end
+			store["spell:" .. id] = nil
+		end
+	end
+	local noted = store[TRANSMUTE_KEY]
+	if not (noted and (noted.ends or 0) > time()) then
+		for _, id in ipairs(TRANSMUTES) do
+			if cooling(id) then self:NoteSpell(id) break end
+		end
+	end
+	for _, id in ipairs(CRAFTS) do
+		if cooling(id) then self:NoteSpell(id) end
 	end
 end
 
@@ -300,15 +353,25 @@ end
 
 local function buildCooldowns(col, kit)
 	local page = scaffold(col, kit, "Cooldowns")
-	-- The big line breathes once when something comes off cooldown.
-	local pulse = page.big:CreateAnimationGroup()
-	local dim = pulse:CreateAnimation("Alpha")
-	dim:SetFromAlpha(1); dim:SetToAlpha(0.35); dim:SetDuration(0.18); dim:SetOrder(1)
-	local lift = pulse:CreateAnimation("Alpha")
-	lift:SetFromAlpha(0.35); lift:SetToAlpha(1); lift:SetDuration(0.3); lift:SetOrder(2)
-	local function whole() page.big:SetAlpha(1) end
-	pulse:SetScript("OnFinished", whole)
-	pulse:SetScript("OnStop", whole)
+	-- The big line breathes once when something comes off cooldown. Done by
+	-- hand on a frame of its own: an animation group on the line itself
+	-- left the line unseen on some logins, played or not.
+	local breath = CreateFrame("Frame", nil, col)
+	breath:Hide()
+	local DIM, DOWN, UP = 0.35, 0.18, 0.3
+	breath:SetScript("OnUpdate", function(self, elapsed)
+		self.t = (self.t or 0) + elapsed
+		local t = self.t
+		if t >= DOWN + UP then
+			page.big:SetAlpha(1)
+			self:Hide()
+		elseif t < DOWN then
+			page.big:SetAlpha(1 - (1 - DIM) * (t / DOWN))
+		else
+			page.big:SetAlpha(DIM + (1 - DIM) * ((t - DOWN) / UP))
+		end
+	end)
+	breath:SetScript("OnHide", function() page.big:SetAlpha(1) end)
 	local wasReady
 	local update = keep(col, 5, function()
 		local list = shelved()
@@ -319,14 +382,15 @@ local function buildCooldowns(col, kit)
 		if #list == 0 then
 			page.big:SetText("Nothing cooling")
 			page.note:SetText("")
+			page.fit()
 		else
 			page.big:SetText(ready > 0 and (ready .. " ready") or "None ready")
 			page.note:SetText(soonest and ("next " .. span(soonest)) or "")
+			page.fit()
 		end
 		tint(page.big, ready > 0 and "accent" or "text")
-		-- Whatever the pulse left behind, the line is always fully shown.
-		if not pulse:IsPlaying() then page.big:SetAlpha(1) end
-		if wasReady and ready > wasReady then pulse:Play() end
+		if not breath:IsShown() then page.big:SetAlpha(1) end
+		if wasReady and ready > wasReady then breath.t = 0 breath:Show() end
 		wasReady = ready
 		for _, trinket in ipairs(trinkets()) do list[#list + 1] = trinket end
 		for i = 1, ROWS do
@@ -372,6 +436,7 @@ local function buildWeek(col, kit)
 		page.big:SetText(mine == 0 and "All open" or (mine .. " saved"))
 		local reset = C_DateAndTime and C_DateAndTime.GetSecondsUntilWeeklyReset and plain(C_DateAndTime.GetSecondsUntilWeeklyReset())
 		page.note:SetText(reset and reset > 0 and ("resets " .. span(reset)) or "")
+		page.fit()
 		local last = #others > 0 and ROWS - 1 or ROWS
 		for i = 1, last do
 			local lock = list[i]
@@ -406,6 +471,7 @@ function Pages:OnEnable()
 		C_Timer.After(1.5, function()
 			pending = false
 			self:ScanItems()
+			self:ScanSpells()
 			if self.cooldownsChanged then self.cooldownsChanged() end
 		end)
 	end

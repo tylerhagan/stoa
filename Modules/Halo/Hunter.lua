@@ -5,8 +5,11 @@
 --   colour: forgetting one is a word, not a missing buff icon. Your pet
 --   has its own plaque, arc and words (Pet.lua); Mongoose Bite and
 --   Counterattack are procs (Procs.lua).
---   Next press: Mark and Sting when they're down, then the game's own
---   suggestion or Arcane Shot.
+--   Next press (Warcraft Tavern's Forever guides, 2026-11-26): Serpent
+--   Sting and Hunter's Mark when they're down; in melee Raptor Strike,
+--   Mongoose Bite and Strider Kick; then Summon Hawk, Sniper Shot, Aimed
+--   Shot and Arcane Shot as they come ready, then Rapid Fire and Bestial
+--   Wrath. Each only once you know it.
 --
 -- Forever's guides don't give every number yet, so the timers below are
 -- the classic ones; wherever the game shows them, its own wins.
@@ -118,16 +121,31 @@ end
 
 -- Next press ---------------------------------------------------------------------
 
+-- Forever's newer shots are found by name.
+local MELEE = { "Mongoose Bite", "Strider Kick" }
+local SHOTS = { "Summon Hawk", "Sniper Shot", "Aimed Shot" }
+local LAST = { "Rapid Fire", "Bestial Wrath" }
+
+local function first(list)
+	for _, name in ipairs(list) do
+		if Sign.can(name) then return C_Spell.GetSpellName(Sign.spell(name)) end
+	end
+end
+
 function Hunter:NextPress()
 	if not Sign.hostileTarget() then return nil end
 	local state = self.state or {}
-	if state.mark == "off" then return nameOf("mark") end
 	if state.serpentSting == "off" then return nameOf("serpentSting") end
-	local melee = Stoa:GetRole() == "MELEE"
-	if melee and Sign.knows(SPELLS.raptorStrike) and Sign.ready(SPELLS.raptorStrike) ~= false then
-		return Sign.assisted() or nameOf("raptorStrike")
+	if state.mark == "off" then return nameOf("mark") end
+	if Stoa:GetRole() == "MELEE" and Sign.knows(SPELLS.raptorStrike) then
+		if Sign.ready(SPELLS.raptorStrike) ~= false then return nameOf("raptorStrike") end
+		local melee = first(MELEE)
+		if melee then return melee end
 	end
-	return Sign.assisted() or (Sign.knows(SPELLS.arcaneShot) and nameOf("arcaneShot")) or nil
+	local shot = first(SHOTS)
+	if shot then return shot end
+	if Sign.knows(SPELLS.arcaneShot) and Sign.ready(SPELLS.arcaneShot) then return nameOf("arcaneShot") end
+	return first(LAST) or Sign.assisted() or (Sign.knows(SPELLS.arcaneShot) and nameOf("arcaneShot")) or nil
 end
 
 -- Lifecycle ----------------------------------------------------------------------

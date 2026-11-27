@@ -1818,4 +1818,11 @@ function More:OnEnable()
 	Stoa:On("ADDON_LOADED", function(addon)
 		if type(addon) == "string" and addon:find("^Blizzard_") then tryAll() end
 	end)
+	-- The flight map's addon has a part that loads at startup, so its
+	-- ADDON_LOADED can come before the window exists and not again when the
+	-- window is made. Opening a flight master dresses it as a backstop.
+	Stoa:On("TAXIMAP_OPENED", function()
+		tryAll()
+		C_Timer.After(0, function() xpcall(tryAll, Stoa.catch) end)
+	end)
 end

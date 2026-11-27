@@ -5,8 +5,17 @@
 --   SHARDS n under them from your bags, and TAP when your mana is low and
 --   your health can spare it. Your demon has its own plaque, arc and words
 --   (Pet.lua); Shadow Trance and Decimation are procs (Procs.lua).
---   Next press: whichever of the three is down, then the game's own
---   suggestion or Shadow Bolt.
+--   Next press (Warcraft Tavern's Forever guides, 2026-11-26), read from
+--   the spells you know:
+--     Affliction (Wrack): Bane of Agony, your Curse, Corruption, Siphon
+--     Life, Shadow Bolt under Shadow Trance, Life Tap under 40% mana, Wrack.
+--     Destruction (Conflagrate or Incinerate): Bane, Curse, Immolate,
+--     Corruption, Conflagrate, Shadowburn, Life Tap, Incinerate.
+--     Otherwise (Demonology, levelling): Searing Pain for Demonic Brand,
+--     Bane, Curse, Immolate, Soul Fire under Decimation, Corruption, Life
+--     Tap, Shadow Bolt.
+--   Bane of Doom stands in for Agony on a boss outside Affliction. Your
+--   Curse is the one you cast last.
 --
 -- Forever's guides don't give every number yet, so the timers below are
 -- the classic ones; wherever the game shows them, its own wins.
@@ -38,6 +47,7 @@ function Warlock:NoteCast(name)
 	for key in pairs(LENGTHS) do
 		if name == nameOf(key) then self.casts:Note(key, true) end
 	end
+	if name:find("^Curse of ") then self.curse = name end
 end
 
 -- Coins --------------------------------------------------------------------------
@@ -95,14 +105,58 @@ end
 
 -- Next press ---------------------------------------------------------------------
 
+local AFFLICTION_TAP = 0.4
+
+local function named(name)
+	local id = Sign.spell(name)
+	return id and C_Spell.GetSpellName(id)
+end
+
+local function ready(name)
+	return Sign.can(name) and named(name)
+end
+
+-- Your DoT of this name is due: known, and not on the target.
+local function due(name)
+	return Sign.spell(name) ~= nil and Sign.missing(name)
+end
+
+local function boss()
+	local level = UnitLevel("target")
+	return not Stoa:IsSecret(level) and level == -1
+end
+
 function Warlock:NextPress()
 	if not Sign.hostileTarget() then return nil end
 	local state = self.state or {}
-	if self:WantsTap() then return nameOf("lifeTap") end
-	for _, entry in ipairs(COINS) do
-		if state[entry[1]] == "off" then return nameOf(entry[1]) end
+	local affliction = Sign.spell("Wrack") ~= nil
+	local destruction = not affliction and (Sign.spell("Conflagrate") or Sign.spell("Incinerate")) ~= nil
+	if not affliction and not destruction and due("Demonic Brand") and Sign.spell("Searing Pain") then
+		return named("Searing Pain")
 	end
-	return Sign.assisted() or nameOf("shadowBolt")
+	-- Your Bane: any of yours on the target counts.
+	if Sign.knows(SPELLS.agony) and state.agony == "off" and Sign.missing("Bane of Doom") and Sign.missing("Bane of Havoc") then
+		if not affliction and boss() and Sign.spell("Bane of Doom") then return named("Bane of Doom") end
+		return nameOf("agony")
+	end
+	if self.curse and not Sign.aura("target", self.curse, "HARMFUL") then return self.curse end
+	if affliction then
+		if state.corruption == "off" then return nameOf("corruption") end
+		if due("Siphon Life") then return named("Siphon Life") end
+		if Sign.aura("player", "Shadow Trance", "HELPFUL") then return nameOf("shadowBolt") end
+		local mana = Sign.manaShare()
+		if mana and mana < AFFLICTION_TAP and Sign.knows(SPELLS.lifeTap) then return nameOf("lifeTap") end
+		return named("Wrack") or nameOf("shadowBolt")
+	end
+	if state.immolate == "off" then return nameOf("immolate") end
+	if not destruction and Sign.aura("player", "Decimation", "HELPFUL") and Sign.spell("Soul Fire") then return named("Soul Fire") end
+	if state.corruption == "off" then return nameOf("corruption") end
+	if destruction then
+		local burst = ready("Conflagrate") or ((self:Shards() or 0) > 0 and ready("Shadowburn"))
+		if burst then return burst end
+	end
+	if self:WantsTap() then return nameOf("lifeTap") end
+	return (destruction and named("Incinerate")) or nameOf("shadowBolt")
 end
 
 -- Lifecycle ----------------------------------------------------------------------
