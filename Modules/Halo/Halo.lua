@@ -246,11 +246,12 @@ local function railBar(parent, token, index)
 end
 
 -- Slate's ground line swells toward the signature and ends in a bite that
--- follows it (LineFlare.tga, Tools/art/line_flare.py: a 128x16 space whose
--- bar starts 2 in). The bar reaches FLARE.reach closer than LINE.gap and
--- stands FLARE.tall, so the mask has the room; everything placed from
--- LINE's own numbers stays where it was. A hairline is too thin to flare.
-local FLARE = { tall = 14, reach = 7, art = { 128, 16 } }
+-- follows it at the gap the flat ends kept (LineFlareLeft/Right.tga,
+-- Tools/art/line_flare.py: a 128x16 space flush with the bar's outer
+-- end). The bar reaches FLARE.reach closer than LINE.gap and stands
+-- FLARE.tall, so the mask has the room; everything placed from LINE's own
+-- numbers stays where it was. A hairline is too thin to flare.
+local FLARE = { tall = 14, reach = 1, art = { 128, 16 } }
 local function flared()
 	return UI.slate() and LINE.height >= 6
 end
@@ -276,9 +277,9 @@ local function lineBar(parent, token, reverse)
 		for _, piece in ipairs({ { sb:GetStatusBarTexture(), 0 }, { track, 1 } }) do
 			local tex, proud = piece[1], piece[2]
 			local mask = sb:CreateMaskTexture()
-			mask:SetTexture(UI.MEDIA .. "Textures\\LineFlare", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-			-- Drawn for the right-hand bar; the left-hand one mirrors it.
-			if reverse then mask:SetTexCoord(1, 0, 0, 1) end
+			-- A mask doesn't flip by its texture coordinates, so each side
+			-- has its own art.
+			mask:SetTexture(UI.MEDIA .. "Textures\\LineFlare" .. (reverse and "Left" or "Right"), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 			mask:SetSize(artW + 2 * proud, artH + 2 * proud)
 			mask:SetPoint(outer, sb, outer, reverse and -proud or proud, 0)
 			tex:AddMaskTexture(mask)
