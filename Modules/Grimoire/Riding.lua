@@ -276,12 +276,10 @@ function Console:PlaceRideBack()
 	if top then lift = math.max(lift, math.floor(top - frame:GetBottom() + PAIR_AIR + 0.5)) end
 	-- Slate's own card (your name, health and portrait) stands on the rim
 	-- in the middle; its portrait rises a little past the card's top.
-	local you = self.youCard
-	local youTop = you and you:IsShown() and you:GetTop()
-	if youTop then
-		local ratio = you:GetEffectiveScale() / frame:GetEffectiveScale()
-		lift = math.max(lift, math.floor(youTop * ratio - frame:GetBottom() + YOU_AIR + 0.5))
-	end
+	-- Worked out from the open console's height, not read off the card:
+	-- when Open console is pressed the console is still folded.
+	local you = self.youCard and self.YOU_CARD
+	if you then lift = math.max(lift, self:OpenHeight() + you.y + you.height / 2 + YOU_AIR) end
 	back:ClearAllPoints()
 	back:SetPoint("BOTTOM", frame, "BOTTOM", 0, lift)
 	back:Show()
