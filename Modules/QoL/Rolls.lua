@@ -138,10 +138,12 @@ function Rolls:ResultCard(i)
 	card.icon:SetPoint("TOPLEFT", 12, -9)
 	card.name = UI.text(card, "serif", Stoa.typeSize.label, "text")
 	card.name:SetPoint("LEFT", card.icon, "RIGHT", 8, 0)
-	card.name:SetPoint("RIGHT", card, "RIGHT", -124, 0)
 	card.name:SetWordWrap(false)
 	card.status = UI.text(card, "sans", Stoa.typeSize.body, "accent", "RIGHT")
 	card.status:SetPoint("RIGHT", card, "TOPRIGHT", -12, -23)
+	-- The item's name ends where the status starts, however long the
+	-- winner's name is, and is cut short there.
+	card.name:SetPoint("RIGHT", card.status, "LEFT", -10, 0)
 	card.names, card.choices = columns(card)
 	card.names:SetPoint("TOPLEFT", card.icon, "BOTTOMLEFT", 0, -8)
 	card.choices:SetPoint("TOPRIGHT", card, "TOPRIGHT", -12, -45)
