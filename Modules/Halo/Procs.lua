@@ -182,6 +182,9 @@ function Procs:BuildArt()
 	self.pieces = {}
 end
 
+-- How tall the glow along a ground line bar is (the bar itself is 8).
+local STRIP_TALL = 34
+
 -- One piece of art in a spot round the Halo, faded in like the game's.
 local function makePiece(holder, spot)
 	local piece = CreateFrame("Frame", nil, holder)
@@ -210,7 +213,24 @@ local function makePiece(holder, spot)
 	piece.pulse = pulse
 
 	local long, short = 300, 150
-	if spot == "left" then
+	local line = Stoa.Sign and Stoa.Sign.groundLine and Stoa.Sign.groundLine()
+	local halo = _G.StoaHalo
+	if line and halo then
+		-- The ground line has no ring to stand round: the art is a soft
+		-- glow lying along the bar on that side (both for top and bottom).
+		piece.strip = true
+		local reach = line.gap + line.width
+		if spot == "left" then
+			piece:SetSize(line.width + 36, STRIP_TALL)
+			piece:SetPoint("CENTER", halo, "BOTTOM", -(line.gap + line.width / 2), line.y)
+		elseif spot == "right" then
+			piece:SetSize(line.width + 36, STRIP_TALL)
+			piece:SetPoint("CENTER", halo, "BOTTOM", line.gap + line.width / 2, line.y)
+		else
+			piece:SetSize(reach * 2 + 36, STRIP_TALL)
+			piece:SetPoint("CENTER", halo, "BOTTOM", 0, line.y)
+		end
+	elseif spot == "left" then
 		piece:SetSize(short, long)
 		piece:SetPoint("RIGHT", holder, "LEFT", 10, 0)
 	elseif spot == "right" then
@@ -249,7 +269,26 @@ function Procs:ShowArt(owner, art, spots, r, g, b)
 			list[spot] = piece
 		end
 		if not piece:IsShown() then
-			if setArt(piece.texture, art, spot) and r then piece.texture:SetVertexColor(r, g, b) end
+			if piece.strip then
+				-- The game's own colour when it gives a real one (it sends
+				-- 0 to 255). Its standing overlays come as plain white over
+				-- dark art (Shadowform): those lie as a violet shadow. STOA's
+				-- own procs take the accent.
+				local cr, cg, cb, ca = Stoa:Color("accent")
+				ca = 0.8
+				if type(r) == "number" and type(g) == "number" and type(b) == "number" then
+					if r > 1 or g > 1 or b > 1 then r, g, b = r / 255, g / 255, b / 255 end
+					if r > 0.95 and g > 0.95 and b > 0.95 then
+						cr, cg, cb, ca = 0.5, 0.3, 0.9, 0.6
+					else
+						cr, cg, cb = r, g, b
+					end
+				end
+				piece.texture:SetTexture(Stoa.UI.MEDIA .. "Textures\\SparkleGlow")
+				piece.texture:SetVertexColor(cr, cg, cb, ca)
+			elseif setArt(piece.texture, art, spot) and r then
+				piece.texture:SetVertexColor(r, g, b)
+			end
 			piece:Show()
 			piece.fade:Play()
 			piece.pulse:Play()
@@ -501,11 +540,11 @@ end
 function Procs:OnGameShow(spellID, texture, location, _, r, g, b)
 	if Stoa:IsSecret(spellID) or Stoa:IsSecret(texture) then return end
 	if not self.db.takeOver then return end
-	-- The game's standing overlays (Shadowform's dark arcs) are drawn for a
-	-- ring round you. On the straight Halo shapes they have nothing to
-	-- follow, so they are left out for now; STOA's own procs still show.
+	-- The side rail has nothing for the game's standing overlays (Shadowform's
+	-- dark arcs) to follow, so they are left out there. The ground line
+	-- lays them along its bars (see makePiece).
 	local halo = Stoa.modules.Halo
-	if halo and halo.db and halo.db.shape and halo.db.shape ~= "arcs" then return end
+	if halo and halo.Rail and halo:Rail() then return end
 	self:ShowArt("game:" .. tostring(spellID), texture, SPOTS[location] or { "left", "right" }, r, g, b)
 end
 

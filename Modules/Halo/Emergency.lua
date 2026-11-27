@@ -109,7 +109,8 @@ function Emergency:Place()
 			button:SetPoint("TOPRIGHT", halo, "CENTER", -Stoa.Sign.railLeft(rail), rail.bottom - 8)
 		elseif line then
 			-- The ground line: at its outer end, past the health number.
-			button:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76)), line.y)
+			local petRoom = Stoa.modules.Pet and Stoa.modules.Pet.LineRoom and Stoa.modules.Pet:LineRoom() or 0
+			button:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76) + petRoom), line.y)
 		else
 			button:SetPoint("RIGHT", halo, "LEFT", -60, -40)
 		end

@@ -218,7 +218,8 @@ function SelfBuffs:Place()
 			frame:SetPoint("RIGHT", halo, "CENTER", -(Stoa.Sign.railLeft(rail) + 64), rail.bottom + rail.height / 2)
 		elseif line then
 			-- The ground line: in the same row, past the emergency button.
-			frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76) + 40 + 10), line.y)
+			local petRoom = Stoa.modules.Pet and Stoa.modules.Pet.LineRoom and Stoa.modules.Pet:LineRoom() or 0
+			frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76) + 40 + 10 + petRoom), line.y)
 		else
 			frame:SetPoint("RIGHT", halo, "LEFT", -60, 24)
 		end

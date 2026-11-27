@@ -30,9 +30,8 @@ local PAD = 12
 -- Slate's companion ring: its size, and where on the pet's arc it sits
 -- (degrees below the Halo's left).
 local RING, RING_AT = 38, 68
--- Ground line: how far left of the health bar's end the ring stands (room
--- for a five-figure health number).
-local LINE_CLEAR = 84
+-- Ground line: the gap between the health number and the ring.
+local LINE_CLEAR = 8
 local COIN_SPACE = UI.PLAQUE_COIN_SPACE
 local ROW_SIZE, ROW_GAP, ROW_BREAK = 26, 5, 8
 local COIN = 46
@@ -308,6 +307,13 @@ function Pet:BuildPlaque()
 	Stoa:RegisterClickFrame(clicker)
 end
 
+-- Ground line: the room the pet's ring takes in the row left of the health
+-- number, for the pieces that stand further out. Nothing without a pet class.
+function Pet:LineRoom()
+	if not (UI.slate() and (self.demo or self:Keeper())) then return 0 end
+	return LINE_CLEAR + RING + 8
+end
+
 -- Where the tank watch goes, at the Halo's upper left; a healer keeps that
 -- spot for the watch, so the pet sits just under it.
 function Pet:PlacePlaque()
@@ -324,18 +330,19 @@ function Pet:PlacePlaque()
 		return
 	end
 	if frame.ring and halo and module and module.Line and module:Line() then
-		-- Ground line: the ring stands off to the left, clear of the bar
-		-- and of the health number at its end, level with the line. Its
-		-- name reads away from the fight, the percent under the ring.
+		-- Ground line: the ring stands off to the left in the line's own
+		-- row, just past the health number; the emergency button and your
+		-- buffs step further out to make room (LineRoom). Its words stack
+		-- over it and the percent under it, so nothing reaches sideways.
 		local line = module.LINE
-		frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + LINE_CLEAR), line.y)
+		frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76) + LINE_CLEAR), line.y)
 		frame.name:ClearAllPoints()
-		frame.name:SetPoint("RIGHT", frame, "LEFT", -6, -5)
-		frame.name:SetJustifyH("RIGHT")
+		frame.name:SetPoint("BOTTOM", frame, "TOP", 0, 3)
+		frame.name:SetJustifyH("CENTER")
 		for _, fs in ipairs({ frame.foot, frame.on }) do
 			fs:ClearAllPoints()
-			fs:SetPoint("BOTTOMRIGHT", frame.name, "TOPRIGHT", 0, 4)
-			fs:SetJustifyH("RIGHT")
+			fs:SetPoint("BOTTOM", frame.name, "TOP", 0, 2)
+			fs:SetJustifyH("CENTER")
 		end
 		return
 	end
@@ -937,6 +944,11 @@ function Pet:SetDemo(on)
 		return
 	end
 	self.demo = on and true or nil
+	-- The row beside the ground line opens or closes the ring's place.
+	for _, name in ipairs({ "Emergency", "SelfBuffs" }) do
+		local module = Stoa.modules[name]
+		if module and module.Place then module:Place() end
+	end
 	for frame, rule in pairs({ [self.row or false] = self:RowRule(), [self.coin or false] = COIN_RULE }) do
 		if frame then
 			if on then
