@@ -3379,6 +3379,11 @@ function Console:OnEnable()
 		for _, fs in ipairs({ self.youName, self.youSub, self.healthText, self.manaText, self.levelPlate and self.levelPlate.text }) do
 			UI.redraw(fs)
 		end
+		-- A hidden value cannot be read back, so the numbers are asked
+		-- for again instead.
+		self.healthText:SetText("")
+		self.manaText:SetText("")
+		self:UpdateResources()
 	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		self:UpdateSeal()
