@@ -501,6 +501,11 @@ end
 function Procs:OnGameShow(spellID, texture, location, _, r, g, b)
 	if Stoa:IsSecret(spellID) or Stoa:IsSecret(texture) then return end
 	if not self.db.takeOver then return end
+	-- The game's standing overlays (Shadowform's dark arcs) are drawn for a
+	-- ring round you. On the straight Halo shapes they have nothing to
+	-- follow, so they are left out for now; STOA's own procs still show.
+	local halo = Stoa.modules.Halo
+	if halo and halo.db and halo.db.shape and halo.db.shape ~= "arcs" then return end
 	self:ShowArt("game:" .. tostring(spellID), texture, SPOTS[location] or { "left", "right" }, r, g, b)
 end
 
