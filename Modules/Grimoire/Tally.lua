@@ -918,7 +918,8 @@ function Tally:Refresh()
 			row.value:SetTextColor(Stoa:Color(warn and "danger" or "text"))
 			row.pin:SetShown(self:IsPinned(key))
 			self:DrawFigure(row, key)
-			row:Show()
+			-- Slate: a line that newly appears fades in.
+			if UI.slate() then UI.softShow(row, true) else row:Show() end
 		else
 			row:Hide()
 		end

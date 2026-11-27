@@ -2285,7 +2285,8 @@ function Console:ShowSlateJobs(list)
 			row.words:SetText(job[1])
 			row.words:SetTextColor(Stoa:Color(job[3] and "danger" or "text"))
 			row.mark:SetVertexColor(Stoa:Color(job[3] and "danger" or "accent"))
-			row:Show()
+			-- A new job fades in, like the one-line note does.
+			UI.softShow(row, true)
 			last = row
 		else
 			row:Hide()
@@ -3213,6 +3214,15 @@ function Console:FitPages()
 		end
 		if cols[key] then
 			shown[key] = true
+			-- Slate: a page that comes back into view, or moves to another
+			-- slot, fades in there rather than snapping. Not the first time
+			-- it is placed, at login.
+			local col = cols[key]
+			if self:Slate() and col.stoaX and (col.stoaX ~= x or not col:IsShown()) then
+				col.stoaIn = col.stoaIn or UI.fadeIn(col)
+				col.stoaIn:Play()
+			end
+			col.stoaX = x
 			cols[key]:ClearAllPoints()
 			cols[key]:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
 		elseif key == "empty" then

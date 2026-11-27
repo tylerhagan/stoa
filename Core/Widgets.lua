@@ -1715,7 +1715,10 @@ function UI.button(parent, label, width, onClick, reloads)
 		text:SetTextColor(Stoa:Color(lit and "accent" or "text"))
 		if wash then
 			local r, g, b = Stoa:Color("accent")
-			wash:SetVertexColor(r, g, b, button.selected and 0.16 or 0.1)
+			local rest = button.selected and 0.16 or 0.1
+			wash:SetVertexColor(r, g, b, rest)
+			-- Where its hover fade ends: the wash is stronger when selected.
+			wash.stoaRestAlpha = rest
 			wash:SetShown(lit and true or false)
 		end
 		if lit then
@@ -1729,11 +1732,21 @@ function UI.button(parent, label, width, onClick, reloads)
 					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, UI.MOTION.quick)
 					button.glowIn[i]:Play()
 				end
+				-- Slate's wash warms in with it; not on a reload button,
+				-- which is a secure one.
+				if wash and not reloads then
+					button.washIn = button.washIn or UI.fadeIn(wash, UI.MOTION.quick)
+					button.washIn:Play()
+				end
 			elseif not button:IsMouseOver() then
 				-- Selected: the edge is simply there. Only a hover warms in.
 				for i, group in ipairs(button.glowIn or {}) do
 					group:Stop()
 					glow.edges[i]:SetAlpha(glow.edges[i].stoaRestAlpha or 1)
+				end
+				if button.washIn then
+					button.washIn:Stop()
+					wash:SetAlpha(wash.stoaRestAlpha or 1)
 				end
 			end
 		else
@@ -1750,6 +1763,7 @@ function UI.button(parent, label, width, onClick, reloads)
 	-- Coming into view, any fade cut short by the hide is put to rest.
 	button:HookScript("OnShow", function()
 		for _, group in ipairs(button.glowIn or {}) do group:Stop() end
+		if button.washIn then button.washIn:Stop() end
 		colour()
 	end)
 	button:SetScript("OnMouseDown", function(self)

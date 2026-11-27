@@ -1178,12 +1178,15 @@ end
 
 -- The dark seat under the signature (the tapered ground line) carries
 -- danger: red under a quarter health, amber while an enemy is on you (a
--- tank holding one is the calm case), its own dark tone otherwise.
+-- tank holding one is the calm case), its own dark tone otherwise. Dead or
+-- a ghost, the danger is over: the seat goes back to dark.
 function Halo:SeatMood()
 	local seat = self.signature and self.signature.seat
 	if not seat then return end
 	local token
-	if self.healthToken == "hostile" then
+	if UnitIsDeadOrGhost and Stoa.safe.plain(UnitIsDeadOrGhost("player")) then
+		token = nil
+	elseif self.healthToken == "hostile" then
 		token = "hostile"
 	elseif self.seatAggro then
 		token = "danger"
@@ -1196,6 +1199,20 @@ function Halo:SeatMood()
 	else
 		seat:SetVertexColor(0.04, 0.05, 0.06)
 	end
+	-- The new tone comes up out of a brief dip rather than snapping. An
+	-- animation's alpha lets go when it ends, so the seat can't stay faint.
+	local ease = seat.stoaEase
+	if not ease then
+		ease = seat:CreateAnimationGroup()
+		local fade = ease:CreateAnimation("Alpha")
+		fade:SetFromAlpha(0.35)
+		fade:SetToAlpha(1)
+		fade:SetDuration(UI.MOTION.grow)
+		fade:SetSmoothing("OUT")
+		seat.stoaEase = ease
+	end
+	ease:Stop()
+	ease:Play()
 end
 
 function Halo:SeatThreat()
@@ -2222,6 +2239,9 @@ function Halo:OnEnable()
 		self:SeatThreat()
 	end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:SeatThreat() end)
+	for _, event in ipairs({ "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST" }) do
+		Stoa:On(event, function() self:SeatMood() end)
+	end
 	Stoa:OnUnit("UNIT_THREAT_LIST_UPDATE", { "target" }, function() self:UpdateThreat() end)
 
 	local function onCast(channel)
