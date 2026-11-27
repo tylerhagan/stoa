@@ -193,6 +193,7 @@ function Halo:Line()
 	return self.db.shape == "line"
 end
 
+local LINE_ALPHA = 0.82
 local function lineBar(parent, token, reverse)
 	local sb = CreateFrame("StatusBar", nil, parent)
 	sb:SetSize(LINE_W, LINE_H)
@@ -206,6 +207,8 @@ local function lineBar(parent, token, reverse)
 	track:SetPoint("TOPLEFT", -1, 1)
 	track:SetPoint("BOTTOMRIGHT", 1, -1)
 	track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+	-- A little of the world shows through, like the console's own bars.
+	sb:SetAlpha(LINE_ALPHA)
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
 	if reverse then
@@ -225,7 +228,7 @@ local function quiet(self, bar, text, current, max, emptyIsRest)
 	local alpha = resting and 0 or 1
 	if bar.stoaQuiet == alpha then return end
 	bar.stoaQuiet = alpha
-	UI.fade(bar, alpha, 0.15)
+	UI.fade(bar, alpha * LINE_ALPHA, 0.15)
 	text:SetAlpha(alpha)
 end
 
