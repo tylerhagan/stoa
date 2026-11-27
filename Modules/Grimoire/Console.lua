@@ -2690,8 +2690,10 @@ function Console:SetOpen(open, instant)
 			part:SetShown(open or progress < 1)
 		end
 		UI.fadeTo(self.bridge, open and 1 - progress or progress)
+		-- Slate's ride card is the whole chat, so its tabs stay on it.
+		local tabsStay = riding and chatShade and chatShade.stoaCard
 		for _, part in ipairs(self.tabArt or {}) do
-			UI.fadeTo(part, open and progress or 1 - progress)
+			UI.fadeTo(part, tabsStay and 1 or (open and progress or 1 - progress))
 		end
 		for _, part in ipairs(self.flatParts) do
 			UI.fadeTo(part, open and 1 - progress or progress)
