@@ -728,7 +728,6 @@ function Alts:Refresh()
 			paintName(row.name, entry)
 			local about = {}
 			if className(entry) ~= "" then about[#about + 1] = className(entry) end
-			if entry.realm and entry.realm ~= "" and entry.realm ~= select(3, Alts.me()) then about[#about + 1] = entry.realm end
 			row.class:SetText(UI.join(about))
 			setBar(row, entry, 150)
 			row.zone:SetText(entry.zone or "Not seen yet")
