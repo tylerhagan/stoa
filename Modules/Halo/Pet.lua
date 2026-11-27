@@ -311,6 +311,16 @@ function Pet:PlacePlaque()
 	local frame, halo = self.plaqueFrame, _G.StoaHalo
 	if not frame or Stoa:HasSavedPosition("pet") then return end
 	frame:ClearAllPoints()
+	local module = Stoa.modules.Halo
+	if frame.ring and halo and module and module.Line and module:Line() then
+		-- Ground line: the ring stands on the outer end of the pet's
+		-- hairline, its name beside it over the bar.
+		local line = module.LINE
+		frame:SetPoint("BOTTOM", halo, "BOTTOM", -(line.gap + line.width) + RING / 2, line.y + line.height / 2 + 10)
+		frame.percent:ClearAllPoints()
+		frame.percent:SetPoint("LEFT", frame.name, "RIGHT", 6, 0)
+		return
+	end
 	if frame.ring and halo then
 		-- At the foot of the pet's arc (see BuildArc for its size).
 		local radius, at = halo:GetHeight() * 0.44, math.rad(RING_AT)
@@ -499,6 +509,26 @@ end
 function Pet:BuildArc()
 	local halo = _G.StoaHalo
 	if not halo then return end
+	-- Ground line: the pet's health is a hairline riding on your own bar.
+	local module = Stoa.modules.Halo
+	if module and module.Line and module:Line() then
+		local line = module.LINE
+		local sb = CreateFrame("StatusBar", nil, halo)
+		sb:SetSize(line.width, 3)
+		sb:SetPoint("BOTTOMRIGHT", halo, "BOTTOM", -line.gap, line.y + line.height / 2 + 4)
+		sb:SetStatusBarTexture(UI.WHITE)
+		if sb.SetReverseFill then sb:SetReverseFill(true) end
+		UI.paint(sb, "accent", 0.7)
+		local track = sb:CreateTexture(nil, "BACKGROUND")
+		track:SetPoint("TOPLEFT", -1, 1)
+		track:SetPoint("BOTTOMRIGHT", 1, -1)
+		track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+		sb:SetMinMaxValues(0, 1)
+		sb:SetValue(0)
+		sb:Hide()
+		self.arcBar = sb
+		return
+	end
 	local size = halo:GetHeight() * 0.88
 	local file = UI.MEDIA .. "Textures\\HaloArcLeft"
 	local sb = CreateFrame("StatusBar", nil, halo)

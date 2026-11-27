@@ -42,6 +42,13 @@ local Halo = Stoa:NewModule("Halo", {
 	restFade = false,
 	-- The arcs' drawing: an ARC_STYLES key.
 	arcStyle = "tube",
+	-- How health and power are drawn round you in a fight: "arcs" (the two
+	-- tall arcs) or "line" (two straight bars on one line under you, either
+	-- side of the cooldown slot).
+	shape = "arcs",
+	-- Ground line: a bar and its number go away while full (or, for rage,
+	-- empty) and come back the moment that changes.
+	lineQuiet = false,
 	-- Set once the one-time move from Line to Tube (2.0) has been looked at.
 	arcTube = false,
 })
@@ -176,6 +183,52 @@ local function arc(parent, side, token)
 	return sb
 end
 
+-- The ground line: two straight bars on the Halo's bottom line, health
+-- left of the cooldown slot and power right of it. Health empties toward
+-- the slot's side last, so both bars are fullest where they meet.
+local LINE_W, LINE_H, LINE_GAP, LINE_Y = 120, 6, 28, 8
+Halo.LINE = { width = LINE_W, height = LINE_H, gap = LINE_GAP, y = LINE_Y }
+
+function Halo:Line()
+	return self.db.shape == "line"
+end
+
+local function lineBar(parent, token, reverse)
+	local sb = CreateFrame("StatusBar", nil, parent)
+	sb:SetSize(LINE_W, LINE_H)
+	sb:SetStatusBarTexture(UI.WHITE)
+	if UI.slate() then UI.barShade(sb) end
+	UI.paint(sb, token)
+	if reverse and sb.SetReverseFill then sb:SetReverseFill(true) end
+	-- A dark groove a pixel proud of the bar, so it reads over snow and
+	-- bright sky as well as over dark ground.
+	local track = sb:CreateTexture(nil, "BACKGROUND")
+	track:SetPoint("TOPLEFT", -1, 1)
+	track:SetPoint("BOTTOMRIGHT", 1, -1)
+	track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+	sb:SetMinMaxValues(0, 1)
+	sb:SetValue(1)
+	if reverse then
+		sb:SetPoint("RIGHT", parent, "BOTTOM", -LINE_GAP, LINE_Y)
+	else
+		sb:SetPoint("LEFT", parent, "BOTTOM", LINE_GAP, LINE_Y)
+	end
+	return sb
+end
+
+-- Hide while full: a bar that is full (rage: empty) says nothing, so it and
+-- its number go clear. A hidden value counts as not full.
+local function quiet(self, bar, text, current, max, emptyIsRest)
+	if not (self:Line() and self.db.lineQuiet) then return end
+	local known = not Stoa:IsSecret(current) and not Stoa:IsSecret(max) and type(current) == "number" and type(max) == "number" and max > 0
+	local resting = known and ((emptyIsRest and current <= 0) or (not emptyIsRest and current >= max))
+	local alpha = resting and 0 or 1
+	if bar.stoaQuiet == alpha then return end
+	bar.stoaQuiet = alpha
+	UI.fade(bar, alpha, 0.15)
+	text:SetAlpha(alpha)
+end
+
 function Halo:Build()
 	local frame = CreateFrame("Frame", "StoaHalo", UIParent)
 	frame:SetSize(SIZE, SIZE)
@@ -186,16 +239,29 @@ function Halo:Build()
 	frame:SetAlpha(0)
 	self.frame = frame
 
-	local health = arc(frame, "Left", "health")
-	health:SetPoint("LEFT")
-	local mana = arc(frame, "Right", "mana")
-	mana:SetPoint("RIGHT")
+	local line = self:Line()
+	local health, mana
+	if line then
+		health = lineBar(frame, "health", true)
+		mana = lineBar(frame, "mana")
+	else
+		health = arc(frame, "Left", "health")
+		health:SetPoint("LEFT")
+		mana = arc(frame, "Right", "mana")
+		mana:SetPoint("RIGHT")
+	end
 	self.health, self.mana = health, mana
 
 	local healthText = UI.text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	healthText:SetPoint("BOTTOMRIGHT", frame, "BOTTOM", -SIZE * 0.3, 6)
 	local manaText = UI.text(frame, "serif", Stoa.typeSize.title, "mana", "LEFT")
-	manaText:SetPoint("BOTTOMLEFT", frame, "BOTTOM", SIZE * 0.3, 6)
+	if line then
+		-- The numbers stand at the bars' outer ends.
+		healthText:SetPoint("RIGHT", health, "LEFT", -10, 0)
+		manaText:SetPoint("LEFT", mana, "RIGHT", 10, 0)
+	else
+		healthText:SetPoint("BOTTOMRIGHT", frame, "BOTTOM", -SIZE * 0.3, 6)
+		manaText:SetPoint("BOTTOMLEFT", frame, "BOTTOM", SIZE * 0.3, 6)
+	end
 	-- The numbers are what you read mid-fight, so they get a fine outline.
 	Stoa:SetFont(healthText, "serif", Stoa.typeSize.title, "OUTLINE")
 	Stoa:SetFont(manaText, "serif", Stoa.typeSize.title, "OUTLINE")
@@ -248,6 +314,27 @@ function Halo:BuildManaPlay(frame, arcBar, manaText)
 	number:SetPoint("TOPLEFT", form, "BOTTOMLEFT", 0, -3)
 	form:Hide()
 	local db = self.db
+	if self:Line() then
+		-- On the straight bar: a fraction along it is a distance from its left.
+		self.manaPlay = Stoa.Power.dress(arcBar, {
+			enabled = function(key) return db[key] end,
+			place = function(tex, f)
+				tex:ClearAllPoints()
+				tex:SetPoint("CENTER", arcBar, "LEFT", f * LINE_W, 0)
+			end,
+			shade = function(tex, from, to)
+				tex:ClearAllPoints()
+				tex:SetPoint("TOPLEFT", arcBar, "TOPLEFT", from * LINE_W, 0)
+				tex:SetPoint("BOTTOMRIGHT", arcBar, "BOTTOMLEFT", to * LINE_W, 0)
+			end,
+			form = {
+				bar = form,
+				show = function(_, raw) number:SetText(raw) number:Show() end,
+				hide = function() number:Hide() end,
+			},
+		})
+		return
+	end
 	self.manaPlay = Stoa.Power.dress(arcBar, {
 		texture = arcFile("Right"),
 		enabled = function(key) return db[key] end,
@@ -909,6 +996,7 @@ function Halo:UpdateHealth()
 	UI.setUnitBar(self.health, "player", "health")
 	if self.rest then UI.setUnitBar(self.rest.health, "player", "health") end
 	self.healthText:SetText(UnitHealth("player"))
+	quiet(self, self.health, self.healthText, UnitHealth("player"), UnitHealthMax("player"))
 end
 
 -- The right arc is whatever your power is: mana in its own colour, energy
@@ -927,6 +1015,8 @@ function Halo:UpdatePower()
 		if self.rest then self.rest.mana:SetStatusBarColor(Stoa:Color(token)) end
 		self.manaText:SetTextColor(Stoa:Color(token))
 	end
+	-- Rage rests empty; everything else rests full.
+	quiet(self, self.mana, self.manaText, UnitPower("player"), UnitPowerMax("player"), kind == 1)
 end
 
 function Halo:UpdateSignature()
@@ -1692,10 +1782,15 @@ function Halo:BuildRest()
 	rest:SetScale(self.db.scale)
 	rest:SetFrameStrata("LOW")
 	rest:EnableMouse(false)
-	rest.health = arc(rest, "Left", "health")
-	rest.health:SetPoint("LEFT")
-	rest.mana = arc(rest, "Right", "mana")
-	rest.mana:SetPoint("RIGHT")
+	if self:Line() then
+		rest.health = lineBar(rest, "health", true)
+		rest.mana = lineBar(rest, "mana")
+	else
+		rest.health = arc(rest, "Left", "health")
+		rest.health:SetPoint("LEFT")
+		rest.mana = arc(rest, "Right", "mana")
+		rest.mana:SetPoint("RIGHT")
+	end
 	rest:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 0 or REST_ARCS)
 	self.rest = rest
 	UI.applyTheme()

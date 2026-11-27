@@ -177,13 +177,26 @@ end
 
 -- Building -----------------------------------------------------------------------
 
+-- The ground line (Halo shape) has no ring to stand beside: the coins sit
+-- in a row over the power bar instead, from its inner end outwards.
+local function groundLine()
+	local module = Stoa.modules.Halo
+	return module and module.Line and module:Line() and module.LINE or nil
+end
+local LINE_COIN_GAP, LINE_COIN_LIFT = 6, 10
+
 function Sign.buildCoins(halo)
 	local coins = {}
+	local line = groundLine()
 	for i = 1, #Sign.ANGLES do
 		local coin = CreateFrame("Frame", nil, halo)
 		coin:SetSize(Sign.COIN, Sign.COIN)
-		local angle = math.rad(Sign.ANGLES[i])
-		coin:SetPoint("CENTER", halo, "CENTER", Sign.RADIUS * math.cos(angle), Sign.RADIUS * math.sin(angle))
+		if line then
+			coin:SetPoint("BOTTOMLEFT", halo, "BOTTOM", line.gap + (i - 1) * (Sign.COIN + LINE_COIN_GAP), line.y + line.height / 2 + LINE_COIN_LIFT)
+		else
+			local angle = math.rad(Sign.ANGLES[i])
+			coin:SetPoint("CENTER", halo, "CENTER", Sign.RADIUS * math.cos(angle), Sign.RADIUS * math.sin(angle))
+		end
 		local ring = UI.circle(coin, "BORDER", 0, Sign.COIN)
 		ring:SetPoint("CENTER")
 		ring:SetColorTexture(1, 1, 1)
@@ -215,8 +228,14 @@ end
 -- The caption under the coins: counts, procs, stacks.
 function Sign.buildCaption(halo)
 	local caption = UI.caption(halo, "")
-	local angle = math.rad(Sign.ANGLES[#Sign.ANGLES])
-	caption:SetPoint("TOP", halo, "CENTER", Sign.RADIUS * math.cos(angle), Sign.RADIUS * math.sin(angle) - Sign.COIN / 2 - 4)
+	local line = groundLine()
+	if line then
+		-- Over the coin row, from the same left edge.
+		caption:SetPoint("BOTTOMLEFT", halo, "BOTTOM", line.gap, line.y + line.height / 2 + LINE_COIN_LIFT + Sign.COIN + 6)
+	else
+		local angle = math.rad(Sign.ANGLES[#Sign.ANGLES])
+		caption:SetPoint("TOP", halo, "CENTER", Sign.RADIUS * math.cos(angle), Sign.RADIUS * math.sin(angle) - Sign.COIN / 2 - 4)
+	end
 	UI.legible(caption)
 	return caption
 end
