@@ -359,6 +359,9 @@ end
 local function updateFooter(frame)
 	local parts = frame.stoaBag
 	if not parts then return end
+	-- Seated in the combined bag as a section (sectionLook), a bag has no
+	-- footer of its own: showing its words again would double them there.
+	if frame.stoaHidden and next(frame.stoaHidden) then return end
 	local free, size = freeSlots(frame)
 	if free then
 		local text = size and (free .. " of " .. size .. " free") or (free .. " free")
