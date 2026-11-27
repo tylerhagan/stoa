@@ -270,22 +270,15 @@ function Procs:ShowArt(owner, art, spots, r, g, b)
 		end
 		if not piece:IsShown() then
 			if piece.strip then
-				-- The game's own colour when it gives a real one (it sends
-				-- 0 to 255). Its standing overlays come as plain white over
-				-- dark art (Shadowform): those lie as a violet shadow. STOA's
-				-- own procs take the accent.
+				-- The game's own colour when it gives one (it sends 0 to
+				-- 255); STOA's own procs take the accent.
 				local cr, cg, cb = Stoa:Color("accent")
-				local ca = 0.8
 				if type(r) == "number" and type(g) == "number" and type(b) == "number" then
 					if r > 1 or g > 1 or b > 1 then r, g, b = r / 255, g / 255, b / 255 end
-					if r > 0.95 and g > 0.95 and b > 0.95 then
-						cr, cg, cb, ca = 0.5, 0.3, 0.9, 0.6
-					else
-						cr, cg, cb = r, g, b
-					end
+					cr, cg, cb = r, g, b
 				end
 				piece.texture:SetTexture(Stoa.UI.MEDIA .. "Textures\\SparkleGlow")
-				piece.texture:SetVertexColor(cr, cg, cb, ca)
+				piece.texture:SetVertexColor(cr, cg, cb, 0.8)
 			elseif setArt(piece.texture, art, spot) and r then
 				piece.texture:SetVertexColor(r, g, b)
 			end
@@ -540,11 +533,17 @@ end
 function Procs:OnGameShow(spellID, texture, location, _, r, g, b)
 	if Stoa:IsSecret(spellID) or Stoa:IsSecret(texture) then return end
 	if not self.db.takeOver then return end
-	-- The side rail has nothing for the game's standing overlays (Shadowform's
-	-- dark arcs) to follow, so they are left out there. The ground line
-	-- lays them along its bars (see makePiece).
+	-- The side rail has nothing for the game's overlays to follow, so they
+	-- are left out there. The ground line lays coloured ones along its bars
+	-- (see makePiece); the plain white ones are the standing form overlays
+	-- (Shadowform), which the form's own look draws.
 	local halo = Stoa.modules.Halo
 	if halo and halo.Rail and halo:Rail() then return end
+	if halo and halo.Line and halo:Line() then
+		local plainWhite = type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number"
+			or (r >= 242 and g >= 242 and b >= 242) or (r <= 1 and g <= 1 and b <= 1 and r >= 0.95 and g >= 0.95 and b >= 0.95)
+		if plainWhite then return end
+	end
 	self:ShowArt("game:" .. tostring(spellID), texture, SPOTS[location] or { "left", "right" }, r, g, b)
 end
 
