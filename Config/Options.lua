@@ -290,7 +290,7 @@ local function build()
 	for _, name in ipairs(Stoa.themeOrder) do
 		themes[#themes + 1] = { name, name == "Class" and "Your class" or name, swatch = name }
 	end
-	choice(db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Matte is black hardware with white print. Ice and Ember are flat near-black with a cool blue or a warm orange accent, made for Slate. Each class has its own, and Your class follows whoever you log in.", "Bone", themes, {
+	choice(db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Matte is black hardware with white print. Ice and Ember are flat near-black with a pale frost or a warm orange accent, made for Slate. Each class has its own, and Your class follows whoever you log in.", "Bone", themes, {
 		list = true, words = "colour color palette class skin",
 		change = function(_, v) Stoa:SetTheme(v) end,
 	})

@@ -81,7 +81,7 @@ Stoa.themes = {
 		neutralAccent = true,
 	},
 	-- Made for Slate: flat near-black panels, fine light lines and one
-	-- accent kept for what you act on. Ice is cool blue, Ember warm orange.
+	-- accent kept for what you act on. Ice is pale frost, Ember warm orange.
 	Ice = {
 		text    = rgb("E9ECEF"),
 		muted   = rgb("8E98A2"),
@@ -92,7 +92,9 @@ Stoa.themes = {
 		danger  = rgb("FFB547"),
 		hostile = rgb("E0443A"),
 		shield  = rgb("D6EEFF", 0.85),
-		accent  = rgb("58B6E8"),
+		-- A pale frost, well clear of mana's blue: the two used to read as
+		-- one colour, and the whole console went blue.
+		accent  = rgb("B4DDF2"),
 		magic   = rgb("6FA8FF"),
 		disease = rgb("B9A2F2"),
 		classTint = true,
