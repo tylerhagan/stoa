@@ -245,9 +245,21 @@ local function railBar(parent, token, index)
 	return sb
 end
 
+-- Slate's ground line swells toward the signature and ends in a bite that
+-- follows it (LineFlare.tga, Tools/art/line_flare.py: a 128x16 space whose
+-- bar starts 2 in). The bar reaches FLARE.reach closer than LINE.gap and
+-- stands FLARE.tall, so the mask has the room; everything placed from
+-- LINE's own numbers stays where it was. A hairline is too thin to flare.
+local FLARE = { tall = 14, reach = 7, art = { 128, 16 } }
+local function flared()
+	return UI.slate() and LINE.height >= 6
+end
+
 local function lineBar(parent, token, reverse)
 	local sb = CreateFrame("StatusBar", nil, parent)
-	sb:SetSize(LINE.width, LINE.height)
+	local flare = flared()
+	local reach = flare and FLARE.reach or 0
+	sb:SetSize(LINE.width + reach, flare and FLARE.tall or LINE.height)
 	sb:SetStatusBarTexture(UI.WHITE)
 	if UI.slate() then UI.barShade(sb) end
 	UI.paint(sb, token)
@@ -258,17 +270,16 @@ local function lineBar(parent, token, reverse)
 	track:SetPoint("TOPLEFT", -1, 1)
 	track:SetPoint("BOTTOMRIGHT", 1, -1)
 	track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
-	-- Slate rounds the outer end. The pill mask is 16 to 1 and lies flush
-	-- with that end, so its far cap falls past the inner end, which stays
-	-- square against the seal. A hairline is too thin to round.
-	if UI.slate() and LINE.height >= 6 then
+	if flare then
 		local outer = reverse and "LEFT" or "RIGHT"
+		local artW, artH = FLARE.art[1], FLARE.art[2]
 		for _, piece in ipairs({ { sb:GetStatusBarTexture(), 0 }, { track, 1 } }) do
 			local tex, proud = piece[1], piece[2]
-			local height = LINE.height + 2 * proud
 			local mask = sb:CreateMaskTexture()
-			mask:SetTexture(UI.MEDIA .. "Textures\\LineCap", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-			mask:SetSize(math.max(height * 16, LINE.width + 2 * proud + height), height)
+			mask:SetTexture(UI.MEDIA .. "Textures\\LineFlare", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			-- Drawn for the right-hand bar; the left-hand one mirrors it.
+			if reverse then mask:SetTexCoord(1, 0, 0, 1) end
+			mask:SetSize(artW + 2 * proud, artH + 2 * proud)
 			mask:SetPoint(outer, sb, outer, reverse and -proud or proud, 0)
 			tex:AddMaskTexture(mask)
 		end
@@ -278,9 +289,9 @@ local function lineBar(parent, token, reverse)
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
 	if reverse then
-		sb:SetPoint("RIGHT", parent, "BOTTOM", -LINE.gap, LINE.y)
+		sb:SetPoint("RIGHT", parent, "BOTTOM", -(LINE.gap - reach), LINE.y)
 	else
-		sb:SetPoint("LEFT", parent, "BOTTOM", LINE.gap, LINE.y)
+		sb:SetPoint("LEFT", parent, "BOTTOM", LINE.gap - reach, LINE.y)
 	end
 	return sb
 end
@@ -425,12 +436,12 @@ function Halo:BuildManaPlay(frame, arcBar, manaText)
 			enabled = function(key) return db[key] end,
 			place = function(tex, f)
 				tex:ClearAllPoints()
-				tex:SetPoint("CENTER", arcBar, "LEFT", f * LINE.width, 0)
+				tex:SetPoint("CENTER", arcBar, "LEFT", f * arcBar:GetWidth(), 0)
 			end,
 			shade = function(tex, from, to)
 				tex:ClearAllPoints()
-				tex:SetPoint("TOPLEFT", arcBar, "TOPLEFT", from * LINE.width, 0)
-				tex:SetPoint("BOTTOMRIGHT", arcBar, "BOTTOMLEFT", to * LINE.width, 0)
+				tex:SetPoint("TOPLEFT", arcBar, "TOPLEFT", from * arcBar:GetWidth(), 0)
+				tex:SetPoint("BOTTOMRIGHT", arcBar, "BOTTOMLEFT", to * arcBar:GetWidth(), 0)
 			end,
 			form = {
 				bar = form,
