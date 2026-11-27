@@ -35,6 +35,9 @@ local ROWS_PER_COLUMN = 4
 local COLUMN_WIDTH = 170
 local COLUMN_GAP = 36
 local ROW_GAP = 20
+-- Slate's card is taller than the well: the four rows spread down it, so
+-- the card isn't full at the top and empty at the foot.
+local SLATE_ROW_GAP, SLATE_ROW_TOP = 25, -9
 -- Room left from the chat's right edge, and kept clear either side of the
 -- centre for the medallion and the health bar.
 local CHAT_RIGHT = 440 + 44
@@ -795,7 +798,8 @@ function Tally:BuildRow(page, index)
 	local slot = (index - 1) % ROWS_PER_COLUMN
 	local row = CreateFrame("Button", nil, page)
 	row:SetSize(COLUMN_WIDTH, 18)
-	row:SetPoint("TOPLEFT", self.rule, "BOTTOMLEFT", column * (COLUMN_WIDTH + COLUMN_GAP), -6 - slot * ROW_GAP)
+	local slate = UI.slate()
+	row:SetPoint("TOPLEFT", self.rule, "BOTTOMLEFT", column * (COLUMN_WIDTH + COLUMN_GAP), (slate and SLATE_ROW_TOP or -6) - slot * (slate and SLATE_ROW_GAP or ROW_GAP))
 	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	local label = UI.text(row, "sans", Stoa.typeSize.body, "muted")
 	label:SetPoint("LEFT")
