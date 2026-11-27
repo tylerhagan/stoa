@@ -3372,10 +3372,22 @@ function Console:OnEnable()
 		end
 		update()
 	end
+	-- On a cold start the card's words can be drawn before the face has
+	-- loaded and come out blank, though set and measuring fine. They are
+	-- drawn again a moment after each loading screen.
+	local function redrawYou()
+		for _, fs in ipairs({ self.youName, self.youSub, self.healthText, self.manaText, self.levelPlate and self.levelPlate.text }) do
+			UI.redraw(fs)
+		end
+	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		self:UpdateSeal()
 		self:UpdateResources()
 		self:UpdateFellowship()
+		if self.youCard then
+			C_Timer.After(1, redrawYou)
+			C_Timer.After(4, redrawYou)
+		end
 		if IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
 	end)
 

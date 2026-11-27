@@ -334,6 +334,18 @@ if CreateFrame then
 	end)
 end
 
+-- The same remedy for words that do change (a name, a number): draw what
+-- the string holds once more in a freshly loaded face. Its owner calls
+-- this a moment after a loading screen. A hidden value is left alone.
+function UI.redraw(fs)
+	if not (fs and fs.GetFont) then return end
+	refont(fs)
+	local words = fs:GetText()
+	if words == nil or Stoa:IsSecret(words) then return end
+	fs:SetText("")
+	fs:SetText(words)
+end
+
 function UI.settleText(fs, words, tries)
 	settled[fs] = words
 	fs:SetText("")
