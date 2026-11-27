@@ -247,11 +247,12 @@ local function dressTick(check, switch)
 			local state = tickState(check)
 			local enabled = not check.IsEnabled or check:IsEnabled()
 			local r, g, b = Stoa:Color(state and "accent" or "text")
-			-- Off: a dim grey; on: the accent a step down, so the knob reads
-			-- (the same tones as the switches in STOA's settings).
-			local k = state == true and 0.82 or state and 0.4 or 0.2
+			-- Off: a dim grey. On: a dark track only tinted by the accent,
+			-- and the knob carries the colour, so a long list of switches
+			-- stays calm whatever the theme (a full orange track shouted).
+			local k = state == true and 0.3 or state and 0.18 or 0.2
 			for _, part in ipairs(parts) do part:SetVertexColor(r * k, g * k, b * k, enabled and 1 or 0.5) end
-			local kr, kg, kb = Stoa:Color(state and "text" or "muted")
+			local kr, kg, kb = Stoa:Color(state == true and "accent" or state and "text" or "muted")
 			knob:SetVertexColor(kr, kg, kb, enabled and 1 or 0.5)
 			knob:ClearAllPoints()
 			knob:SetPoint("CENTER", check, "CENTER", state == true and travel or state and 0 or -travel, 0)
