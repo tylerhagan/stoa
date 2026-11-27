@@ -1215,6 +1215,45 @@ function Halo:SeatMood()
 	ease:Play()
 end
 
+-- A form's look (Forms.lua: Shadowform) breathes round the seat: the ring
+-- glow in the form's smoke, slowly rising and falling. The only standing
+-- motion on the ground line, so it stays low and slow.
+local SEAT_BREATH, SEAT_BREATH_LOW = 1.8, 0.3
+function Halo:SeatForm(look)
+	local slot = self.signature
+	if not (slot and slot.seat) then return end
+	local smoke = slot.seatSmoke
+	local shade = type(look) == "table" and look.shade
+	if not shade then
+		if smoke then
+			smoke.breath:Stop()
+			smoke:Hide()
+		end
+		return
+	end
+	if not smoke then
+		smoke = self.frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+		smoke:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
+		-- The glow peaks 55/77 of the way out: set that just past the
+		-- signature's ring.
+		local size = (SIGNATURE_SIZE / 2 + 14) / (55 / 77) * 2
+		smoke:SetSize(size, size)
+		smoke:SetPoint("CENTER", slot, "CENTER")
+		local breath = smoke:CreateAnimationGroup()
+		breath:SetLooping("BOUNCE")
+		local fade = breath:CreateAnimation("Alpha")
+		fade:SetFromAlpha(SEAT_BREATH_LOW)
+		fade:SetToAlpha(1)
+		fade:SetDuration(SEAT_BREATH)
+		fade:SetSmoothing("IN_OUT")
+		smoke.breath = breath
+		slot.seatSmoke = smoke
+	end
+	smoke:SetVertexColor(shade[1], shade[2], shade[3])
+	smoke:Show()
+	if not smoke.breath:IsPlaying() then smoke.breath:Play() end
+end
+
 function Halo:SeatThreat()
 	local status = InCombatLockdown() and UnitThreatSituation and UnitThreatSituation("player")
 	if Stoa:IsSecret(status) then status = nil end
@@ -2240,6 +2279,8 @@ function Halo:OnEnable()
 		self:SeatThreat()
 	end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:SeatThreat() end)
+	Stoa:On("STOA_FORM_LOOK", function(look) self:SeatForm(look) end)
+	self:SeatForm(Stoa.Forms and Stoa.Forms.look)
 	for _, event in ipairs({ "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST" }) do
 		Stoa:On(event, function() self:SeatMood() end)
 	end
