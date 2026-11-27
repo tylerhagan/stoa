@@ -59,6 +59,52 @@ end
 
 -- Build ---------------------------------------------------------------------
 
+-- In a fight the game refuses every aura read an addon makes, so STOA
+-- can't know a party member carries a debuff you could remove. The game's
+-- own raid frames don't read auras either: they hand the game a frame and
+-- some settings, and the game draws into it. This does the same with a
+-- small box on the card's top right corner, asking only for the mark of
+-- each kind of debuff this character can dispel (magic, disease, ...).
+-- STOA never learns what is drawn there. Out of a fight the DISEASE or
+-- MAGIC word still shows as before, next to the mark.
+local MARK_BOX_W, MARK_BOX_H, MARK_SCALE = 48, 18, 1.3
+
+function Party:BuildDispelBox(card, unit)
+	local auras, kinds = C_UnitAuras, Enum
+	if not (auras and auras.AddPrivateAuraAnchor and kinds.RaidDispelDisplayType and kinds.RaidAuraOrganizationType) then return end
+	local box = CreateFrame("Frame", nil, card)
+	box:SetSize(MARK_BOX_W, MARK_BOX_H)
+	box:SetScale(MARK_SCALE)
+	-- The game puts the marks 3 in and 2 down from the box's top right,
+	-- 14 across each; this rests the first one on the card's corner.
+	box:SetPoint("TOPRIGHT", card, "TOPRIGHT", 5, 8)
+	box:SetFrameLevel(card:GetFrameLevel() + 6)
+	box:EnableMouse(false)
+	local settings = {
+		["max-buffs"] = 0, ["max-debuffs"] = 0, ["max-dispel-debuffs"] = 3,
+		["aura-organization-type"] = kinds.RaidAuraOrganizationType.Legacy,
+		["dispel-indicator-option"] = kinds.RaidDispelDisplayType.DispellableByMe,
+		["display-only-dispellable-debuffs"] = true,
+		["ignore-buffs"] = true, ["ignore-debuffs"] = true, ["ignore-dispel-debuffs"] = false,
+		["display-larger-role-specific-debuffs"] = false,
+		["dispel-indicator-overlay-animation"] = false, ["dispel-indicator-animated-border"] = false,
+		["show-big-defensive"] = false, ["big-defensive-size"] = 14,
+		["debuff-size"] = 14, ["buff-size"] = 14, ["debuff-border-scale"] = 1, ["buff-border-scale"] = 1,
+		["always-hide-duration"] = true, ["set-aura-size-to-icon-size"] = true,
+		["power-bar-used-height"] = 0,
+	}
+	for key, value in pairs(settings) do box:SetAttribute(key, value) end
+	local ok, id = pcall(auras.AddPrivateAuraAnchor, {
+		unitToken = unit, auraIndex = 1, parent = box, isContainer = true,
+		showCooldownFrame = false, showCooldownEdge = false, showCountdownNumbers = false, showDispelIcon = false,
+		iconInfo = {
+			iconAnchor = { point = "CENTER", relativeTo = box, relativePoint = "CENTER", offsetX = 0, offsetY = 0 },
+			iconWidth = 14, iconHeight = 14, borderScale = 1,
+		},
+	})
+	card.dispelBox, card.dispelAnchor = box, ok and id or nil
+end
+
 function Party:BuildCard(index, unit)
 	local card = CreateFrame("Button", "StoaPartyCard" .. index, self.frame, "SecureUnitButtonTemplate")
 	card:SetAttribute("unit", unit)
@@ -84,6 +130,8 @@ function Party:BuildCard(index, unit)
 		button.hover = nil
 		self:UpdateCard(button)
 	end)
+
+	xpcall(self.BuildDispelBox, Stoa.catch, self, card, unit)
 
 	if unit == "player" then
 		-- Your own card only shows in a group; alone the Halo covers you.
