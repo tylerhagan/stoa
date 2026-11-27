@@ -875,6 +875,13 @@ function Halo:BuildTarget(frame)
 	local theirs = Stoa.Conflicts and Stoa.Conflicts:SteppedAside("Target")
 	RegisterStateDriver(target, "visibility", theirs and "hide" or "[@target,exists] show; hide")
 	self.target = target
+	-- A friendly target's debuffs you can remove: the game draws their
+	-- marks just above the plaque's top left corner, in a fight too (see
+	-- Party:BuildDispelBox).
+	local party = Stoa.modules.Party
+	if party and party.BuildDispelBox then
+		xpcall(party.BuildDispelBox, Stoa.catch, party, target, "target", "TOPLEFT", 22, 17, 1.6)
+	end
 	-- The medallion faces away from the Halo, balancing the card.
 	local plaque = UI.plaque(target, "RIGHT", { medallion = true })
 	target.plaque = plaque

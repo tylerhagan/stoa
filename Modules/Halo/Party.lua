@@ -63,21 +63,22 @@ end
 -- can't know a party member carries a debuff you could remove. The game's
 -- own raid frames don't read auras either: they hand the game a frame and
 -- some settings, and the game draws into it. This does the same with a
--- small box on the card's top right corner, asking only for the mark of
--- each kind of debuff this character can dispel (magic, disease, ...).
--- STOA never learns what is drawn there. Out of a fight the DISEASE or
--- MAGIC word still shows as before, next to the mark.
-local MARK_BOX_W, MARK_BOX_H, MARK_SCALE = 48, 18, 1.3
+-- small box, asking only for the mark of each kind of debuff this
+-- character can dispel (magic, disease, ...). STOA never learns what is
+-- drawn there. Out of a fight the DISEASE or MAGIC word still shows as
+-- before, next to the mark.
+-- The game puts the marks 3 in and 2 down from the box's top right, 14
+-- across each, the next to the left. x and y place the box's top right
+-- from the owner's `corner`, in the box's own (scaled) units.
+local MARK_BOX_W, MARK_BOX_H = 48, 18
 
-function Party:BuildDispelBox(card, unit)
+function Party:BuildDispelBox(card, unit, corner, x, y, scale)
 	local auras, kinds = C_UnitAuras, Enum
 	if not (auras and auras.AddPrivateAuraAnchor and kinds.RaidDispelDisplayType and kinds.RaidAuraOrganizationType) then return end
 	local box = CreateFrame("Frame", nil, card)
 	box:SetSize(MARK_BOX_W, MARK_BOX_H)
-	box:SetScale(MARK_SCALE)
-	-- The game puts the marks 3 in and 2 down from the box's top right,
-	-- 14 across each; this rests the first one on the card's corner.
-	box:SetPoint("TOPRIGHT", card, "TOPRIGHT", 5, 8)
+	box:SetScale(scale)
+	box:SetPoint("TOPRIGHT", card, corner, x, y)
 	box:SetFrameLevel(card:GetFrameLevel() + 6)
 	box:EnableMouse(false)
 	local settings = {
@@ -131,7 +132,8 @@ function Party:BuildCard(index, unit)
 		self:UpdateCard(button)
 	end)
 
-	xpcall(self.BuildDispelBox, Stoa.catch, self, card, unit)
+	-- Inside the card's bottom right corner, about 21 across.
+	xpcall(self.BuildDispelBox, Stoa.catch, self, card, unit, "BOTTOMRIGHT", -2, 19, 1.5)
 
 	if unit == "player" then
 		-- Your own card only shows in a group; alone the Halo covers you.
