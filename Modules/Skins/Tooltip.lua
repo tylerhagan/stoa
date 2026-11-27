@@ -863,6 +863,14 @@ local function settle(tip)
 	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
 	local room = ((second and second:IsShown()) and HEADER_ROOM or (HEADER_TOP - 10)) + questRoom + (tip.stoaLower and LOWER_PAD or 0)
 	tip.stoaRoom = room
+	local head = tip.stoaHead
+	if head and head.whole then
+		local lone = not (second and second:IsShown())
+		head.whole:SetShown(lone)
+		head.band:SetShown(not lone)
+		head.shade:SetShown(not lone)
+		head.fall:SetShown(not lone)
+	end
 	-- Cards with more than a name keep a minimum width, so a short card
 	-- (a level and a word or two) doesn't look squeezed.
 	local wide = second and second:IsShown()
@@ -923,7 +931,16 @@ local function header(tip)
 	fade:SetDrawLayer("BACKGROUND", -5)
 	fade:Hide()
 	tip.stoaFade = fade
-	UI.shadowLine(tip, band)
+	-- A one-line card is all header: the band's shape with rounded feet
+	-- fills it, so no sliver of the body shows under the name.
+	local whole = UI.sliced(tip, "BACKGROUND", "CardFill.tga")
+	if whole then
+		whole:SetDrawLayer("BACKGROUND", -6)
+		UI.tint(whole, "text", 0.06)
+		whole:Hide()
+	end
+	local shade, fall = UI.shadowLine(tip, band)
+	tip.stoaHead = { band = band, whole = whole, shade = shade, fall = fall }
 	UI.applyTheme()
 end
 
