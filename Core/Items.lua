@@ -295,7 +295,7 @@ end
 -- The item goals in your quest log ("Scaber Stalk: 2/5") not yet met, by
 -- the item's name. The bags edge these in the accent and junk selling
 -- leaves them be. Read again when the quest log changes.
-local questNeeds
+local questNeeds, questWaits
 
 local function objectiveName(text)
 	if type(text) ~= "string" or Stoa:IsSecret(text) then return nil end
@@ -337,8 +337,22 @@ end
 
 for _, event in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED" }) do
 	Stoa:On(event, function()
-		questNeeds = nil
-		Stoa:Fire("STOA_QUEST_NEEDS_CHANGED")
+		-- The quest log updates on every kill: the list is read once a
+		-- moment later, and the word goes out only when it changed.
+		if questWaits then return end
+		questWaits = true
+		C_Timer.After(0.3, function()
+			questWaits = nil
+			local was = questNeeds
+			questNeeds = readQuestNeeds()
+			if was then
+				local same = true
+				for name in pairs(was) do if not questNeeds[name] then same = false break end end
+				for name in pairs(questNeeds) do if not was[name] then same = false break end end
+				if same then return end
+			end
+			Stoa:Fire("STOA_QUEST_NEEDS_CHANGED")
+		end)
 	end)
 end
 

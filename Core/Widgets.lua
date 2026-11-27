@@ -12,6 +12,8 @@ UI.WHITE = "Interface\\Buttons\\WHITE8x8"
 UI.MEDIA = "Interface\\AddOns\\Stoa\\Media\\"
 
 local themed = {}
+-- How far down the list the last pass painted.
+local painted = 0
 
 -- Hairlines in whole screen pixels. A line one unit tall can land between
 -- two pixels at most UI scales and blur, or vanish; these keep their size in
@@ -64,7 +66,10 @@ end
 -- Drops a region from the theme passes, for one its owner colours itself.
 function UI.unpaint(region)
 	for i = #themed, 1, -1 do
-		if themed[i].region == region then table.remove(themed, i) end
+		if themed[i].region == region then
+			table.remove(themed, i)
+			if i <= painted then painted = painted - 1 end
+		end
 	end
 end
 
@@ -89,6 +94,15 @@ end
 
 function UI.applyTheme()
 	for _, entry in ipairs(themed) do paintOne(entry) end
+	painted = #themed
+end
+
+-- Paints only what has been made since the last pass. The builders below
+-- use this: a full pass after every new panel or item slot repainted the
+-- whole list, which grows all session.
+function UI.paintNew()
+	for i = painted + 1, #themed do paintOne(themed[i]) end
+	painted = #themed
 end
 
 -- Sets a region's alpha so that a later theme pass keeps it.
@@ -1197,7 +1211,7 @@ function UI.roundPanel(frame, alpha, kind)
 		if frame.stoaHeader then frame.stoaTopLight.stoaUnder(frame.stoaHeader) end
 	end
 	UI.mould(frame)
-	UI.applyTheme()
+	UI.paintNew()
 	return bg
 end
 
@@ -1214,7 +1228,7 @@ function UI.fadeRule(parent, token, alpha)
 		tex:SetPoint(i == 1 and "RIGHT" or "LEFT", rule, "CENTER")
 		UI.gradient(tex, token or "text", alpha or 0.28, "HORIZONTAL", i == 1 and 0 or 1, i == 1 and 1 or 0)
 	end
-	UI.applyTheme()
+	UI.paintNew()
 	return rule
 end
 
@@ -1434,7 +1448,7 @@ function UI.band(frame, size, family, plain)
 		UI.shadowLine(frame, header)
 	end
 	if frame.stoaTopLight and frame.stoaTopLight.stoaUnder then frame.stoaTopLight.stoaUnder(header) end
-	UI.applyTheme()
+	UI.paintNew()
 	return header
 end
 
@@ -1547,7 +1561,7 @@ function UI.surface(frame, kind, opts)
 	end
 	frame.stoaSurface = fill
 	frame.stoaSurfaceKind = kind
-	UI.applyTheme()
+	UI.paintNew()
 	return fill
 end
 
@@ -1566,7 +1580,7 @@ function UI.windowPanel(frame, alpha, opts)
 	if opts.header then header = UI.band(frame, opts.header, opts.family, opts.plainHeader) end
 	if opts.footer and not opts.bare then footer = UI.tray(frame, opts.footer) end
 	if not opts.bare then UI.stone(frame, header, footer) end
-	UI.applyTheme()
+	UI.paintNew()
 	return bg
 end
 
@@ -1907,7 +1921,7 @@ function UI.unitCard(card, styleName)
 			end,
 			Clear = function() ring:Hide() end,
 		}
-		UI.applyTheme()
+		UI.paintNew()
 	else
 		UI.surface(card, "card", { alpha = 0.96 })
 		card.state = UI.roundBorder(card, "CardState.tga", 2)
@@ -1964,7 +1978,7 @@ function UI.unitCard(card, styleName)
 	card.mark:SetPoint("CENTER")
 
 	UI.styleCard(card, styleName)
-	UI.applyTheme()
+	UI.paintNew()
 end
 
 -- A plaque: the target, tank watch and pet cards. A solid card in the

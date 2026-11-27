@@ -34,12 +34,18 @@ local function protectedInside(frame, depth)
 	end
 	return false
 end
+local fight = 0
 function Windows.Locked(frame)
 	if not InCombatLockdown() then return false end
 	if type(frame) ~= "table" then return true end
+	-- The walk is long for a window full of buttons: one answer a window
+	-- for each fight.
+	if frame.stoaLockedFight == fight then return frame.stoaLocked end
 	local ok, locked = pcall(protectedInside, frame, 6)
-	return not ok or locked
+	frame.stoaLockedFight, frame.stoaLocked = fight, not ok or locked
+	return frame.stoaLocked
 end
+Stoa:On("PLAYER_REGEN_DISABLED", function() fight = fight + 1 end)
 
 -- Strips the plain frames inside a window too, down a few levels, leaving
 -- buttons, bars and edit boxes (and their icons) alone.

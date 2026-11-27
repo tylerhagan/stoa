@@ -291,6 +291,7 @@ local function decorateButton(button)
 		return
 	end
 	markJunkWord(button, info.itemID)
+	button.stoaItemID = info.itemID
 	local link = info.hyperlink
 	-- Reading the level costs a lookup, so an unchanged slot is left alone.
 	if button.stoaLink ~= link or button.stoaQuality ~= info.quality then
@@ -305,7 +306,7 @@ local function decorateButton(button)
 		parts.edge:Set(Stoa:Color("accent"))
 	end
 	-- Another addon's gear planner marks upgrades in bags already (Core/Companions.lua).
-	Item.markUpgrade(button, parts, button.stoaUpgrade and not Stoa:SharedBy("bagUpgrade"))
+	Item.markUpgrade(button, parts, button.stoaUpgrade and not Bags.upgradeShared)
 end
 
 -- Gold, silver and copper with the game's coin icons, as the hover shows them.
@@ -454,6 +455,8 @@ end
 
 local function decorateFrame(frame)
 	if not frame or not frame.stoaBag then return end
+	-- Asked once for the whole bag, not once a slot.
+	Bags.upgradeShared = Stoa:SharedBy("bagUpgrade") and true or false
 	for _, button in ipairs(items(frame)) do
 		guarded(decorateButton, button)
 		if Bags.junkMode then guarded(junkOverlay, button, true) end
@@ -502,6 +505,25 @@ end
 local function refreshShown()
 	for _, frame in ipairs(allFrames()) do
 		if frame and frame.IsShown and frame:IsShown() then guarded(decorateFrame, frame) end
+	end
+end
+
+-- Events come in bursts (an item loading, a quest log update for every
+-- kill): one pass a moment later answers the lot.
+local refreshWaits
+local function refreshSoon()
+	if refreshWaits then return end
+	refreshWaits = true
+	C_Timer.After(0.05, function()
+		refreshWaits = nil
+		refreshShown()
+	end)
+end
+
+-- Coins and currencies change the footer only.
+local function footersShown()
+	for _, frame in ipairs(allFrames()) do
+		if frame and frame.stoaBag and frame.IsShown and frame:IsShown() then guarded(updateFooter, frame) end
 	end
 end
 
@@ -758,7 +780,13 @@ function Bags:LayOutSections()
 	local buttons = items(combined)
 	if not money or #buttons == 0 then return end
 	if InCombatLockdown() and (combined:IsProtected() or buttons[1]:IsProtected()) then
-		Stoa:AfterCombat(function() Bags:LayOutSections() end)
+		if not self.layWaits then
+			self.layWaits = true
+			Stoa:AfterCombat(function()
+				Bags.layWaits = nil
+				Bags:LayOutSections()
+			end)
+		end
 		return
 	end
 	self.laying = true
@@ -1006,7 +1034,7 @@ function Bags:OnEnable()
 	for _, frame in ipairs(allFrames()) do
 		if frame then guarded(self.Dress, self, frame) end
 	end
-	Stoa:On("BAG_UPDATE_DELAYED", refreshShown)
+	Stoa:On("BAG_UPDATE_DELAYED", refreshSoon)
 	-- The search box runs the bag's full width, up to the clean-up button.
 	local function placeSearch(frame)
 		local box = BagItemSearchBox
@@ -1065,15 +1093,15 @@ function Bags:OnEnable()
 		end
 	end
 	Stoa:On("BAG_UPDATE_DELAYED", function() if dockWanted() then dock() end end)
-	Stoa:On("STOA_JUNK_CHANGED", refreshShown)
-	Stoa:On("STOA_QUEST_NEEDS_CHANGED", refreshShown)
+	Stoa:On("STOA_JUNK_CHANGED", refreshSoon)
+	Stoa:On("STOA_QUEST_NEEDS_CHANGED", refreshSoon)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Bags:SetJunkMode(false) end)
-	Stoa:On("PLAYER_MONEY", refreshShown)
-	Stoa:On("CURRENCY_DISPLAY_UPDATE", refreshShown)
+	Stoa:On("PLAYER_MONEY", footersShown)
+	Stoa:On("CURRENCY_DISPLAY_UPDATE", footersShown)
 	-- Ticking "Show on Backpack" fires no event, so follow the call itself.
 	for _, name in ipairs({ "SetCurrencyBackpack", "SetCurrencyBackpackByID" }) do
 		if C_CurrencyInfo and C_CurrencyInfo[name] then
-			hooksecurefunc(C_CurrencyInfo, name, function() C_Timer.After(0, refreshShown) end)
+			hooksecurefunc(C_CurrencyInfo, name, function() C_Timer.After(0, footersShown) end)
 		end
 	end
 	-- What counts as an upgrade moves with your gear and your role.
@@ -1091,14 +1119,18 @@ function Bags:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", rescore)
 	Stoa:On("PLAYER_LEVEL_UP", function() C_Timer.After(1, rescore) end)
 	-- Item links load a moment after the bag does.
-	Stoa:On("GET_ITEM_INFO_RECEIVED", function()
+	-- Only the slots holding the item that loaded are read again.
+	Stoa:On("GET_ITEM_INFO_RECEIVED", function(itemID)
+		local any = false
 		for _, frame in ipairs(allFrames()) do
 			if frame and frame.stoaBag and frame.IsShown and frame:IsShown() then
 				guarded(function()
-					for _, button in ipairs(items(frame)) do button.stoaLink = nil end
+					for _, button in ipairs(items(frame)) do
+						if button.stoaItemID == itemID then button.stoaLink, any = nil, true end
+					end
 				end)
 			end
 		end
-		refreshShown()
+		if any then refreshSoon() end
 	end)
 end
