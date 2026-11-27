@@ -1757,8 +1757,8 @@ function Halo:UpdateTargetPower()
 	power:SetShown(Stoa:IsSecret(dead) or not dead)
 end
 
--- Your Shield, Renew and the like on a friendly target, as the same tags
--- the party cards carry. Nothing on an enemy or the dead.
+-- A debuff you can dispel, your Shield, Renew and the like on a friendly
+-- target, as the same tags the party cards carry. Nothing on an enemy or the dead.
 function Halo:UpdateTargetPips()
 	local row = self.target and self.target.pips
 	if not row then return end
@@ -1770,7 +1770,12 @@ function Halo:UpdateTargetPips()
 		if Stoa:IsSecret(dead) then dead = false end
 		-- Docked, there's no room under the bar: it's on the rim.
 		local docked = self.target.plaque.docked
-		if not hostile and not dead and not docked then party:AuraPips("target", pips) end
+		if not hostile and not dead and not docked then
+			-- A debuff you can remove leads, as on the party cards.
+			local dispel = party.DispelFor and party:DispelFor("target")
+			if dispel then pips[1] = { dispel.word, dispel.token } end
+			party:AuraPips("target", pips)
+		end
 	end
 	UI.setPips(row, pips)
 end
