@@ -202,11 +202,25 @@ function Forms:BuildLook()
 		local haze = CreateFrame("Frame", nil, halo.frame)
 		haze:SetAllPoints()
 		haze:SetFrameLevel(halo.frame:GetFrameLevel())
+		haze.pieces = {}
+		local line = halo.Line and halo:Line()
+		local rail = halo.Rail and halo:Rail()
+		-- The ground line (Slate's Halo shapes): a soft smoke lying along
+		-- each bar. The rail goes without.
+		local spec = line and halo.LINE
+		if spec then
+			for _, sign in ipairs({ -1, 1 }) do
+				local piece = haze:CreateTexture(nil, "BACKGROUND", nil, -8)
+				piece:SetTexture(UI.MEDIA .. "Textures\\SparkleGlow")
+				piece:SetSize(spec.width + 40, 36)
+				piece:SetPoint("CENTER", haze, "BOTTOM", sign * (spec.gap + spec.width / 2), spec.y)
+				haze.pieces[#haze.pieces + 1] = piece
+			end
+		end
 		-- It peaks on the arcs, just inside the frame's edge.
 		local size = halo.frame:GetWidth() * 0.96 / GLOW_PEAK
 		local reach = HAZE_REACH
-		haze.pieces = {}
-		for _, q in ipairs({
+		for _, q in ipairs((line or rail) and {} or {
 			{ "BOTTOMRIGHT", 0, 0.5, 0.5 - reach, 0.5, 1, 0 },
 			{ "TOPRIGHT", 0, 0.5, 0.5, 0.5 + reach, 0, 1 },
 			{ "BOTTOMLEFT", 0.5, 1, 0.5 - reach, 0.5, 1, 0 },
@@ -264,7 +278,11 @@ function Forms:ApplyLook(look, entering)
 		if parts.haloHaze then
 			local sr, sg, sb = unpack(look.shade)
 			for _, piece in ipairs(parts.haloHaze.pieces) do
-				UI.setGradient(piece, piece.fade, sr, sg, sb, HALO_HAZE_ALPHA)
+				if piece.fade then
+					UI.setGradient(piece, piece.fade, sr, sg, sb, HALO_HAZE_ALPHA)
+				else
+					piece:SetVertexColor(sr, sg, sb, HALO_HAZE_ALPHA)
+				end
 			end
 			parts.haloHaze:Show()
 		end
