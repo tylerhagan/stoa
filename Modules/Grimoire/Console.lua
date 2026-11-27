@@ -207,9 +207,13 @@ function Console:PageInset()
 end
 
 -- The console's height when open.
+-- Slate's cards stand a line taller than the well, so Journey keeps its
+-- quest and trainer lines under the pace row with air beneath them.
+local SLATE_TALLER = 20
 function Console:OpenHeight()
 	if self.db.slim then return SLIM_HEIGHT end
-	return self:Art() and ART_HEIGHT or self.db.height
+	if self:Art() then return ART_HEIGHT end
+	return self.db.height + (self:Slate() and SLATE_TALLER or 0)
 end
 
 -- Slate: no slab along the bottom. Full is the console's zones (chat, At
@@ -1640,6 +1644,8 @@ function Console:BuildFellowship(frame, space)
 		toLevel:SetPoint("TOPLEFT", self, "TOPLEFT", left + math.floor((COLUMN_WIDTH - left) / 2), 0)
 	end
 	self.paceTight = tight
+	-- Slate's taller card has the room for the trainer's line as well.
+	self.paceRoom = UI.slate() and not self.db.slim
 	pace:Hide()
 	-- While the pace is still being worked out, a line of words instead.
 	local rate = text(journeyCol, "sans", Stoa.typeSize.body, "muted")
@@ -2495,7 +2501,7 @@ function Console:SettleNext()
 	questNote:SetShown(quest)
 	-- In the well there is one line's room under the pace: the quest has
 	-- it, and the trainer's line waits (Ready's small jobs name it too).
-	note:SetShown(training and not (self.paceTight and paced and quest))
+	note:SetShown(training and not (self.paceTight and not self.paceRoom and paced and quest))
 	if UI.slate() and not self.db.slim then
 		local label, value
 		if quest then
