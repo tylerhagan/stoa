@@ -80,6 +80,14 @@ function Console:BuildRide()
 	mark:SetColorTexture(Stoa:Color("accent"))
 	Stoa:On("STOA_THEME_CHANGED", function() mark:SetColorTexture(Stoa:Color("accent")) end)
 
+	-- Getting off: a plain button (the game lets an addon dismount you),
+	-- left of the next stop. Not on a flight, which can't be left.
+	local off = UI.button(band, "Dismount", 84, function()
+		if Dismount then Dismount() end
+	end)
+	off:SetPoint("RIGHT", stop, "LEFT", -34, 0)
+	band.off = off
+
 	band.speed, band.zone, band.sub = speed, zone, sub
 	band.stop, band.title, band.far, band.fill, band.mark = stop, title, far, fill, mark
 	self.ride = band
@@ -113,6 +121,7 @@ function Console:FillRide()
 	local onTaxi = UnitOnTaxi and plain(UnitOnTaxi("player"))
 	local sub = GetSubZoneText and GetSubZoneText() or ""
 	band.sub:SetText(onTaxi and "On a flight" or sub)
+	band.off:SetShown(not onTaxi)
 
 	local id, title, yards = nextStop()
 	band.stop:SetShown(id ~= nil)
