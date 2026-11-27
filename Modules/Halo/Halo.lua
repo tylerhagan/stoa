@@ -192,7 +192,7 @@ end
 -- (top is the room the shape takes above its bars; below says the coins
 -- can't sit over the bar).
 local LINES = {
-	line = { width = 120, height = 6, gap = 28, y = 8, top = 3 },
+	line = { width = 120, height = 8, gap = 28, y = 8, top = 4 },
 	numbers = { width = 84, height = 3, gap = 28, y = 8, top = 34, below = true, numbers = true },
 }
 Halo.LINE = {}
