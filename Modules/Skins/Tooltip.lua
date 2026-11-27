@@ -58,6 +58,10 @@ local LINE_GAP = 18
 -- What the two add over the game's own spacing (10 above, 2 between).
 local HEADER_ROOM = (HEADER_TOP - 10) + (LINE_GAP - 2)
 local FADE_ALPHA = 0.22
+-- Slate: the header's colour is a hint, not a wash, and the lines under
+-- it stand a little apart (the game sets them 2 apart).
+local SLATE_FADE_ALPHA = 0.1
+local SLATE_AIR = 3
 -- Cards with more than a name are at least this wide.
 local MIN_WIDTH = 210
 -- What an emptied line still takes, and the extra foot under STOA's lines.
@@ -740,7 +744,7 @@ function Tooltip:Fade(tip, r, g, b)
 	local fade = tip.stoaFade
 	if not fade then return end
 	if not r then fade:Hide() return end
-	UI.setGradient(fade, { "HORIZONTAL", 1, 0 }, r, g, b, FADE_ALPHA)
+	UI.setGradient(fade, { "HORIZONTAL", 1, 0 }, r, g, b, UI.slate() and SLATE_FADE_ALPHA or FADE_ALPHA)
 	fade:Show()
 end
 
@@ -861,9 +865,44 @@ local function questSpacing(tip, check)
 	return extra, true
 end
 
+-- Slate: every line from the third down steps SLATE_AIR further from the
+-- one above it, and the card grows by as much at its foot. Only lines the
+-- game hung straight under the line above are moved (the quest box's two
+-- are placed above); `check` only reports whether the game has laid them
+-- out again since. Each moved line is remembered like the quest box's, so
+-- the next card gets it back where the game keeps it.
+local function airLines(tip, check)
+	if not UI.slate() then return 0, true end
+	local count = tip.NumLines and tip:NumLines()
+	if Stoa:IsSecret(count) or type(count) ~= "number" then return 0, true end
+	local questFirst, questLast = questRange(tip)
+	local extra = 0
+	for i = 3, count do
+		local text, above = line(tip, i), line(tip, i - 1)
+		if not (text and above and text:IsShown()) then break end
+		if not (questFirst and (i == questFirst or i == questLast + 1)) then
+			local _, rel, _, x, y = text:GetPoint(1)
+			if Stoa:IsSecret(x) or Stoa:IsSecret(y) or Stoa:IsSecret(rel) then return extra, true end
+			if rel == above and type(y) == "number" and math.abs(x or 0) < 0.5 then
+				if math.abs(y + 2) < 0.5 then
+					if check then return 0, false end
+					text:ClearAllPoints()
+					text:SetPoint("TOPLEFT", above, "BOTTOMLEFT", 0, -(2 + SLATE_AIR))
+					tip.stoaMoved = tip.stoaMoved or {}
+					tip.stoaMoved[text] = above
+					extra = extra + SLATE_AIR
+				elseif math.abs(y + 2 + SLATE_AIR) < 0.5 then
+					extra = extra + SLATE_AIR
+				end
+			end
+		end
+	end
+	return extra, true
+end
+
 local function settle(tip)
 	placeLines(tip)
-	local questRoom = questSpacing(tip)
+	local questRoom = questSpacing(tip) + airLines(tip)
 	if not (tip.SetPadding and tip.GetPadding) then return end
 	-- A one-line card (a minimap blip, a name) only needs the name's drop.
 	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
@@ -907,7 +946,9 @@ local function keepHeader(tip)
 	if tip.stoaPad ~= tip.stoaRoom and padded == tip.stoaPad then return settle(tip) end
 	-- The game lays lines out again as quest objectives arrive.
 	local _, placed = questSpacing(tip, true)
-	if not placed then settle(tip) end
+	if not placed then return settle(tip) end
+	local _, aired = airLines(tip, true)
+	if not aired then settle(tip) end
 end
 
 local function header(tip)
