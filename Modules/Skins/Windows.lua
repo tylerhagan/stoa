@@ -1454,7 +1454,17 @@ end
 local function dressTooltips()
 	for _, name in ipairs(TOOLTIPS) do dressTooltip(_G[name]) end
 	local link = _G.ItemRefTooltip
-	if link then pcall(dressClose, link.CloseButton or _G.ItemRefCloseButton) end
+	local linkClose = link and (link.CloseButton or _G.ItemRefCloseButton)
+	if linkClose then
+		pcall(dressClose, linkClose)
+		-- The cross sat in the tip's very corner: it comes in from the
+		-- right and down onto the name's line (Tooltip.lua sets the name
+		-- 14 down, so its middle is about 21).
+		if not forbidden(linkClose) and linkClose.ClearAllPoints then
+			linkClose:ClearAllPoints()
+			linkClose:SetPoint("CENTER", link, "TOPRIGHT", -18, -21)
+		end
+	end
 	local bar = GameTooltipStatusBar
 	if bar then
 		bar:SetStatusBarTexture(UI.WHITE)
