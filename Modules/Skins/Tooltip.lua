@@ -777,7 +777,7 @@ local function clear(tip)
 		end
 		tip.stoaMoved = nil
 	end
-	tip.stoaQuest = nil
+	tip.stoaQuest, tip.stoaQuestID, tip.stoaQuestMine = nil, nil, nil
 	tip.stoaLower, tip.stoaWide, tip.stoaDropped = nil, nil, nil
 	if tip.stoaRule then tip.stoaRule:Hide() end
 	if tip.stoaGear then tip.stoaGear:Hide() end
@@ -1057,6 +1057,45 @@ function Tooltip:PlaceQuestBox(tip)
 	box.fill:Show()
 end
 
+-- The card's count can trail the quest log (a kill or a pickup counted
+-- there a moment before the card's own data catches up, most of all in a
+-- party). Your own objective lines take the log's count when the two differ.
+local COUNT = "%d+%s*/%s*%d+"
+
+local function questFor(data, title)
+	local id = known(data.id) or known(data.questID)
+	if type(id) == "number" and id > 0 then return id end
+	local log = C_QuestLog
+	if type(title) ~= "string" or not (log and log.GetNumQuestLogEntries and log.GetInfo) then return nil end
+	local count = Stoa:PlainNumber((Stoa.safe.call(log.GetNumQuestLogEntries))) or 0
+	for i = 1, count do
+		local info = Stoa.safe.call(log.GetInfo, i)
+		if type(info) == "table" and not known(info.isHeader) and known(info.title) == title then return known(info.questID) end
+	end
+end
+
+-- The line's words with the log's count, and whether the log has it done.
+local function logCount(tip, words)
+	local id = tip.stoaQuestMine and tip.stoaQuestID
+	local log = C_QuestLog
+	if not (id and log and log.GetQuestObjectives) then return words end
+	local shown, total = words:match("(%d+)%s*/%s*(%d+)")
+	if not shown then return words end
+	for _, goal in ipairs(Stoa.safe.call(log.GetQuestObjectives, id) or {}) do
+		local text, have, need = known(goal.text), Stoa:PlainNumber(goal.numFulfilled), Stoa:PlainNumber(goal.numRequired)
+		if type(text) == "string" and have and need and need > 0 and need == tonumber(total) then
+			local name = text:gsub(COUNT, ""):gsub("^[%s:%-]+", ""):gsub("[%s:%-]+$", "")
+			if name ~= "" and words:find(name, 1, true) then
+				if have ~= tonumber(shown) then
+					words = words:gsub(COUNT, function() return have .. "/" .. need end, 1)
+				end
+				return words, known(goal.finished) == true
+			end
+		end
+	end
+	return words
+end
+
 function Tooltip:QuestLine(tip, data)
 	local index = data and known(data.lineIndex)
 	local text = index and line(tip, index)
@@ -1066,8 +1105,20 @@ function Tooltip:QuestLine(tip, data)
 	local types = Enum.TooltipDataLineType
 	if data.type == types.QuestTitle then
 		text:SetTextColor(Stoa:Color("accent"))
+		tip.stoaQuestID, tip.stoaQuestMine = questFor(data, known(text:GetText())), true
+	elseif data.type == types.QuestPlayer then
+		-- The lines under a party member's name are theirs, not yours.
+		text:SetTextColor(Stoa:Color("text"))
+		tip.stoaQuestMine = known(text:GetText()) == known(UnitName("player"))
 	elseif data.type == types.QuestObjective then
-		if known(data.completed) then
+		local raw = known(text:GetText())
+		local done = known(data.completed)
+		if type(raw) == "string" and not raw:find("|c", 1, true) then
+			local fresh, finished = logCount(tip, raw)
+			if fresh ~= raw then text:SetText(fresh) end
+			done = done or finished
+		end
+		if done then
 			text:SetTextColor(Stoa:Color("muted"))
 		else
 			text:SetTextColor(Stoa:Color("text"))
