@@ -337,9 +337,8 @@ end
 -- Slate: the map's filter button (the magnifier in a gold ring). Its ring
 -- and backing go clear and the icon is drawn grey, warming to the accent
 -- under the mouse, like the header's other marks.
-function Map:DressFilter()
-	local button = WorldMapFrame and WorldMapFrame.WorldMapTrackingOptionsButton
-	if not button or button.stoaDressed or not UI.slate() then return end
+local function dressFilter(button)
+	if not button or button.stoaDressed then return end
 	if button.IsForbidden and button:IsForbidden() then return end
 	button.stoaDressed = true
 	local icon = button.Icon
@@ -359,6 +358,15 @@ function Map:DressFilter()
 	button:HookScript("OnEnter", function() paint(true) end)
 	button:HookScript("OnLeave", function() paint(false) end)
 	paint(false)
+end
+
+-- Slate: the map's two filter buttons (over the map, and beside the quest
+-- log's search box) lose the game's gold and take the theme's ink.
+function Map:DressFilter()
+	if not UI.slate() then return end
+	dressFilter(WorldMapFrame and WorldMapFrame.WorldMapTrackingOptionsButton)
+	local scroll = rawget(_G, "QuestScrollFrame")
+	dressFilter(scroll and scroll.SettingsDropdown)
 end
 
 function Map:SetupDress()

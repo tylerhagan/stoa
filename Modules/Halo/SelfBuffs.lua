@@ -211,7 +211,13 @@ function SelfBuffs:Place()
 	local halo = _G.StoaHalo
 	frame:ClearAllPoints()
 	if halo then
-		frame:SetPoint("RIGHT", halo, "LEFT", -60, 24)
+		local line = Stoa.Sign and Stoa.Sign.groundLine()
+		if line then
+			-- The ground line: in the same row, past the emergency button.
+			frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + 76 + 40 + 10), line.y)
+		else
+			frame:SetPoint("RIGHT", halo, "LEFT", -60, 24)
+		end
 	else
 		frame:SetPoint("BOTTOM", UIParent, "BOTTOM", -300, 380)
 	end

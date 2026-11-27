@@ -228,7 +228,9 @@ function Paladin:BuildCoins(halo)
 		local coin = CreateFrame("Frame", nil, halo)
 		coin:SetSize(COIN, COIN)
 		local angle = math.rad(COIN_ANGLES[i])
-		coin:SetPoint("CENTER", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle))
+		if not Stoa.Sign.lineCoin(coin, halo, i) then
+			coin:SetPoint("CENTER", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle))
+		end
 		local ring = UI.circle(coin, "BORDER", 0, COIN)
 		ring:SetPoint("CENTER")
 		ring:SetColorTexture(1, 1, 1)

@@ -102,7 +102,13 @@ function Emergency:Place()
 	local halo = _G.StoaHalo
 	button:ClearAllPoints()
 	if halo then
-		button:SetPoint("RIGHT", halo, "LEFT", -60, -40)
+		local line = Stoa.Sign and Stoa.Sign.groundLine()
+		if line then
+			-- The ground line: at its outer end, past the health number.
+			button:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + 76), line.y)
+		else
+			button:SetPoint("RIGHT", halo, "LEFT", -60, -40)
+		end
 	else
 		button:SetPoint("CENTER", UIParent, "CENTER", -260, -80)
 	end

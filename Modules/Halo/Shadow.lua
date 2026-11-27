@@ -124,7 +124,9 @@ function Shadow:BuildCoins(halo)
 		local coin = CreateFrame("Frame", nil, halo)
 		coin:SetSize(COIN, COIN)
 		local angle = math.rad(COIN_ANGLES[i])
-		coin:SetPoint("CENTER", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle))
+		if not Stoa.Sign.lineCoin(coin, halo, i) then
+			coin:SetPoint("CENTER", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle))
+		end
 		local ring = UI.circle(coin, "BORDER", 0, COIN)
 		ring:SetPoint("CENTER")
 		ring:SetColorTexture(1, 1, 1)
@@ -156,7 +158,9 @@ function Shadow:BuildCoins(halo)
 	-- How many enemies in the fight carry your Pain, under the coins.
 	local count = UI.caption(halo, "")
 	local angle = math.rad(COIN_ANGLES[#COIN_ANGLES])
-	count:SetPoint("TOP", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle) - COIN / 2 - 4)
+	if not Stoa.Sign.lineCaption(count, halo) then
+		count:SetPoint("TOP", halo, "CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle) - COIN / 2 - 4)
+	end
 	UI.legible(count)
 	self.painCount = count
 end

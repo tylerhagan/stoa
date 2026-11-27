@@ -185,6 +185,23 @@ local function groundLine()
 end
 local LINE_COIN_GAP, LINE_COIN_LIFT = 6, 10
 
+-- For the specs that draw their own coins (Shadow, Discipline, Paladin):
+-- the same row. Each answers true when it placed the piece.
+Sign.groundLine = groundLine
+function Sign.lineCoin(coin, halo, i)
+	local line = groundLine()
+	if not line then return false end
+	coin:SetPoint("BOTTOMLEFT", halo, "BOTTOM", line.gap + (i - 1) * (Sign.COIN + LINE_COIN_GAP), line.y + line.height / 2 + LINE_COIN_LIFT)
+	return true
+end
+function Sign.lineCaption(caption, halo)
+	local line = groundLine()
+	if not line then return false end
+	caption:SetJustifyH("LEFT")
+	caption:SetPoint("BOTTOMLEFT", halo, "BOTTOM", line.gap, line.y + line.height / 2 + LINE_COIN_LIFT + Sign.COIN + 6)
+	return true
+end
+
 function Sign.buildCoins(halo)
 	local coins = {}
 	local line = groundLine()
