@@ -1218,11 +1218,16 @@ Stoa:On("STOA_SPEC_SETTINGS", function()
 	if Party.grid then Party:SetGridMode(Party.db.clickGrid) end
 end)
 
--- /stoa dispel: prints what the game hands addons about debuffs right now,
--- for you, your party and your target. Run it in a fight while someone
--- has a debuff you can remove. Does nothing until it is typed.
+-- /stoa dispel: a probe of what the game hands addons about debuffs, for
+-- you and your party. Typing it prints the state now and starts a watch:
+-- through each fight it notes every different answer the game gives, and
+-- prints them when the fight ends. Typing it again stops the watch. It
+-- does nothing until typed, and a /reload ends it.
 local PROBE_FILTERS = { "HARMFUL", "HARMFUL|RAID", "HARMFUL|RAID_PLAYER_DISPELLABLE" }
 local PROBE_LABELS = { "ALL", "MINE", "PARTY" }
+local PROBE_UNITS = { player = true, party1 = true, party2 = true, party3 = true, party4 = true }
+local PROBE_MOST = 24
+local probeOn, probeHooked, probeSeen, probeNotes = false, false, {}, {}
 
 local function probeWord(ok, value)
 	if not ok then return "error" end
@@ -1230,33 +1235,59 @@ local function probeWord(ok, value)
 	return type(value)
 end
 
-Stoa.commands.dispel = function()
+local function probeLine(unit)
 	local auras = C_UnitAuras
-	if not auras then return end
-	local hidden = C_Secrets and C_Secrets.ShouldAurasBeSecret and select(2, pcall(C_Secrets.ShouldAurasBeSecret))
-	Stoa:Print("Debuff probe. In combat: " .. tostring(InCombatLockdown()) .. ", auras kept back: " .. tostring(Stoa:IsSecret(hidden) and "secret" or hidden))
-	for _, unit in ipairs({ "player", "party1", "party2", "party3", "party4", "target" }) do
-		if UnitExists(unit) then
-			local parts = {}
-			for i, filter in ipairs(PROBE_FILTERS) do
-				local ok, aura = pcall(auras.GetAuraDataByIndex, unit, 1, filter)
-				local first = probeWord(ok, aura)
-				if first == "table" then
-					local read, kind = pcall(function() return aura.dispelName end)
-					first = "table/" .. (not read and "error" or Stoa:IsSecret(kind) and "secret" or tostring(kind))
-				end
-				local count = "-"
-				if auras.GetUnitAuraInstanceIDs then
-					local listed, ids = pcall(auras.GetUnitAuraInstanceIDs, unit, filter)
-					count = probeWord(listed, ids)
-					if count == "table" then
-						local sized, n = pcall(function() return #ids end)
-						count = sized and (Stoa:IsSecret(n) and "secret" or tostring(n)) or "error"
-					end
-				end
-				parts[#parts + 1] = PROBE_LABELS[i] .. " " .. first .. " ids " .. count
-			end
-			Stoa:Print(unit .. ": " .. table.concat(parts, "  ·  "))
+	local parts = {}
+	for i, filter in ipairs(PROBE_FILTERS) do
+		local ok, aura = pcall(auras.GetAuraDataByIndex, unit, 1, filter)
+		local first = probeWord(ok, aura)
+		if first == "table" then
+			local read, kind = pcall(function() return aura.dispelName end)
+			first = "table/" .. (not read and "error" or Stoa:IsSecret(kind) and "secret" or tostring(kind))
 		end
+		local count = "-"
+		if auras.GetUnitAuraInstanceIDs then
+			local listed, ids = pcall(auras.GetUnitAuraInstanceIDs, unit, filter)
+			count = probeWord(listed, ids)
+			if count == "table" then
+				local sized, n = pcall(function() return #ids end)
+				count = sized and (Stoa:IsSecret(n) and "secret" or tostring(n)) or "error"
+			end
+		end
+		parts[#parts + 1] = PROBE_LABELS[i] .. " " .. first .. " ids " .. count
 	end
+	return unit .. ": " .. table.concat(parts, "  /  ")
+end
+
+local function probeNote(unit)
+	if not (probeOn and PROBE_UNITS[unit] and InCombatLockdown()) or #probeNotes >= PROBE_MOST then return end
+	local ok, line = pcall(probeLine, unit)
+	if not ok then line = unit .. ": probe error" end
+	if probeSeen[line] then return end
+	probeSeen[line] = true
+	probeNotes[#probeNotes + 1] = line
+end
+
+Stoa.commands.dispel = function()
+	if not C_UnitAuras then return end
+	if probeOn then
+		probeOn = false
+		Stoa:Print("Debuff probe stopped.")
+		return
+	end
+	probeOn = true
+	Stoa:Print("Debuff probe on: it prints after each fight. /stoa dispel again stops it. Now:")
+	for unit in pairs(PROBE_UNITS) do
+		if UnitExists(unit) then Stoa:Print(probeLine(unit)) end
+	end
+	if probeHooked then return end
+	probeHooked = true
+	Stoa:On("UNIT_AURA", function(unit) probeNote(unit) end)
+	Stoa:On("PLAYER_REGEN_ENABLED", function()
+		if not probeOn or #probeNotes == 0 then return end
+		Stoa:Print("Debuff probe, this fight:")
+		for _, line in ipairs(probeNotes) do Stoa:Print(line) end
+		wipe(probeNotes)
+		wipe(probeSeen)
+	end)
 end
