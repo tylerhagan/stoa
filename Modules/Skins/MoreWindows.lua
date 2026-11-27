@@ -596,9 +596,30 @@ local function sizeGuild(frame)
 	if math.abs(w - GUILD_W) > 0.5 or math.abs(h - GUILD_H) > 0.5 then frame:SetSize(GUILD_W, GUILD_H) end
 end
 
+-- Guild > Info's news filters: a small pop-over of its own (a translucent
+-- stone frame on UIParent). The stone gives way to a Stoa card, the title
+-- takes the text colour and the close its quiet cross; the ticks stay the
+-- game's.
+local function dressNewsFilters()
+	local pop = rawget(_G, "CommunitiesGuildNewsFiltersFrame")
+	if type(pop) ~= "table" or pop.stoaDressed or forbidden(pop) then return end
+	pop.stoaDressed = true
+	hide(pop.Bg)
+	hide(pop.Border)
+	hide(pop.NineSlice)
+	UI.surface(pop, "card", { alpha = 0.98 })
+	if pop.Title and pop.Title.SetTextColor then
+		Stoa:SetFont(pop.Title, "serif", Stoa.typeSize.label)
+		pop.Title:SetTextColor(Stoa:Color("text"))
+	end
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressClose then windows.DressClose(pop.CloseButton) end
+end
+
 local AFTER = {}
 local wardrobeTabs
 function AFTER.communities(frame)
+	xpcall(dressNewsFilters, Stoa.catch)
 	-- Its minimise button was the last red one in the header.
 	local windows = Stoa.modules.Windows
 	if windows and windows.DressMaxMin then windows.DressMaxMin(frame.MaximizeMinimizeFrame) end
