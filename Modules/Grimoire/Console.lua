@@ -2589,6 +2589,11 @@ local SEAL_CLEARANCE = 64
 -- floats over the world. A flat dark plate stands in for the leather, so
 -- its words stay readable over sand, snow and bright sky.
 local CHAT_SHADE = 0.2
+-- Slate: a card of its own instead, like the console's, round the chat's
+-- button column too. Near solid on a ride, where it also holds the typing
+-- strip; lighter in a fight, so less of the world is covered.
+local SLATE_CHAT_RIDE, SLATE_CHAT_FIGHT = 0.92, 0.5
+local SLATE_CHAT_PAD, SLATE_CHAT_RAIL, SLATE_CHAT_INPUT = 8, 28, 24
 
 function Console:ChatShade()
 	local housed = ChatFrame1 and self.HousesChat and self:HousesChat()
@@ -2596,6 +2601,24 @@ function Console:ChatShade()
 	if not housed then
 		if shade then shade:SetAlpha(0) end
 		return nil
+	end
+	if not shade and self:Slate() and not self.db.slim then
+		shade = CreateFrame("Frame", nil, UIParent)
+		shade:SetFrameStrata("BACKGROUND")
+		slatePlate(shade)
+		shade:SetAlpha(0)
+		shade.stoaCard = true
+		self.chatShade = shade
+	end
+	if shade and shade.stoaCard then
+		local look = Stoa.modules.ChatLook
+		local on = look and look.enabled and look.db
+		local left = SLATE_CHAT_PAD + ((on and on.rail) and SLATE_CHAT_RAIL or 0)
+		local foot = 6 + ((self.riding and on and on.input) and SLATE_CHAT_INPUT or 0)
+		shade:ClearAllPoints()
+		shade:SetPoint("TOPLEFT", ChatFrame1, "TOPLEFT", -left, 10)
+		shade:SetPoint("BOTTOMRIGHT", ChatFrame1, "BOTTOMRIGHT", SLATE_CHAT_PAD, -foot)
+		return shade, self.riding and SLATE_CHAT_RIDE or SLATE_CHAT_FIGHT
 	end
 	if not shade then
 		local holder = CreateFrame("Frame", nil, UIParent)
@@ -2633,11 +2656,12 @@ function Console:SetOpen(open, instant)
 	local crowded = foot and foot < SEAL_CLEARANCE or false
 	if open then crowded = self.sealCrowded else self.sealCrowded = crowded end
 
-	local chatShade = self:ChatShade()
+	local chatShade, shadeMost = self:ChatShade()
+	shadeMost = shadeMost or CHAT_SHADE
 
 	local function step(progress)
 		frame:SetHeight(from + (target - from) * progress)
-		if chatShade then chatShade:SetAlpha((open and 1 - progress or progress) * CHAT_SHADE) end
+		if chatShade then chatShade:SetAlpha((open and 1 - progress or progress) * shadeMost) end
 		self.leftPage:SetAlpha(open and progress or 1 - progress)
 		self.rightPage:SetAlpha(open and progress or 1 - progress)
 		for _, page in ipairs(self.extraPages or {}) do

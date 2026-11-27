@@ -73,6 +73,13 @@ local SLIM_CHAT_LIFT = 38
 local SLIM_CHAT_HEIGHT = 150
 -- Air between the travel line and the chat's last line on a ride.
 local RIDE_CHAT_GAP = 10
+-- Slate's ride card: its air over the travel line, and the room it keeps
+-- under the messages for the typing strip (the strip and the card's pad).
+local SLATE_RIDE_AIR, SLATE_RIDE_INPUT = 8, 28
+local CHAT_GROUND = {
+	"Background", "TopLeftTexture", "BottomLeftTexture", "TopRightTexture", "BottomRightTexture",
+	"LeftTexture", "RightTexture", "BottomTexture", "TopTexture",
+}
 
 local function placeChat()
 	local chat = ChatFrame1
@@ -91,13 +98,30 @@ local function placeChat()
 	if look and look.db and look.db.enabled ~= false and look.db.input then bottom = bottom + 8 end
 	-- On a ride the console is the travel line: the chat's foot stands
 	-- clear of it, and its top stays where it was.
-	if Console.riding and Console.RIDE_HEIGHT then bottom = math.max(bottom, Console.RIDE_HEIGHT + RIDE_CHAT_GAP) end
+	if Console.riding and Console.RIDE_HEIGHT then
+		bottom = math.max(bottom, Console.RIDE_HEIGHT + RIDE_CHAT_GAP)
+		-- Slate: the chat rides in a card of its own (Console:ChatShade),
+		-- which holds the typing strip too and stands clear of the line.
+		if pillsOn() then
+			local typing = look and look.db and look.db.enabled ~= false and look.db.input
+			bottom = Console.RIDE_HEIGHT + SLATE_RIDE_AIR + (typing and SLATE_RIDE_INPUT or 6)
+		end
+	end
 	local top = (pillsOn() and SLATE_CHAT_TOP) or (artOn() and ART_CHAT_GAP) or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
 	chat:ClearAllPoints()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), bottom)
 	chat:SetSize(Console:ChatWidth(), Console:OpenHeight() - bottom - top)
 	-- The ink panel is the background, so the chat window's own goes.
 	if FCF_SetWindowAlpha then FCF_SetWindowAlpha(chat, 0) end
+	-- Blizzard fades that background (a flat black block) back in under
+	-- the mouse, but only the parts that are shown. Slate's cards are the
+	-- ground, so the block and its border are hidden outright.
+	if pillsOn() then
+		for _, part in ipairs(CHAT_GROUND) do
+			local tex = _G["ChatFrame1" .. part]
+			if tex and tex.Hide then tex:Hide() end
+		end
+	end
 	placing = false
 end
 
