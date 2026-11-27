@@ -216,13 +216,14 @@ local LINE_ALPHA = 0.82
 -- The side rail: both bars as short uprights together on your left (the
 -- target docks on the right), with the numbers and coins beyond them. x
 -- and bottom are from the Halo's centre; the health rail is the nearer.
-Halo.RAIL = { x = 74, bottom = -52, width = 7, height = 96, gap = 5 }
+Halo.RAIL = { x = 74, bottom = -52, width = 10, height = 96, gap = 6 }
 local RAIL = Halo.RAIL
 
 function Halo:Rail()
 	return self.db.shape == "rail"
 end
 
+local RAIL_ALPHA = 0.95
 local function railBar(parent, token, index)
 	local sb = CreateFrame("StatusBar", nil, parent)
 	sb:SetSize(RAIL.width, RAIL.height)
@@ -231,10 +232,14 @@ local function railBar(parent, token, index)
 	if UI.slate() then UI.barShade(sb) end
 	UI.paint(sb, token)
 	local track = sb:CreateTexture(nil, "BACKGROUND")
-	track:SetPoint("TOPLEFT", -1, 1)
-	track:SetPoint("BOTTOMRIGHT", 1, -1)
-	track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
-	sb:SetAlpha(LINE_ALPHA)
+	-- Uprights stand against whatever is behind you (green on jungle,
+	-- blue on sky), so they get a heavier dark seat than the ground line
+	-- and stay nearly solid.
+	track:SetPoint("TOPLEFT", -2, 2)
+	track:SetPoint("BOTTOMRIGHT", 2, -2)
+	track:SetColorTexture(0.03, 0.04, 0.05, 0.82)
+	sb:SetAlpha(RAIL_ALPHA)
+	sb.stoaAlpha = RAIL_ALPHA
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
 	sb:SetPoint("BOTTOMRIGHT", parent, "CENTER", -(RAIL.x + (index - 1) * (RAIL.width + RAIL.gap)), RAIL.bottom)
@@ -275,7 +280,7 @@ local function quiet(self, bar, text, current, max, emptyIsRest)
 	local alpha = resting and 0 or 1
 	if bar.stoaQuiet == alpha then return end
 	bar.stoaQuiet = alpha
-	UI.fade(bar, alpha * LINE_ALPHA, 0.15)
+	UI.fade(bar, alpha * (bar.stoaAlpha or LINE_ALPHA), 0.15)
 	text:SetAlpha(alpha)
 end
 
