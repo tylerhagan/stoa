@@ -1719,10 +1719,12 @@ function Halo:UpdateTargetAuras()
 			icon.count:SetText("")
 			pcall(function()
 				local n = aura.applications
+				if Stoa:IsSecret(n) then return end
 				icon.count:SetText(n and n > 1 and n or "")
 			end)
 			icon.cooldown:Clear()
 			pcall(function()
+				if Stoa:IsSecret(aura.duration) or Stoa:IsSecret(aura.expirationTime) then return end
 				if aura.duration and aura.duration > 0 then
 					icon.cooldown:SetCooldown(aura.expirationTime - aura.duration, aura.duration)
 				end

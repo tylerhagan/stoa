@@ -235,6 +235,7 @@ function Shadow:UpdateCoins()
 				end
 				if not drawn then
 					pcall(function()
+						if Stoa:IsSecret(aura.duration) or Stoa:IsSecret(aura.expirationTime) then return end
 						if aura.duration > 0 then
 							coin.cooldown:SetCooldown(aura.expirationTime - aura.duration, aura.duration)
 						end
