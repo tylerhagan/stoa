@@ -265,11 +265,21 @@ function Rolls:OnDrop(encounterID, key)
 	self:Layout()
 end
 
--- Default spot: right of the middle of the screen, clear of the bars, the
--- Halo and the party cards.
+-- Default spot: right of the Halo and above the target, which stands
+-- there in a fight with its cast and auras hanging under it. The cards
+-- stack upward, so they never reach down over it. Without the Halo:
+-- right of the middle of the screen, clear of the bars.
+local OVER_TARGET_X, OVER_TARGET_Y = 52 + 147, 36 + 100 + 16
+
 function Rolls:Place()
-	self.anchor:ClearAllPoints()
-	self.anchor:SetPoint("BOTTOM", UIParent, "CENTER", 380, -120)
+	local anchor, halo = self.anchor, _G.StoaHalo
+	anchor:ClearAllPoints()
+	if halo then
+		local scale = halo:GetScale() or 1
+		anchor:SetPoint("BOTTOM", halo, "RIGHT", OVER_TARGET_X * scale, OVER_TARGET_Y * scale)
+	else
+		anchor:SetPoint("BOTTOM", UIParent, "CENTER", 380, -120)
+	end
 end
 
 function Rolls:OnEnable()
@@ -279,6 +289,11 @@ function Rolls:OnEnable()
 	self.anchor = anchor
 	self:Place()
 	Stoa:RegisterMover("lootRolls", anchor, "Loot rolls", { default = function() self:Place() end })
+	-- The Halo is built after this module; hang from it once it is there,
+	-- unless the player has put the cards somewhere.
+	Stoa:On("PLAYER_ENTERING_WORLD", function()
+		if not Stoa:HasSavedPosition("lootRolls") then self:Place() end
+	end)
 
 	if type(_G.GroupLootContainer_Update) == "function" then
 		hooksecurefunc("GroupLootContainer_Update", function()
