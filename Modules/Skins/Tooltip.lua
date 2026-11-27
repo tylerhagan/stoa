@@ -941,6 +941,15 @@ local function settle(tip)
 	end
 end
 
+-- /stoa tooltip watch: counts how often, and why, a card had to be put
+-- right a frame after the game laid it out again (a card that twitches).
+local watch
+local function note(tip, why)
+	if not watch then return end
+	local key = (tip:GetName() or "?") .. " " .. why
+	watch[key] = (watch[key] or 0) + 1
+end
+
 local function keepHeader(tip)
 	local name = tip:GetName()
 	local first, second = name and _G[name .. "TextLeft1"], name and _G[name .. "TextLeft2"]
@@ -948,15 +957,27 @@ local function keepHeader(tip)
 	local _, relative, _, _, y = second:GetPoint(1)
 	-- In combat the game can hand back secret positions; leave the card be.
 	if Stoa:IsSecret(y) or Stoa:IsSecret(relative) then return end
-	if relative ~= first or math.abs((y or 0) + LINE_GAP) > 0.5 then settle(tip) end
+	if relative ~= first or math.abs((y or 0) + LINE_GAP) > 0.5 then
+		note(tip, "lines")
+		settle(tip)
+	end
 	local padded = tip.GetPadding and select(2, tip:GetPadding())
 	if Stoa:IsSecret(padded) then return end
-	if tip.stoaPad ~= tip.stoaRoom and padded == tip.stoaPad then return settle(tip) end
+	if tip.stoaPad ~= tip.stoaRoom and padded == tip.stoaPad then
+		note(tip, "foot")
+		return settle(tip)
+	end
 	-- The game lays lines out again as quest objectives arrive.
 	local _, placed = questSpacing(tip, true)
-	if not placed then return settle(tip) end
+	if not placed then
+		note(tip, "quest")
+		return settle(tip)
+	end
 	local _, aired = airLines(tip, true)
-	if not aired then settle(tip) end
+	if not aired then
+		note(tip, "air")
+		settle(tip)
+	end
 end
 
 local function header(tip)
@@ -1000,14 +1021,26 @@ local function edge(tip)
 		UI.roundBorder(tip, "CardEdge.tga", 1, -4),
 	}
 	xpcall(header, Stoa.catch, tip)
-	Stoa.SafeHook(tip, "Show", function(self) xpcall(settle, Stoa.catch, self) end)
+	Stoa.SafeHook(tip, "Show", function(self)
+		note(self, "Show")
+		xpcall(settle, Stoa.catch, self)
+	end)
 	-- The game can show the card without calling Show from Lua, and it lays
 	-- the lines out again when it adds one (quest objectives arrive after
 	-- the card is up), so a moved line is checked each frame it is shown.
-	tip:HookScript("OnShow", function(self) xpcall(settle, Stoa.catch, self) end)
+	tip:HookScript("OnShow", function(self)
+		note(self, "OnShow")
+		xpcall(settle, Stoa.catch, self)
+	end)
 	tip:HookScript("OnUpdate", function(self) xpcall(keepHeader, Stoa.catch, self) end)
-	tip:HookScript("OnTooltipCleared", clear)
-	tip:HookScript("OnHide", clear)
+	tip:HookScript("OnTooltipCleared", function(self)
+		note(self, "cleared")
+		clear(self)
+	end)
+	tip:HookScript("OnHide", function(self)
+		note(self, "hidden")
+		clear(self)
+	end)
 end
 
 -- The game's tooltip fonts in Stoa's faces and sizes (the text size
@@ -1192,6 +1225,20 @@ function Tooltip:OnEnable()
 			end, "Tooltip"))
 		end
 	end
+	-- The game rebuilds the Equipped cards several times a second while an
+	-- item is pointed at; they are put right as soon as it has placed them.
+	local compare = _G.TooltipComparisonManager
+	if type(compare) == "table" and type(compare.AnchorShoppingTooltips) == "function" then
+		hooksecurefunc(compare, "AnchorShoppingTooltips", Stoa:Guard(function(manager)
+			local owner = manager.tooltip
+			for _, tip in ipairs(owner and owner.shoppingTooltips or {}) do
+				if usable(tip) and tip:IsShown() then
+					note(tip, "compare")
+					settle(tip)
+				end
+			end
+		end, "Tooltip"))
+	end
 	Stoa:On("INSPECT_READY", function(guid)
 		xpcall(self.InspectReady, Stoa.catch, self, guid)
 	end)
@@ -1200,6 +1247,26 @@ end
 -- /stoa tooltip cursor|console moves the card.
 Stoa.commands.tooltip = function(rest)
 	local where = rest and rest:lower():match("%a+")
+	if where == "watch" then
+		if watch then
+			watch = nil
+			Stoa:Print("Tooltip watch stopped.")
+			return
+		end
+		watch = {}
+		Stoa:Print("Tooltip watch on for 10 seconds: hover the item that twitches now.")
+		C_Timer.After(10, function()
+			if not watch then return end
+			local keys = {}
+			for key in pairs(watch) do keys[#keys + 1] = key end
+			table.sort(keys)
+			Stoa:Print("Tooltip watch, 10 seconds:")
+			for _, key in ipairs(keys) do Stoa:Print(key .. ": " .. watch[key]) end
+			if #keys == 0 then Stoa:Print("nothing noted.") end
+			watch = nil
+		end)
+		return
+	end
 	if where == "cursor" or where == "console" then
 		Tooltip.db.anchor = where
 		Stoa:Print(where == "cursor" and "Tooltips follow the cursor." or "Tooltips sit above the console's right corner.")
