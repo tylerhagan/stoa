@@ -1670,6 +1670,29 @@ local function lfgWho(frame)
 	eachRow(frame.ScrollBox, "stoaWhoRows", dressWhoRow)
 end
 
+-- Blizzard's places: the roles 70 in and 41 down with the newcomer flag
+-- hard against the right edge, and the browse dropdowns 43 down, close
+-- under the title. Without the wood strip the roles sit centred in the
+-- band with more air above, and the dropdowns halfway to the list.
+local LFG_ROLES_LEFT, LFG_ROLES_DOWN = 28, 8
+local LFG_DROPS_DOWN = 10
+local function placeLfg(frame, name)
+	if InCombatLockdown() then return end
+	local function seat(part, point, x, y)
+		if type(part) ~= "table" or forbidden(part) or (part.IsProtected and part:IsProtected()) then return end
+		part:ClearAllPoints()
+		part:SetPoint(point, frame, point, x, y)
+	end
+	if name == "LFGListingFrame" then
+		seat(frame.SoloRoleButtons, "TOPLEFT", 70 - LFG_ROLES_LEFT, -41 - LFG_ROLES_DOWN)
+		seat(frame.GroupRoleButtons, "TOPLEFT", 105 - LFG_ROLES_LEFT, -41 - LFG_ROLES_DOWN)
+		seat(frame.NewPlayerFriendlyButton, "TOPRIGHT", -3 - LFG_ROLES_LEFT, -30 - LFG_ROLES_DOWN)
+	elseif name == "LFGBrowseFrame" then
+		seat(frame.CategoryDropdown, "TOPLEFT", 70, -43 - LFG_DROPS_DOWN)
+		seat(frame.OptionsButton, "TOPRIGHT", -12, -32 - LFG_DROPS_DOWN)
+	end
+end
+
 function AFTER.lfg(frame)
 	local parent = rawget(_G, "LFGParentFrame")
 	if type(parent) ~= "table" or forbidden(parent) then return end
@@ -1684,10 +1707,12 @@ function AFTER.lfg(frame)
 			if eye.EnableMouse then eye:EnableMouse(false) end
 		end
 	end
-	if type(frame) ~= "table" or forbidden(frame) or frame.stoaLfgInside then return end
+	if type(frame) ~= "table" or forbidden(frame) then return end
+	local name = frame.GetName and frame:GetName()
+	placeLfg(frame, name)
+	if frame.stoaLfgInside then return end
 	frame.stoaLfgInside = true
 	lfgCommon(frame)
-	local name = frame.GetName and frame:GetName()
 	if name == "LFGListingFrame" then
 		lfgListing(frame)
 	elseif name == "LFGBrowseFrame" then
