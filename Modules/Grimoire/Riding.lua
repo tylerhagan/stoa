@@ -31,6 +31,10 @@ function Console:RidingWanted()
 	if InCombatLockdown() or Stoa:GetState() ~= Stoa.STATE_WORLD then return false end
 	local mounted = IsMounted and plain(IsMounted())
 	local flying = UnitOnTaxi and plain(UnitOnTaxi("player"))
+	-- "Open console" on the line brings the full console back for the
+	-- rest of this ride; the line returns with the next mount or flight.
+	if not (mounted or flying) then self.rideOpened = nil end
+	if self.rideOpened then return false end
 	return (mounted or flying) and true or false
 end
 
@@ -88,6 +92,19 @@ function Console:BuildRide()
 	end)
 	off:SetPoint("CENTER", band, "CENTER", 0, -2)
 	band.off = off
+	-- For when you need your bars or pages mid-ride.
+	local full = UI.button(band, "Open console", 108, function()
+		Console.rideOpened = true
+		Console:SetRiding(false)
+	end)
+	full:SetPoint("LEFT", band, "CENTER", 56, -2)
+	full:HookScript("OnEnter", function(own)
+		GameTooltip:SetOwner(own, "ANCHOR_TOP")
+		GameTooltip:AddLine("Open console")
+		GameTooltip:AddLine("Shows the full console for the rest of this ride.", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	full:HookScript("OnLeave", function() GameTooltip:Hide() end)
 
 	band.speed, band.zone, band.sub = speed, zone, sub
 	band.stop, band.title, band.far, band.fill, band.mark = stop, title, far, fill, mark
@@ -199,5 +216,6 @@ end)
 -- /stoa ride previews the travel line on foot; again puts it back.
 Stoa.commands.ride = function()
 	if not Console.frame then return end
+	Console.rideOpened = nil
 	Console:SetRiding(not Console.riding)
 end
