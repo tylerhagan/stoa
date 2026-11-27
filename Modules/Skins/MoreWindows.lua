@@ -598,8 +598,8 @@ end
 
 -- Guild > Info's news filters: a small pop-over of its own (a translucent
 -- stone frame on UIParent). The stone gives way to a Stoa card, the title
--- takes the text colour and the close its quiet cross; the ticks stay the
--- game's.
+-- takes the text colour and the close its quiet cross; under Slate the
+-- ticks become STOA's squares.
 local function dressNewsFilters()
 	local pop = rawget(_G, "CommunitiesGuildNewsFiltersFrame")
 	if type(pop) ~= "table" or pop.stoaDressed or forbidden(pop) then return end
@@ -614,6 +614,7 @@ local function dressNewsFilters()
 	end
 	local windows = Stoa.modules.Windows
 	if windows and windows.DressClose then windows.DressClose(pop.CloseButton) end
+	if windows and windows.DressButtonsIn then windows.DressButtonsIn(pop, 2) end
 end
 
 local AFTER = {}
@@ -1302,6 +1303,15 @@ end
 function AFTER.addons(frame)
 	if InCombatLockdown() then return end
 	for _, key in ipairs({ "Dropdown", "ForceLoad", "SearchBox", "Performance" }) do dropTops(frame[key], ADDONS_DROP) end
+	-- Slate: each addon's tick is a small switch (the rows have the room),
+	-- and the lone tick in the header a square like the other windows'.
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressTick and UI.slate() then
+		eachRow(frame.ScrollBox, "stoaSwitches", function(row)
+			if type(row.Enabled) == "table" then windows.DressTick(row.Enabled, true) end
+		end)
+		if type(frame.ForceLoad) == "table" then windows.DressTick(frame.ForceLoad) end
+	end
 end
 
 -- Professions: the tall tiles down the right (the overview and one per

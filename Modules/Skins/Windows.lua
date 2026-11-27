@@ -187,12 +187,120 @@ local function dressMaxMin(holder)
 	end
 end
 
--- Every red button inside a window, however deep.
+-- Tick boxes (Slate): the game's yellow box and tick become a quiet rounded
+-- square with the tick in the accent, or, where a row has the room (the
+-- AddOns list), a small switch like the ones in STOA's settings. Only the
+-- box's art changes: its size, place and clicks stay the game's. A grey
+-- (desaturated) tick is the AddOns list's "on for some characters": a dash
+-- in the square, the knob resting mid-track on the switch.
+local TICK_ART = { "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture", "GetCheckedTexture", "GetDisabledCheckedTexture" }
+-- The switch keeps inside the game box's 24 width, and under the AddOns
+-- list's 16 row height so two rows' switches never touch.
+local TICK_BOX, SWITCH_W, SWITCH_H, SWITCH_KNOB = 24, 24, 12, 8
+-- Interface\Buttons\UI-CheckBox-Up, where the client names files by number.
+local TICK_FILE = 130755
+
+local function isTickBox(check)
+	if check.icon or check.Icon or check.stoaTabParts then return false end
+	if check.IsProtected and check:IsProtected() then return false end
+	local w, h = check:GetSize()
+	if type(w) ~= "number" or type(h) ~= "number" or w < 12 or w > 34 or math.abs(w - h) > 4 then return false end
+	local normal = check.GetNormalTexture and check:GetNormalTexture()
+	if not normal then return false end
+	local atlas = normal.GetAtlas and normal:GetAtlas()
+	if type(atlas) == "string" and atlas:lower():find("checkbox", 1, true) then return true end
+	local file = normal.GetTexture and normal:GetTexture()
+	if type(file) == "string" then return file:lower():find("checkbox", 1, true) ~= nil end
+	return file == TICK_FILE
+end
+
+local function tickState(check)
+	if not check:GetChecked() then return false end
+	local tex = check.GetCheckedTexture and check:GetCheckedTexture()
+	if tex and tex.IsDesaturated and tex:IsDesaturated() then return "some" end
+	return true
+end
+
+local function plainTick(check)
+	for _, getter in ipairs(TICK_ART) do
+		local tex = check[getter] and check[getter](check)
+		if tex then tex:SetAlpha(0) end
+	end
+end
+
+local function dressTick(check, switch)
+	if not check or check.stoaTick or forbidden(check) or not UI.slate() then return end
+	check.stoaTick = true
+	plainTick(check)
+	local paint
+	if switch then
+		local parts = { UI.circle(check, "ARTWORK", 0, SWITCH_H), UI.circle(check, "ARTWORK", 0, SWITCH_H), check:CreateTexture(nil, "ARTWORK") }
+		parts[1]:SetPoint("LEFT", check, "CENTER", -SWITCH_W / 2, 0)
+		parts[2]:SetPoint("RIGHT", check, "CENTER", SWITCH_W / 2, 0)
+		parts[3]:SetPoint("TOPLEFT", parts[1], "TOP", 0, 0)
+		parts[3]:SetPoint("BOTTOMRIGHT", parts[2], "BOTTOM", 0, 0)
+		for _, part in ipairs(parts) do part:SetColorTexture(1, 1, 1, 1) end
+		local knob = UI.circle(check, "OVERLAY", 0, SWITCH_KNOB)
+		knob:SetColorTexture(1, 1, 1, 1)
+		local travel = (SWITCH_W - SWITCH_KNOB) / 2 - 2
+		function paint()
+			local state = tickState(check)
+			local enabled = not check.IsEnabled or check:IsEnabled()
+			local r, g, b = Stoa:Color(state and "accent" or "text")
+			-- Off: a dim grey; on: the accent a step down, so the knob reads
+			-- (the same tones as the switches in STOA's settings).
+			local k = state == true and 0.82 or state and 0.4 or 0.2
+			for _, part in ipairs(parts) do part:SetVertexColor(r * k, g * k, b * k, enabled and 1 or 0.5) end
+			local kr, kg, kb = Stoa:Color(state and "text" or "muted")
+			knob:SetVertexColor(kr, kg, kb, enabled and 1 or 0.5)
+			knob:ClearAllPoints()
+			knob:SetPoint("CENTER", check, "CENTER", state == true and travel or state and 0 or -travel, 0)
+		end
+	else
+		local box = UI.glyph(check, "Box", TICK_BOX, "muted")
+		box:SetDrawLayer("ARTWORK")
+		box:SetPoint("CENTER")
+		local tick = UI.glyph(check, "Tick", TICK_BOX - 4, "accent")
+		tick:SetPoint("CENTER")
+		local dash = check:CreateTexture(nil, "OVERLAY")
+		dash:SetSize(8, 2)
+		dash:SetPoint("CENTER")
+		local over = false
+		function paint()
+			local state = tickState(check)
+			local enabled = not check.IsEnabled or check:IsEnabled()
+			local r, g, b = Stoa:Color((over and enabled) and "accent" or "muted")
+			box:SetVertexColor(r, g, b, enabled and (state == true and 0.9 or 0.6) or 0.3)
+			tick:SetShown(state == true)
+			tick:SetAlpha(enabled and 1 or 0.4)
+			dash:SetShown(state == "some")
+			dash:SetColorTexture(Stoa:Color("muted"))
+		end
+		check:HookScript("OnEnter", function() over = true paint() end)
+		check:HookScript("OnLeave", function() over = false paint() end)
+	end
+	-- A click turns the box without SetChecked; the game's own code sets
+	-- it (and greys the tick) when a list is drawn again.
+	hooksecurefunc(check, "SetChecked", paint)
+	check:HookScript("PostClick", paint)
+	local checked = check.GetCheckedTexture and check:GetCheckedTexture()
+	if checked and checked.SetDesaturated then hooksecurefunc(checked, "SetDesaturated", paint) end
+	for _, script in ipairs({ "OnShow", "OnEnable", "OnDisable" }) do
+		check:HookScript(script, function(own) plainTick(own) paint() end)
+	end
+	paint()
+end
+
+-- Every red button inside a window, however deep, and under Slate every
+-- tick box beside them.
 local function dressButtonsIn(frame, depth)
 	if not (frame and frame.GetChildren) or depth <= 0 then return end
+	local slate = UI.slate()
 	for _, child in ipairs({ frame:GetChildren() }) do
 		if not forbidden(child) then
-			if child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
+			if slate and child.IsObjectType and child:IsObjectType("CheckButton") then
+				if not child.stoaTick and isTickBox(child) then dressTick(child) end
+			elseif child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
 				dressButton(child)
 			end
 			dressButtonsIn(child, depth - 1)
@@ -303,6 +411,7 @@ Windows.DressScrollBar = dressScrollBar
 Windows.DressArrowDropdown = dressArrowDropdown
 Windows.DressButtonsIn = dressButtonsIn
 Windows.DressButton = dressButton
+Windows.DressTick = dressTick
 Windows.DressClose = dressClose
 Windows.DressMaxMin = dressMaxMin
 
