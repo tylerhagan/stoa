@@ -188,8 +188,9 @@ end
 -- the slot's side last, so both bars are fullest where they meet.
 -- Two shapes share this geometry. "line": the bars are the frame, numbers
 -- at their outer ends. "numbers": the numbers are the frame, large over a
--- hairline bar each, and the coins move under the bars (top is the room
--- the shape takes above its bars; below says the coins go underneath).
+-- hairline bar each, and the coins move past the power bar's outer end
+-- (top is the room the shape takes above its bars; below says the coins
+-- can't sit over the bar).
 local LINES = {
 	line = { width = 120, height = 6, gap = 28, y = 8, top = 3 },
 	numbers = { width = 84, height = 3, gap = 28, y = 8, top = 34, below = true, numbers = true },
