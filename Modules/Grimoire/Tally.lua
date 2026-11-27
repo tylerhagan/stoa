@@ -35,9 +35,10 @@ local ROWS_PER_COLUMN = 4
 local COLUMN_WIDTH = 170
 local COLUMN_GAP = 36
 local ROW_GAP = 20
--- Slate's card is taller than the well: the four rows spread down it, so
--- the card isn't full at the top and empty at the foot.
-local SLATE_ROW_GAP, SLATE_ROW_TOP = 25, -9
+-- Slate's card is taller than the well: the four rows keep close to each
+-- other and stand as one block midway between the heading and the card's
+-- foot, so the card isn't full at the top and empty below.
+local SLATE_ROW_GAP, SLATE_ROW_TOP = 21, -16
 -- Room left from the chat's right edge, and kept clear either side of the
 -- centre for the medallion and the health bar.
 local CHAT_RIGHT = 440 + 44
