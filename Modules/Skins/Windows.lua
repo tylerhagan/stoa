@@ -21,6 +21,26 @@ local function forbidden(frame)
 	return frame.IsForbidden and frame:IsForbidden()
 end
 
+-- In a fight the game refuses changes to protected frames, and to anything
+-- one of them is anchored to. A window with none of those inside can be
+-- dressed and settled at once; the rest wait for the fight to end.
+local function protectedInside(frame, depth)
+	if forbidden(frame) then return true end
+	if frame.IsProtected and frame:IsProtected() then return true end
+	if frame.IsAnchoringRestricted and frame:IsAnchoringRestricted() then return true end
+	if depth <= 0 or not frame.GetChildren then return false end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		if protectedInside(child, depth - 1) then return true end
+	end
+	return false
+end
+function Windows.Locked(frame)
+	if not InCombatLockdown() then return false end
+	if type(frame) ~= "table" then return true end
+	local ok, locked = pcall(protectedInside, frame, 6)
+	return not ok or locked
+end
+
 -- Strips the plain frames inside a window too, down a few levels, leaving
 -- buttons, bars and edit boxes (and their icons) alone.
 local KEEP = { Button = true, CheckButton = true, StatusBar = true, EditBox = true, Cooldown = true }
@@ -445,7 +465,7 @@ Windows.RAISE = RAISE
 
 local function seatTitle(frame, title, close)
 	local header = frame.stoaHeader
-	if not header or InCombatLockdown() then return end
+	if not header or Windows.Locked(frame) then return end
 	-- A skin may ask for a smaller title (bags name themselves in label
 	-- size); the size is applied here so a settle never grows it back.
 	if title and (frame.stoaPlainHeader or frame.stoaTitleSize) and not frame.stoaOwnTitle then
@@ -540,14 +560,25 @@ local function liftPanel(frame, raise)
 	-- The raised strip lies outside the window's own edge, so a click (or a
 	-- Shift-drag to move it) on its top part went through to the world:
 	-- the window's clickable area reaches up to cover it.
-	if frame.SetHitRectInsets and frame.GetHitRectInsets and not mapFill and not InCombatLockdown() then
+	if frame.SetHitRectInsets and frame.GetHitRectInsets and not mapFill then
 		local left, right, _, bottom = frame:GetHitRectInsets()
 		pcall(frame.SetHitRectInsets, frame, left or 0, right or 0, -raise, bottom or 0)
 	end
 end
 
 function Windows:Settle(frame)
-	if not frame or InCombatLockdown() then return end
+	if not frame then return end
+	if Windows.Locked(frame) then
+		-- Catch up once the fight ends.
+		if not frame.stoaSettleWaits then
+			frame.stoaSettleWaits = true
+			Stoa:AfterCombat(function()
+				frame.stoaSettleWaits = nil
+				Windows:Settle(frame)
+			end)
+		end
+		return
+	end
 	hide(frame.NineSlice)
 	hide(frame.PortraitContainer)
 	-- Guild & Communities draws its guild tabard or club icon on its own

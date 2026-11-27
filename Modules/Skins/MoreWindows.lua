@@ -1569,6 +1569,21 @@ local function runAfter(target, frame)
 end
 
 local function dressLater(target, frame)
+	local windows = Stoa.modules.Windows
+	if InCombatLockdown() and windows and windows.Locked and not windows.Locked(frame) then
+		-- Opened in a fight, with nothing protected inside: the look goes
+		-- on now. The layout steps that hold back in a fight follow after.
+		xpcall(dressTarget, Stoa.catch, target, frame)
+		xpcall(runAfter, Stoa.catch, target, frame)
+		if target.after and not target.afterWaits then
+			target.afterWaits = true
+			Stoa:AfterCombat(function()
+				target.afterWaits = nil
+				xpcall(runAfter, Stoa.catch, target, frame)
+			end)
+		end
+		return
+	end
 	Stoa:AfterCombat(function()
 		xpcall(dressTarget, Stoa.catch, target, frame)
 		xpcall(runAfter, Stoa.catch, target, frame)
