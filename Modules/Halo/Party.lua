@@ -717,14 +717,32 @@ local DISPEL_CUES = {
 }
 
 -- The first debuff you can remove, if any. The RAID filter asks the game
--- for debuffs this character can dispel.
-function Party:DispelFor(unit)
-	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return nil end
-	local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, 1, "HARMFUL|RAID")
-	if not ok or not aura then return nil end
+-- for debuffs this character can dispel. In a fight the game can keep an
+-- aura's details from addons, and then the indexed read may come back
+-- empty though the debuff is there; the list of aura ids isn't kept back,
+-- so it is asked second. A debuff whose kind can't be read says DISPEL.
+local DISPEL_FILTER = "HARMFUL|RAID"
+local DISPEL_ANY = { word = "DISPEL", token = "accent" }
+local function dispelCue(aura)
 	local kind = aura.dispelName
 	if Stoa:IsSecret(kind) then kind = nil end
-	return DISPEL_CUES[kind] or { word = "DISPEL", token = "accent" }
+	return DISPEL_CUES[kind] or DISPEL_ANY
+end
+
+function Party:DispelFor(unit)
+	local auras = C_UnitAuras
+	if not (auras and auras.GetAuraDataByIndex) then return nil end
+	local ok, aura = pcall(auras.GetAuraDataByIndex, unit, 1, DISPEL_FILTER)
+	if ok and type(aura) == "table" then return dispelCue(aura) end
+	if not auras.GetUnitAuraInstanceIDs then return nil end
+	local listed, ids = pcall(auras.GetUnitAuraInstanceIDs, unit, DISPEL_FILTER, 1)
+	local id = listed and type(ids) == "table" and ids[1]
+	if not id then return nil end
+	if auras.GetAuraDataByAuraInstanceID then
+		ok, aura = pcall(auras.GetAuraDataByAuraInstanceID, unit, id)
+		if ok and type(aura) == "table" then return dispelCue(aura) end
+	end
+	return DISPEL_ANY
 end
 
 -- Range can be secret; newer clients let a secret boolean set alpha directly.
