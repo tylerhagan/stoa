@@ -604,9 +604,15 @@ local function dressNewsFilters()
 	local pop = rawget(_G, "CommunitiesGuildNewsFiltersFrame")
 	if type(pop) ~= "table" or pop.stoaDressed or forbidden(pop) then return end
 	pop.stoaDressed = true
-	hide(pop.Bg)
+	-- The stone edge is a child frame of border pieces (its key differs
+	-- between clients), so every child that isn't a button loses its art.
+	hideOwnArt(pop)
 	hide(pop.Border)
-	hide(pop.NineSlice)
+	for _, child in ipairs({ pop:GetChildren() }) do
+		if not forbidden(child) and not (child.IsObjectType and child:IsObjectType("Button")) then
+			hideOwnArt(child)
+		end
+	end
 	UI.surface(pop, "card", { alpha = 0.98 })
 	if pop.Title and pop.Title.SetTextColor then
 		Stoa:SetFont(pop.Title, "serif", Stoa.typeSize.label)
