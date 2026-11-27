@@ -3375,7 +3375,18 @@ function Console:OnEnable()
 	-- On a cold start the card's words can be drawn before the face has
 	-- loaded and come out blank, though set and measuring fine. They are
 	-- drawn again a moment after each loading screen.
+	-- Every word on the console's own frames, the game's frames left alone.
+	local function redrawWords(frame, depth)
+		if not frame or (frame.IsForbidden and frame:IsForbidden()) or (frame.IsProtected and frame:IsProtected()) then return end
+		for _, region in ipairs({ frame:GetRegions() }) do
+			if region.GetObjectType and region:GetObjectType() == "FontString" then UI.redraw(region) end
+		end
+		if depth <= 0 then return end
+		for _, child in ipairs({ frame:GetChildren() }) do redrawWords(child, depth - 1) end
+	end
 	local function redrawYou()
+		redrawWords(self.frame, 8)
+		if _G.StoaConsoleCard then redrawWords(_G.StoaConsoleCard, 8) end
 		for _, fs in ipairs({ self.youName, self.youSub, self.healthText, self.manaText, self.levelPlate and self.levelPlate.text }) do
 			UI.redraw(fs)
 		end
@@ -3390,8 +3401,8 @@ function Console:OnEnable()
 		self:UpdateResources()
 		self:UpdateFellowship()
 		if self.youCard then
-			C_Timer.After(1, redrawYou)
-			C_Timer.After(4, redrawYou)
+			C_Timer.After(1, function() Stoa.safe.guarded(redrawYou) end)
+			C_Timer.After(4, function() Stoa.safe.guarded(redrawYou) end)
 		end
 		if IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
 	end)
