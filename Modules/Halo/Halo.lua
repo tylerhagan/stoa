@@ -1177,8 +1177,8 @@ function Halo:HealthMood()
 end
 
 -- The dark seat under the signature (the tapered ground line) carries
--- danger: red under a quarter health, amber while an enemy is on you (a
--- tank holding one is the calm case), its own dark tone otherwise. Dead or
+-- danger: red under a quarter health, amber while an enemy is on you in a
+-- group (a tank holding one is the calm case), its own dark tone otherwise. Dead or
 -- a ghost, the danger is over: the seat goes back to dark.
 function Halo:SeatMood()
 	local seat = self.signature and self.signature.seat
@@ -1218,7 +1218,8 @@ end
 function Halo:SeatThreat()
 	local status = InCombatLockdown() and UnitThreatSituation and UnitThreatSituation("player")
 	if Stoa:IsSecret(status) then status = nil end
-	self.seatAggro = status == 3 and Stoa:GetRole() ~= "TANK" or nil
+	-- Only in a group: alone, every enemy is on you and the amber says nothing.
+	self.seatAggro = status == 3 and Stoa:GetRole() ~= "TANK" and IsInGroup and IsInGroup() or nil
 	self:SeatMood()
 end
 
