@@ -67,6 +67,8 @@ local HALO_HAZE_ALPHA = 0.5
 local HAZE_REACH = 0.29
 -- On the ground line the smoke is a stretched soft dot, so it needs more.
 local LINE_HAZE_ALPHA = 0.9
+-- The Halo's smoke breathes between this and full.
+local HAZE_BREATH_LOW = 0.6
 
 local function knows(spellID)
 	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
@@ -109,12 +111,12 @@ local function band(parent, face, extra)
 	return tex
 end
 
-local function breathe(tex)
+local function breathe(tex, low, high)
 	local group = tex:CreateAnimationGroup()
 	group:SetLooping("BOUNCE")
 	local fade = group:CreateAnimation("Alpha")
-	fade:SetFromAlpha(BREATH_LOW)
-	fade:SetToAlpha(BREATH_HIGH)
+	fade:SetFromAlpha(low or BREATH_LOW)
+	fade:SetToAlpha(high or BREATH_HIGH)
 	fade:SetDuration(BREATH)
 	fade:SetSmoothing("IN_OUT")
 	return group
@@ -241,7 +243,8 @@ function Forms:BuildLook()
 			haze.pieces[#haze.pieces + 1] = piece
 		end
 		haze:Hide()
-		parts.haloHaze = haze
+		-- The Halo's smoke breathes too, gently: it never thins out.
+		parts.haloHaze, parts.hazeBreath = haze, breathe(haze, HAZE_BREATH_LOW, 1)
 	end
 	self.parts = parts
 end
@@ -291,6 +294,7 @@ function Forms:ApplyLook(look, entering)
 				end
 			end
 			parts.haloHaze:Show()
+			if not parts.hazeBreath:IsPlaying() then parts.hazeBreath:Play() end
 		end
 		for _, band in ipairs(parts.waveBands or {}) do
 			-- The leading edge bright, trailing off towards the seal.
@@ -310,6 +314,7 @@ function Forms:ApplyLook(look, entering)
 			if parts[key] then parts[key]:Hide() end
 		end
 		if parts.breath then parts.breath:Stop() end
+		if parts.hazeBreath then parts.hazeBreath:Stop() end
 		if was and parts.console and parts.console.UpdateRing then parts.console:UpdateRing() end
 	end
 	if look ~= was then Stoa:Fire("STOA_FORM_LOOK", look) end
