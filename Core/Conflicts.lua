@@ -52,8 +52,10 @@ local RULES = {
 		key = "chat", job = "the chat", modules = { "ChatLook", "Chat" },
 		addons = {
 			{ "DaylightUI_Chat", "Daylight UI Chat" }, { "EllesmereUIChat", "EllesmereUI Chat" },
-			{ "Prat-3.0", "Prat" }, { "Chattynator", "Chattynator" },
-			{ "Glass", "Glass" }, { "Chatter", "Chatter" },
+			-- gameWindow: it changes the game's own chat window instead of
+			-- drawing one, so the console can still hold that window.
+			{ "Prat-3.0", "Prat", gameWindow = true }, { "Chattynator", "Chattynator" },
+			{ "Glass", "Glass" }, { "Chatter", "Chatter", gameWindow = true },
 		},
 	},
 	{
@@ -246,6 +248,19 @@ local found = {}
 
 function Conflicts:SteppedAside(name)
 	return aside[name]
+end
+
+-- True when an addon kept for this job draws its own window (anything not
+-- marked gameWindow). Prat alone leaves the game's chat window in place.
+function Conflicts:OwnWindow(key)
+	for _, entry in ipairs(found) do
+		if entry.rule.key == key then
+			for _, addon in ipairs(entry.loaded) do
+				if not addon.gameWindow then return true end
+			end
+		end
+	end
+	return false
 end
 
 -- For the welcome page (Config/Welcome.lua): each clash found, its saved

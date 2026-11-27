@@ -93,6 +93,8 @@ local function placeChat()
 	local bottom = CHAT_BOTTOM
 	-- Stoa's typing strip sits under the messages, inside the console.
 	local look = Stoa.modules.ChatLook
+	-- Stepped aside for Prat, STOA's strip isn't there to make room for.
+	if Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook") then look = nil end
 	if look and look.db and look.db.enabled ~= false and look.db.input then bottom = bottom + 8 end
 	-- On a ride the console is the travel line: the chat's foot stands
 	-- clear of it, and its top stays where it was.
@@ -857,10 +859,12 @@ local function safely(fn)
 	end)
 end
 
--- Chat is housed only while no other chat addon was kept for the job
--- (Core/Conflicts.lua): theirs draws its own frame and tabs.
+-- Chat is housed unless a chat addon that draws its own frame and tabs
+-- was kept for the job (Core/Conflicts.lua). Prat and Chatter change the
+-- game's own window, so that window sits on the console all the same.
 local function housesChat(db)
-	return db.houseChat and not (Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook"))
+	local conflicts = Stoa.Conflicts
+	return db.houseChat and not (conflicts and conflicts:SteppedAside("ChatLook") and conflicts:OwnWindow("chat"))
 end
 Console.HousesChat = function(self) return housesChat(self.db) end
 
