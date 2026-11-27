@@ -1423,7 +1423,9 @@ local function slotHandle(parent, heading)
 	handle:SetScript("OnEnter", function(own)
 		if not Console:CanPick() then return end
 		if slate then rest(own, true) else chevron:Show() end
-		heading:SetAlpha(1)
+		-- A slot holding a meter keeps its caption unseen: the window's
+		-- own title stands in the same spot, and the two ran together.
+		heading:SetAlpha(own.dock and 0 or 1)
 		heading:SetTextColor(Stoa:Color("text"))
 		GameTooltip:SetOwner(own, "ANCHOR_TOP")
 		GameTooltip:AddLine(own.empty and not own.dock and "Add a page" or "Change this page")
