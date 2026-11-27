@@ -35,6 +35,11 @@ local TARGETS = {
 	{ name = "AuctionHouseFrame" },
 	{ name = "PVEFrame" },
 	{ name = "LFDParentFrame" },
+	-- Forever's Looking For Group: a bare parent (close, the eye, three
+	-- side tabs) over three framed pages, one shown at a time.
+	{ name = "LFGListingFrame", after = "lfg" },
+	{ name = "LFGBrowseFrame", after = "lfg" },
+	{ name = "LFGWhoListFrame", after = "lfg" },
 	{ name = "FriendsFrame", parts = { "FriendsFrameInset", "WhoFrameListInset", "WhoFrameEditBoxInset" } },
 	-- Forever's friends window is the newer social window: the Battle.net
 	-- bar starts 22px down, so the strip stays short, and its tabs hang
@@ -1407,6 +1412,24 @@ end
 function AFTER.professions(frame)
 	dressSideTab(frame.ProfessionsOverviewTab)
 	for _, tab in ipairs(frame.rightProfessionTabs or {}) do dressSideTab(tab) end
+end
+
+-- Looking For Group: the parts that live on the bare parent. Its close
+-- becomes the quiet cross, the side tabs dark tiles like the professions'
+-- ones, and the big eye over the corner goes (as every window's portrait
+-- does); nothing is moved.
+function AFTER.lfg()
+	local parent = rawget(_G, "LFGParentFrame")
+	if type(parent) ~= "table" or parent.stoaLFG or forbidden(parent) then return end
+	parent.stoaLFG = true
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressClose then windows.DressClose(rawget(_G, "LFGParentFrameCloseButton")) end
+	for _, key in ipairs({ "ListingTab", "BrowsingTab", "WhoListingTab" }) do dressSideTab(parent[key]) end
+	local eye = rawget(_G, "LFGParentFramePortrait")
+	if type(eye) == "table" and eye.SetAlpha and not forbidden(eye) then
+		eye:SetAlpha(0)
+		if eye.EnableMouse then eye:EnableMouse(false) end
+	end
 end
 
 -- Friends (the social window): its tabs come from a pool when the window
