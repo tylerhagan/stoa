@@ -1083,10 +1083,60 @@ end
 
 -- Updates -------------------------------------------------------------------
 
+-- The straight shapes are small, so the corner of your eye gets colour and
+-- movement instead of size: health turns amber under half and red under a
+-- quarter (bar and number), and a hit for an eighth of your health or more
+-- flashes the bar once. Unreadable health leaves everything as it was.
+local HIT_SHARE = 0.12
+local function healthToken(share)
+	if share <= 0.25 then return "hostile" end
+	if share <= 0.5 then return "danger" end
+	return "health"
+end
+
+function Halo:HealthHit()
+	local bar = self.health
+	local flash = bar.stoaFlash
+	if not flash then
+		flash = bar:CreateTexture(nil, "OVERLAY")
+		flash:SetPoint("TOPLEFT", -3, 3)
+		flash:SetPoint("BOTTOMRIGHT", 3, -3)
+		flash:SetColorTexture(1, 1, 1, 1)
+		flash:SetBlendMode("ADD")
+		flash:SetAlpha(0)
+		local group = flash:CreateAnimationGroup()
+		local fade = group:CreateAnimation("Alpha")
+		fade:SetFromAlpha(0.8)
+		fade:SetToAlpha(0)
+		fade:SetDuration(0.3)
+		flash.group = group
+		bar.stoaFlash = flash
+	end
+	flash.group:Stop()
+	flash.group:Play()
+end
+
+function Halo:HealthMood()
+	if not (self:Line() or self:Rail()) then return end
+	local health, max = UnitHealth("player"), UnitHealthMax("player")
+	if Stoa:IsSecret(health) or Stoa:IsSecret(max) or type(health) ~= "number" or type(max) ~= "number" or max <= 0 then return end
+	local share = health / max
+	local token = healthToken(share)
+	if token ~= self.healthToken then
+		self.healthToken = token
+		self.health:SetStatusBarColor(Stoa:Color(token))
+		self.healthText:SetTextColor(Stoa:Color(token == "health" and "text" or token))
+	end
+	local last = self.healthShare
+	self.healthShare = share
+	if last and last - share >= HIT_SHARE then self:HealthHit() end
+end
+
 function Halo:UpdateHealth()
 	UI.setUnitBar(self.health, "player", "health")
 	if self.rest then UI.setUnitBar(self.rest.health, "player", "health") end
 	self.healthText:SetText(UnitHealth("player"))
+	self:HealthMood()
 	quiet(self, self.health, self.healthText, UnitHealth("player"), UnitHealthMax("player"))
 end
 
@@ -1989,7 +2039,9 @@ function Halo:OnEnable()
 	end)
 	Stoa:On("STOA_THEME_CHANGED", function()
 		self.powerToken = nil
+		self.healthToken = nil
 		self:UpdatePower()
+		self:UpdateHealth()
 		self:UpdateTarget()
 	end)
 	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, function(unit)
