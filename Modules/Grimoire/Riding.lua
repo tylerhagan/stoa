@@ -246,7 +246,7 @@ end
 -- After "Open console", the way back: "Ride view" in the same spot, clear
 -- above the bars and the console. It steps aside for a target, which
 -- docks there, and for a fight.
-local BACK_AIR = 6
+local BACK_AIR, YOU_AIR = 6, 14
 function Console:PlaceRideBack()
 	local frame = self.frame
 	local mounted = (IsMounted and plain(IsMounted())) or (UnitOnTaxi and plain(UnitOnTaxi("player")))
@@ -274,6 +274,14 @@ function Console:PlaceRideBack()
 	local lift = self:OpenHeight() + BACK_AIR
 	local top = barsTop(frame)
 	if top then lift = math.max(lift, math.floor(top - frame:GetBottom() + PAIR_AIR + 0.5)) end
+	-- Slate's own card (your name, health and portrait) stands on the rim
+	-- in the middle; its portrait rises a little past the card's top.
+	local you = self.youCard
+	local youTop = you and you:IsShown() and you:GetTop()
+	if youTop then
+		local ratio = you:GetEffectiveScale() / frame:GetEffectiveScale()
+		lift = math.max(lift, math.floor(youTop * ratio - frame:GetBottom() + YOU_AIR + 0.5))
+	end
 	back:ClearAllPoints()
 	back:SetPoint("BOTTOM", frame, "BOTTOM", 0, lift)
 	back:Show()
