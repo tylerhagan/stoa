@@ -315,7 +315,7 @@ function Pet:PlacePlaque()
 	if frame.ring and halo and module and module.Rail and module:Rail() then
 		-- Side rail: the ring hangs under the rails, its name beside it.
 		local rail = module.RAIL
-		frame:SetPoint("TOP", halo, "CENTER", rail.x + rail.width + rail.gap / 2, rail.bottom - 8)
+		frame:SetPoint("TOP", halo, "CENTER", -(rail.x + rail.width + rail.gap / 2), rail.bottom - 8)
 		frame.percent:ClearAllPoints()
 		frame.percent:SetPoint("LEFT", frame.name, "RIGHT", 6, 0)
 		return
@@ -525,7 +525,7 @@ function Pet:BuildArc()
 		local sb = CreateFrame("StatusBar", nil, halo)
 		sb:SetSize(3, rail.height)
 		sb:SetOrientation("VERTICAL")
-		sb:SetPoint("BOTTOMRIGHT", halo, "CENTER", rail.x - 5, rail.bottom)
+		sb:SetPoint("BOTTOMLEFT", halo, "CENTER", -(rail.x - 5), rail.bottom)
 		sb:SetStatusBarTexture(UI.WHITE)
 		UI.paint(sb, "accent", 0.7)
 		local track = sb:CreateTexture(nil, "BACKGROUND")

@@ -213,9 +213,9 @@ end
 
 local LINE_ALPHA = 0.82
 
--- The side rail: both bars as short uprights together on your right, with
--- the numbers and coins beside them. x and bottom are from the Halo's
--- centre; the health rail is the left of the two.
+-- The side rail: both bars as short uprights together on your left (the
+-- target docks on the right), with the numbers and coins beyond them. x
+-- and bottom are from the Halo's centre; the health rail is the nearer.
 Halo.RAIL = { x = 74, bottom = -52, width = 7, height = 96, gap = 5 }
 local RAIL = Halo.RAIL
 
@@ -237,7 +237,7 @@ local function railBar(parent, token, index)
 	sb:SetAlpha(LINE_ALPHA)
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(1)
-	sb:SetPoint("BOTTOMLEFT", parent, "CENTER", RAIL.x + (index - 1) * (RAIL.width + RAIL.gap), RAIL.bottom)
+	sb:SetPoint("BOTTOMRIGHT", parent, "CENTER", -(RAIL.x + (index - 1) * (RAIL.width + RAIL.gap)), RAIL.bottom)
 	return sb
 end
 
@@ -312,9 +312,9 @@ function Halo:Build()
 	local manaText = UI.text(frame, "serif", numberSize, "mana", "LEFT")
 	if rail then
 		-- Beside the rails, at their foot: health over power.
-		healthText:SetJustifyH("LEFT")
-		manaText:SetPoint("BOTTOMLEFT", mana, "BOTTOMRIGHT", 8, -2)
-		healthText:SetPoint("BOTTOMLEFT", manaText, "TOPLEFT", 0, 4)
+		manaText:SetJustifyH("RIGHT")
+		manaText:SetPoint("BOTTOMRIGHT", mana, "BOTTOMLEFT", -8, -2)
+		healthText:SetPoint("BOTTOMRIGHT", manaText, "TOPRIGHT", 0, 4)
 	elseif line and LINE.numbers then
 		-- The numbers are the frame: large, each over its hairline.
 		healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 5)
