@@ -733,14 +733,20 @@ function Party:DispelFor(unit)
 	local auras = C_UnitAuras
 	if not (auras and auras.GetAuraDataByIndex) then return nil end
 	local ok, aura = pcall(auras.GetAuraDataByIndex, unit, 1, DISPEL_FILTER)
-	if ok and type(aura) == "table" then return dispelCue(aura) end
+	if ok and type(aura) == "table" then
+		local read, cue = pcall(dispelCue, aura)
+		return read and cue or DISPEL_ANY
+	end
 	if not auras.GetUnitAuraInstanceIDs then return nil end
 	local listed, ids = pcall(auras.GetUnitAuraInstanceIDs, unit, DISPEL_FILTER, 1)
 	local id = listed and type(ids) == "table" and ids[1]
 	if not id then return nil end
 	if auras.GetAuraDataByAuraInstanceID then
 		ok, aura = pcall(auras.GetAuraDataByAuraInstanceID, unit, id)
-		if ok and type(aura) == "table" then return dispelCue(aura) end
+		if ok and type(aura) == "table" then
+			local read, cue = pcall(dispelCue, aura)
+			if read and cue then return cue end
+		end
 	end
 	return DISPEL_ANY
 end
@@ -1211,3 +1217,46 @@ end
 Stoa:On("STOA_SPEC_SETTINGS", function()
 	if Party.grid then Party:SetGridMode(Party.db.clickGrid) end
 end)
+
+-- /stoa dispel: prints what the game hands addons about debuffs right now,
+-- for you, your party and your target. Run it in a fight while someone
+-- has a debuff you can remove. Does nothing until it is typed.
+local PROBE_FILTERS = { "HARMFUL", "HARMFUL|RAID", "HARMFUL|RAID_PLAYER_DISPELLABLE" }
+local PROBE_LABELS = { "ALL", "MINE", "PARTY" }
+
+local function probeWord(ok, value)
+	if not ok then return "error" end
+	if Stoa:IsSecret(value) then return "secret" end
+	return type(value)
+end
+
+Stoa.commands.dispel = function()
+	local auras = C_UnitAuras
+	if not auras then return end
+	local hidden = C_Secrets and C_Secrets.ShouldAurasBeSecret and select(2, pcall(C_Secrets.ShouldAurasBeSecret))
+	Stoa:Print("Debuff probe. In combat: " .. tostring(InCombatLockdown()) .. ", auras kept back: " .. tostring(Stoa:IsSecret(hidden) and "secret" or hidden))
+	for _, unit in ipairs({ "player", "party1", "party2", "party3", "party4", "target" }) do
+		if UnitExists(unit) then
+			local parts = {}
+			for i, filter in ipairs(PROBE_FILTERS) do
+				local ok, aura = pcall(auras.GetAuraDataByIndex, unit, 1, filter)
+				local first = probeWord(ok, aura)
+				if first == "table" then
+					local read, kind = pcall(function() return aura.dispelName end)
+					first = "table/" .. (not read and "error" or Stoa:IsSecret(kind) and "secret" or tostring(kind))
+				end
+				local count = "-"
+				if auras.GetUnitAuraInstanceIDs then
+					local listed, ids = pcall(auras.GetUnitAuraInstanceIDs, unit, filter)
+					count = probeWord(listed, ids)
+					if count == "table" then
+						local sized, n = pcall(function() return #ids end)
+						count = sized and (Stoa:IsSecret(n) and "secret" or tostring(n)) or "error"
+					end
+				end
+				parts[#parts + 1] = PROBE_LABELS[i] .. " " .. first .. " ids " .. count
+			end
+			Stoa:Print(unit .. ": " .. table.concat(parts, "  ·  "))
+		end
+	end
+end
