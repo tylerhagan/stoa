@@ -69,9 +69,10 @@ Stoa:On("CHAT_MSG_SYSTEM", function(text)
 	local line = rawget(_G, "INTERFACE_ACTION_BLOCKED")
 	if not line or text ~= line then return end
 	local now, events = GetTime and GetTime() or 0, {}
-	for i, name in ipairs(Stoa.recentEvents or {}) do
-		if name ~= "" and name ~= "CHAT_MSG_SYSTEM" then
-			events[#events + 1] = ("%s -%.1fs"):format(name, now - (Stoa.recentEventTimes[i] or now))
+	local names, times = Stoa:RecentEvents()
+	for i, name in ipairs(names) do
+		if name ~= "CHAT_MSG_SYSTEM" then
+			events[#events + 1] = ("%s -%.1fs"):format(name, now - (times[i] or now))
 		end
 	end
 	local health, max = UnitHealth("player"), UnitHealthMax("player")
@@ -81,7 +82,9 @@ Stoa:On("CHAT_MSG_SYSTEM", function(text)
 		("health %s%s; events before it: %s"):format(share, dead == true and ", dead" or "", table.concat(events, ", ")))
 end)
 
--- The game's own taint log names what these miss. /stoa taint keeps it
+-- The game's own taint log names what these miss. Level 1 only: it
+-- records blocked actions. Level 2 writes every tainted read and makes
+-- the game stutter. /stoa taint keeps it
 -- switched on (it does not always stay on by itself); the log is the file
 -- Logs\taint.log, written when you reload or log out.
 local function taintLog(level)
@@ -89,12 +92,12 @@ local function taintLog(level)
 	if set then pcall(set, "taintLog", level) end
 end
 Stoa:On("PLAYER_LOGIN", function()
-	if Stoa.db and Stoa.db.taintWatch then taintLog("2") end
+	if Stoa.db and Stoa.db.taintWatch then taintLog("1") end
 end)
 Stoa.commands = Stoa.commands or {}
 Stoa.commands.taint = function()
 	Stoa.db.taintWatch = not Stoa.db.taintWatch or nil
-	taintLog(Stoa.db.taintWatch and "2" or "0")
+	taintLog(Stoa.db.taintWatch and "1" or "0")
 	Stoa:Print(Stoa.db.taintWatch and "The game's taint log is on and STOA will keep it on. After the next \"Interface action failed\" line, /reload so the game writes it."
 		or "The game's taint log is off again.")
 end

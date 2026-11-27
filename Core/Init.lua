@@ -85,13 +85,22 @@ end
 local recent, recentAt, RECENT = {}, {}, 12
 for i = 1, RECENT do recent[i], recentAt[i] = "", 0 end
 Stoa.recentEvents, Stoa.recentEventTimes = recent, recentAt
+-- A ring: recentHead is the newest entry, the one after it the oldest.
+local recentHead = RECENT
+function Stoa:RecentEvents()
+	local names, times = {}, {}
+	for step = 1, RECENT do
+		local i = (recentHead + step - 1) % RECENT + 1
+		if recent[i] ~= "" then names[#names + 1], times[#times + 1] = recent[i], recentAt[i] end
+	end
+	return names, times
+end
 
 frame:SetScript("OnEvent", function(_, event, ...)
 	if Stoa.blocked then return end
-	if recent[RECENT] ~= event then
-		table.remove(recent, 1)
-		table.remove(recentAt, 1)
-		recent[RECENT], recentAt[RECENT] = event, GetTime and GetTime() or 0
+	if recent[recentHead] ~= event then
+		recentHead = recentHead % RECENT + 1
+		recent[recentHead], recentAt[recentHead] = event, GetTime and GetTime() or 0
 	end
 	Stoa:Fire(event, ...)
 end)
