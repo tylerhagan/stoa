@@ -171,6 +171,9 @@ function Console:SetRiding(on)
 		if self.ride then self.ride:Hide() end
 		if self.rideTicker then self.rideTicker:Cancel() self.rideTicker = nil end
 	end
+	-- A meter window in one of the console's slots goes with the cards.
+	local meters = Stoa.modules.Meters
+	if meters and meters.enabled and meters.SetRiding then xpcall(meters.SetRiding, Stoa.catch, meters, on) end
 	self:Refold()
 	-- The chat's foot steps up over the travel line, and back down after.
 	if self.ReplaceChat then self:ReplaceChat() end

@@ -404,6 +404,25 @@ function Meters:Remind(n)
 	end)
 end
 
+-- On a ride the console folds to its travel line and its cards go; a
+-- window in a slot goes with them (by alpha only: hiding it would write
+-- the game's own saved window list) and comes back with the console.
+function Meters:SetRiding(on)
+	for n = 1, 3 do
+		local window = _G["DamageMeterSessionWindow" .. n]
+		if window and window.SetAlpha and not (window.IsForbidden and window:IsForbidden()) then
+			local docked = self.docks and self.docks[n]
+			if on and docked then
+				window.stoaRideHidden = true
+				window:SetAlpha(0)
+			elseif window.stoaRideHidden then
+				window.stoaRideHidden = nil
+				window:SetAlpha(1)
+			end
+		end
+	end
+end
+
 function Meters:Place()
 	local docks = self.docks or {}
 	local anchor = self.db.place and self:Anchor()
