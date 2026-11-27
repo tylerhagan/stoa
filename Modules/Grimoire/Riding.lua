@@ -90,14 +90,14 @@ function Console:BuildRide()
 	local off = UI.button(band, "Dismount", 96, function()
 		if Dismount then Dismount() end
 	end)
-	off:SetPoint("RIGHT", band, "CENTER", -10, -2)
+	off:SetPoint("RIGHT", band, "CENTER", -4, -2)
 	band.off = off
 	-- For when you need your bars or pages mid-ride.
 	local full = UI.button(band, "Open console", 108, function()
 		Console.rideOpened = true
 		Console:SetRiding(false)
 	end)
-	full:SetPoint("LEFT", band, "CENTER", -2, -2)
+	full:SetPoint("LEFT", band, "CENTER", 4, -2)
 	band.full = full
 	full:HookScript("OnEnter", function(own)
 		GameTooltip:SetOwner(own, "ANCHOR_TOP")
@@ -131,6 +131,47 @@ local function nextStop()
 	return id, log.GetTitleForQuestID and plain(log.GetTitleForQuestID(id)) or "", math.sqrt(squared)
 end
 
+-- The faded action bars still take clicks (they are secure, so they can't
+-- be switched off), so the buttons sit clear above the tallest bar that
+-- crosses the middle of the screen, not over it.
+local PAIR_HALF, PAIR_AIR = 106, 12
+local function barsTop(band)
+	local scale = band:GetEffectiveScale()
+	local middle = (band:GetLeft() + band:GetRight()) / 2
+	local top
+	for _, name in ipairs(BARS) do
+		local bar = _G[name]
+		if bar and bar.IsShown and not (bar.IsForbidden and bar:IsForbidden()) and bar:IsShown() then
+			local ratio = bar:GetEffectiveScale() / scale
+			local left, right, edge = bar:GetLeft(), bar:GetRight(), bar:GetTop()
+			if left and right and edge and left * ratio < middle + PAIR_HALF and right * ratio > middle - PAIR_HALF then
+				edge = edge * ratio
+				if not top or edge > top then top = edge end
+			end
+		end
+	end
+	return top
+end
+
+function Console:PlaceRideButtons(onTaxi)
+	local band = self.ride
+	if not (band and band.off and band.full and band:GetLeft() and band:GetBottom()) then return end
+	local top = barsTop(band)
+	local lift = top and math.floor(top - band:GetBottom() + PAIR_AIR + 0.5) or false
+	if band.pairLift == lift and band.pairAlone == onTaxi then return end
+	band.pairLift, band.pairAlone = lift, onTaxi
+	local off, full = band.off, band.full
+	off:ClearAllPoints()
+	full:ClearAllPoints()
+	if lift then
+		off:SetPoint("BOTTOMRIGHT", band, "BOTTOM", -4, lift)
+		full:SetPoint(onTaxi and "BOTTOM" or "BOTTOMLEFT", band, "BOTTOM", onTaxi and 0 or 4, lift)
+	else
+		off:SetPoint("RIGHT", band, "CENTER", -4, -2)
+		full:SetPoint(onTaxi and "CENTER" or "LEFT", band, "CENTER", onTaxi and 0 or 4, -2)
+	end
+end
+
 function Console:FillRide()
 	local band = self.ride
 	if not band then return end
@@ -141,16 +182,7 @@ function Console:FillRide()
 	local sub = GetSubZoneText and GetSubZoneText() or ""
 	band.sub:SetText(onTaxi and "On a flight" or sub)
 	band.off:SetShown(not onTaxi)
-	-- Alone on a flight, Open console takes the middle.
-	if band.full.stoaAlone ~= (onTaxi and true or false) then
-		band.full.stoaAlone = onTaxi and true or false
-		band.full:ClearAllPoints()
-		if onTaxi then
-			band.full:SetPoint("CENTER", band, "CENTER", 0, -2)
-		else
-			band.full:SetPoint("LEFT", band, "CENTER", -2, -2)
-		end
-	end
+	self:PlaceRideButtons(onTaxi and true or false)
 
 	local id, title, yards = nextStop()
 	band.stop:SetShown(id ~= nil)
