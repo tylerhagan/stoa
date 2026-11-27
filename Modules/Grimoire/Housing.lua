@@ -102,7 +102,8 @@ local function placeChat()
 		bottom = math.max(bottom, Console.RIDE_HEIGHT + RIDE_CHAT_GAP)
 		-- Slate: the chat rides in a card of its own (Console:ChatShade),
 		-- which holds the typing strip too and stands clear of the line.
-		if pillsOn() then
+		-- Leather and Matte ride in a card as well, in their own panel.
+		do
 			local typing = look and look.db and look.db.enabled ~= false and look.db.input
 			bottom = Console.RIDE_HEIGHT + SLATE_RIDE_AIR + (typing and SLATE_RIDE_INPUT or 6)
 		end
@@ -416,7 +417,22 @@ local function refreshTabs()
 	for i = #windows + 1, #tabs do tabs[i]:Hide() end
 end
 
+-- The combat log's own row of quick filters ("What happened to me?" and
+-- the rest) hangs from Blizzard's tab, which is unseen, so the row went
+-- unseen with it while the log still left room for it. It shows again,
+-- without its black bar.
+local function showLogLinks()
+	local bar = rawget(_G, "CombatLogQuickButtonFrame_Custom")
+	if type(bar) ~= "table" or bar.stoaShown or (bar.IsForbidden and bar:IsForbidden()) then return end
+	if not bar.SetIgnoreParentAlpha then return end
+	bar.stoaShown = true
+	bar:SetIgnoreParentAlpha(true)
+	local ground = rawget(_G, "CombatLogQuickButtonFrame_CustomTexture")
+	if type(ground) == "table" and ground.SetAlpha then ground:SetAlpha(0) end
+end
+
 local function buildTabs()
+	showLogLinks()
 	if strip then return end
 	strip = CreateFrame("Frame", "StoaChatTabs", UIParent)
 	-- Above the chat frames, so these take the clicks rather than
@@ -439,6 +455,7 @@ end
 
 local function safeRefresh()
 	xpcall(refreshTabs, Stoa.catch)
+	if strip then xpcall(showLogLinks, Stoa.catch) end
 end
 
 -- On a cold start the game can measure a label (the tab takes its width)

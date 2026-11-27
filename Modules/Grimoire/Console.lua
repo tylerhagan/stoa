@@ -2614,6 +2614,7 @@ function Console:ChatShade()
 	local shade = self.chatShade
 	if not housed then
 		if shade then shade:SetAlpha(0) end
+		if self.chatRideCard then self.chatRideCard:SetAlpha(0) end
 		return nil
 	end
 	if not shade and self:Slate() and not self.db.slim then
@@ -2633,6 +2634,31 @@ function Console:ChatShade()
 		shade:SetPoint("TOPLEFT", ChatFrame1, "TOPLEFT", -left, 10)
 		shade:SetPoint("BOTTOMRIGHT", ChatFrame1, "BOTTOMRIGHT", SLATE_CHAT_PAD, -foot)
 		return shade, self.riding and SLATE_CHAT_RIDE or SLATE_CHAT_FIGHT
+	end
+	-- Leather and Matte on a ride: the chat keeps a card too, in the
+	-- style's own panel, from the console's top line (where the tabs
+	-- stand) down past the typing strip. In a fight they keep the shade.
+	local ride = self.chatRideCard
+	if self.riding and not self.db.slim then
+		if not ride then
+			ride = CreateFrame("Frame", nil, UIParent)
+			ride:SetFrameStrata("BACKGROUND")
+			UI.roundPanel(ride, 1)
+			ride:SetAlpha(0)
+			ride.stoaCard = true
+			self.chatRideCard = ride
+		end
+		local look = Stoa.modules.ChatLook
+		local on = look and look.enabled and look.db
+		local left = SLATE_CHAT_PAD + ((on and on.rail) and SLATE_CHAT_RAIL or 0)
+		local foot = 6 + ((on and on.input) and SLATE_CHAT_INPUT or 0)
+		ride:ClearAllPoints()
+		ride:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", (self:PageInset()) - left, self:OpenHeight())
+		ride:SetPoint("BOTTOMRIGHT", ChatFrame1, "BOTTOMRIGHT", SLATE_CHAT_PAD, -foot)
+		if shade then shade:SetAlpha(0) end
+		return ride, SLATE_CHAT_RIDE
+	elseif ride then
+		ride:SetAlpha(0)
 	end
 	if not shade then
 		local holder = CreateFrame("Frame", nil, UIParent)
@@ -2704,7 +2730,7 @@ function Console:SetOpen(open, instant)
 			part:SetShown(open or progress < 1)
 		end
 		UI.fadeTo(self.bridge, open and 1 - progress or progress)
-		-- Slate's ride card is the whole chat, so its tabs stay on it.
+		-- The ride card is the whole chat, so its tabs stay on it.
 		local tabsStay = riding and chatShade and chatShade.stoaCard
 		for _, part in ipairs(self.tabArt or {}) do
 			UI.fadeTo(part, tabsStay and 1 or (open and progress or 1 - progress))
