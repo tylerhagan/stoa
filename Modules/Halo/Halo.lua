@@ -647,7 +647,7 @@ function Halo:TwinWidth()
 	local console = Stoa.modules.Grimoire
 	local right, you = console and console.barsCardRight, console and console.YOU_CARD
 	if not (right and you) then return TWIN_W end
-	return math.max(TWIN_W_LEAST, math.min(TWIN_W_MOST, right - you.width / 2 - SLATE_REST_GAP))
+	return math.floor(math.max(TWIN_W_LEAST, math.min(TWIN_W_MOST, right - you.width / 2 - SLATE_REST_GAP)) + 0.5)
 end
 
 function Halo:PlaceTarget()
