@@ -1414,21 +1414,286 @@ function AFTER.professions(frame)
 	for _, tab in ipairs(frame.rightProfessionTabs or {}) do dressSideTab(tab) end
 end
 
--- Looking For Group: the parts that live on the bare parent. Its close
--- becomes the quiet cross, the side tabs dark tiles like the professions'
--- ones, and the big eye over the corner goes (as every window's portrait
--- does); nothing is moved.
-function AFTER.lfg()
-	local parent = rawget(_G, "LFGParentFrame")
-	if type(parent) ~= "table" or parent.stoaLFG or forbidden(parent) then return end
-	parent.stoaLFG = true
+-- Looking For Group. The parts on the bare parent first: its close becomes
+-- the quiet cross, the side tabs dark tiles like the professions' ones, and
+-- the big eye over the corner goes (as every window's portrait does).
+-- Then each page's inside: wood, stone and gold bevels go, rows become
+-- dark tiles, fields and ticks STOA's. Nothing is moved.
+local function lfgTile(row, left, top, right, bottom)
+	local fill = UI.sliced(row, "BACKGROUND", "CardFill.tga")
+	if not fill then return end
+	local edge = UI.roundBorder(row, "CardEdge.tga", 1)
+	local parts = { fill }
+	for _, tex in ipairs(edge.edges or {}) do parts[#parts + 1] = tex end
+	for _, tex in ipairs(parts) do
+		tex:ClearAllPoints()
+		tex:SetPoint("TOPLEFT", left, -top)
+		tex:SetPoint("BOTTOMRIGHT", -right, bottom)
+	end
+	fill:SetDrawLayer("BACKGROUND", -8)
+	row.stoaFill, row.stoaEdge = fill, edge
+	return fill
+end
+
+local function paintLfgRow(row)
+	if not row.stoaFill then return end
+	local chosen = row.Selected and row.Selected:IsShown()
+	local over = row.stoaOver
+	local r, g, b = Stoa:Color("panel")
+	local lift = chosen and 0.06 or (over and 0.03 or 0)
+	row.stoaFill:SetVertexColor(r + lift, g + lift, b + lift, chosen and 0.95 or (over and 0.8 or 0.55))
+	if chosen then row.stoaEdge:Set(Stoa:Color("accent")) elseif over then row.stoaEdge:Set(Stoa:Color("hairline")) else row.stoaEdge:Clear() end
+end
+
+local LFG_ROW_ART = { "ResultBG", "Background", "Selected", "Highlight" }
+local function lfgRowTile(row, left, top, right, bottom)
+	for _, key in ipairs(LFG_ROW_ART) do alphaOff(row[key]) end
+	alphaOff(row.GetHighlightTexture and row:GetHighlightTexture())
+	if row.stoaFill or not lfgTile(row, left, top, right, bottom) then return end
+	if row.Selected then
+		for _, method in ipairs({ "Show", "Hide", "SetShown" }) do
+			hooksecurefunc(row.Selected, method, function() paintLfgRow(row) end)
+		end
+	end
+	row:HookScript("OnEnter", function(self) self.stoaOver = true paintLfgRow(self) end)
+	row:HookScript("OnLeave", function(self) self.stoaOver = nil paintLfgRow(self) end)
+	row:HookScript("OnShow", paintLfgRow)
+	paintLfgRow(row)
+end
+
+-- A small square key (refresh, search, invite): the gold square goes, its
+-- sign turns grey and warms under the mouse.
+local function lfgKey(button)
+	if type(button) ~= "table" or forbidden(button) or button.stoaKey then return end
+	button.stoaKey = true
+	quietButtonArt(button)
+	local icon = button.Icon
+	local fill = UI.sliced(button, "BACKGROUND", "CardFill.tga")
+	if fill then
+		fill:ClearAllPoints()
+		fill:SetPoint("TOPLEFT", 4, -4)
+		fill:SetPoint("BOTTOMRIGHT", -4, 4)
+		fill:SetDrawLayer("BACKGROUND", -8)
+		UI.tint(fill, "panel", 0.95)
+	end
+	local function paint(over)
+		if not (icon and icon.SetVertexColor) then return end
+		icon:SetDesaturated(true)
+		icon:SetVertexColor(Stoa:Color(over and "accent" or "muted"))
+	end
+	button:HookScript("OnEnter", function() paint(true) end)
+	button:HookScript("OnLeave", function() paint(false) end)
+	button:HookScript("OnShow", function() paint(false) end)
+	paint(false)
+end
+
+local function lfgWords(text, token)
+	if type(text) == "table" and text.SetTextColor then
+		text:SetTextColor(Stoa:Color(token))
+		if text.SetShadowOffset then text:SetShadowOffset(0, 0) end
+	end
+end
+
+local function lfgCommon(frame)
 	local windows = Stoa.modules.Windows
-	if windows and windows.DressClose then windows.DressClose(rawget(_G, "LFGParentFrameCloseButton")) end
-	for _, key in ipairs({ "ListingTab", "BrowsingTab", "WhoListingTab" }) do dressSideTab(parent[key]) end
-	local eye = rawget(_G, "LFGParentFramePortrait")
-	if type(eye) == "table" and eye.SetAlpha and not forbidden(eye) then
-		eye:SetAlpha(0)
-		if eye.EnableMouse then eye:EnableMouse(false) end
+	if type(frame.Inset) == "table" and not forbidden(frame.Inset) then hideOwnArt(frame.Inset) end
+	if windows and windows.DressScrollBar then windows.DressScrollBar(frame.ScrollBar) end
+end
+
+-- A group in the browse list, or the heading of a folded set of them.
+local function dressLfgEntry(row)
+	if type(row) ~= "table" or forbidden(row) then return end
+	if row.CategoryLabel then
+		for _, key in ipairs({ "ResultBG", "Highlight" }) do alphaOff(row[key]) end
+		if row.stoaHead then return end
+		row.stoaHead = true
+		local rule = row:CreateTexture(nil, "BACKGROUND")
+		rule:SetTexture(UI.WHITE)
+		rule:SetHeight(1)
+		rule:SetPoint("BOTTOMLEFT", 10, 2)
+		rule:SetPoint("BOTTOMRIGHT", -10, 2)
+		UI.tint(rule, "hairline")
+		lfgWords(row.CategoryLabel, "muted")
+		for _, key in ipairs({ "ExpandIcon", "CollapseIcon" }) do
+			local sign = row[key]
+			if sign and sign.SetDesaturated then
+				sign:SetDesaturated(true)
+				sign:SetVertexColor(Stoa:Color("muted"))
+			end
+		end
+		return
+	end
+	lfgRowTile(row, 4, 3, 4, 1)
+	local display = row.DataDisplay
+	local delist = type(display) == "table" and display.DelistButton
+	if type(delist) == "table" and not forbidden(delist) and not delist.stoaKey then
+		delist.stoaKey = true
+		hideOwnArt(delist, { [delist.Icon or false] = true })
+		if delist.Icon then delist.Icon:SetAlpha(1) end
+	end
+end
+
+local function dressWhoRow(row)
+	if type(row) ~= "table" or forbidden(row) then return end
+	lfgRowTile(row, 0, 2, 0, 2)
+	if row.stoaWho then return end
+	row.stoaWho = true
+	lfgWords(row.Name, "text")
+	lfgKey(row.InviteButton)
+end
+
+-- An activity in "list yourself": the game sets the name's font (yellow,
+-- or grey and red by level) each time the row is drawn; the plain and the
+-- heading ones read in STOA's text colour.
+local function dressActivityRow(row)
+	if type(row) ~= "table" or forbidden(row) or row.stoaActivity then return end
+	row.stoaActivity = true
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressTick then windows.DressTick(row.CheckButton) end
+	local name = row.NameButton and row.NameButton.Name
+	local function paint(text, font, token)
+		if font == rawget(_G, "LFGActivityEntry") or font == rawget(_G, "LFGActivityHeader") then lfgWords(text, token) end
+	end
+	if name and name.SetFontObject then
+		hooksecurefunc(name, "SetFontObject", function(self, font) paint(self, font, "text") end)
+		paint(name, name:GetFontObject(), "text")
+	end
+	if row.Level and row.Level.SetFontObject then
+		hooksecurefunc(row.Level, "SetFontObject", function(self, font) paint(self, font, "muted") end)
+		paint(row.Level, row.Level:GetFontObject(), "muted")
+	end
+end
+
+-- The four big picture buttons: the bronze cover goes, the picture stays
+-- (dimmed until the mouse is over it) on a dark tile with a fine rim.
+local CATEGORY_DIM, CATEGORY_LIT = 0.5, 0.9
+local function dressCategory(button)
+	if type(button) ~= "table" or forbidden(button) then return end
+	alphaOff(button.Cover)
+	alphaOff(button.GetPushedTexture and button:GetPushedTexture())
+	alphaOff(button.GetHighlightTexture and button:GetHighlightTexture())
+	if button.stoaFill then return end
+	if not lfgTile(button, 5, 8, 5, 5) then return end
+	UI.tint(button.stoaFill, "panel", 0.95)
+	local label = button.Label or (button.GetFontString and button:GetFontString())
+	if label then
+		Stoa:SetFont(label, "sans", Stoa.typeSize.name)
+		lfgWords(label, "text")
+	end
+	local function paint(over)
+		if button.Icon then button.Icon:SetAlpha(over and CATEGORY_LIT or CATEGORY_DIM) end
+		if over then button.stoaEdge:Set(Stoa:Color("accent")) else button.stoaEdge:Set(Stoa:Color("hairline")) end
+	end
+	button:HookScript("OnEnter", function() paint(true) end)
+	button:HookScript("OnLeave", function() paint(false) end)
+	button:HookScript("OnShow", function() paint(false) end)
+	paint(false)
+end
+
+local function dressCategories(view)
+	if type(view) ~= "table" or forbidden(view) then return end
+	for _, button in ipairs(view.CategoryButtons or {}) do xpcall(dressCategory, Stoa.catch, button) end
+end
+
+local function lfgListing(frame)
+	local windows = Stoa.modules.Windows
+	local tick = windows and windows.DressTick
+	local roles = frame.RolesSection
+	if type(roles) == "table" and not forbidden(roles) then
+		hideOwnArt(roles)
+		-- A fine line where the wood strip ended.
+		local rule = roles:CreateTexture(nil, "ARTWORK")
+		rule:SetTexture(UI.WHITE)
+		rule:SetHeight(1)
+		rule:SetPoint("BOTTOMLEFT", 14, 2)
+		rule:SetPoint("BOTTOMRIGHT", -14, 2)
+		UI.tint(rule, "hairline")
+	end
+	if type(frame.DividerFrame) == "table" and not forbidden(frame.DividerFrame) then hideOwnArt(frame.DividerFrame) end
+	local solo = frame.SoloRoleButtons
+	for _, role in ipairs(type(solo) == "table" and solo.RoleButtons or {}) do
+		alphaOff(role.Background)
+		if tick then tick(role.CheckButton) end
+	end
+	local group = frame.GroupRoleButtons
+	if type(group) == "table" and not forbidden(group) then
+		if group.RoleIcon then alphaOff(group.RoleIcon.Background) end
+		if type(group.RoleDropdown) == "table" then dressDropdownField(group.RoleDropdown) end
+	end
+	local friendly = frame.NewPlayerFriendlyButton
+	if tick and type(friendly) == "table" then tick(friendly.CheckButton) end
+	dressCategories(frame.CategoryView)
+	if rawget(_G, "LFGListingCategorySelection_UpdateCategoryButtons") then
+		Stoa.SafeHook("LFGListingCategorySelection_UpdateCategoryButtons", function(view)
+			dressCategories(view)
+			dressCategories(frame.CategoryView)
+		end)
+	end
+	local view = frame.ActivityView
+	if type(view) ~= "table" or forbidden(view) then return end
+	alphaOff(view.BarTop)
+	alphaOff(view.BarMiddle)
+	lfgWords(view.VoiceChatLabel, "muted")
+	for _, key in ipairs({ "PlayStyleDropdown", "VoiceChatDropdown" }) do
+		if type(view[key]) == "table" and not forbidden(view[key]) then dressDropdownField(view[key]) end
+	end
+	local ranges = view.LevelRangesCheckbox
+	if type(ranges) == "table" then
+		lfgWords(ranges.Text, "muted")
+		if tick then tick(ranges.Checkbox) end
+	end
+	if windows and windows.DressScrollBar then windows.DressScrollBar(view.ScrollBar) end
+	eachRow(view.ScrollBox, "stoaActivityRows", dressActivityRow)
+	local comment = view.Comment
+	if type(comment) == "table" and not forbidden(comment) and not comment.stoaWell then
+		hideOwnArt(comment)
+		UI.well(comment, 4)
+	end
+end
+
+local function lfgBrowse(frame)
+	for _, key in ipairs({ "CategoryDropdown", "ActivityDropdown" }) do
+		if type(frame[key]) == "table" and not forbidden(frame[key]) then dressDropdownField(frame[key]) end
+	end
+	lfgKey(frame.RefreshButton)
+	local gear = frame.OptionsButton
+	if type(gear) == "table" and gear.Icon and gear.Icon.SetDesaturated then gear.Icon:SetDesaturated(true) end
+	eachRow(frame.ScrollBox, "stoaLfgRows", dressLfgEntry)
+end
+
+local function lfgWho(frame)
+	local windows = Stoa.modules.Windows
+	if windows and windows.DressSearch then xpcall(windows.DressSearch, Stoa.catch, frame.EditBox) end
+	lfgKey(frame.WhoSearch)
+	if type(frame.FilterDropdown) == "table" and not forbidden(frame.FilterDropdown) then dressDropdownField(frame.FilterDropdown) end
+	lfgWords(frame.WhoFrameTotals, "muted")
+	eachRow(frame.ScrollBox, "stoaWhoRows", dressWhoRow)
+end
+
+function AFTER.lfg(frame)
+	local parent = rawget(_G, "LFGParentFrame")
+	if type(parent) ~= "table" or forbidden(parent) then return end
+	if not parent.stoaLFG then
+		parent.stoaLFG = true
+		local windows = Stoa.modules.Windows
+		if windows and windows.DressClose then windows.DressClose(rawget(_G, "LFGParentFrameCloseButton")) end
+		for _, key in ipairs({ "ListingTab", "BrowsingTab", "WhoListingTab" }) do dressSideTab(parent[key]) end
+		local eye = rawget(_G, "LFGParentFramePortrait")
+		if type(eye) == "table" and eye.SetAlpha and not forbidden(eye) then
+			eye:SetAlpha(0)
+			if eye.EnableMouse then eye:EnableMouse(false) end
+		end
+	end
+	if type(frame) ~= "table" or forbidden(frame) or frame.stoaLfgInside then return end
+	frame.stoaLfgInside = true
+	lfgCommon(frame)
+	local name = frame.GetName and frame:GetName()
+	if name == "LFGListingFrame" then
+		lfgListing(frame)
+	elseif name == "LFGBrowseFrame" then
+		lfgBrowse(frame)
+	elseif name == "LFGWhoListFrame" then
+		lfgWho(frame)
 	end
 end
 
