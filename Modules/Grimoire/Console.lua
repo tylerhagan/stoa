@@ -493,8 +493,10 @@ local WELL_BARS, WELL_BARS_TOP = 3, -48
 local SLATE_PAD, SLATE_TOP, SLATE_BOTTOM = 10, -8, 8
 Console.SLATE_TOP = SLATE_TOP
 -- The bars' card hugs the bars, so the portrait, health and mana stand
--- over the world above it rather than in an empty band of card.
-local SLATE_BARS_TOP = -40
+-- over the world above it rather than in an empty band of card. The
+-- bars stand where Edit Mode puts them, so the card's top comes down to
+-- leave the same air above the upper row as there is under the lower one.
+local SLATE_BARS_TOP = -62
 -- The air kept between two cards, and the least a card pads its content.
 local SLATE_AIR, SLATE_PAD_LEAST, SLATE_AIR_LEAST = 20, 6, 10
 function Console:PlaceWells(zones, top)
