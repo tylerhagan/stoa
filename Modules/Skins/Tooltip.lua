@@ -32,6 +32,12 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
+-- The headline's size. Slate sets it in the sans, which runs wider and
+-- taller than the serif at the same size, so it steps down one.
+local function headSize()
+	return UI.slate() and Stoa.typeSize.label or Stoa.typeSize.name
+end
+
 local Tooltip = Stoa:NewModule("Tooltip", {
 	-- "console": above the console's right corner; "cursor": at the mouse.
 	anchor = "console",
@@ -393,7 +399,7 @@ function Tooltip:DressUnit(tip)
 		unit = known(UnitExists("mouseover")) and "mouseover" or nil
 		if not unit then
 			local name = line(tip, 1)
-			if name then Stoa:SetFont(name, "serif", Stoa.typeSize.name) end
+			if name then Stoa:SetFont(name, "serif", headSize()) end
 			for i = 2, tip:NumLines() do
 				local text = line(tip, i)
 				if text then text:SetTextColor(Stoa:Color("muted")) end
@@ -405,7 +411,7 @@ function Tooltip:DressUnit(tip)
 	local name = line(tip, 1)
 	if name then
 		name:SetTextColor(r, g, b)
-		Stoa:SetFont(name, "serif", Stoa.typeSize.name)
+		Stoa:SetFont(name, "serif", headSize())
 	end
 	self:Rank(tip, known(UnitClassification(unit)))
 
@@ -520,7 +526,7 @@ function Tooltip:DressItem(tip, data)
 	tip.stoaEdge:Clear()
 	self:Fade(tip, r, g, b)
 	local name = line(tip, 1)
-	if name then Stoa:SetFont(name, "serif", Stoa.typeSize.name) end
+	if name then Stoa:SetFont(name, "serif", headSize()) end
 
 	if tip ~= GameTooltip or InCombatLockdown() then return end
 	self:Upgrade(tip, link)
@@ -952,7 +958,7 @@ local function fonts()
 	local function face(object, kind, size)
 		if object and object.SetFont then Stoa:SetFont(object, kind, size) end
 	end
-	face(GameTooltipHeaderText, "serif", Stoa.typeSize.name)
+	face(GameTooltipHeaderText, "serif", headSize())
 	face(GameTooltipText, "sans", Stoa.typeSize.body)
 	face(GameTooltipTextSmall, "sans", Stoa.typeSize.caption)
 end
