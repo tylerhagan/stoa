@@ -30,6 +30,9 @@ local PAD = 12
 -- Slate's companion ring: its size, and where on the pet's arc it sits
 -- (degrees below the Halo's left).
 local RING, RING_AT = 38, 68
+-- Ground line: how far left of the health bar's end the ring stands (room
+-- for a five-figure health number).
+local LINE_CLEAR = 84
 local COIN_SPACE = UI.PLAQUE_COIN_SPACE
 local ROW_SIZE, ROW_GAP, ROW_BREAK = 26, 5, 8
 local COIN = 46
@@ -321,12 +324,19 @@ function Pet:PlacePlaque()
 		return
 	end
 	if frame.ring and halo and module and module.Line and module:Line() then
-		-- Ground line: the ring stands on the outer end of the pet's
-		-- hairline, its name beside it over the bar.
+		-- Ground line: the ring stands off to the left, clear of the bar
+		-- and of the health number at its end, level with the line. Its
+		-- name reads away from the fight, the percent under the ring.
 		local line = module.LINE
-		frame:SetPoint("BOTTOM", halo, "BOTTOM", -(line.gap + line.width) + RING / 2, line.y + (line.top or line.height / 2) + 10)
-		frame.percent:ClearAllPoints()
-		frame.percent:SetPoint("LEFT", frame.name, "RIGHT", 6, 0)
+		frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + LINE_CLEAR), line.y)
+		frame.name:ClearAllPoints()
+		frame.name:SetPoint("RIGHT", frame, "LEFT", -6, -5)
+		frame.name:SetJustifyH("RIGHT")
+		for _, fs in ipairs({ frame.foot, frame.on }) do
+			fs:ClearAllPoints()
+			fs:SetPoint("BOTTOMRIGHT", frame.name, "TOPRIGHT", 0, 4)
+			fs:SetJustifyH("RIGHT")
+		end
 		return
 	end
 	if frame.ring and halo then

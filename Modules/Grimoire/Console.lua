@@ -2057,11 +2057,29 @@ function Console:UpdateSeal()
 	if self.groupBuffs then self.groupBuffs:SetText(Stoa.groupBuffLine or "") end
 end
 
+-- Power that is not mana: rage bone, energy the accent (the Halo's own choice).
+local POWER_TOKENS = { [1] = "text", [3] = "accent" }
+
 function Console:UpdateResources()
 	setUnitBar(self.health, "player", "health")
 	self.healthText:SetText(UnitHealth("player"))
 	setUnitBar(self.mana, "player", "power")
 	self.manaText:SetText(UnitPower("player"))
+	-- Rage and energy wear their own colours, as on the Halo; only mana is
+	-- blue. Once a bar has worn another colour it leaves the theme's pass
+	-- (which would paint it mana again) and is coloured here.
+	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType("player")))
+	local token = kind and POWER_TOKENS[kind] or "mana"
+	if token ~= (self.powerToken or "mana") then
+		if not self.powerOwn then
+			self.powerOwn = true
+			UI.unpaint(self.mana)
+			UI.unpaint(self.manaText)
+		end
+		self.powerToken = token
+		self.mana:SetStatusBarColor(Stoa:Color(token))
+		self.manaText:SetTextColor(Stoa:Color(token))
+	end
 end
 
 function Console:UpdateFellowship()
@@ -3451,6 +3469,10 @@ function Console:OnEnable()
 	Stoa:OnUnit("UNIT_MAXPOWER", { "player" }, function(unit)
 		if unit == "player" then self:UpdateResources() end
 	end)
+	-- A druid changing form swaps the power itself.
+	Stoa:OnUnit("UNIT_DISPLAYPOWER", { "player" }, function(unit)
+		if unit == "player" then self:UpdateResources() end
+	end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function() self:UpdateFellowship() end)
 
 	for _, event in ipairs({ "PLAYER_XP_UPDATE", "UPDATE_EXHAUSTION", "PLAYER_LEVEL_UP" }) do
@@ -3471,7 +3493,14 @@ function Console:OnEnable()
 	end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:CheckLowHealth() end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:Settle("low") end)
-	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDaylit() end)
+	Stoa:On("STOA_THEME_CHANGED", function()
+		self:UpdateRing()
+		self:PaintDaylit()
+		if self.powerOwn then
+			self.mana:SetStatusBarColor(Stoa:Color(self.powerToken or "mana"))
+			self.manaText:SetTextColor(Stoa:Color(self.powerToken or "mana"))
+		end
+	end)
 	self:UpdateDaylight()
 	self:PaintDaylit()
 	Stoa:NewTicker(60, function() self:UpdateDaylight() end)
