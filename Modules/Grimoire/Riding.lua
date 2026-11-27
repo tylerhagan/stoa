@@ -90,14 +90,14 @@ function Console:BuildRide()
 	local off = UI.button(band, "Dismount", 96, function()
 		if Dismount then Dismount() end
 	end)
-	off:SetPoint("CENTER", band, "CENTER", 0, -2)
+	off:SetPoint("RIGHT", band, "CENTER", -10, -2)
 	band.off = off
 	-- For when you need your bars or pages mid-ride.
 	local full = UI.button(band, "Open console", 108, function()
 		Console.rideOpened = true
 		Console:SetRiding(false)
 	end)
-	full:SetPoint("LEFT", band, "CENTER", 56, -2)
+	full:SetPoint("LEFT", band, "CENTER", -2, -2)
 	full:HookScript("OnEnter", function(own)
 		GameTooltip:SetOwner(own, "ANCHOR_TOP")
 		GameTooltip:AddLine("Open console")
