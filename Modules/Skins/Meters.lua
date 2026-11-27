@@ -66,6 +66,30 @@ local function isDocked(window)
 	return n and docks[n] ~= nil or false
 end
 
+-- A slot shows five rows. The game's rows are as tall and as far apart
+-- as its Edit Mode says (25 and 4 unless changed), and setting those
+-- from addon code would taint the meter, so the docked window is scaled
+-- as a whole until five rows fit the slot, and its words are drawn that
+-- much larger to come out the size of the pages' own.
+local DOCK_ROWS = 5
+local DOCK_FONT = 11
+
+local function dockScale(window, spot)
+	local tall = window.GetBarHeight and select(2, pcall(window.GetBarHeight, window))
+	local apart = window.GetBarSpacing and select(2, pcall(window.GetBarSpacing, window))
+	tall, apart = Stoa:PlainNumber(tall) or 25, Stoa:PlainNumber(apart) or 4
+	-- The list starts DOCK_TITLE under the slot's top and ends 6 above
+	-- its foot (the game's own margin, which scales with the window).
+	local rows = DOCK_ROWS * (tall + apart) - apart + 7
+	local scale = (spot.height - DOCK_TITLE) / rows
+	return math.max(0.55, math.min(1, math.floor(scale * 100) / 100))
+end
+
+-- How far a length on the screen is inside the scaled window.
+local function inside(window, length)
+	return length / (window.stoaScale or 1)
+end
+
 -- Entries --------------------------------------------------------------------
 
 local function colourEntry(entry)
@@ -109,6 +133,13 @@ local function layoutEntry(entry)
 	local holder = entry.Icon
 	if not (holder and holder.SetAlpha) then return end
 	local docked = isDocked(entry.stoaWindow)
+	-- Words the size of the pages' own, whatever the window's scale.
+	local size = docked and math.floor(inside(entry.stoaWindow, DOCK_FONT) + 0.5) or Stoa.typeSize.body
+	if entry.stoaFont ~= size then
+		entry.stoaFont = size
+		font(entry.GetName and entry:GetName(), size)
+		font(entry.GetValue and entry:GetValue(), size)
+	end
 	holder:SetAlpha(docked and 0 or 1)
 	if not docked then return end
 	local bar = entry.GetStatusBar and entry:GetStatusBar()
@@ -179,9 +210,10 @@ local function layoutWindow(window)
 	local header = window.Header
 	if not header then return end
 	local docked = isDocked(window)
-	if window.stoaLaidOut == docked then return end
+	local laid = docked and (window.stoaScale or 1) or false
+	if window.stoaLaidOut == laid then return end
 	local was = window.stoaLaidOut
-	window.stoaLaidOut = docked
+	window.stoaLaidOut = laid
 	-- Out of a slot again: Blizzard's own layout puts the rows' icons back.
 	if was and not docked and window.ForEachEntryFrame then
 		window:ForEachEntryFrame(function(entry)
@@ -193,7 +225,7 @@ local function layoutWindow(window)
 	if docked then
 		-- The rows hang 5 in and 2 under the header: flush with the slot's
 		-- left edge, DOCK_TITLE under its top.
-		local lift = HEADER_HEIGHT + 2 - DOCK_TITLE
+		local lift = HEADER_HEIGHT + 2 - inside(window, DOCK_TITLE)
 		header:SetPoint("TOPLEFT", -5, lift)
 		header:SetPoint("TOPRIGHT", 1, lift)
 	else
@@ -214,11 +246,11 @@ local function layoutWindow(window)
 	if timer then
 		timer:ClearAllPoints()
 		if docked then
-			timer:SetPoint("TOPRIGHT", window, "TOPRIGHT", 0, -3)
+			timer:SetPoint("TOPRIGHT", window, "TOPRIGHT", 0, -inside(window, 1))
 		else
 			timer:SetPoint("TOPLEFT", header, "TOPLEFT", 1, -9)
 		end
-		font(timer, docked and 11 or Stoa.typeSize.body, "muted")
+		font(timer, docked and math.floor(inside(window, DOCK_FONT) + 0.5) or Stoa.typeSize.body, "muted")
 	end
 	local typeDropdown = window.DamageMeterTypeDropdown
 	local title = typeDropdown and typeDropdown.TypeName
@@ -233,10 +265,10 @@ local function layoutWindow(window)
 	end
 	if title then
 		title:ClearAllPoints()
+		-- Docked, STOA's own heading stands in for it (below).
+		title:SetAlpha(docked and 0 or 1)
 		if docked then
 			title:SetPoint("TOPLEFT", window, "TOPLEFT", 0, -3)
-			Stoa:SetFont(title, "sans", 11)
-			title:SetTextColor(Stoa:Color("muted"))
 		else
 			if typeDropdown.Arrow then title:SetPoint("LEFT", typeDropdown.Arrow, "RIGHT", 0, 3) end
 			if session then title:SetPoint("RIGHT", session, "LEFT", -5, 0) end
@@ -246,14 +278,43 @@ local function layoutWindow(window)
 		UI.legible(title)
 	end
 
-	-- The hairline under the title, as under the pages' headings.
-	if docked and not window.stoaRule then
-		local rule = UI.line(window)
-		rule:SetPoint("TOPLEFT", window, "TOPLEFT", 0, -DOCK_RULE)
-		rule:SetPoint("TOPRIGHT", window, "TOPRIGHT", 0, -DOCK_RULE)
-		window.stoaRule = rule
+	-- The heading as the pages have theirs: small capitals where a page's
+	-- heading stands, and the hairline under it (none in Slate, where the
+	-- card is the section). On a frame of its own that undoes the window's
+	-- scale, so it is drawn at the pages' size.
+	if docked and not window.stoaHead then
+		local head = CreateFrame("Frame", nil, window)
+		head:SetPoint("TOPLEFT", window, "TOPLEFT", 0, 0)
+		head:SetSize(10, DOCK_TITLE)
+		head.words = UI.caption(head, "")
+		head.words:SetPoint("TOPLEFT", head, "TOPLEFT", 0, 0)
+		local rule = UI.line(head)
+		rule:SetPoint("TOPLEFT", head, "TOPLEFT", 0, -DOCK_RULE)
+		rule:SetPoint("TOPRIGHT", head, "TOPRIGHT", 0, -DOCK_RULE)
+		head.rule = rule
+		window.stoaHead = head
+		head.name = function()
+			local words = title and title.GetText and title:GetText()
+			if type(words) == "string" and not Stoa:IsSecret(words) and words ~= "" then
+				UI.settleText(head.words, words:upper())
+			end
+		end
+		if window.SetDamageMeterType then hooksecurefunc(window, "SetDamageMeterType", head.name) end
 	end
-	if window.stoaRule then window.stoaRule:SetShown(docked) end
+	local head = window.stoaHead
+	if head then
+		head:SetShown(docked)
+		if docked then
+			head:SetScale(1 / (window.stoaScale or 1))
+			local width = Stoa:PlainNumber(window:GetWidth())
+			if width then head:SetWidth(width * (window.stoaScale or 1)) end
+			head.rule:SetShown(not UI.slate())
+			head.name()
+		end
+	end
+	-- More than five in the list scrolls with the wheel; the bar stays away.
+	local scroll = window.GetScrollBar and select(2, pcall(window.GetScrollBar, window))
+	if type(scroll) == "table" and scroll.SetAlpha then scroll:SetAlpha(docked and 0 or 1) end
 
 	showButtons(window, docked and window:IsMouseOver() or false)
 	if window.ForEachEntryFrame then
@@ -430,12 +491,19 @@ function Meters:Place()
 	for _, window in ipairs(shownWindows()) do
 		local n = windowNumber(window)
 		local spot = n and docks[n]
-		if window.stoaDressed then guarded(layoutWindow, window) end
+		-- Out of a slot the window is its own size again.
+		if not spot and window.stoaScale then
+			window.stoaScale = nil
+			window:SetScale(1)
+		end
 		if spot or anchor then
 			window:ClearAllPoints()
 			if spot then
-				window:SetPoint("TOPRIGHT", UIParent, "BOTTOMRIGHT", -spot.right, spot.top)
-				window:SetSize(spot.width, spot.height)
+				local scale = dockScale(window, spot)
+				window.stoaScale = scale
+				window:SetScale(scale)
+				window:SetPoint("TOPRIGHT", UIParent, "BOTTOMRIGHT", -spot.right / scale, spot.top / scale)
+				window:SetSize(spot.width / scale, spot.height / scale)
 			else
 				window:SetPoint("TOPLEFT", anchor, "TOPLEFT", x, 0)
 				window:SetSize(WIDTH, HEIGHT)
@@ -444,6 +512,8 @@ function Meters:Place()
 			-- Keep Blizzard's position cache from saving over the place.
 			if window.SetUserPlaced and window:IsMovable() then pcall(window.SetUserPlaced, window, false) end
 		end
+		-- After the window has its scale, which the docked layout uses.
+		if window.stoaDressed then guarded(layoutWindow, window) end
 	end
 end
 
