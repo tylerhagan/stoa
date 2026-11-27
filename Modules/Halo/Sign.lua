@@ -126,14 +126,41 @@ function Sign.readyAt(spellID)
 	return start + duration, duration, true
 end
 
+-- Your own casts time the cooldowns the game hides in combat: when each
+-- spell was last cast, and how long its cooldown was the last time the
+-- game showed it (out of combat, say), by name so every rank counts.
+local castAt, cooldownOf = {}, {}
+
+local function learnCooldown(spellID)
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+	if not name then return end
+	local _, duration, readable = Sign.readyAt(spellID)
+	if readable and duration and duration > 1.5 then cooldownOf[name] = duration end
+	return name
+end
+
+Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function(_, _, spellID)
+	if not spellID or Stoa:IsSecret(spellID) then return end
+	local name = learnCooldown(spellID)
+	if name then castAt[name] = GetTime() end
+end)
+
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
--- the game won't say.
-function Sign.ready(spellID)
+-- the game won't say and your casts can't tell. `guess` is a cooldown
+-- length to time from your last cast before the game has shown one.
+function Sign.ready(spellID, guess)
 	local managed = Stoa.Manager and Stoa.Manager:Ready(spellID)
 	if managed ~= nil then return managed end
-	local ends, _, readable = Sign.readyAt(spellID)
-	if not readable then return nil end
-	return not ends or ends - GetTime() <= 0.3
+	local ends, duration, readable = Sign.readyAt(spellID)
+	if readable then
+		if duration and duration > 1.5 then learnCooldown(spellID) end
+		return not ends or ends - GetTime() <= 0.3
+	end
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+	local length = name and (cooldownOf[name] or guess)
+	if not length then return nil end
+	local at = castAt[name]
+	return not at or GetTime() - at >= length - 0.3
 end
 
 function Sign.hostileTarget()
@@ -160,6 +187,57 @@ function Sign.assisted()
 	if ok and spellID and not Stoa:IsSecret(spellID) then
 		return C_Spell.GetSpellName(spellID)
 	end
+end
+
+-- Spells found by name, for Forever spells whose IDs STOA doesn't carry:
+-- the ID of the one you know, or nil. Read again when spells change.
+local byName = {}
+Stoa:On("SPELLS_CHANGED", function() wipe(byName) end)
+
+function Sign.spell(name)
+	if not name then return nil end
+	local id = byName[name]
+	if id == nil then
+		id = false
+		local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(name)
+		local found = type(info) == "table" and info.spellID
+		if found and not Stoa:IsSecret(found) and Sign.knows(found) then id = found end
+		byName[name] = id
+	end
+	return id or nil
+end
+
+-- A spell you know, by name, that is off cooldown and usable now (rage,
+-- energy, a reactive strike's opening). A cooldown the game hides counts
+-- as not ready, so the outline doesn't claim what it can't see.
+function Sign.can(name)
+	local id = Sign.spell(name)
+	if not id or not Sign.ready(id) then return false end
+	if C_Spell and C_Spell.IsSpellUsable then
+		local ok, usable = pcall(C_Spell.IsSpellUsable, id)
+		if ok and usable ~= nil and not Stoa:IsSecret(usable) and not usable then return false end
+	end
+	return true
+end
+
+-- A spell you know, by name, that the game says you can use now: for
+-- strikes with no real cooldown that open up (Execute, Revenge, Overpower).
+function Sign.usable(name)
+	local id = Sign.spell(name)
+	if not id or not (C_Spell and C_Spell.IsSpellUsable) then return false end
+	local ok, usable = pcall(C_Spell.IsSpellUsable, id)
+	return ok and not Stoa:IsSecret(usable) and usable == true
+end
+
+-- Whether your own debuff of this name is missing from the target.
+function Sign.missing(name)
+	return not Sign.aura("target", name, "HARMFUL|PLAYER")
+end
+
+-- Your mana, 0 to 1, or nil when hidden.
+function Sign.manaShare()
+	local mana, most = Stoa:PlainNumber(UnitPower("player", 0)), Stoa:PlainNumber(UnitPowerMax("player", 0))
+	if mana and most and most > 0 then return mana / most end
 end
 
 function Sign.inCombat()

@@ -23,6 +23,15 @@ Stoa.WhatsNew = WhatsNew
 local FOOT = "/stoa news shows this again."
 local NOTES = {
 	{
+		edition = "2.1.2",
+		title = "New in STOA 2.1.2",
+		lines = {
+			{ "Next press, your way", "Settings > Combat > Outline the next press now chooses whose order the combat bar's outline follows: STOA's, the game's own suggestion, or Off for no outline at all." },
+			{ "Up-to-date rotations", "STOA's order now follows the current Forever guides for every damage and tank spec, with Forever's new spells: Banes and Wrack, Heating Up, Arcane Wrath, Shank, Venom, Lava Burst, Spearing Strike and more." },
+			{ "Cooldowns in a fight", "The game hides cooldowns from addons in combat, so the outline now times Mind Blast, Judgement and the rest from your own casts instead of leaving them to the game's pick." },
+		},
+	},
+	{
 		edition = "2.1.1",
 		title = "New in STOA 2.1",
 		lines = {
@@ -91,17 +100,6 @@ local NOTES = {
 		lines = {
 			{ "EllesmereUI", "STOA knows EllesmereUI's parts and asks, part by part, which of the two looks after each, cooldown icons and buff reminders included." },
 			{ "EllesmereUI on the console", "Keep EllesmereUI's chat and one click seats it on the console's left page, with its damage meter top left. /stoa fit undo puts them back." },
-		},
-	},
-	{
-		edition = "1.5.1",
-		title = "New in STOA 1.5.1",
-		lines = {
-			{ "Daylight UI", "STOA knows Daylight UI's parts and asks, part by part, which of the two looks after each: bags, nameplates, chat, tooltips, frames and more." },
-			{ "One page of questions", "When several addons share jobs with STOA, the questions come as one list, with theirs kept unless you pick STOA's." },
-			{ "Daylight's chat in the console", "Keep Daylight UI's chat and it sits in the console's chat place, with its tabs along the top edge." },
-			{ "Other chat addons", "Chat from another addon now stands above the console instead of behind it." },
-			{ "Changing your mind", "Settings > Setup > Other addons lists each shared job, so any answer can be changed later." },
 		},
 	},
 }

@@ -6,6 +6,12 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 
 ## 2.1.2
 
+- **Outline the next press, your way**: Settings > Combat > Combat bar > Outline the next press is now a choice. STOA's order (the default) keeps STOA's priority, The game's suggestion outlines Forever's own pick instead, and Off never outlines a button.
+
+- **Up-to-date next press for every spec**: STOA's order now follows Warcraft Tavern's current Forever guides for every damage and tank spec, with Forever's new spells. Warlocks get a list per tree (Banes, your last Curse, Wrack, Conflagrate, Incinerate, Demonic Brand), fire mages Pyroblast at 3 Heating Up and Scorch to 5 stacks, arcane Arcane Wrath, rogues their spec's builder and finishers (Mutilate, Venom, Hemorrhage, Shank, Death Mark), hunters Aimed Shot, Sniper Shot and hawks, shamans Lava Burst and instant Lightning Bolt on Maelstrom, warriors separate Arms, Fury and Protection lists, paladins Judgement first, Consecration and the Unsealed Wrath swap, and ferals the guide's Bite and Shifting Power thresholds. Heroic Strike is no longer outlined, since it doesn't use the global cooldown.
+
+- **Next press in a fight**: the game hides cooldowns from addons in combat, so Mind Blast, Shadow Word: Death, Judgement and other cooldowns never read as ready and the outline fell back to the game's suggestion. STOA now times them from your own casts, with the length the game last showed out of combat.
+
 - **Cooldowns page finds running profession cooldowns**: a transmute or Mooncloth cooldown that was started before STOA could see it (on an older version, or before a profile reset) now shows after the next login, not only after the next cast. Transmutes share one cooldown in the game, so they share one row named Transmute.
 
 - **Cooldowns page headline**: the big line (1 ready, None ready) could stay unseen. Its small pulse is now drawn another way. It also runs the column's full width when there is no note beside it, so Nothing cooling is no longer cut off.

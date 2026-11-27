@@ -95,12 +95,14 @@ local auraLeft = Stoa.aura.left
 
 -- Whether a spell is off cooldown (the global cooldown aside), or nil when
 -- the game won't say.
+-- Base cooldowns, for timing from your own casts in combat until the game
+-- has shown the real ones (talents shorten Mind Blast).
+local COOLDOWN_GUESS = { blast = 8, death = 12 }
+
+-- Off cooldown: the game's reading, else the Cooldown Manager's, else
+-- timed from your own last cast.
 local function ready(key)
-	local info = C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(SPELLS[key])
-	if type(info) ~= "table" then return nil end
-	local start, duration = Stoa:PlainNumber(info.startTime), Stoa:PlainNumber(info.duration)
-	if not start or not duration then return nil end
-	return start == 0 or duration <= 1.5 or (start + duration - GetTime()) <= 0.3
+	return Stoa.Sign.ready(SPELLS[key], COOLDOWN_GUESS[key])
 end
 
 local function hostileTarget()
@@ -309,7 +311,8 @@ end
 
 -- A cast sequence macro's next step when one is on your bars, else the
 -- guide's single-target order: DoTs when they're off, Mind Blast and
--- Shadow Word: Death when ready, Embrace when it's off, Mind Flay to fill.
+-- Shadow Word: Death when ready, Embrace when it's off, Mind Flay to fill
+-- (Warcraft Tavern's Forever guide, checked 2026-11-26).
 function Shadow:NextPress()
 	if not self:Active() or not hostileTarget() then return nil end
 	local state = self.state or {}
@@ -327,6 +330,7 @@ function Shadow:NextPress()
 	for _, key in ipairs({ "blast", "death" }) do
 		if knows(SPELLS[key]) and ready(key) then return nameOf(key) end
 	end
+	if wants("embrace") then return nameOf("embrace") end
 	-- Cooldowns are hidden in combat, so for the rest the game's own
 	-- suggestion is asked, where there is one.
 	if C_AssistedCombat and C_AssistedCombat.GetNextCastSpell then
@@ -336,7 +340,6 @@ function Shadow:NextPress()
 			if name then return name end
 		end
 	end
-	if wants("embrace") then return nameOf("embrace") end
 	if knows(SPELLS.flay) then return nameOf("flay") end
 end
 

@@ -68,8 +68,10 @@ local DURATIONS = {
 }
 local COOLDOWNS = { swiftmend = 15, wildGrowth = 6, swiftness = 180 }
 local LACERATE_MAX = 5
--- Shifting Power is for when energy runs low.
-local LOW_ENERGY = 60
+-- Shifting Power is for when energy runs low; Ferocious Bite waits for
+-- enough to spend (Warcraft Tavern's Forever guide, 2026-11-26).
+local LOW_ENERGY = 50
+local BITE_ENERGY = 70
 
 function Druid:Mode()
 	local _, classFile = UnitClass("player")
@@ -255,20 +257,21 @@ function Druid:NextPress(mode)
 		local shred = Sign.knows(SPELLS.shred) and "shred" or "claw"
 		if clearcasting() then return nameOf(shred) end
 		local energy = Sign.power()
-		if energy and energy < LOW_ENERGY and usable("shiftingPower") then return nameOf("shiftingPower") end
 		local points = Sign.comboPoints() or 0
-		if points >= 5 and state.rip == "off" then return nameOf("rip") end
-		if points >= 5 and Sign.knows(SPELLS.bite) then return nameOf("bite") end
+		local rip = Sign.knows(SPELLS.rip) and state.rip == "off"
+		if points >= 5 and rip then return nameOf("rip") end
+		if points >= 4 and not rip and Sign.knows(SPELLS.bite) and (not energy or energy >= BITE_ENERGY) then return nameOf("bite") end
 		if state.rake == "off" then return nameOf("rake") end
+		if energy and energy < LOW_ENERGY and usable("shiftingPower") then return nameOf("shiftingPower") end
 		return nameOf(shred)
 	elseif mode == "bear" then
 		if Sign.wantsTaunt() and usable("growl") then return nameOf("growl") end
-		if state.demoRoar == "off" then return nameOf("demoRoar") end
 		if state.faerie == "off" then return nameOf(faerieKey()) end
+		if state.demoRoar == "off" then return nameOf("demoRoar") end
+		if usable("primalBite") and Sign.ready(SPELLS.primalBite) then return nameOf("primalBite") end
 		if Sign.knows(SPELLS.lacerate) and (state.lacerate == "off" or state.lacerate == "ending" or (self.stacks or 0) < LACERATE_MAX) then
 			return nameOf("lacerate")
 		end
-		if usable("primalBite") and Sign.ready(SPELLS.primalBite) then return nameOf("primalBite") end
 		return Sign.assisted() or nameOf("maul")
 	end
 end
