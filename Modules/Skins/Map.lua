@@ -272,6 +272,18 @@ local function logHeaderArt(header)
 	local text = header.ButtonText or (header.GetFontString and header:GetFontString()) or header.Text
 	if text and text.SetTextColor then
 		Stoa:SetFont(text, "sans", Stoa.typeSize.label)
+		-- The game colours the word again as the mouse comes and goes;
+		-- each time it does, the accent goes back on.
+		if not text.stoaInk then
+			text.stoaInk = true
+			local painting = false
+			hooksecurefunc(text, "SetTextColor", function(own)
+				if painting then return end
+				painting = true
+				own:SetTextColor(Stoa:Color("accent"))
+				painting = false
+			end)
+		end
 		text:SetTextColor(Stoa:Color("accent"))
 	end
 end

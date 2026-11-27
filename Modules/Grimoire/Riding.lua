@@ -96,6 +96,7 @@ function Console:BuildRide()
 	local full = UI.button(band, "Open console", 108, function()
 		Console.rideOpened = true
 		Console:SetRiding(false)
+		Console:PlaceRideBack()
 	end)
 	full:SetPoint("LEFT", band, "CENTER", 4, -2)
 	band.full = full
@@ -242,8 +243,47 @@ function Console:SetRiding(on)
 	if halo and halo.enabled and halo.PlaceTarget then halo:PlaceTarget() end
 end
 
+-- After "Open console", the way back: "Ride view" in the same spot, clear
+-- above the bars and the console. It steps aside for a target, which
+-- docks there, and for a fight.
+local BACK_AIR = 6
+function Console:PlaceRideBack()
+	local frame = self.frame
+	local mounted = (IsMounted and plain(IsMounted())) or (UnitOnTaxi and plain(UnitOnTaxi("player")))
+	local want = self.rideOpened and mounted and not self.riding and not InCombatLockdown()
+		and Stoa:GetState() == Stoa.STATE_WORLD and not UnitExists("target") and frame:GetBottom() and true or false
+	local back = self.rideBack
+	if not want then
+		if back then back:Hide() end
+		return
+	end
+	if not back then
+		back = UI.button(frame, "Ride view", 96, function()
+			Console.rideOpened = nil
+			Console:CheckRiding()
+		end)
+		back:HookScript("OnEnter", function(own)
+			GameTooltip:SetOwner(own, "ANCHOR_TOP")
+			GameTooltip:AddLine("Ride view")
+			GameTooltip:AddLine("Folds the console back to the travel line.", 1, 1, 1)
+			GameTooltip:Show()
+		end)
+		back:HookScript("OnLeave", function() GameTooltip:Hide() end)
+		self.rideBack = back
+	end
+	local lift = self:OpenHeight() + BACK_AIR
+	local top = barsTop(frame)
+	if top then lift = math.max(lift, math.floor(top - frame:GetBottom() + PAIR_AIR + 0.5)) end
+	back:ClearAllPoints()
+	back:SetPoint("BOTTOM", frame, "BOTTOM", 0, lift)
+	back:Show()
+end
+
 function Console:CheckRiding()
-	xpcall(function() self:SetRiding(self:RidingWanted()) end, Stoa.catch)
+	xpcall(function()
+		self:SetRiding(self:RidingWanted())
+		self:PlaceRideBack()
+	end, Stoa.catch)
 end
 
 Stoa:On("STOA_READY", function()
@@ -252,7 +292,13 @@ Stoa:On("STOA_READY", function()
 		Stoa:On(event, function() Console:CheckRiding() end)
 	end
 	-- A fight takes the travel line away before anything else.
-	Stoa:On("PLAYER_REGEN_DISABLED", function() Console:SetRiding(false) end)
+	Stoa:On("PLAYER_REGEN_DISABLED", function()
+		Console:SetRiding(false)
+		if Console.rideBack then Console.rideBack:Hide() end
+	end)
+	for _, event in ipairs({ "PLAYER_TARGET_CHANGED", "PLAYER_REGEN_ENABLED" }) do
+		Stoa:On(event, function() xpcall(Console.PlaceRideBack, Stoa.catch, Console) end)
+	end
 	Console:CheckRiding()
 end)
 
@@ -261,4 +307,5 @@ Stoa.commands.ride = function()
 	if not Console.frame then return end
 	Console.rideOpened = nil
 	Console:SetRiding(not Console.riding)
+	Console:PlaceRideBack()
 end
