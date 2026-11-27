@@ -81,11 +81,12 @@ function Console:BuildRide()
 	Stoa:On("STOA_THEME_CHANGED", function() mark:SetColorTexture(Stoa:Color("accent")) end)
 
 	-- Getting off: a plain button (the game lets an addon dismount you),
-	-- left of the next stop. Not on a flight, which can't be left.
-	local off = UI.button(band, "Dismount", 84, function()
+	-- in the middle of the line, under your character where the hand
+	-- already is. Not on a flight, which can't be left.
+	local off = UI.button(band, "Dismount", 96, function()
 		if Dismount then Dismount() end
 	end)
-	off:SetPoint("RIGHT", stop, "LEFT", -34, 0)
+	off:SetPoint("CENTER", band, "CENTER", 0, -2)
 	band.off = off
 
 	band.speed, band.zone, band.sub = speed, zone, sub
