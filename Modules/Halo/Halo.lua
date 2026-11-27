@@ -270,7 +270,9 @@ local function lineBar(parent, token, reverse)
 	local track = sb:CreateTexture(nil, "BACKGROUND")
 	track:SetPoint("TOPLEFT", -1, 1)
 	track:SetPoint("BOTTOMRIGHT", 1, -1)
-	track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+	-- Flared, the groove is the bar's outline: darker, so the whole shape
+	-- holds when the bar is part empty.
+	track:SetColorTexture(0.04, 0.05, 0.06, flare and 0.85 or 0.6)
 	if flare then
 		local outer = reverse and "LEFT" or "RIGHT"
 		local artW, artH = FLARE.art[1], FLARE.art[2]
