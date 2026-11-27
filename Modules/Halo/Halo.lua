@@ -251,7 +251,7 @@ end
 -- end). The bar reaches FLARE.reach closer than LINE.gap and stands
 -- FLARE.tall, so the mask has the room; everything placed from LINE's own
 -- numbers stays where it was. A hairline is too thin to flare.
-local FLARE = { tall = 12, reach = 3, art = { 128, 16 }, seat = 128 }
+local FLARE = { tall = 12, reach = 6, art = { 128, 16 }, seat = 128 }
 local function flared()
 	return UI.slate() and LINE.height >= 6
 end

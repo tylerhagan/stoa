@@ -18,10 +18,12 @@ import numpy as np
 from PIL import Image
 
 W, H, SCALE, UNIT = 256, 32, 4, 2
-INNER, THIN, WIDE, EASE = 5, 3, 6, 1
-CENTRE, BITE = -20, 25
+INNER, THIN, WIDE, EASE = 2, 3, 6, 1
+# A tighter circle than the seat's own, touching it on the bar's middle line:
+# at the seat's true radius a 12 tall end curves by under a pixel and reads flat.
+CENTRE, BITE = -4, 9
 # The seat: a dark disc under the signature and two fading bands around it.
-SEAT = ((25, 0.8), (31, 0.4), (37, 0.2))
+SEAT = ((25, 0.7), (31, 0.28), (37, 0.12))
 
 n = SCALE * UNIT
 x, y = np.meshgrid((np.arange(W * SCALE) + 0.5) / n, (np.arange(H * SCALE) + 0.5) / n)
