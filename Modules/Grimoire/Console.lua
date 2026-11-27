@@ -1541,12 +1541,12 @@ function Console:BuildFellowship(frame, space)
 	of:SetPoint("BOTTOMLEFT", columns, "BOTTOMRIGHT", 8, -1)
 	bags.columns, bags.free, bags.of = columns, free, of
 	-- Slate: the bags are a row like Gear above them, "Bags" on the left
-	-- and "5 free of 26" on the right, on the same 16 pitch as every other
-	-- line on the cards.
+	-- and "5 free of 26" on the right, on the same 20 pitch as every other
+	-- line on the cards (At a glance's rows set it).
 	if UI.slate() then
 		bags:SetHeight(12)
 		bags:ClearAllPoints()
-		bags:SetPoint("TOPLEFT", gear, "BOTTOMLEFT", 0, -4)
+		bags:SetPoint("TOPLEFT", gear, "BOTTOMLEFT", 0, -8)
 		columns:SetAlpha(0)
 		local bagsLabel = text(bags, "sans", Stoa.typeSize.body, "muted")
 		bagsLabel:SetPoint("LEFT")
@@ -1576,7 +1576,7 @@ function Console:BuildFellowship(frame, space)
 	end
 	-- Group buffs you could cast that someone near you lacks.
 	local groupBuffs = text(readyCol, "sans", Stoa.typeSize.body, "accent")
-	groupBuffs:SetPoint("TOPLEFT", bags, "BOTTOMLEFT", 0, -5)
+	groupBuffs:SetPoint("TOPLEFT", bags, "BOTTOMLEFT", 0, UI.slate() and -8 or -5)
 	groupBuffs:SetWidth(COLUMN_WIDTH)
 	groupBuffs:SetWordWrap(false)
 	self.roleWord, self.roleNote, self.gear, self.bags, self.groupBuffs = role, note, gear, bags, groupBuffs
@@ -1692,11 +1692,11 @@ function Console:BuildFellowship(frame, space)
 	self.alone:SetPoint("TOPLEFT", company, "BOTTOMLEFT", 0, -6)
 	self.alone:SetText("Travelling alone")
 	local online = text(companyCol, "sans", Stoa.typeSize.body, "muted")
-	online:SetPoint("TOPLEFT", self.alone, "BOTTOMLEFT", 0, -4)
+	online:SetPoint("TOPLEFT", self.alone, "BOTTOMLEFT", 0, UI.slate() and -8 or -4)
 	self.onlineCount = online
 	-- A few of them by name, so the column says who as well as how many.
 	local names = text(companyCol, "serif", Stoa.typeSize.label, "text")
-	names:SetPoint("TOPLEFT", online, "BOTTOMLEFT", 0, -4)
+	names:SetPoint("TOPLEFT", online, "BOTTOMLEFT", 0, UI.slate() and -8 or -4)
 	names:SetWidth(COLUMN_WIDTH)
 	names:SetWordWrap(false)
 	self.onlineNames = names
@@ -2263,7 +2263,7 @@ end
 -- mock-up's Ready card). Two rows fit; the chip and the hover say the
 -- rest. While there are jobs the gear row steps aside (worn gear is a
 -- job of its own) and the bags close up under the rows.
-local SLATE_JOB_ROWS, SLATE_JOB_H = 2, 16
+local SLATE_JOB_ROWS, SLATE_JOB_H = 2, 20
 
 function Console:BuildSlateJobs(col, role)
 	local count = UI.badge(col, nil, "accent")
@@ -2314,7 +2314,7 @@ function Console:ShowSlateJobs(list)
 	-- is last.
 	self.gear:SetShown(not any)
 	self.bags:ClearAllPoints()
-	self.bags:SetPoint("TOPLEFT", any and last or self.gear, "BOTTOMLEFT", 0, -4)
+	self.bags:SetPoint("TOPLEFT", any and last or self.gear, "BOTTOMLEFT", 0, any and -4 or -8)
 	return any and true or false
 end
 
@@ -2526,7 +2526,9 @@ function Console:SettleNext()
 	note:SetText(full)
 	note:ClearAllPoints()
 	if quest then
-		note:SetPoint("TOPLEFT", questNote, "BOTTOMLEFT", 0, -4)
+		-- Slate's card has the room for the cards' 20 pitch, except under
+		-- the pace row, where both lines must still fit.
+		note:SetPoint("TOPLEFT", questNote, "BOTTOMLEFT", 0, (UI.slate() and not self.db.slim and not paced) and -8 or -4)
 	else
 		note:SetPoint("TOPLEFT", questNote, "TOPLEFT")
 	end
