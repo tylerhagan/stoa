@@ -216,7 +216,7 @@ local LINE_ALPHA = 0.82
 -- The side rail: both bars as short uprights together on your left (the
 -- target docks on the right), with the numbers and coins beyond them. x
 -- and bottom are from the Halo's centre; the health rail is the nearer.
-Halo.RAIL = { x = 74, bottom = -28, width = 10, height = 48, gap = 6 }
+Halo.RAIL = { x = 74, bottom = -52, width = 10, height = 48, gap = 6 }
 local RAIL = Halo.RAIL
 
 function Halo:Rail()
