@@ -79,8 +79,20 @@ function Stoa:Fire(event, ...)
 	end
 end
 
+-- The last few game events STOA answered, newest last, for /stoa report:
+-- when the game refuses something without saying what, these show what
+-- STOA had just been doing.
+local recent, recentAt, RECENT = {}, {}, 12
+for i = 1, RECENT do recent[i], recentAt[i] = "", 0 end
+Stoa.recentEvents, Stoa.recentEventTimes = recent, recentAt
+
 frame:SetScript("OnEvent", function(_, event, ...)
 	if Stoa.blocked then return end
+	if recent[RECENT] ~= event then
+		table.remove(recent, 1)
+		table.remove(recentAt, 1)
+		recent[RECENT], recentAt[RECENT] = event, GetTime and GetTime() or 0
+	end
 	Stoa:Fire(event, ...)
 end)
 
