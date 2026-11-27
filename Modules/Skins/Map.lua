@@ -338,9 +338,10 @@ end
 -- and backing go clear and the icon is drawn grey, warming to the accent
 -- under the mouse, like the header's other marks.
 local function dressFilter(button)
-	if not button or button.stoaDressed then return end
+	-- Its own flag: the window dress marks buttons with stoaDressed.
+	if not button or button.stoaFilterDressed then return end
 	if button.IsForbidden and button:IsForbidden() then return end
-	button.stoaDressed = true
+	button.stoaFilterDressed = true
 	local icon = button.Icon
 	local function quiet()
 		for _, region in ipairs({ button:GetRegions() }) do
@@ -350,11 +351,16 @@ local function dressFilter(button)
 	quiet()
 	button:HookScript("OnShow", quiet)
 	if not (icon and icon.SetDesaturated) then return end
-	icon:SetDesaturated(true)
-	local function paint(over)
+	local over = false
+	local function paint(hover)
+		if hover ~= nil then over = hover end
 		local r, g, b = Stoa:Color(over and "accent" or "muted")
+		icon:SetDesaturated(true)
 		icon:SetVertexColor(r, g, b)
 	end
+	-- The game swaps the art on every press and show.
+	if icon.SetAtlas then hooksecurefunc(icon, "SetAtlas", function() paint() end) end
+	button:HookScript("OnShow", function() paint() end)
 	button:HookScript("OnEnter", function() paint(true) end)
 	button:HookScript("OnLeave", function() paint(false) end)
 	paint(false)
