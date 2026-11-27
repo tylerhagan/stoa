@@ -98,6 +98,7 @@ function Console:BuildRide()
 		Console:SetRiding(false)
 	end)
 	full:SetPoint("LEFT", band, "CENTER", -2, -2)
+	band.full = full
 	full:HookScript("OnEnter", function(own)
 		GameTooltip:SetOwner(own, "ANCHOR_TOP")
 		GameTooltip:AddLine("Open console")
@@ -140,6 +141,16 @@ function Console:FillRide()
 	local sub = GetSubZoneText and GetSubZoneText() or ""
 	band.sub:SetText(onTaxi and "On a flight" or sub)
 	band.off:SetShown(not onTaxi)
+	-- Alone on a flight, Open console takes the middle.
+	if band.full.stoaAlone ~= (onTaxi and true or false) then
+		band.full.stoaAlone = onTaxi and true or false
+		band.full:ClearAllPoints()
+		if onTaxi then
+			band.full:SetPoint("CENTER", band, "CENTER", 0, -2)
+		else
+			band.full:SetPoint("LEFT", band, "CENTER", -2, -2)
+		end
+	end
 
 	local id, title, yards = nextStop()
 	band.stop:SetShown(id ~= nil)
