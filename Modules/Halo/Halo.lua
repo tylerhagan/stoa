@@ -258,6 +258,21 @@ local function lineBar(parent, token, reverse)
 	track:SetPoint("TOPLEFT", -1, 1)
 	track:SetPoint("BOTTOMRIGHT", 1, -1)
 	track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+	-- Slate rounds the outer end. The pill mask is 16 to 1 and lies flush
+	-- with that end, so its far cap falls past the inner end, which stays
+	-- square against the seal. A hairline is too thin to round.
+	if UI.slate() and LINE.height >= 6 then
+		local outer = reverse and "LEFT" or "RIGHT"
+		for _, piece in ipairs({ { sb:GetStatusBarTexture(), 0 }, { track, 1 } }) do
+			local tex, proud = piece[1], piece[2]
+			local height = LINE.height + 2 * proud
+			local mask = sb:CreateMaskTexture()
+			mask:SetTexture(UI.MEDIA .. "Textures\\LineCap", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			mask:SetSize(math.max(height * 16, LINE.width + 2 * proud + height), height)
+			mask:SetPoint(outer, sb, outer, reverse and -proud or proud, 0)
+			tex:AddMaskTexture(mask)
+		end
+	end
 	-- A little of the world shows through, like the console's own bars.
 	sb:SetAlpha(LINE_ALPHA)
 	sb:SetMinMaxValues(0, 1)
