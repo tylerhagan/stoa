@@ -1343,6 +1343,16 @@ local COLUMN_GAP = 40
 -- under the mouse, and a click lists what the slot can hold. Only the
 -- caption takes the click, never the page.
 local SLOT_DOT, SLOT_DOT_GAP = 5, 4
+-- The game's quest list stands in a higher layer than the console, and its
+-- frame (and quests faded out where they'd run over the console) still
+-- took the mouse over the right-hand cards: Company's caption only
+-- answered along its foot. The console's own buttons there stand in the
+-- quest list's layer, well above its levels; windows are higher still.
+local OVER_TRACKER_LEVEL = 200
+function Console.OverTracker(button, lift)
+	button:SetFrameStrata("LOW")
+	button:SetFrameLevel(OVER_TRACKER_LEVEL + (lift or 0))
+end
 local function slotHandle(parent, heading)
 	local handle = CreateFrame("Button", nil, parent)
 	handle:SetPoint("TOPLEFT", heading, "TOPLEFT", -4, 5)
@@ -1350,6 +1360,7 @@ local function slotHandle(parent, heading)
 	-- Above anything else on the page that takes the mouse: Company's
 	-- whole column is a button, and it lay over half of this one.
 	handle:SetFrameLevel(parent:GetFrameLevel() + 6)
+	Console.OverTracker(handle, 6)
 	local chevron = UI.glyph(handle, "Chevron", 10, "text")
 	chevron:SetPoint("LEFT", heading, "RIGHT", 5, 0)
 	chevron:Hide()
@@ -1705,6 +1716,7 @@ function Console:BuildFellowship(frame, space)
 	local open = CreateFrame("Button", nil, companyCol)
 	open:SetPoint("TOPLEFT", company, "TOPLEFT", 0, 22)
 	open:SetSize(COLUMN_WIDTH, 104)
+	Console.OverTracker(open, 0)
 	open:SetScript("OnClick", function()
 		if Stoa.modules.Roster then Stoa.modules.Roster:Toggle() end
 	end)
