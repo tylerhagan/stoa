@@ -103,7 +103,11 @@ function Emergency:Place()
 	button:ClearAllPoints()
 	if halo then
 		local line = Stoa.Sign and Stoa.Sign.groundLine()
-		if line then
+		local rail = Stoa.Sign and Stoa.Sign.sideRail()
+		if rail then
+			-- The side rail: under the numbers, clear of the pet's ring.
+			button:SetPoint("TOPRIGHT", halo, "CENTER", -(Stoa.Sign.railLeft(rail) + 4), rail.bottom - 8)
+		elseif line then
 			-- The ground line: at its outer end, past the health number.
 			button:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76)), line.y)
 		else

@@ -200,19 +200,21 @@ end
 local function coinRowX(line)
 	return line.below and (line.gap + line.width + 12) or line.gap
 end
--- The side rail (on your left): the coins run in a row from the rails'
--- top, outwards.
+-- The side rail (on your left): the coins run in a row above the rails,
+-- outwards from their inner edge, so they clear the numbers beside them.
 local function sideRail()
 	local module = Stoa.modules.Halo
 	return module and module.Rail and module:Rail() and module.RAIL or nil
 end
+Sign.sideRail = sideRail
 local function railLeft(rail)
 	return rail.x + 2 * rail.width + rail.gap + 8
 end
+Sign.railLeft = railLeft
 function Sign.lineCoin(coin, halo, i)
 	local rail = sideRail()
 	if rail then
-		coin:SetPoint("TOPRIGHT", halo, "CENTER", -(railLeft(rail) + (i - 1) * (Sign.COIN + LINE_COIN_GAP)), rail.bottom + rail.height)
+		coin:SetPoint("BOTTOMRIGHT", halo, "CENTER", -(rail.x + (i - 1) * (Sign.COIN + LINE_COIN_GAP)), rail.bottom + rail.height + 8)
 		return true
 	end
 	local line = groundLine()
@@ -224,7 +226,7 @@ function Sign.lineCaption(caption, halo)
 	local rail = sideRail()
 	if rail then
 		caption:SetJustifyH("RIGHT")
-		caption:SetPoint("TOPRIGHT", halo, "CENTER", -railLeft(rail), rail.bottom + rail.height - Sign.COIN - 5)
+		caption:SetPoint("BOTTOMRIGHT", halo, "CENTER", -rail.x, rail.bottom + rail.height + 8 + Sign.COIN + 4)
 		return true
 	end
 	local line = groundLine()

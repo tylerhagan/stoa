@@ -212,7 +212,11 @@ function SelfBuffs:Place()
 	frame:ClearAllPoints()
 	if halo then
 		local line = Stoa.Sign and Stoa.Sign.groundLine()
-		if line then
+		local rail = Stoa.Sign and Stoa.Sign.sideRail()
+		if rail then
+			-- The side rail: beyond the numbers, level with the rails' middle.
+			frame:SetPoint("RIGHT", halo, "CENTER", -(Stoa.Sign.railLeft(rail) + 64), rail.bottom + rail.height / 2)
+		elseif line then
 			-- The ground line: in the same row, past the emergency button.
 			frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76) + 40 + 10), line.y)
 		else
