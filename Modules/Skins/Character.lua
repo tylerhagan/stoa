@@ -783,7 +783,7 @@ local function levelBlock()
 	block:SetHeight(ILVL_H)
 	block:SetPoint("BOTTOMLEFT", pane, "TOPLEFT", 0, 0)
 	block:SetPoint("BOTTOMRIGHT", pane.ScrollBox or pane, "TOPRIGHT", 0, 0)
-	local heading = UI.text(block, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+	local heading = UI.text(block, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
 	heading:SetPoint("LEFT", ILVL_LEFT, 0)
 	heading:SetText(rawget(_G, "STAT_AVERAGE_ITEM_LEVEL") or "Item Level")
 	block.number = UI.text(block, "serif", Stoa.typeSize.title, "text", "RIGHT")
@@ -879,13 +879,13 @@ local function dressListRow(row, token)
 		return
 	end
 	if not content then
-		-- A heading: its bar goes, the word takes the accent over a rule.
+		-- A heading: its bar goes, the word takes the accent (Slate: muted) over a rule.
 		for _, region in ipairs({ row:GetRegions() }) do
 			if region.GetObjectType and region:GetObjectType() == "Texture" then region:SetAlpha(0) end
 		end
 		if row.Name then
 			Stoa:SetFont(row.Name, "sans", Stoa.typeSize.caption)
-			row.Name:SetTextColor(Stoa:Color("accent"))
+			row.Name:SetTextColor(Stoa:Color(UI.slate() and "muted" or "accent"))
 			row.Name:ClearAllPoints()
 			row.Name:SetPoint("BOTTOMLEFT", 4, 8)
 		end

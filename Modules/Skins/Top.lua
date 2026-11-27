@@ -243,9 +243,9 @@ local function dressHeader(header, collapsed)
 	if not header or header.stoaDressed then return end
 	header.stoaDressed = true
 	bury(header.Background)
-	-- Slate: section names in the accent with no rule, like its cards.
+	-- Slate: section names with no rule, like its cards.
 	local slate = UI.slate()
-	if header.Text then header.Text:SetTextColor(Stoa:Color(slate and "accent" or "text")) end
+	if header.Text then header.Text:SetTextColor(Stoa:Color("text")) end
 	local line = UI.line(header)
 	line:SetPoint("BOTTOMLEFT", 7, 2)
 	line:SetPoint("BOTTOMRIGHT", -2, 2)

@@ -191,7 +191,7 @@ local function makeTiles(parent, entry)
 			button.back:SetVertexColor(0, 0, 0, chosen and 0.5 or 0.3)
 			button.edge:Set(Stoa:Color(chosen and "accent" or "hairline"))
 			colour(button.left, "text", lit and 0.95 or 0.5)
-			colour(button.right, "accent", lit and 0.95 or 0.5)
+			colour(button.right, (lit or not UI.slate()) and "accent" or "muted", lit and 0.95 or 0.5)
 			colour(button.text, chosen and "accent" or button.over and "text" or "muted")
 		end
 	end
@@ -903,7 +903,7 @@ local function groupHeader(text, y)
 	if not header then
 		header = CreateFrame("Frame", nil, Window.child)
 		header:SetHeight(20)
-		-- Slate: the heading in the accent (UI.eyebrow), with no rule.
+		-- Slate: the heading is the muted caption (UI.eyebrow), with no rule.
 		header.text = UI.eyebrow(header, "")
 		header.text:SetPoint("LEFT")
 		header.rule = UI.line(header, "hairline")

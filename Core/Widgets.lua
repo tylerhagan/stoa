@@ -235,7 +235,7 @@ end
 
 -- An upright seam like the console's own: a line strongest in the middle
 -- and clear at both ends, a dark crease to its left for depth. Leather
--- draws it in the accent; Matte as a moulded groove with a faint lit edge.
+-- draws it in the accent (a quiet one in Slate is a faint white line); Matte as a moulded groove with a faint lit edge.
 -- `quiet` is for scroll rails, which sit beside their own thumb.
 local seams = setmetatable({}, { __mode = "k" })
 
@@ -244,6 +244,7 @@ local function paintSeam(seam)
 	local r, g, b = Stoa:Color("accent")
 	local lineAlpha, creaseAlpha = seam.quiet and 0.22 or 0.4, seam.quiet and 0.3 or 0.5
 	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, seam.quiet and 0.04 or 0.06, seam.quiet and 0.45 or 0.6 end
+	if seam.quiet and UI.slate() then r, g, b, lineAlpha = 1, 1, 1, 0.08 end
 	seam.creaseUp:SetWidth(matte and 2 or 1)
 	seam.creaseDown:SetWidth(matte and 2 or 1)
 	local gradient = CreateColor and seam.upper.SetGradient
@@ -417,15 +418,9 @@ function UI.caption(parent, label)
 	return fs
 end
 
--- A card's heading: the caption, in the accent under Slate (the small
--- coloured capitals that head each card there), muted otherwise.
+-- A card's heading: the caption, muted.
 function UI.eyebrow(parent, label)
-	local fs = UI.caption(parent, label)
-	if UI.slate() then
-		UI.unpaint(fs)
-		UI.paint(fs, "accent")
-	end
-	return fs
+	return UI.caption(parent, label)
 end
 
 -- Slate: a bar's fill is never one flat colour. It runs from a deeper
@@ -1205,9 +1200,9 @@ function UI.roundPanel(frame, alpha, kind)
 	end
 	frame.stoaPanelEdge = edge
 	frame.stoaPanelBg = bg
-	-- Slate: a breath of the accent at the top of a window.
+	-- Slate: a breath of light at the top of a window.
 	if kind == "window" and UI.slate() and (alpha or 1) > 0 then
-		frame.stoaTopLight = UI.topLight(frame, "accent", 0.085)
+		frame.stoaTopLight = UI.topLight(frame, "text", 0.07)
 		if frame.stoaHeader then frame.stoaTopLight.stoaUnder(frame.stoaHeader) end
 	end
 	UI.mould(frame)
@@ -1443,6 +1438,7 @@ function UI.band(frame, size, family, plain)
 		frame.stoaPlainHeader = true
 		UI.emboss(frame, header)
 	else
+		if family == "trade" and UI.slate() then family = "plain" end
 		local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
 		UI.tint(header, tint.token, tint.alpha)
 		UI.shadowLine(frame, header)
@@ -1552,11 +1548,7 @@ function UI.surface(frame, kind, opts)
 	end
 	if spec.stone and not opts.noStone then UI.stone(frame, frame.stoaHeader, frame.stoaFooter) end
 	if spec.edge and UI.slate() then
-		if kind == "panel" then
-			frame.stoaTopLight = UI.topLight(frame, "accent", 0.085)
-		else
-			frame.stoaTopLight = UI.topLight(frame, "text", 0.07)
-		end
+		frame.stoaTopLight = UI.topLight(frame, "text", 0.07)
 		if frame.stoaTopLight and frame.stoaHeader then frame.stoaTopLight.stoaUnder(frame.stoaHeader) end
 	end
 	frame.stoaSurface = fill

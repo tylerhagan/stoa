@@ -679,7 +679,7 @@ end
 local function light(fs, title)
 	if not (fs and fs.SetTextColor) then return end
 	if title then
-		fs:SetTextColor(Stoa:Color("accent"))
+		fs:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent"))
 	else
 		fs:SetTextColor(Stoa:Color("text"))
 	end

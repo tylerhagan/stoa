@@ -764,9 +764,14 @@ function Console:BuildSeal(frame)
 	end
 	local ring = circle(seal, "BORDER", 2, size + 4)
 	ring:SetPoint("CENTER")
-	self.daylitParts = self.daylitParts or {}
-	-- The ring hugs the portrait, so it only takes a touch of the sky.
-	table.insert(self.daylitParts, { region = ring, weight = 0.3 })
+	if you then
+		-- Slate's card: a neutral hairline, never the accent.
+		ring:SetColorTexture(1, 1, 1, 0.14)
+	else
+		self.daylitParts = self.daylitParts or {}
+		-- The ring hugs the portrait, so it only takes a touch of the sky.
+		table.insert(self.daylitParts, { region = ring, weight = 0.3 })
+	end
 
 	local portrait = circle(seal, "ARTWORK", 0, size)
 	portrait:SetPoint("CENTER")
@@ -1900,6 +1905,12 @@ function Console:BuildRing(seal, portrait, size)
 	plate:SetHeight(18)
 	plate.fill:SetVertexColor(0, 0, 0, 0.95)
 	plate:Set("1", "accent")
+	if UI.slate() then
+		-- Slate: only the number is in the accent, no wash or edge round it.
+		if plate.wash then plate.wash:Hide() end
+		if plate.edge then plate.edge:Clear() end
+		plate.wash, plate.edge = nil, nil
+	end
 	plate:SetFrameLevel(seal:GetFrameLevel() + 5)
 	if self.youCard then
 		-- A small chip at the portrait's lower left.

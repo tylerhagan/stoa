@@ -33,7 +33,7 @@ end
 
 -- A school's heading on Blizzard's pages ("Shadow", "Name Matches" in a
 -- search): the parchment smudge and the red divider go, the name is in
--- STOA's serif in the accent over a plain hairline. Blizzard makes these
+-- STOA's serif in the accent (Slate: plain text) over a plain hairline. Blizzard makes these
 -- as the pages fill, beside the spells, so each spell dressed looks for
 -- new headings next to it.
 local function dressHeader(header)
@@ -43,7 +43,7 @@ local function dressHeader(header)
 	header.Border:SetAlpha(0)
 	Stoa:SetFont(header.Text, "serif", Stoa.typeSize.name)
 	header.Text:SetShadowOffset(0, 0)
-	header.Text:SetTextColor(Stoa:Color("accent"))
+	header.Text:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent"))
 	local rule = header:CreateTexture(nil, "ARTWORK")
 	rule:SetTexture(UI.WHITE)
 	rule:SetHeight(1)
@@ -394,8 +394,8 @@ local function buildRow(list)
 	row.detail:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 11, 0)
 	row.detail:SetPoint("RIGHT", pill, "LEFT", -10, 0)
 	row.detail:SetWordWrap(false)
-	-- A school heading: its name in the accent, the count quiet, a rule.
-	row.head = UI.text(row, "sans", Stoa.typeSize.micro, "accent", "LEFT")
+	-- A school heading: its name in the accent (Slate: plain text), the count quiet, a rule.
+	row.head = UI.text(row, "sans", Stoa.typeSize.micro, UI.slate() and "text" or "accent", "LEFT")
 	row.head:SetPoint("BOTTOMLEFT", 2, 13)
 	row.count = UI.text(row, "sans", Stoa.typeSize.micro, "muted", "LEFT")
 	row.count:SetPoint("LEFT", row.head, "RIGHT", 8, 0)

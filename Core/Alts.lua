@@ -638,11 +638,11 @@ function Alts:Build()
 	self:BuildBand(list)
 	local headY = -(LIST_TOP - HEADER - 14)
 	for _, column in ipairs(COLUMNS) do
-		local head = UI.text(list, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+		local head = UI.text(list, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
 		head:SetPoint("TOPLEFT", column[2] + (column[2] == 0 and (CREST + 26) or 0), headY)
 		head:SetText(column[1]:upper())
 	end
-	local ilvlHead = UI.text(list, "sans", Stoa.typeSize.caption, "accent", "RIGHT")
+	local ilvlHead = UI.text(list, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "RIGHT")
 	ilvlHead:SetPoint("TOPRIGHT", -12, headY)
 	ilvlHead:SetText("ITEM LEVEL")
 	local headRule = UI.line(list, "hairline")
