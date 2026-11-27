@@ -1,6 +1,7 @@
 """Cut the ground line's flared masks (Slate): a blade that tapers the whole
-way, 6 tall at its round outer tip and widening steadily to 14 at the
-signature, where a circle around the signature bites its end. There is no
+way, 6 tall at its round outer tip and widening evenly to 12 at the
+signature, where a circle bites its end just inside the dark seat the
+signature sits on (Halo:BuildSignature), so bars and signature are one piece. There is no
 point where the swell begins, so it reads as one shape and not a bar with a
 limb. LineFlareRight.tga is the right-hand bar (inner end on the left) and
 LineFlareLeft.tga its mirror: the game does not flip a mask by its texture
@@ -15,8 +16,8 @@ import numpy as np
 from PIL import Image
 
 W, H, SCALE, UNIT = 256, 32, 4, 2
-INNER, THIN, WIDE, EASE = 7, 3, 7, 1.4
-CENTRE, BITE = -20, 28
+INNER, THIN, WIDE, EASE = 3, 3, 6, 1
+CENTRE, BITE = -20, 23
 
 n = SCALE * UNIT
 x, y = np.meshgrid((np.arange(W * SCALE) + 0.5) / n, (np.arange(H * SCALE) + 0.5) / n)
