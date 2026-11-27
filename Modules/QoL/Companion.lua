@@ -539,7 +539,12 @@ function Companion:PlaceLine()
 	bar:ClearAllPoints()
 	local console = _G.StoaConsole
 	if console and console:IsShown() then
-		bar:SetPoint("BOTTOM", console, "TOP", 0, 8)
+		-- Slate's own card (name, health, portrait) stands on the console's
+		-- rim in the middle; the line clears its portrait.
+		local grimoire = Stoa.modules.Grimoire
+		local you = grimoire and grimoire.youCard and grimoire.YOU_CARD
+		local lift = you and (you.y + you.height / 2 + 14) or 8
+		bar:SetPoint("BOTTOM", console, "TOP", 0, lift)
 	else
 		bar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 140)
 	end
