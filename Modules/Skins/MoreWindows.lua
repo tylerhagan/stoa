@@ -1444,13 +1444,18 @@ local function quietRankBar(bar)
 	if type(bar) ~= "table" or forbidden(bar) then return end
 	alphaOff(bar.Border)
 	if bar.Background and bar.Background.SetVertexColor then bar.Background:SetVertexColor(0, 0, 0, 0.6) end
-	for _, key in ipairs({ "Fill", "Flare" }) do
-		local tex = bar[key]
-		if tex and tex.SetDesaturated then
-			tex:SetDesaturated(true)
-			tex:SetVertexColor(Stoa:Color("accent"))
-		end
+	-- One flat colour: the game puts its animated swirl back whenever the
+	-- profession shown changes, so this runs after each of its updates.
+	-- Its mask still cuts the fill to the bar's shape and length.
+	alphaOff(bar.Flare)
+	local fill = bar.Fill
+	if fill and fill.SetColorTexture then
+		fill:SetColorTexture(1, 1, 1, 1)
+		local r, g, b = Stoa:Color("accent")
+		fill:SetVertexColor(r, g, b, 0.85)
 	end
+	local words = bar.Rank and bar.Rank.Text
+	if words and words.SetTextColor then words:SetTextColor(Stoa:Color("text")) end
 end
 
 local function dressSpellButton(button)
@@ -1536,10 +1541,187 @@ local function dressProfessionCards(frame)
 	for _, key in ipairs(PROFESSION_CARDS) do xpcall(dressProfessionCard, Stoa.catch, content[key]) end
 end
 
+-- A profession's own page: the recipe list on the left, the chosen recipe
+-- on the right. The torn brown strip behind the skill bar, the list's
+-- bronze ground and heading bars, the gold bevel round the recipe and the
+-- yellow glow on the chosen row go. The list is a darker column, its
+-- headings quiet words over a fine line, the chosen recipe a calm tile
+-- with an accent bar. Nothing is moved.
+local function holdColour(text, token)
+	if type(text) ~= "table" or not text.SetTextColor then return end
+	text.stoaHold = token
+	if text.stoaHeld then
+		text:SetTextColor(Stoa:Color(token))
+		return
+	end
+	text.stoaHeld = true
+	local busy
+	-- The game colours a heading again each time it draws or leaves it.
+	for _, method in ipairs({ "SetTextColor", "SetVertexColor" }) do
+		if text[method] then
+			hooksecurefunc(text, method, function(own)
+				if busy then return end
+				busy = true
+				own[method](own, Stoa:Color(own.stoaHold))
+				busy = false
+			end)
+		end
+	end
+	if text.SetShadowOffset then text:SetShadowOffset(0, 0) end
+	text:SetTextColor(Stoa:Color(token))
+end
+
+local function paintRecipeRow(row)
+	local mark = row.stoaChosen
+	if not mark then return end
+	local chosen = row.SelectedOverlay and row.SelectedOverlay:IsShown() and true or false
+	mark.fill:SetShown(chosen)
+	mark.bar:SetShown(chosen)
+end
+
+local function dressRecipeRow(row)
+	if type(row) ~= "table" or forbidden(row) then return end
+	if type(row.SelectedOverlay) == "table" and row.Label then
+		-- A recipe.
+		alphaOff(row.SelectedOverlay)
+		alphaOff(row.HighlightOverlay)
+		if not row.stoaChosen then
+			local fill = row:CreateTexture(nil, "BACKGROUND")
+			fill:SetTexture(UI.WHITE)
+			fill:SetPoint("TOPLEFT", 2, 0)
+			fill:SetPoint("BOTTOMRIGHT", -2, 0)
+			UI.tint(fill, "accent", 0.12)
+			local bar = row:CreateTexture(nil, "ARTWORK")
+			bar:SetTexture(UI.WHITE)
+			bar:SetWidth(2)
+			bar:SetPoint("TOPLEFT", 2, -2)
+			bar:SetPoint("BOTTOMLEFT", 2, 2)
+			UI.tint(bar, "accent")
+			local over = row:CreateTexture(nil, "HIGHLIGHT")
+			over:SetTexture(UI.WHITE)
+			over:SetPoint("TOPLEFT", 2, 0)
+			over:SetPoint("BOTTOMRIGHT", -2, 0)
+			over:SetVertexColor(1, 1, 1, 0.05)
+			row.stoaChosen = { fill = fill, bar = bar }
+			for _, method in ipairs({ "SetShown", "Show", "Hide" }) do
+				hooksecurefunc(row.SelectedOverlay, method, function() paintRecipeRow(row) end)
+			end
+		end
+		paintRecipeRow(row)
+		return
+	end
+	if type(row.RankBar) ~= "table" or not row.GetRegions then return end
+	-- A heading. Its bar art is the game's to swap (folded, open, under
+	-- the mouse), so it is only ever faded out.
+	local own = row.stoaHeadParts
+	for _, region in ipairs({ row:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") and not (own and own[region]) then
+			region:SetAlpha(0)
+		elseif region.IsObjectType and region:IsObjectType("FontString") then
+			holdColour(region, row.stoaOver and "text" or "muted")
+		end
+	end
+	if own then return end
+	local rule = row:CreateTexture(nil, "BACKGROUND")
+	rule:SetTexture(UI.WHITE)
+	rule:SetHeight(1)
+	rule:SetPoint("BOTTOMLEFT", 4, 1)
+	rule:SetPoint("BOTTOMRIGHT", -4, 1)
+	UI.tint(rule, "hairline")
+	row.stoaHeadParts = { [rule] = true }
+	-- The plus and minus at the end: grey, not gold.
+	local fold = type(row.GetCollapseButton) == "function" and row:GetCollapseButton()
+	if type(fold) == "table" and not forbidden(fold) and fold.GetRegions then
+		for _, region in ipairs({ fold:GetRegions() }) do
+			if region.SetDesaturated then
+				region:SetDesaturated(true)
+				region:SetVertexColor(Stoa:Color("muted"))
+			end
+		end
+	end
+	local function words(over)
+		row.stoaOver = over
+		for _, region in ipairs({ row:GetRegions() }) do
+			if region.stoaHeld then holdColour(region, over and "text" or "muted") end
+		end
+	end
+	row:HookScript("OnEnter", function() words(true) end)
+	row:HookScript("OnLeave", function() words(false) end)
+end
+
+-- Rows are filled in after they are handed out, so the look goes on once
+-- the game has written them.
+local function eachDrawn(scrollBox, key, fn)
+	if type(scrollBox) ~= "table" or forbidden(scrollBox) or scrollBox[key] then return end
+	if not (ScrollUtil and ScrollUtil.AddInitializedFrameCallback) then return eachRow(scrollBox, key, fn) end
+	scrollBox[key] = true
+	ScrollUtil.AddInitializedFrameCallback(scrollBox, function(_, row) xpcall(fn, Stoa.catch, row) end, scrollBox, true)
+end
+
+-- The painted workbench behind the recipe: grey and faint, so it reads as
+-- a watermark on the window, not a brown card.
+local FORM_ART = 0.22
+local function quietFormArt(tex)
+	if type(tex) ~= "table" or not tex.SetDesaturated then return end
+	tex:SetDesaturated(true)
+	tex:SetAlpha(FORM_ART)
+end
+
+local function dressCraftingPage(frame)
+	local page = frame.CraftingPage
+	if type(page) ~= "table" or forbidden(page) then return end
+	local windows = Stoa.modules.Windows
+	local bar = page.RankBar
+	if type(bar) == "table" and not forbidden(bar) then
+		quietRankBar(bar)
+		if not bar.stoaQuiet and type(bar.Update) == "function" then
+			bar.stoaQuiet = true
+			Stoa.SafeHook(bar, "Update", function(own) quietRankBar(own) end)
+		end
+	end
+	if page.stoaCrafting then return end
+	page.stoaCrafting = true
+	-- The strip of torn leather under the title.
+	hideOwnArt(page)
+	local list = page.RecipeList
+	if type(list) == "table" and not forbidden(list) then
+		alphaOff(list.Background)
+		alphaOff(list.BackgroundNineSlice)
+		column(list, 0.22, "RIGHT")
+		professionWords(list.NoResultsText, "muted")
+		if windows and windows.DressSearch then xpcall(windows.DressSearch, Stoa.catch, list.SearchBox) end
+		if windows and windows.DressScrollBar then xpcall(windows.DressScrollBar, Stoa.catch, list.ScrollBar) end
+		local filter = list.FilterDropdown
+		if type(filter) == "table" and not forbidden(filter) and filter.CreateTexture then
+			quietButtonArt(filter)
+			xpcall(dressDropdownField, Stoa.catch, filter)
+		end
+		eachDrawn(list.ScrollBox, "stoaRecipeRows", dressRecipeRow)
+	end
+	local form = page.SchematicForm
+	if type(form) == "table" and not forbidden(form) then
+		-- The gold bevel is a nameless texture on the form's border layer.
+		for _, region in ipairs({ form:GetRegions() }) do
+			if region.IsObjectType and region:IsObjectType("Texture") and region ~= form.Background and region ~= form.MinimalBackground
+				and region.GetDrawLayer and region:GetDrawLayer() == "BORDER" then
+				region:SetAlpha(0)
+			end
+		end
+		alphaOff(form.NineSlice)
+		quietFormArt(form.Background)
+		quietFormArt(form.MinimalBackground)
+		for _, key in ipairs({ "Reagents", "OptionalReagents", "FinishingReagents" }) do
+			local group = form[key]
+			if type(group) == "table" then professionWords(group.Label, "muted") end
+		end
+	end
+end
+
 function AFTER.professions(frame)
 	dressSideTab(frame.ProfessionsOverviewTab)
 	for _, tab in ipairs(frame.rightProfessionTabs or {}) do dressSideTab(tab) end
 	xpcall(dressProfessionCards, Stoa.catch, frame)
+	xpcall(dressCraftingPage, Stoa.catch, frame)
 end
 
 -- Looking For Group. The parts on the bare parent first: its close becomes
