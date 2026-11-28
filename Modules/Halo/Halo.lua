@@ -193,7 +193,7 @@ end
 -- can't sit over the bar).
 local LINES = {
 	line = { width = 120, height = 8, gap = 28, y = 8, top = 4 },
-	numbers = { width = 84, height = 3, gap = 28, y = 8, top = 34, below = true, numbers = true },
+	numbers = { width = 84, height = 4, gap = 28, y = 8, top = 34, below = true, numbers = true },
 }
 Halo.LINE = {}
 for key, value in pairs(LINES.line) do Halo.LINE[key] = value end
@@ -224,6 +224,7 @@ function Halo:Rail()
 end
 
 local RAIL_ALPHA = 0.8
+local RAIL_SEAT_PAD = 4
 local function railBar(parent, token, index)
 	local sb = CreateFrame("StatusBar", nil, parent)
 	sb:SetSize(RAIL.width, RAIL.height)
@@ -237,6 +238,7 @@ local function railBar(parent, token, index)
 	track:SetPoint("TOPLEFT", -2, 2)
 	track:SetPoint("BOTTOMRIGHT", 2, -2)
 	track:SetColorTexture(0.03, 0.04, 0.05, 0.6)
+	sb.stoaTrack = track
 	sb:SetAlpha(RAIL_ALPHA)
 	sb.stoaAlpha = RAIL_ALPHA
 	sb:SetMinMaxValues(0, 1)
@@ -354,8 +356,8 @@ function Halo:Build()
 		healthText:SetPoint("BOTTOMRIGHT", manaText, "TOPRIGHT", 0, 4)
 	elseif line and LINE.numbers then
 		-- The numbers are the frame: large, each over its hairline.
-		healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 5)
-		manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 5)
+		healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 3)
+		manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 3)
 	elseif line then
 		-- The numbers stand at the bars' outer ends.
 		healthText:SetPoint("RIGHT", health, "LEFT", -10, 0)
@@ -489,9 +491,31 @@ function Halo:BuildSignature(frame)
 	slot:SetPoint("CENTER", frame, "BOTTOM", 0, 8)
 	self.signature = slot
 
-	-- The tapered ground line runs in under a dark seat in the groove's
-	-- tone, which makes the bars and the signature one object.
-	if self:Line() and not LINE.numbers and flared() then
+	-- Side rail: the signature docks at the rails' foot, under the pair,
+	-- and one dark rounded plate stands behind both uprights in place of
+	-- their own grooves. The plate is the rail's seat: it carries the
+	-- danger tones the ground line's seat does.
+	if self:Rail() and self.health and self.mana then
+		local pairX = -(RAIL.x + RAIL.width + RAIL.gap / 2)
+		slot:ClearAllPoints()
+		slot:SetPoint("TOP", frame, "CENTER", pairX, RAIL.bottom - RAIL_SEAT_PAD - 2)
+		local host = CreateFrame("Frame", nil, frame)
+		host:SetFrameLevel(frame:GetFrameLevel())
+		host:SetPoint("TOPLEFT", self.mana, "TOPLEFT", -RAIL_SEAT_PAD, RAIL_SEAT_PAD)
+		host:SetPoint("BOTTOMRIGHT", self.health, "BOTTOMRIGHT", RAIL_SEAT_PAD, -RAIL_SEAT_PAD)
+		local plate = UI.pillFill(host, 0)
+		plate:SetVertexColor(0.04, 0.05, 0.06)
+		plate:SetAlpha(0.75)
+		for _, bar in ipairs({ self.health, self.mana }) do
+			if bar.stoaTrack then bar.stoaTrack:Hide() end
+		end
+		slot.seat = plate
+	end
+
+	-- The ground line (and Numbers first) runs in under a dark seat in the
+	-- groove's tone, which makes the bars and the signature one object.
+	-- Every style; only Slate's bars flare into it.
+	if self:Line() then
 		-- On the Halo itself, so it lies behind the bars: a disc and two
 		-- fading bands (LineSeat.tga), and the bars start at the disc's edge.
 		local seat = frame:CreateTexture(nil, "BACKGROUND")
