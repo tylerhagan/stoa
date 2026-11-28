@@ -542,11 +542,26 @@ local function buildTools(book)
 	local back = UI.pillFill(box, 0)
 	back:SetVertexColor(0, 0, 0, 0.35)
 	local edge = UI.pillEdge(box, 0)
+	-- Leather and Matte: a field pressed into the material.
+	local tooled = UI.tooled()
+	if tooled then
+		back:Hide()
+		UI.pressIn(box, "PlateFill.tga")
+	end
 	local hint = UI.text(box, "sans", Stoa.typeSize.body, "muted")
 	hint:SetPoint("LEFT", 10, 0)
 	hint:SetText("Search spells")
 	local function paintBox()
 		hint:SetShown(box:GetText() == "" and not box:HasFocus())
+		if tooled then
+			if box:HasFocus() then
+				local r, g, b = Stoa:Color("accent")
+				edge:Set(r, g, b, 0.5)
+			else
+				edge:Clear()
+			end
+			return
+		end
 		edge:Set(Stoa:Color(box:HasFocus() and "accent" or "hairline"))
 	end
 	box:SetScript("OnEditFocusGained", paintBox)

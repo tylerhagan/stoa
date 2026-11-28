@@ -1317,7 +1317,7 @@ function AFTER.addons(frame)
 	-- Slate: each addon's tick is a small switch (the rows have the room),
 	-- and the lone tick in the header a square like the other windows'.
 	local windows = Stoa.modules.Windows
-	if windows and windows.DressTick and UI.slate() then
+	if windows and windows.DressTick then
 		eachRow(frame.ScrollBox, "stoaSwitches", function(row)
 			if type(row.Enabled) == "table" then windows.DressTick(row.Enabled, true) end
 		end)

@@ -239,7 +239,7 @@ local function plainTick(check)
 end
 
 local function dressTick(check, switch)
-	if not check or check.stoaTick or forbidden(check) or not UI.slate() then return end
+	if not check or check.stoaTick or forbidden(check) then return end
 	check.stoaTick = true
 	plainTick(check)
 	local paint
@@ -306,10 +306,9 @@ end
 -- tick box beside them.
 local function dressButtonsIn(frame, depth)
 	if not (frame and frame.GetChildren) or depth <= 0 then return end
-	local slate = UI.slate()
 	for _, child in ipairs({ frame:GetChildren() }) do
 		if not forbidden(child) then
-			if slate and child.IsObjectType and child:IsObjectType("CheckButton") then
+			if child.IsObjectType and child:IsObjectType("CheckButton") then
 				if not child.stoaTick and isTickBox(child) then dressTick(child) end
 			elseif child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
 				dressButton(child)
@@ -336,7 +335,28 @@ local function dressSearch(box)
 	end
 	local edge = UI.roundBorder(box, "CardEdge.tga", 1)
 	if edge.edges[1] then edge.edges[1]:SetPoint("TOPLEFT", -6, 0) end
+	-- Leather and Matte: the field is pressed in (a catch of light under
+	-- its foot), with no outline until you type in it.
+	local tooled = UI.tooled()
+	if tooled then
+		if fill then fill:SetVertexColor(0, 0, 0, UI.TOOLED.well + 0.04) end
+		local catch = box:CreateTexture(nil, "BACKGROUND")
+		catch:SetTexture(UI.WHITE)
+		UI.pixel(catch, "height")
+		catch:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, 0)
+		catch:SetPoint("TOPRIGHT", box, "BOTTOMRIGHT", -5, 0)
+		UI.paint(catch, "text", UI.TOOLED.catch)
+	end
 	local function paint()
+		if tooled then
+			if box:HasFocus() then
+				local r, g, b = Stoa:Color("accent")
+				edge:Set(r, g, b, 0.5)
+			else
+				edge:Clear()
+			end
+			return
+		end
 		if box:HasFocus() then edge:Set(Stoa:Color("accent")) else edge:Set(Stoa:Color("hairline")) end
 	end
 	box:HookScript("OnEditFocusGained", paint)
@@ -910,10 +930,10 @@ local function questFonts()
 	face(QuestFontNormalSmall, sans, 12)
 end
 
--- Slate sets every word in Inter. The game's own windows, tracker and
--- lists draw from a handful of base fonts, so those take STOA's face and
--- keep their own sizes and outlines. (Picking another Style reloads, which
--- gives the game's faces back.)
+-- One face per job, in every Style: the game's own windows, tracker and
+-- lists draw from a handful of base fonts, so those take Inter and keep
+-- their own sizes and outlines. Titles keep the display face (questFonts
+-- below; Slate sets those in Inter too).
 local BASE_FONTS = {
 	"SystemFont_Tiny", "SystemFont_Tiny2", "SystemFont_Small", "SystemFont_Small2", "SystemFont_Med1", "SystemFont_Med2",
 	"SystemFont_Med3", "SystemFont_Large", "SystemFont_Large2", "SystemFont_Huge1", "SystemFont_Huge2",
@@ -1532,7 +1552,7 @@ end
 local guarded = Stoa.safe.guarded
 
 function Windows:OnEnable()
-	if UI.slate() then guarded(slateFonts) end
+	guarded(slateFonts)
 	guarded(questFonts)
 	guarded(dressQuest)
 	guarded(dressGossip)

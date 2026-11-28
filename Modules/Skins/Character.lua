@@ -792,7 +792,7 @@ local SIDE_L, SIDE_R = 21, 10
 -- level stops being missed. Forever's caps: spells 4% and 17%, attacks 5%
 -- and 8%, two weapons 24% and 29%. Healers have no gauge: heals can't miss.
 local CAP_H, CAP_GAP = 30, 12
-local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + CAP_GAP + CAP_H + 10
+local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + CAP_GAP + CAP_H
 local HIT_CAPS = { spell = { 4, 17 }, attack = { 5, 8 }, dual = { 24, 29 } }
 
 local function plainOf(fn, ...)
@@ -853,14 +853,37 @@ local FIGURES = {
 	dodge = { "Dodge", function() return percent((plainOf(rawget(_G, "GetDodgeChance")))) end },
 	parry = { "Parry", function() return percent((plainOf(rawget(_G, "GetParryChance")))) end },
 }
-local function figureSet()
-	local role = Stoa.GetRole and Stoa:GetRole()
+-- Every figure a tile can show, in the order its menu lists them.
+local FIGURE_MENU = {
+	{ "spellPower", "Spell power" }, { "healing", "Healing" }, { "spellHit", "Spell hit" },
+	{ "spellCrit", "Spell crit" }, { "regen", "Mana per 5s" }, { "mana", "Mana" }, { "health", "Health" },
+	{ "attack", "Attack power" }, { "hit", "Melee hit" }, { "crit", "Melee crit" },
+	{ "ranged", "Ranged power" }, { "rangedHit", "Ranged hit" }, { "rangedCrit", "Ranged crit" },
+	{ "armor", "Armor" }, { "dodge", "Dodge" }, { "parry", "Parry" },
+}
+local function roleKey()
+	return (Stoa.GetRole and Stoa:GetRole()) or "RANGED"
+end
+local function usualSet()
+	local role = roleKey()
 	local _, class = UnitClass("player")
 	if role == "TANK" then return { "health", "armor", "dodge", "parry" } end
 	if role == "HEALER" then return { "healing", "spellCrit", "regen", "mana" } end
 	if class == "HUNTER" then return { "ranged", "rangedHit", "rangedCrit", "attack" } end
 	if role == "MELEE" then return { "attack", "hit", "crit", "armor" } end
 	return { "spellPower", "spellHit", "spellCrit", "mana" }
+end
+-- Your role's usual four, with any tile you picked yourself in its place
+-- (Character.db.tiles, kept per role, so an off-spec has its own).
+local function figureSet()
+	local set = usualSet()
+	local own = Character.db and Character.db.tiles and Character.db.tiles[roleKey()]
+	if own then
+		for i = 1, 4 do
+			if own[i] and FIGURES[own[i]] then set[i] = own[i] end
+		end
+	end
+	return set
 end
 
 -- Your hit chance and which caps it is measured against, or nil (healers).
@@ -921,8 +944,9 @@ end
 local function buildTiles(block)
 	block.tiles = {}
 	for i = 1, 4 do
-		local tile = CreateFrame("Frame", nil, block)
+		local tile = CreateFrame("Button", nil, block)
 		tile:SetHeight(TILE_H)
+		tile.index = i
 		local y = -ILVL_H - TILES_TOP - (i > 2 and (TILE_H + TILE_GAP) or 0)
 		if i % 2 == 1 then
 			tile:SetPoint("TOPLEFT", block, "TOPLEFT", SIDE_L, y)
@@ -948,6 +972,39 @@ local function buildTiles(block)
 		tile.value:SetPoint("BOTTOMLEFT", 10, 8)
 		tile.value:SetPoint("RIGHT", -8, 0)
 		tile.value:SetWordWrap(false)
+		-- A click picks what the tile shows, from the same list the
+		-- settings' choices use.
+		tile:SetScript("OnClick", function(self)
+			local window = Stoa.SettingsWindow
+			if not (window and window.OpenMenu) then return end
+			local options = { { "usual", "Your role's usual" } }
+			for _, entry in ipairs(FIGURE_MENU) do options[#options + 1] = entry end
+			window.OpenMenu(self, {
+				options = options,
+				get = function() return figureSet()[self.index] end,
+				set = function(v)
+					local db = Character.db
+					if not db then return end
+					db.tiles = db.tiles or {}
+					local own = db.tiles[roleKey()] or {}
+					own[self.index] = v ~= "usual" and v or nil
+					db.tiles[roleKey()] = own
+					guarded(fillTiles, block)
+				end,
+			})
+		end)
+		tile:SetScript("OnEnter", function(self)
+			self.label:SetTextColor(Stoa:Color("text"))
+			if GameTooltip then
+				GameTooltip:SetOwner(self, "ANCHOR_TOP")
+				GameTooltip:SetText("Click to choose what this tile shows")
+				GameTooltip:Show()
+			end
+		end)
+		tile:SetScript("OnLeave", function(self)
+			self.label:SetTextColor(Stoa:Color("muted"))
+			if GameTooltip then GameTooltip:Hide() end
+		end)
 		block.tiles[i] = tile
 	end
 	local cap = CreateFrame("Frame", nil, block)
