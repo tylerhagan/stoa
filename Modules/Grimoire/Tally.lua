@@ -34,6 +34,11 @@ local MAX_ROWS = 8
 local ROWS_PER_COLUMN = 4
 local COLUMN_WIDTH = 170
 local COLUMN_GAP = 36
+-- A line whose value says what it is by itself (15 ms, 144 fps, coins,
+-- / h) keeps its label out of sight until the mouse is over At a glance.
+-- When every line of the last column speaks for itself, that column
+-- narrows to its values.
+local SPEAKS_WIDTH = 112
 local ROW_GAP = 20
 -- Slate's card is taller than the well: the four rows keep close to each
 -- other and stand as one block midway between the heading and the card's
@@ -415,7 +420,7 @@ local ENTRIES = {
 			end
 		end
 	end, open = "bags" },
-	gold = { label = "Gold", group = "Kit", value = money, detail = function(add)
+	gold = { label = "Gold", group = "Kit", speaks = true, value = money, detail = function(add)
 		local copper = plain(call(GetMoney))
 		if copper and session.money then add("This session", moneyText(copper - session.money)) end
 		local alts = Stoa.Alts
@@ -428,7 +433,7 @@ local ENTRIES = {
 	fishing = profession("fishing", "Fishing"),
 	firstAid = profession("firstAid", "First Aid"),
 
-	zone = { label = "Zone", group = "World", value = function()
+	zone = { label = "Zone", group = "World", speaks = true, value = function()
 		local sub, zone = call(GetSubZoneText), call(GetZoneText)
 		return (sub and sub ~= "" and sub) or zone
 	end, detail = function(add)
@@ -464,12 +469,12 @@ local ENTRIES = {
 		if word then add("Standing", word) end
 		if name and value and session.rep and session.rep[1] == name then add("This session", signed(value - session.rep[2])) end
 	end, open = "reputation" },
-	clock = { label = "Time", group = "World", value = function() return date("%H:%M") end, detail = function(add)
+	clock = { label = "Time", group = "World", speaks = true, value = function() return date("%H:%M") end, detail = function(add)
 		local hour, minute = call(GetGameTime)
 		hour, minute = plain(hour), plain(minute)
 		if hour and minute then add("Realm time", ("%02d:%02d"):format(hour, minute)) end
 	end, open = "clock" },
-	latency = { label = "Latency", group = "World", value = function()
+	latency = { label = "Latency", group = "World", speaks = true, value = function()
 		local _, _, home, world = call(GetNetStats)
 		local ms = plain(world) or plain(home)
 		return ms and (ms .. " ms")
@@ -493,7 +498,7 @@ local ENTRIES = {
 		if run then add("On foot or mounted", ("%d%%"):format(run / BASE_SPEED * 100 + 0.5)) end
 		if swim then add("Swimming", ("%d%%"):format(swim / BASE_SPEED * 100 + 0.5)) end
 	end, open = "character" },
-	framerate = { label = "Framerate", group = "World", value = function()
+	framerate = { label = "Framerate", group = "World", speaks = true, value = function()
 		local fps = plain(call(GetFramerate))
 		return fps and (math.floor(fps + 0.5) .. " fps")
 	end },
@@ -832,6 +837,7 @@ function Tally:BuildRow(page, index)
 		end
 	end)
 	row:SetScript("OnEnter", function(button)
+		self:HoverLabels(true)
 		UI.softShow(button.glow, true)
 		local object = button.key and feed(button.key)
 		if button.key and not object and ENTRIES[button.key] then
@@ -851,6 +857,7 @@ function Tally:BuildRow(page, index)
 		end
 	end)
 	row:SetScript("OnLeave", function(button)
+		self:HoverLabels(false)
 		UI.softShow(button.glow, false)
 		local object = button.key and feed(button.key)
 		if object and object.OnLeave then call(object.OnLeave, button) end
@@ -867,6 +874,8 @@ function Tally:Build(console)
 	page:SetSize(COLUMN_WIDTH * 2 + COLUMN_GAP, 110)
 	page:RegisterForClicks("RightButtonUp")
 	page:SetScript("OnClick", function(button) self:OpenPicker(button) end)
+	page:SetScript("OnEnter", function() self:HoverLabels(true) end)
+	page:SetScript("OnLeave", function() self:HoverLabels(false) end)
 	self.page = page
 
 	local heading = UI.caption(page, "At a glance")
@@ -901,7 +910,9 @@ function Tally:Fit()
 	self.columns = room >= COLUMN_WIDTH * 2 + COLUMN_GAP and 2 or room >= COLUMN_WIDTH and 1 or 0
 	self.page:SetShown(self.columns > 0)
 	self.page:SetWidth(self.columns == 2 and COLUMN_WIDTH * 2 + COLUMN_GAP or COLUMN_WIDTH)
+	self.fitting = true
 	self:Refresh()
+	self.fitting = false
 end
 
 function Tally:Refresh()
@@ -917,6 +928,8 @@ function Tally:Refresh()
 		local label, value, warn
 		if key then label, value, warn = self:Read(key) end
 		row.key = key or nil
+		local entry = key and ENTRIES[key]
+		row.speaks = entry and entry.speaks or nil
 		if key and label then
 			row.label:SetText(label)
 			row.value:SetText(value or "-")
@@ -929,6 +942,68 @@ function Tally:Refresh()
 			row:Hide()
 		end
 	end
+	self:NarrowSpeaking(shown)
+end
+
+-- The last column narrows to its values when every line there speaks for
+-- itself; the console then places its wells and lines round the new width.
+function Tally:NarrowSpeaking(shown)
+	local columns = self.columns or 2
+	if columns < 1 then return end
+	local first = (columns - 1) * ROWS_PER_COLUMN + 1
+	local narrow = columns == 2
+	local any = false
+	for i = first, shown do
+		local row = self.rows[i]
+		if row and row.key then
+			any = true
+			if not row.speaks then narrow = false end
+		end
+	end
+	narrow = narrow and any
+	local last = narrow and SPEAKS_WIDTH or COLUMN_WIDTH
+	for i = first, #self.rows do
+		local row = self.rows[i]
+		row:SetWidth(last)
+		row.value:SetWidth(last - 10)
+	end
+	local width = columns == 2 and (COLUMN_WIDTH + COLUMN_GAP + last) or COLUMN_WIDTH
+	local before = plain(self.page:GetWidth())
+	self.page:SetWidth(width)
+	if before and math.abs(before - width) > 0.5 and not self.fitting then
+		local console = Stoa.modules.Grimoire
+		if console and console.FitPages then console:FitPages() end
+	end
+	self:ShowLabels(self.labelsOut)
+end
+
+-- Labels of lines that speak for themselves: faded in while the mouse is
+-- over At a glance, out of sight otherwise.
+function Tally:ShowLabels(on)
+	self.labelsOut = on and true or false
+	for _, row in ipairs(self.rows or {}) do
+		local label = row.label
+		if row.speaks then
+			if on and label:GetAlpha() < 1 then
+				label:SetAlpha(1)
+				label.stoaSoft = label.stoaSoft or UI.fadeIn(label)
+				label.stoaSoft:Play()
+			elseif not on then
+				label:SetAlpha(0)
+			end
+		else
+			label:SetAlpha(1)
+		end
+	end
+end
+
+function Tally:HoverLabels(on)
+	if on then return self:ShowLabels(true) end
+	-- Leaving one line for the next, or for the page between them, keeps
+	-- the labels out.
+	C_Timer.After(0.05, function()
+		if self.page and not self.page:IsMouseOver() then self:ShowLabels(false) end
+	end)
 end
 
 -- The small figure between a line's label and its value, made on first use.
@@ -951,6 +1026,30 @@ function Tally:DrawFigure(row, key)
 		if name ~= kind then figure:Hide() end
 	end
 	local valueWidth = plain(row.value:GetStringWidth()) or 30
+	-- A line that speaks for itself: its figure sits by the value, and its
+	-- label (shown on hover) stands right-aligned just before them.
+	row.label:ClearAllPoints()
+	if row.speaks then
+		local shift = valueWidth + 8
+		if FIGURES[kind] then
+			local figure = row.figures[kind]
+			if not figure then
+				figure = FIGURES[kind](row)
+				row.figures[kind] = figure
+			end
+			figure:ClearAllPoints()
+			figure:SetPoint("RIGHT", row, "RIGHT", -(valueWidth + 8), 0)
+			figure:Set(a, b)
+			figure:Show()
+			shift = shift + FIGURE_WIDTH + 6
+		end
+		row.label:SetWidth(0)
+		row.label:SetJustifyH("RIGHT")
+		row.label:SetPoint("RIGHT", row, "RIGHT", -shift, 0)
+		return
+	end
+	row.label:SetJustifyH("LEFT")
+	row.label:SetPoint("LEFT")
 	-- The label comes first: where a long value leaves no room for both
 	-- the whole label and the figure ("Gold rate" read "Gold..."), the
 	-- figure steps aside.
