@@ -438,13 +438,9 @@ function Pet:BuildDockCard(console)
 	card.docked = x
 	card.plate = UI.dockPlate(card, true)
 	card.plate:Layout(curve)
-	-- The tab stands only while a pet is out, and only for the classes
-	-- that have one.
-	local class = select(2, UnitClass("player"))
-	if matte and (class == "HUNTER" or class == "WARLOCK") then
-		card.cone = console:BuildCone(console.frame, true)
-		card.cone.holder:Hide()
-	end
+	-- Matte: the tab with the portrait's cone, built the first time a pet
+	-- (or the demo's) is out and shown only while one is.
+	card.coneOn = matte and console
 	console:AddPage(card)
 
 	-- The name and stance by the medallion, the bar beyond them with the
@@ -519,6 +515,9 @@ function Pet:UpdateCard()
 	local show = hasPet()
 	local was = card:IsShown()
 	card:SetShown(show)
+	if show and card.coneOn and not card.cone then
+		card.cone = card.coneOn:BuildCone(card.coneOn.frame, true)
+	end
 	if card.cone then
 		card.cone.holder:SetShown(show)
 		if show then SetPortraitTexture(card.cone.portrait, unit()) end
