@@ -497,27 +497,7 @@ end
 
 -- Header words: Characters and Search.
 local function tabWord(page, label, onClick)
-	local tab = CreateFrame("Button", nil, page)
-	tab:SetHeight(24)
-	local text = UI.text(tab, "sans", Stoa.typeSize.label, "muted", "LEFT")
-	text:SetPoint("LEFT")
-	text:SetText(label)
-	tab:SetWidth(math.max(40, (text:GetStringWidth() or 60) + 2))
-	local mark = UI.line(tab, "accent")
-	mark:SetPoint("BOTTOMLEFT", 0, 0)
-	mark:SetPoint("BOTTOMRIGHT", 0, 0)
-	tab.text, tab.mark = text, mark
-	local grow = UI.growIn(mark)
-	function tab:SetSelected(on)
-		if on and not self.on then grow:Play() end
-		self.on = on
-		mark:SetShown(on)
-		text:SetTextColor(Stoa:Color(on and "text" or "muted"))
-	end
-	tab:SetScript("OnClick", onClick)
-	tab:SetScript("OnEnter", function() text:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
-	tab:SetScript("OnLeave", function() tab:SetSelected(tab.on) end)
-	return tab
+	return UI.wordTab(page, label, onClick)
 end
 
 local function closeButton(parent, onClick)
@@ -660,9 +640,10 @@ function Alts:Build()
 		self.offset = math.min(math.max(self.offset - delta, 0), maxOffset)
 		self:Refresh()
 	end)
-	local empty = UI.text(list, "italic", Stoa.typeSize.label, "muted")
-	empty:SetPoint("CENTER", 0, -40)
-	empty:SetText("Each character fills in when you play it.")
+	local empty = UI.emptyState(list)
+	empty:SetPoint("LEFT", 40, -40)
+	empty:SetPoint("RIGHT", -40, -40)
+	empty:Set("No characters yet", "Each one fills in when you play it.")
 	self.empty = empty
 
 	-- The search.
@@ -723,6 +704,7 @@ function Alts:Refresh()
 	end)
 	self.list = list
 	self.empty:SetShown(#list == 0)
+	self.tabs.list:SetCount(#list > 0 and #list or nil)
 	self:FillBand(list)
 	local arrive = self.arrive
 	self.arrive = false

@@ -773,6 +773,125 @@ end
 -- there: a gold heading and the number large beside it, over a hairline.
 -- It belongs to the stats list (its child), so it shows only with it.
 local ILVL_H = 44
+
+-- Under the item level: four tiles with your role's headline figures, so
+-- a caster finds spell power without scrolling past Strength. They are
+-- STOA's own figures, read from the game's stat functions; the game's list
+-- below is not reordered (doing that from addon code tainted it).
+local TILE_H, TILE_GAP, TILES_TOP = 36, 4, 8
+local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + 8
+
+local function plainOf(fn, ...)
+	if type(fn) ~= "function" then return nil end
+	local ok, a, b = pcall(fn, ...)
+	if not ok then return nil end
+	return Stoa:PlainNumber(a), Stoa:PlainNumber(b)
+end
+local function bestSchool(name)
+	local fn, best = rawget(_G, name), nil
+	for school = 2, 7 do
+		local v = plainOf(fn, school)
+		if v and (not best or v > best) then best = v end
+	end
+	return best
+end
+local function sumOf(...)
+	local total, any = 0, false
+	for i = 1, select("#", ...) do
+		local v = select(i, ...)
+		if v then total, any = total + v, true end
+	end
+	return any and total or nil
+end
+local function whole(v) return v and BreakUpLargeNumbers and BreakUpLargeNumbers(math.floor(v + 0.5)) or v and tostring(math.floor(v + 0.5)) or "--" end
+local function percent(v) return v and ("%.2f%%"):format(v) or "--" end
+local function rating(key) return plainOf(rawget(_G, "GetCombatRatingBonus"), rawget(_G, key)) end
+
+local FIGURES = {
+	spellPower = { "Spell power", function() return whole(bestSchool("GetSpellBonusDamage")) end },
+	healing = { "Healing", function() return whole((plainOf(rawget(_G, "GetSpellBonusHealing")))) end },
+	spellHit = { "Spell hit", function() return percent(sumOf(rating("CR_HIT_SPELL"), (plainOf(rawget(_G, "GetSpellHitModifier"))))) end },
+	spellCrit = { "Spell crit", function() return percent(bestSchool("GetSpellCritChance")) end },
+	regen = { "Mana per 5s", function()
+		local base = plainOf(rawget(_G, "GetManaRegen"))
+		return whole(base and base * 5)
+	end },
+	mana = { "Mana", function() return whole((plainOf(UnitPowerMax, "player", 0))) end },
+	health = { "Health", function() return whole((plainOf(UnitHealthMax, "player"))) end },
+	attack = { "Attack power", function()
+		local base, pos = plainOf(UnitAttackPower, "player")
+		local ok, _, _, neg = pcall(UnitAttackPower, "player")
+		return whole(sumOf(base, pos, ok and Stoa:PlainNumber(neg) or nil))
+	end },
+	ranged = { "Ranged power", function()
+		local base, pos = plainOf(UnitRangedAttackPower, "player")
+		local ok, _, _, neg = pcall(UnitRangedAttackPower, "player")
+		return whole(sumOf(base, pos, ok and Stoa:PlainNumber(neg) or nil))
+	end },
+	hit = { "Hit", function() return percent(sumOf(rating("CR_HIT_MELEE"), (plainOf(rawget(_G, "GetHitModifier"))))) end },
+	rangedHit = { "Hit", function() return percent(sumOf(rating("CR_HIT_RANGED"), (plainOf(rawget(_G, "GetHitModifier"))))) end },
+	crit = { "Crit", function() return percent((plainOf(rawget(_G, "GetCritChance")))) end },
+	rangedCrit = { "Crit", function() return percent((plainOf(rawget(_G, "GetRangedCritChance")))) end },
+	armor = { "Armor", function()
+		local _, effective = plainOf(UnitArmor, "player")
+		return whole(effective)
+	end },
+	dodge = { "Dodge", function() return percent((plainOf(rawget(_G, "GetDodgeChance")))) end },
+	parry = { "Parry", function() return percent((plainOf(rawget(_G, "GetParryChance")))) end },
+}
+local function figureSet()
+	local role = Stoa.GetRole and Stoa:GetRole()
+	local _, class = UnitClass("player")
+	if role == "TANK" then return { "health", "armor", "dodge", "parry" } end
+	if role == "HEALER" then return { "healing", "spellCrit", "regen", "mana" } end
+	if class == "HUNTER" then return { "ranged", "rangedHit", "rangedCrit", "attack" } end
+	if role == "MELEE" then return { "attack", "hit", "crit", "armor" } end
+	return { "spellPower", "spellHit", "spellCrit", "mana" }
+end
+
+local function fillTiles(block)
+	if not (block and block.tiles and block:IsVisible()) then return end
+	local set = figureSet()
+	for i, tile in ipairs(block.tiles) do
+		local figure = FIGURES[set[i]]
+		tile.label:SetText(figure and figure[1] or "")
+		local ok, words = pcall(figure and figure[2] or tostring, "")
+		tile.value:SetText(ok and words or "--")
+	end
+end
+
+local function buildTiles(block)
+	block.tiles = {}
+	for i = 1, 4 do
+		local tile = CreateFrame("Frame", nil, block)
+		tile:SetHeight(TILE_H)
+		local y = -ILVL_H - TILES_TOP - (i > 2 and (TILE_H + TILE_GAP) or 0)
+		if i % 2 == 1 then
+			tile:SetPoint("TOPLEFT", block, "TOPLEFT", 12, y)
+			tile:SetPoint("RIGHT", block, "CENTER", -TILE_GAP / 2, 0)
+		else
+			tile:SetPoint("TOPRIGHT", block, "TOPRIGHT", -10, y)
+			tile:SetPoint("LEFT", block, "CENTER", TILE_GAP / 2, 0)
+		end
+		local fill = UI.sliced(tile, "BACKGROUND", "CardFill.tga")
+		if fill then fill:SetVertexColor(0, 0, 0, 0.24) end
+		local edge = UI.roundBorder(tile, "CardEdge.tga", 1)
+		local r, g, b = Stoa:Color("text")
+		edge:Set(r, g, b, 0.07)
+		tile.label = UI.text(tile, "sans", Stoa.typeSize.micro, "muted", "LEFT")
+		tile.label:SetPoint("TOPLEFT", 9, -6)
+		tile.value = UI.text(tile, "sans", Stoa.typeSize.label, "text", "LEFT")
+		tile.value:SetPoint("BOTTOMLEFT", 9, 6)
+		tile.value:SetPoint("RIGHT", -6, 0)
+		tile.value:SetWordWrap(false)
+		block.tiles[i] = tile
+	end
+	block:HookScript("OnShow", function() guarded(fillTiles, block) end)
+	local function later() guarded(fillTiles, block) end
+	for _, event in ipairs({ "UNIT_STATS", "PLAYER_EQUIPMENT_CHANGED", "COMBAT_RATING_UPDATE", "UNIT_MAXPOWER", "UNIT_MAXHEALTH", "UNIT_ATTACK_POWER", "PLAYER_DAMAGE_DONE_MODS" }) do
+		Stoa:On(event, later)
+	end
+end
 -- In line with the list's own headings and labels below it.
 local ILVL_LEFT = 21
 local function levelBlock()
@@ -780,21 +899,22 @@ local function levelBlock()
 	if not pane or blocked(pane) then return nil end
 	if pane.stoaLevel then return pane.stoaLevel end
 	local block = CreateFrame("Frame", nil, pane)
-	block:SetHeight(ILVL_H)
+	block:SetHeight(ILVL_H + TILES_H)
 	block:SetPoint("BOTTOMLEFT", pane, "TOPLEFT", 0, 0)
 	block:SetPoint("BOTTOMRIGHT", pane.ScrollBox or pane, "TOPRIGHT", 0, 0)
 	local heading = UI.text(block, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
-	heading:SetPoint("LEFT", ILVL_LEFT, 0)
+	heading:SetPoint("LEFT", block, "TOPLEFT", ILVL_LEFT, -ILVL_H / 2)
 	heading:SetText(rawget(_G, "STAT_AVERAGE_ITEM_LEVEL") or "Item Level")
 	block.number = UI.text(block, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	block.number:SetPoint("RIGHT", -10, 0)
+	block.number:SetPoint("RIGHT", block, "TOPRIGHT", -10, -ILVL_H / 2)
 	block.worn = UI.text(block, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	block.worn:SetPoint("RIGHT", block.number, "LEFT", -10, 0)
 	local rule = block:CreateTexture(nil, "ARTWORK")
 	rule:SetHeight(1)
-	rule:SetPoint("BOTTOMLEFT", ILVL_LEFT, 0)
-	rule:SetPoint("BOTTOMRIGHT", -10, 0)
+	rule:SetPoint("TOPLEFT", ILVL_LEFT, -ILVL_H)
+	rule:SetPoint("TOPRIGHT", -10, -ILVL_H)
 	rule:SetColorTexture(1, 1, 1, 0.08)
+	guarded(buildTiles, block)
 	pane.stoaLevel = block
 	return block
 end
@@ -807,7 +927,7 @@ local function seatStatPanes(frame)
 		for _, key in ipairs({ "TitleManagerPane", "EquipmentManagerPane" }) do list[#list + 1] = PaperDollFrame[key] end
 	end
 	for _, pane in pairs(list) do
-		seatPane(pane, frame, pane == CharacterStatsPaneScrollBox and levelBlock() and ILVL_H or 0)
+		seatPane(pane, frame, pane == CharacterStatsPaneScrollBox and levelBlock() and (ILVL_H + TILES_H) or 0)
 	end
 end
 

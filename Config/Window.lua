@@ -968,6 +968,11 @@ function Window:Draw(keep)
 	end
 	self.drawn = shown
 	self.title:SetText(title or "")
+	-- Slate: the header says where you are, the page's name in the accent.
+	if self.crumb and UI.slate() then
+		local here = title and title ~= "" and ("  /  " .. Stoa:Hex("accent") .. title:upper() .. "|r") or ""
+		self.crumb:SetText("SETTINGS" .. here)
+	end
 	self.intro:SetText(intro or "")
 	local y = -(tonumber(self.intro:GetStringHeight()) or 16) - 54
 	local lastGroup
@@ -1182,6 +1187,7 @@ function Window:Build()
 	mark:SetText("STOA")
 	local sub = UI.caption(page, "Settings")
 	sub:SetPoint("BOTTOMLEFT", mark, "BOTTOMRIGHT", 12, 2)
+	self.crumb = sub
 
 	local close = CreateFrame("Button", nil, page)
 	close:SetSize(26, 26)

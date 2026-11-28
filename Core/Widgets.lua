@@ -1878,6 +1878,156 @@ function UI.button(parent, label, width, onClick, reloads)
 	return button
 end
 
+-- Window pieces ------------------------------------------------------------
+-- Small shared parts of STOA's own windows: word tabs, section bands,
+-- toolbar plates and empty states.
+
+-- A tab drawn as a word over a fine accent line when chosen, with an
+-- optional count beside it.
+function UI.wordTab(parent, label, onClick)
+	local tab = CreateFrame("Button", nil, parent)
+	tab:SetHeight(24)
+	local text = UI.text(tab, "sans", Stoa.typeSize.label, "muted", "LEFT")
+	text:SetPoint("LEFT")
+	text:SetText(label)
+	local count = UI.text(tab, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	count:SetPoint("LEFT", text, "RIGHT", 6, 0)
+	count:SetAlpha(0.7)
+	local mark = UI.line(tab, "accent")
+	mark:SetPoint("BOTTOMLEFT", 0, 0)
+	mark:SetPoint("BOTTOMRIGHT", 0, 0)
+	tab.text, tab.mark = text, mark
+	local grow = UI.growIn(mark)
+	local function fit()
+		local wide = (tonumber(text:GetStringWidth()) or 60) + 2
+		local words = count:GetText()
+		if words and words ~= "" then wide = wide + 6 + (tonumber(count:GetStringWidth()) or 8) end
+		tab:SetWidth(math.max(40, wide))
+	end
+	function tab:SetSelected(on)
+		if on and not self.on then grow:Play() end
+		self.on = on
+		mark:SetShown(on and true or false)
+		text:SetTextColor(Stoa:Color(on and "text" or "muted"))
+	end
+	function tab:SetCount(n)
+		count:SetText(n and tostring(n) or "")
+		fit()
+	end
+	tab:SetScript("OnClick", onClick)
+	tab:SetScript("OnEnter", function() text:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
+	tab:SetScript("OnLeave", function() tab:SetSelected(tab.on) end)
+	fit()
+	tab:SetSelected(false)
+	return tab
+end
+
+-- A list's section heading as a band: its name in small capitals, a fine
+-- rule, and how many it holds at the right.
+UI.BAND_HEIGHT = 22
+function UI.sectionBand(parent)
+	local band = CreateFrame("Frame", nil, parent)
+	band:SetHeight(UI.BAND_HEIGHT)
+	if UI.slate() then
+		local fill = band:CreateTexture(nil, "BACKGROUND")
+		fill:SetAllPoints()
+		UI.paint(fill, "text", 0.03)
+	end
+	local label = UI.text(band, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
+	label:SetPoint("LEFT", 8, 0)
+	local count = UI.text(band, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	count:SetPoint("RIGHT", -8, 0)
+	count:SetAlpha(0.7)
+	local rule = UI.line(band, "hairline")
+	rule:SetPoint("LEFT", label, "RIGHT", 10, 0)
+	rule:SetPoint("RIGHT", count, "LEFT", -10, 0)
+	band.label, band.count = label, count
+	function band:Set(name, n)
+		label:SetText(name and name:upper() or "")
+		count:SetText(n and tostring(n) or "")
+	end
+	return band
+end
+
+-- Slate: one quiet plate behind a window's filters, search and action.
+function UI.toolbarPlate(frame, outset)
+	if not UI.slate() or frame.stoaToolbar then return end
+	local fill = sliced(frame, "BACKGROUND", "CardFill.tga", outset or 0)
+	if not fill then return end
+	fill:SetDrawLayer("BACKGROUND", -6)
+	fill:SetVertexColor(0, 0, 0, 0.22)
+	local edge = UI.roundBorder(frame, "CardEdge.tga", 1, outset or 0)
+	local r, g, b = Stoa:Color("text")
+	edge:Set(r, g, b, 0.07)
+	frame.stoaToolbar = fill
+	return fill
+end
+
+-- A dotted line: one row (or column) of the hatch art's stripes, repeated
+-- along the line's length.
+local DOT_PITCH = 16
+local function dotted(parent, upright)
+	local tex = parent:CreateTexture(nil, "BORDER")
+	tex:SetTexture(UI.MEDIA .. "Textures\\Hatch", "REPEAT", "REPEAT")
+	UI.pixel(tex, upright and "width" or "height")
+	function tex:Fit(length)
+		local runs = math.max(1, (tonumber(length) or 0) / DOT_PITCH)
+		if upright then
+			self:SetTexCoord(1 / 16, 2 / 16, 0, runs)
+		else
+			self:SetTexCoord(0, runs, 0, 1 / 16)
+		end
+	end
+	return tex
+end
+
+-- An empty list: one line and one hint. Slate draws them inside a dotted
+-- outline under a small box glyph; the other styles keep the quiet italic
+-- line.
+function UI.emptyState(parent)
+	local box = CreateFrame("Frame", nil, parent)
+	local slate = UI.slate()
+	box:SetHeight(slate and 104 or 48)
+	local line = UI.text(box, slate and "sans" or "italic", Stoa.typeSize.label, slate and "text" or "muted", "CENTER")
+	local hint = UI.text(box, "sans", Stoa.typeSize.caption, "muted", "CENTER")
+	hint:SetPoint("TOP", line, "BOTTOM", 0, -5)
+	if slate then
+		local glyph = UI.glyph(box, "Box", 18, "muted")
+		glyph:SetPoint("TOP", 0, -20)
+		glyph:SetAlpha(0.7)
+		line:SetPoint("TOP", glyph, "BOTTOM", 0, -10)
+		local sides = { dotted(box), dotted(box), dotted(box, true), dotted(box, true) }
+		sides[1]:SetPoint("TOPLEFT")
+		sides[1]:SetPoint("TOPRIGHT")
+		sides[2]:SetPoint("BOTTOMLEFT")
+		sides[2]:SetPoint("BOTTOMRIGHT")
+		sides[3]:SetPoint("TOPLEFT")
+		sides[3]:SetPoint("BOTTOMLEFT")
+		sides[4]:SetPoint("TOPRIGHT")
+		sides[4]:SetPoint("BOTTOMRIGHT")
+		for _, side in ipairs(sides) do UI.paint(side, "text", 0.22) end
+		local function fit()
+			local wide, tall = box:GetSize()
+			if Stoa:IsSecret(wide) or Stoa:IsSecret(tall) then return end
+			sides[1]:Fit(wide)
+			sides[2]:Fit(wide)
+			sides[3]:Fit(tall)
+			sides[4]:Fit(tall)
+		end
+		box:SetScript("OnSizeChanged", fit)
+		box:HookScript("OnShow", fit)
+	else
+		line:SetPoint("TOP", 0, -8)
+	end
+	function box:Set(words, more)
+		line:SetText(words or "")
+		hint:SetText(more or "")
+		self:SetShown(words ~= nil and words ~= "")
+	end
+	box:Hide()
+	return box
+end
+
 -- A secure button that uses an item: the rounded slot of the bags, a count
 -- and a cooldown sweep. Attributes may only change out of combat, so callers
 -- set the item with button:SetItem(link) from Stoa:AfterCombat.

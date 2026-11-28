@@ -576,6 +576,8 @@ local function buildTools(book)
 	ranks:HookScript("OnLeave", function() GameTooltip:Hide() end)
 	tools.ranks = ranks
 	tools.words = {}
+	-- Slate: the school words, All ranks and the search on one quiet plate.
+	UI.toolbarPlate(tools, 8)
 	tools:Hide()
 	return tools
 end
@@ -649,9 +651,10 @@ local function buildList(book)
 		Spellbook:FillList()
 	end)
 	list:SetScript("OnSizeChanged", function() Spellbook:FillList() end)
-	list.empty = UI.text(list, "sans", Stoa.typeSize.body, "muted", "CENTER")
-	list.empty:SetPoint("TOP", 0, -40)
-	list.empty:SetText("No spells match.")
+	list.empty = UI.emptyState(list)
+	list.empty:SetPoint("TOPLEFT", 60, -40)
+	list.empty:SetPoint("TOPRIGHT", -60, -40)
+	list.empty:Set("No spells match", "Clear the search, or pick All.")
 	list:Hide()
 	return list
 end
