@@ -180,8 +180,7 @@ function Pet:BuildPlaque()
 	frame:SetSize(PLAQUE_WIDTH, PLAQUE_HEIGHT)
 	frame:SetAlpha(0)
 	frame:EnableMouse(false)
-	-- Slate draws no plate: the pet is a ring on the Halo (see below).
-	if not UI.slate() then frame.plaque = UI.plaque(frame, "RIGHT") end
+	-- No plate: the pet is a ring on the Halo (see below), in every style.
 
 	-- The words sit in a column centred top to bottom, with room between
 	-- each group (caption, name, bars, the line underneath).
@@ -203,8 +202,6 @@ function Pet:BuildPlaque()
 	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -8)
 	local hp = UI.bar(column, width, 7, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -8)
-	-- The slab's line is shorter (see below): 244 less its pads and percent.
-	if not UI.slate() then UI.engrave(hp, UI.slabCards() and 176 or width) end
 	local power = UI.bar(column, width, 3, "accent")
 	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -8)
 	local foot = UI.caption(column, "")
@@ -214,42 +211,11 @@ function Pet:BuildPlaque()
 	on:SetWidth(width - 90)
 	on:SetWordWrap(false)
 
-	-- Matte: the target slab's twin. The name and mood on one line over
-	-- a slim health line with its percent at the right end; the caption
-	-- stands on top of the block and the stance line hangs under it.
-	frame.slab = UI.slabCards() and not UI.slate()
-	if frame.slab then
-		local pad, numW = 11, 46
-		local barW = 244 - pad * 2 - numW
-		frame:SetSize(244, 50)
-		frame.plaque:SetPlain(true)
-		column:ClearAllPoints()
-		column:SetAllPoints(frame)
-		caption:ClearAllPoints()
-		caption:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", pad, 5)
-		word:ClearAllPoints()
-		word:SetPoint("TOPRIGHT", -pad, -10)
-		Stoa:SetFont(name, "serif", Stoa.typeSize.label)
-		name:ClearAllPoints()
-		name:SetPoint("TOPLEFT", pad, -9)
-		name:SetPoint("RIGHT", word, "LEFT", -8, 0)
-		hp:ClearAllPoints()
-		hp:SetPoint("TOPLEFT", pad, -29)
-		hp:SetSize(barW, 8)
-		Stoa:SetFont(percent, "serif", Stoa.typeSize.label)
-		percent:ClearAllPoints()
-		percent:SetPoint("RIGHT", frame, "TOPRIGHT", -pad, -33)
-		power:ClearAllPoints()
-		power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -3)
-		power:SetWidth(barW)
-		foot:ClearAllPoints()
-		foot:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", pad, -6)
-	end
-	-- Slate: a companion ring at the foot of the pet's arc on the Halo, as
-	-- if the arc grew out of it. The portrait in a ring that carries the
-	-- pet's colour (red when it is low), its name and one line beside it
-	-- inside the Halo, the percent under the ring. No plate at all.
-	if UI.slate() then
+	-- A companion ring at the foot of the pet's arc on the Halo, as if the
+	-- arc grew out of it. The portrait in a ring that carries the pet's
+	-- colour (red when it is low), its name and one line beside it inside
+	-- the Halo, the percent under the ring. No plate at all.
+	do
 		frame.ring = true
 		frame:SetSize(RING, RING)
 		caption:Hide()
@@ -310,7 +276,7 @@ end
 -- Ground line: the room the pet's ring takes in the row left of the health
 -- number, for the pieces that stand further out. Nothing without a pet class.
 function Pet:LineRoom()
-	if not (UI.slate() and (self.demo or self:Keeper())) then return 0 end
+	if not (self.plaqueFrame and (self.demo or self:Keeper())) then return 0 end
 	return LINE_CLEAR + RING + 8
 end
 
@@ -352,14 +318,7 @@ function Pet:PlacePlaque()
 		frame:SetPoint("CENTER", halo, "CENTER", -radius * math.cos(at), -radius * math.sin(at))
 		return
 	end
-	if not halo then
-		frame:SetPoint("CENTER", UIParent, "CENTER", -300, 120)
-	elseif Stoa:GetRole() == "HEALER" then
-		-- Clear of the watch block's buff tags above it.
-		frame:SetPoint("TOPRIGHT", halo, "LEFT", -52, frame.slab and -8 or 24)
-	else
-		frame:SetPoint("BOTTOMRIGHT", halo, "LEFT", -52, frame.slab and 36 or 30)
-	end
+	frame:SetPoint("CENTER", UIParent, "CENTER", -300, 120)
 end
 
 function Pet:UpdatePlaque()
