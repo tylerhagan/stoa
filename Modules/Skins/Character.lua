@@ -946,6 +946,8 @@ local TILE_MARK = {
 -- The mark sits large and faint in the tile's bottom right, cut off by
 -- the tile's edge: a watermark, not an icon to read.
 local TILE_MARK_SIZE, TILE_MARK_OUT, TILE_MARK_ALPHA = 54, 14, 0.14
+-- A wide, short mark (the book) sits higher, so its spine stays whole.
+local TILE_MARK_LIFT = { MarkBook = 8 }
 
 local function fillTiles(block)
 	if not (block and block.tiles and block:IsVisible()) then return end
@@ -955,7 +957,11 @@ local function fillTiles(block)
 		local figure = FIGURES[set[i]]
 		tile.label:SetText(figure and (TILE_WORD[set[i]] or figure[1]) or "")
 		local mark = figure and TILE_MARK[set[i]]
-		if mark then tile.mark:SetTexture(UI.MEDIA .. "Textures\\" .. mark) end
+		if mark then
+			tile.mark:SetTexture(UI.MEDIA .. "Textures\\" .. mark)
+			tile.mark:ClearAllPoints()
+			tile.mark:SetPoint("BOTTOMRIGHT", tile.markClip, "BOTTOMRIGHT", TILE_MARK_OUT, -TILE_MARK_OUT + (TILE_MARK_LIFT[mark] or 0))
+		end
 		tile.mark:SetShown(mark and true or false)
 		tile.full = figure and figure[1]
 		local ok, words = pcall(figure and figure[2] or tostring, "")
@@ -998,7 +1004,7 @@ local function buildTiles(block)
 		art:SetAllPoints(clip)
 		tile.mark = art:CreateTexture(nil, "ARTWORK")
 		tile.mark:SetSize(TILE_MARK_SIZE, TILE_MARK_SIZE)
-		tile.mark:SetPoint("BOTTOMRIGHT", clip, "BOTTOMRIGHT", TILE_MARK_OUT, -TILE_MARK_OUT)
+		tile.markClip = clip
 		tile.mark:SetAlpha(TILE_MARK_ALPHA)
 		tile.mark:Hide()
 		local words = CreateFrame("Frame", nil, tile)
