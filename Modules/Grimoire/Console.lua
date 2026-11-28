@@ -1740,15 +1740,13 @@ function Console:BuildFellowship(frame, space)
 	open:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
--- The crest: the shield and the class mark. With the art they sit in the
--- open corner left of the ring, over the gold line where it sweeps down off
--- the ring and runs flat (the right is left clear for the target); one
--- alone takes the spot nearest the ring, both sit in a row outwards.
--- Measured on ConsoleMedallionLines.tga, from the ring's centre: the line
--- runs flat about 10 px up from 90 px out, and climbs to 22 px up at 83
--- px out and 45 px up at 58 px out. Without the art they sit at the top
--- of the ring, their feet in the band between the portrait and the ring.
-local CREST_X, CREST_Y = -106, 30
+-- The crest: the shield and the class mark. With the art they flank the
+-- level at the portrait's foot, shield left and mark right (both sides of
+-- the medallion are taken by the docked target and pet). Without the art
+-- they sit at the top of the ring, their feet in the band between the
+-- portrait and the ring. CREST_UNDER is from the portrait's bottom,
+-- level with the level's plate.
+local CREST_UNDER_X, CREST_UNDER_Y = 36, -6
 local CREST_FOOT = 3
 
 -- Hovering the shield or the mark says what it is and what's left.
@@ -1813,10 +1811,8 @@ function Console:PlaceCrest()
 		return
 	end
 	if self:Art() then
-		local step = size + 4
-		for i, gauge in ipairs(shown) do
-			gauge:SetPoint("CENTER", self.crestPortrait, "CENTER", CREST_X - (i - 1) * step + nudge, CREST_Y + nudge)
-		end
+		if shield then shield:SetPoint("CENTER", self.crestPortrait, "BOTTOM", -CREST_UNDER_X + nudge, CREST_UNDER_Y + nudge) end
+		if mark then mark:SetPoint("CENTER", self.crestPortrait, "BOTTOM", CREST_UNDER_X + nudge, CREST_UNDER_Y + nudge) end
 		return
 	end
 	if self:Matte() then
