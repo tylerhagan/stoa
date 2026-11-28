@@ -328,12 +328,19 @@ Stoa.fonts = {
 	serif = { DISPLAY, { MEDIA .. "CormorantGaramond-SemiBold.ttf", CORMORANT_SCALE }, { "Fonts\\FRIZQT__.TTF", 1 } },
 	-- Tenor Sans has no italic, so the upright stands in for it.
 	italic = { DISPLAY, { MEDIA .. "CormorantGaramond-SemiBoldItalic.ttf", CORMORANT_SCALE }, { "Fonts\\FRIZQT__.TTF", 1 } },
+	-- Tenor Sans at any size, for a monogram (the letter on a coin).
+	mark = { DISPLAY, { MEDIA .. "CormorantGaramond-SemiBold.ttf", CORMORANT_SCALE }, { "Fonts\\FRIZQT__.TTF", 1 } },
 	sans = { { MEDIA .. "Inter-SemiBold.ttf", 1 }, { STANDARD_TEXT_FONT, 1 } },
 }
 
 -- SetFont raises an error for a missing file, so each candidate is tried in a
 -- pcall and the first one that loads wins.
+-- Tenor Sans is a display face: below this size (a name in a list, a
+-- note) it reads thin, so smaller words are set in Inter.
+local DISPLAY_LEAST = 16
+
 function Stoa:SetFont(fontString, kind, size, flags)
+	if (kind == "serif" or kind == "italic") and type(size) == "number" and size < DISPLAY_LEAST then kind = "sans" end
 	size = self:TypeSize(size)
 	-- Outlined text is text over the world; it always gets the same soft
 	-- shadow too, so every such word reads the same.
@@ -342,7 +349,7 @@ function Stoa:SetFont(fontString, kind, size, flags)
 		fontString:SetShadowOffset(1, -1)
 	end
 	-- Slate sets every word in Inter, headings too.
-	if (kind == "serif" or kind == "italic") and self.db and self.db.material == "slate" then kind = "sans" end
+	if (kind == "serif" or kind == "italic" or kind == "mark") and self.db and self.db.material == "slate" then kind = "sans" end
 	for _, candidate in ipairs(self.fonts[kind] or self.fonts.sans) do
 		local path, scale = candidate[1], candidate[2]
 		local ok, loaded = pcall(fontString.SetFont, fontString, path, size * scale, flags or "")

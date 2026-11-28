@@ -1285,6 +1285,130 @@ function UI.slate()
 	return Stoa.db ~= nil and Stoa.db.material == "slate"
 end
 
+-- Leather and Matte: controls and window parts drawn as if tooled into
+-- the material. Fields, tracks and tiles sit pressed in (dark ground, a
+-- shade along their top, a faint catch of light under their foot); the
+-- chosen piece stands up as a raised plate. The accent is kept for what
+-- you act on: a small diamond, a switch's knob, a window's main button.
+function UI.tooled()
+	return not UI.slate()
+end
+
+UI.TOOLED = { well = 0.38, shade = 0.5, catch = 0.07, raise = 0.07, raiseTop = 0.12 }
+
+-- A pressed-in ground behind a frame. `file` is the shape (PlateFill for
+-- pills, CardFill for cards). Returns the fill; .catch and .shade hang
+-- from it so a caller can hide the lot with frame.stoaPress:SetShown.
+function UI.pressIn(frame, file, outset)
+	if not frame or not frame.CreateTexture then return end
+	if frame.stoaPress then return frame.stoaPress end
+	local T = UI.TOOLED
+	file = file or "CardFill.tga"
+	local fill = sliced(frame, "BACKGROUND", file, outset or 0, file == "PlateFill.tga" and 5 or nil)
+	if not fill then
+		fill = frame:CreateTexture(nil, "BACKGROUND")
+		fill:SetTexture(UI.WHITE)
+		fill:SetAllPoints()
+	end
+	fill:SetDrawLayer("BACKGROUND", -7)
+	fill:SetVertexColor(0, 0, 0, T.well)
+	-- The shade under the top edge, kept clear of the rounded corners.
+	local tall = tonumber(frame:GetHeight()) or 20
+	local inset = file == "PlateFill.tga" and math.min(10, math.max(3, tall / 2)) or 5
+	local shade = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
+	shade:SetTexture(UI.WHITE)
+	shade:SetHeight(3)
+	shade:SetPoint("TOPLEFT", inset, outset or 0)
+	shade:SetPoint("TOPRIGHT", -inset, outset or 0)
+	UI.setGradient(shade, { "VERTICAL", 0, 1 }, 0, 0, 0, T.shade)
+	-- The catch of light along the foot, outside the shape.
+	local catch = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
+	catch:SetTexture(UI.WHITE)
+	UI.pixel(catch, "height")
+	catch:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", inset, -(outset or 0))
+	catch:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", -inset, -(outset or 0))
+	UI.paint(catch, "text", T.catch)
+	fill.shade, fill.catch = shade, catch
+	function fill:SetPressed(on)
+		self:SetShown(on)
+		shade:SetShown(on)
+		catch:SetShown(on)
+	end
+	frame.stoaPress = fill
+	return fill
+end
+
+-- A raised plate on a frame (the chosen segment, a hovered line): a warm
+-- ground a step lighter, a lit top edge and a dark line under its foot.
+function UI.raisePlate(frame, file)
+	local T = UI.TOOLED
+	file = file or "PlateFill.tga"
+	local fill = sliced(frame, "BACKGROUND", file, 0, file == "PlateFill.tga" and 5 or nil)
+	if not fill then
+		fill = frame:CreateTexture(nil, "BACKGROUND")
+		fill:SetTexture(UI.WHITE)
+		fill:SetAllPoints()
+	end
+	fill:SetDrawLayer("BACKGROUND", -4)
+	local tall = tonumber(frame:GetHeight()) or 20
+	local inset = file == "PlateFill.tga" and math.min(10, math.max(3, tall / 2)) or 5
+	local top = frame:CreateTexture(nil, "BACKGROUND", nil, -3)
+	top:SetTexture(UI.WHITE)
+	UI.pixel(top, "height")
+	top:SetPoint("TOPLEFT", inset, 0)
+	top:SetPoint("TOPRIGHT", -inset, 0)
+	local foot = frame:CreateTexture(nil, "BACKGROUND", nil, -4)
+	foot:SetTexture(UI.WHITE)
+	UI.pixel(foot, "height")
+	foot:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", inset, 0)
+	foot:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", -inset, 0)
+	foot:SetVertexColor(0, 0, 0, 0.6)
+	local plate = { fill = fill, top = top, foot = foot }
+	function plate:Paint()
+		local r, g, b = Stoa:Color("text")
+		UI.setGradient(fill, { "VERTICAL", 0.55, 1 }, r, g, b, T.raise)
+		top:SetVertexColor(r, g, b, T.raiseTop)
+	end
+	function plate:SetShown(on)
+		fill:SetShown(on)
+		top:SetShown(on)
+		foot:SetShown(on)
+		if on then self:Paint() end
+	end
+	function plate:Show() self:SetShown(true) end
+	function plate:Hide() self:SetShown(false) end
+	plate:Paint()
+	return plate
+end
+
+-- A horizontal rule tooled into the material: a dark crease with a faint
+-- catch of light under it. Placed like UI.line (set its two side points).
+function UI.crease(parent)
+	local rule = CreateFrame("Frame", nil, parent)
+	rule:SetHeight(2)
+	local dark = rule:CreateTexture(nil, "BORDER")
+	dark:SetTexture(UI.WHITE)
+	UI.pixel(dark, "height")
+	dark:SetPoint("TOPLEFT")
+	dark:SetPoint("TOPRIGHT")
+	dark:SetVertexColor(0, 0, 0, UI.TOOLED.shade + 0.05)
+	local catch = rule:CreateTexture(nil, "BORDER")
+	catch:SetTexture(UI.WHITE)
+	UI.pixel(catch, "height")
+	catch:SetPoint("TOPLEFT", dark, "BOTTOMLEFT")
+	catch:SetPoint("TOPRIGHT", dark, "BOTTOMRIGHT")
+	UI.paint(catch, "text", UI.TOOLED.catch)
+	return rule
+end
+
+-- The chosen mark of Leather and Matte: a small accent diamond.
+function UI.chosenMark(parent, size)
+	local mark = UI.glyph(parent, "DiamondSmall", size or 8, "accent")
+	UI.tint(mark, "accent")
+	mark:Hide()
+	return mark
+end
+
 function UI.grainAlpha()
 	return GRAIN_ALPHA[Stoa.db and Stoa.db.grain] or GRAIN_ALPHA.soft
 end
@@ -1780,43 +1904,96 @@ function UI.button(parent, label, width, onClick, reloads)
 		glow:Set(tr, tg, tb, not enabled and 0.06 or lit and 0.2 or 0.12)
 		showMark(enabled and button.selected)
 	end
-	-- Four looks: plain, lit (hovered or selected: accent word and edge),
-	-- pressed (the word sinks a pixel), and disabled (muted word, no edge).
-	local function colour()
-		if slate then return slateColour() end
-		if not button:IsEnabled() then
-			text:SetTextColor(Stoa:Color("muted"))
-			glow:Clear()
+	-- Leather and Matte (tooled): a quiet outlined button in the text
+	-- colour. Under the mouse it stands up as a raised plate and its edge
+	-- warms to the accent; chosen, it stays raised with the accent diamond;
+	-- the main button is filled with the accent, lit from above, under dark
+	-- words. Pressed sinks the word a pixel; disabled is muted with no edge.
+	local plate = not slate and UI.raisePlate(button, "CardFill.tga")
+	local brass = not slate and sliced(button, "BACKGROUND", "CardFill.tga")
+	if plate then plate:Hide() end
+	if brass then
+		brass:SetDrawLayer("BACKGROUND", 2)
+		brass:Hide()
+	end
+	local diamond
+	local function showDiamond(on)
+		if not on or button.dot then
+			if diamond then diamond:Hide() end
 			return
 		end
-		local lit = button.selected or button.main or button:IsMouseOver()
-		text:SetTextColor(Stoa:Color(lit and "accent" or "text"))
-		if lit then
-			glow:Set(Stoa:Color("accent"))
+		local wide, tall = button:GetWidth() or 0, button:GetHeight() or 0
+		if text:GetJustifyH() ~= "LEFT" and (wide - (tonumber(text:GetStringWidth()) or wide)) / 2 < 18 then
+			if diamond then diamond:Hide() end
+			return
+		end
+		diamond = diamond or UI.chosenMark(button, 8)
+		diamond:ClearAllPoints()
+		if tall > 30 then diamond:SetPoint("TOPRIGHT", -12, -12) else diamond:SetPoint("RIGHT", -9, 0) end
+		diamond:SetVertexColor(Stoa:Color("accent"))
+		diamond:Show()
+	end
+	local function colour()
+		if slate then return slateColour() end
+		local enabled = button:IsEnabled()
+		local over = enabled and button:IsMouseOver()
+		if brass then brass:SetShown(enabled and button.main and true or false) end
+		if not enabled then
+			text:SetTextColor(Stoa:Color("muted"))
+			glow:Clear()
+			if plate then plate:Hide() end
+			showDiamond(false)
+			button.lit = nil
+			return
+		end
+		if button.main then
+			local r, g, b = Stoa:Color(button.main == "risk" and "hostile" or "accent")
+			if brass then
+				local k = over and 0.1 or 0
+				UI.setGradient(brass, { "VERTICAL", over and 0.86 or 0.74, 1 }, r + (1 - r) * k, g + (1 - g) * k, b + (1 - b) * k, 1)
+			end
+			if plate then plate:Hide() end
+			glow:Set(0, 0, 0, 0.55)
+			if button.main == "risk" then
+				text:SetTextColor(1, 1, 1)
+			else
+				text:SetTextColor(0.08, 0.06, 0.03)
+			end
+			showDiamond(false)
+			button.lit = nil
+			return
+		end
+		text:SetTextColor(Stoa:Color("text"))
+		local lit = button.selected or over
+		if plate then plate:SetShown(lit and true or false) end
+		showDiamond(button.selected)
+		if over then
+			local r, g, b = Stoa:Color("accent")
+			glow:Set(r, g, b, 0.5)
 			-- The edge warms in rather than snapping on.
 			-- Only a hover on a button in view: a fade started on a hidden
 			-- one never ran, and left the edge clear until the next hover.
-			if not button.lit and glow.edges and button:IsVisible() and button:IsMouseOver() then
+			if not button.lit and glow.edges and button:IsVisible() then
 				button.glowIn = button.glowIn or {}
 				for i, tex in ipairs(glow.edges) do
+					tex.stoaRestAlpha = 1
 					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, UI.MOTION.quick)
 					button.glowIn[i]:Play()
 				end
-			elseif not button:IsMouseOver() then
-				-- Selected: the edge is simply there. Only a hover warms in.
-				for i, group in ipairs(button.glowIn or {}) do
-					group:Stop()
-					glow.edges[i]:SetAlpha(glow.edges[i].stoaRestAlpha or 1)
-				end
 			end
 		else
-			glow:Clear()
+			for i, group in ipairs(button.glowIn or {}) do
+				group:Stop()
+				glow.edges[i]:SetAlpha(1)
+			end
+			local r, g, b = Stoa:Color("text")
+			glow:Set(r, g, b, button.selected and 0.22 or 0.12)
 		end
-		button.lit = lit
+		button.lit = over
 	end
-	-- The one button a window is there for (Next, Save, Reload). Slate fills
-	-- it with the accent; the other styles keep it lit. "risk" is for a
-	-- step that can't be taken back.
+	-- The one button a window is there for (Next, Save, Reload), filled
+	-- with the accent in every style. "risk" is for a step that can't be
+	-- taken back.
 	function button:SetMain(kind)
 		self.main = kind == nil and "main" or kind or nil
 		colour()
@@ -1898,6 +2075,9 @@ function UI.wordTab(parent, label, onClick)
 	mark:SetPoint("BOTTOMRIGHT", 0, 0)
 	tab.text, tab.mark = text, mark
 	local grow = UI.growIn(mark)
+	-- Leather and Matte: a small diamond hangs from the line's middle.
+	local gem = UI.tooled() and UI.chosenMark(tab, 6)
+	if gem then gem:SetPoint("CENTER", mark, "CENTER", 0, -1) end
 	local function fit()
 		local wide = (tonumber(text:GetStringWidth()) or 60) + 2
 		local words = count:GetText()
@@ -1908,6 +2088,7 @@ function UI.wordTab(parent, label, onClick)
 		if on and not self.on then grow:Play() end
 		self.on = on
 		mark:SetShown(on and true or false)
+		if gem then gem:SetShown(on and true or false) end
 		text:SetTextColor(Stoa:Color(on and "text" or "muted"))
 	end
 	function tab:SetCount(n)
@@ -1915,7 +2096,7 @@ function UI.wordTab(parent, label, onClick)
 		fit()
 	end
 	tab:SetScript("OnClick", onClick)
-	tab:SetScript("OnEnter", function() text:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
+	tab:SetScript("OnEnter", function() text:SetTextColor(Stoa:Color("text")) end)
 	tab:SetScript("OnLeave", function() tab:SetSelected(tab.on) end)
 	fit()
 	tab:SetSelected(false)
@@ -1933,12 +2114,13 @@ function UI.sectionBand(parent)
 		fill:SetAllPoints()
 		UI.paint(fill, "text", 0.03)
 	end
-	local label = UI.text(band, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
+	local label = UI.text(band, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	label:SetPoint("LEFT", 8, 0)
 	local count = UI.text(band, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	count:SetPoint("RIGHT", -8, 0)
 	count:SetAlpha(0.7)
-	local rule = UI.line(band, "hairline")
+	-- Leather and Matte: the rule is a crease tooled into the material.
+	local rule = UI.tooled() and UI.crease(band) or UI.line(band, "hairline")
 	rule:SetPoint("LEFT", label, "RIGHT", 10, 0)
 	rule:SetPoint("RIGHT", count, "LEFT", -10, 0)
 	band.label, band.count = label, count
@@ -1951,7 +2133,13 @@ end
 
 -- Slate: one quiet plate behind a window's filters, search and action.
 function UI.toolbarPlate(frame, outset)
-	if not UI.slate() or frame.stoaToolbar then return end
+	if frame.stoaToolbar then return end
+	-- Leather and Matte: the tools sit in one ground pressed into the
+	-- material.
+	if UI.tooled() then
+		frame.stoaToolbar = UI.pressIn(frame, "CardFill.tga", outset)
+		return frame.stoaToolbar
+	end
 	local fill = sliced(frame, "BACKGROUND", "CardFill.tga", outset or 0)
 	if not fill then return end
 	fill:SetDrawLayer("BACKGROUND", -6)
@@ -1987,11 +2175,19 @@ end
 function UI.emptyState(parent)
 	local box = CreateFrame("Frame", nil, parent)
 	local slate = UI.slate()
-	box:SetHeight(slate and 104 or 48)
-	local line = UI.text(box, slate and "sans" or "italic", Stoa.typeSize.label, slate and "text" or "muted", "CENTER")
+	box:SetHeight(104)
+	local line = UI.text(box, "sans", Stoa.typeSize.label, "text", "CENTER")
 	local hint = UI.text(box, "sans", Stoa.typeSize.caption, "muted", "CENTER")
 	hint:SetPoint("TOP", line, "BOTTOM", 0, -5)
-	if slate then
+	if not slate then
+		-- Leather and Matte: a well pressed into the material under a
+		-- hollow accent diamond.
+		UI.pressIn(box, "CardFill.tga")
+		local gem = UI.glyph(box, "DiamondOpen", 12, "accent")
+		UI.tint(gem, "accent", 0.8)
+		gem:SetPoint("TOP", 0, -22)
+		line:SetPoint("TOP", gem, "BOTTOM", 0, -12)
+	elseif slate then
 		local glyph = UI.glyph(box, "Box", 18, "muted")
 		glyph:SetPoint("TOP", 0, -20)
 		glyph:SetAlpha(0.7)
@@ -2016,8 +2212,6 @@ function UI.emptyState(parent)
 		end
 		box:SetScript("OnSizeChanged", fit)
 		box:HookScript("OnShow", fit)
-	else
-		line:SetPoint("TOP", 0, -8)
 	end
 	function box:Set(words, more)
 		line:SetText(words or "")

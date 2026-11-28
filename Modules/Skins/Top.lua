@@ -198,6 +198,8 @@ local function trackerFonts()
 			local _, size = fontObject:GetFont()
 			-- Slate sets every word in the sans, headings too.
 			if Stoa.UI.slate() then kind = "sans" end
+			-- Tenor Sans only from 16 up (Tokens.lua DISPLAY_LEAST).
+			if kind == "serif" and size and size + extra < 16 then kind = "sans" end
 			local candidate = Stoa.fonts[kind] and Stoa.fonts[kind][1]
 			if size and candidate then
 				pcall(fontObject.SetFont, fontObject, candidate[1], (size + extra) * candidate[2], "")
