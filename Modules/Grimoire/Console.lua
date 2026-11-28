@@ -1251,7 +1251,7 @@ function Console:UpdateSlim()
 		reads.company.note:SetText("")
 	end
 	-- Left: level and experience.
-	local level = UnitLevel("player")
+	local level = Stoa:PlainNumber(UnitLevel("player")) or 0
 	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel()
 	local atMax = maxLevel and level >= maxLevel
 	self.slimLevel:SetText("Level " .. level)
@@ -2435,7 +2435,7 @@ end
 
 function Console:UpdateJourney()
 	if not self.levelText then return end
-	local level = UnitLevel("player")
+	local level = Stoa:PlainNumber(UnitLevel("player")) or 0
 	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel()
 	self.levelText:SetText("Level " .. level)
 	local atMax = maxLevel and level >= maxLevel
@@ -3248,7 +3248,7 @@ function Console:FitPages()
 	-- On the slim console's card the columns have the room they need.
 	if self.slimCard then room = COLUMN_WIDTH * 3 + COLUMN_GAP * 2 end
 
-	local capped = (GetMaxPlayerLevel and UnitLevel("player") >= GetMaxPlayerLevel())
+	local capped = (GetMaxPlayerLevel and (Stoa:PlainNumber(UnitLevel("player")) or 0) >= GetMaxPlayerLevel())
 	local orders = {
 		{ "ready", "journey", "company" },
 		{ "ready", "journey" },

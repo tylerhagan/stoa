@@ -2192,6 +2192,10 @@ function Halo:OnEnable()
 		self:UpdatePower()
 		self:UpdateHealth()
 		self:UpdateTarget()
+		-- The seat's tone is a theme colour too; false matches no tone,
+		-- so it is painted again.
+		self.seatToken = false
+		self:SeatMood()
 	end)
 	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateReminders() end
