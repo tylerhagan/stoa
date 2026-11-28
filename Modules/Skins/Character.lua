@@ -930,7 +930,7 @@ local function fillCap(block)
 end
 
 -- A tile is narrow, so a small mark says the kind (star for spell,
--- dagger for melee, bow for ranged, shield for defence) and a short word follows it;
+-- sword for melee, bow for ranged, shield for defence) and a short word follows it;
 -- the tooltip and the menu keep the full name.
 local TILE_WORD = {
 	spellPower = "Power", spellHit = "Hit", spellCrit = "Crit",
@@ -939,7 +939,7 @@ local TILE_WORD = {
 }
 local TILE_MARK = {
 	spellPower = "MarkStar", spellHit = "MarkStar", spellCrit = "MarkStar", healing = "MarkStar",
-	attack = "MarkDagger", hit = "MarkDagger", crit = "MarkDagger",
+	attack = "MarkSword", hit = "MarkSword", crit = "MarkSword",
 	ranged = "MarkBow", rangedHit = "MarkBow", rangedCrit = "MarkBow",
 	armor = "MarkShield", dodge = "MarkShield", parry = "MarkShield",
 }
