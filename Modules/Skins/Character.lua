@@ -783,13 +783,16 @@ local ILVL_H = 44
 -- a caster finds spell power without scrolling past Strength. They are
 -- STOA's own figures, read from the game's stat functions; the game's list
 -- below is not reordered (doing that from addon code tainted it).
-local TILE_H, TILE_GAP, TILES_TOP = 36, 4, 8
+local TILE_H, TILE_GAP, TILES_TOP = 44, 8, 12
+-- The block's sides: in line with the list's own headings and labels
+-- below it on the left, with the item level figure on the right.
+local SIDE_L, SIDE_R = 21, 10
 -- Under the tiles: how far your hit chance is toward never missing a raid
 -- boss (a skull, three levels up), with a tick where an enemy of your own
 -- level stops being missed. Forever's caps: spells 4% and 17%, attacks 5%
 -- and 8%, two weapons 24% and 29%. Healers have no gauge: heals can't miss.
-local CAP_H = 26
-local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + 8 + CAP_H
+local CAP_H, CAP_GAP = 30, 12
+local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + CAP_GAP + CAP_H + 10
 local HIT_CAPS = { spell = { 4, 17 }, attack = { 5, 8 }, dual = { 24, 29 } }
 
 local function plainOf(fn, ...)
@@ -922,10 +925,10 @@ local function buildTiles(block)
 		tile:SetHeight(TILE_H)
 		local y = -ILVL_H - TILES_TOP - (i > 2 and (TILE_H + TILE_GAP) or 0)
 		if i % 2 == 1 then
-			tile:SetPoint("TOPLEFT", block, "TOPLEFT", 12, y)
+			tile:SetPoint("TOPLEFT", block, "TOPLEFT", SIDE_L, y)
 			tile:SetPoint("RIGHT", block, "CENTER", -TILE_GAP / 2, 0)
 		else
-			tile:SetPoint("TOPRIGHT", block, "TOPRIGHT", -10, y)
+			tile:SetPoint("TOPRIGHT", block, "TOPRIGHT", -SIDE_R, y)
 			tile:SetPoint("LEFT", block, "CENTER", TILE_GAP / 2, 0)
 		end
 		-- Leather and Matte: a well pressed into the material. Slate: a
@@ -940,27 +943,27 @@ local function buildTiles(block)
 			edge:Set(r, g, b, 0.07)
 		end
 		tile.label = UI.text(tile, "sans", Stoa.typeSize.micro, "muted", "LEFT")
-		tile.label:SetPoint("TOPLEFT", 9, -6)
+		tile.label:SetPoint("TOPLEFT", 10, -8)
 		tile.value = UI.text(tile, "sans", Stoa.typeSize.label, "text", "LEFT")
-		tile.value:SetPoint("BOTTOMLEFT", 9, 6)
-		tile.value:SetPoint("RIGHT", -6, 0)
+		tile.value:SetPoint("BOTTOMLEFT", 10, 8)
+		tile.value:SetPoint("RIGHT", -8, 0)
 		tile.value:SetWordWrap(false)
 		block.tiles[i] = tile
 	end
 	local cap = CreateFrame("Frame", nil, block)
 	cap:SetHeight(CAP_H)
-	cap:SetPoint("TOPLEFT", block, "TOPLEFT", 12, -ILVL_H - TILES_TOP - TILE_H * 2 - TILE_GAP - 4)
-	cap:SetPoint("RIGHT", block, "RIGHT", -10, 0)
+	cap:SetPoint("TOPLEFT", block, "TOPLEFT", SIDE_L, -ILVL_H - TILES_TOP - TILE_H * 2 - TILE_GAP - CAP_GAP)
+	cap:SetPoint("RIGHT", block, "RIGHT", -SIDE_R, 0)
 	cap.label = UI.text(cap, "sans", Stoa.typeSize.micro, "muted", "LEFT")
-	cap.label:SetPoint("TOPLEFT", 2, -2)
+	cap.label:SetPoint("TOPLEFT", 0, 0)
 	cap.words = UI.text(cap, "sans", Stoa.typeSize.micro, "text", "RIGHT")
-	cap.words:SetPoint("TOPRIGHT", -2, -2)
+	cap.words:SetPoint("TOPRIGHT", 0, 0)
 	cap.track = cap:CreateTexture(nil, "BACKGROUND")
 	cap.track:SetTexture(UI.WHITE)
 	cap.track:SetVertexColor(0, 0, 0, 0.4)
-	cap.track:SetHeight(3)
-	cap.track:SetPoint("BOTTOMLEFT", 2, 4)
-	cap.track:SetPoint("BOTTOMRIGHT", -2, 4)
+	cap.track:SetHeight(4)
+	cap.track:SetPoint("BOTTOMLEFT", 0, 6)
+	cap.track:SetPoint("BOTTOMRIGHT", 0, 6)
 	-- Leather and Matte: the track is pressed in, a catch of light under it.
 	if UI.tooled() then
 		cap.track:SetVertexColor(0, 0, 0, 0.55)
@@ -973,7 +976,7 @@ local function buildTiles(block)
 	end
 	cap.fill = cap:CreateTexture(nil, "BORDER")
 	cap.fill:SetTexture(UI.WHITE)
-	cap.fill:SetHeight(3)
+	cap.fill:SetHeight(4)
 	cap.fill:SetPoint("LEFT", cap.track, "LEFT", 0, 0)
 	cap.tick = cap:CreateTexture(nil, "ARTWORK")
 	cap.tick:SetTexture(UI.WHITE)
@@ -998,8 +1001,7 @@ local function buildTiles(block)
 		Stoa:On(event, later)
 	end
 end
--- In line with the list's own headings and labels below it.
-local ILVL_LEFT = 21
+local ILVL_LEFT = SIDE_L
 local function levelBlock()
 	local pane = CharacterStatsPaneScrollBox
 	if not pane or blocked(pane) then return nil end
@@ -1013,7 +1015,7 @@ local function levelBlock()
 	heading:SetText(rawget(_G, "STAT_AVERAGE_ITEM_LEVEL") or "Item Level")
 	-- The sheet's one key figure: in the accent under Leather and Matte.
 	block.number = UI.text(block, "serif", Stoa.typeSize.title, UI.tooled() and "accent" or "text", "RIGHT")
-	block.number:SetPoint("RIGHT", block, "TOPRIGHT", -10, -ILVL_H / 2)
+	block.number:SetPoint("RIGHT", block, "TOPRIGHT", -SIDE_R, -ILVL_H / 2)
 	block.worn = UI.text(block, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	block.worn:SetPoint("RIGHT", block.number, "LEFT", -10, 0)
 	local rule
@@ -1025,7 +1027,7 @@ local function levelBlock()
 		rule:SetColorTexture(1, 1, 1, 0.08)
 	end
 	rule:SetPoint("TOPLEFT", ILVL_LEFT, -ILVL_H)
-	rule:SetPoint("TOPRIGHT", -10, -ILVL_H)
+	rule:SetPoint("TOPRIGHT", -SIDE_R, -ILVL_H)
 	guarded(buildTiles, block)
 	pane.stoaLevel = block
 	return block
