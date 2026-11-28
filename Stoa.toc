@@ -42,6 +42,7 @@ Data\FlightTimes.lua
 Data\TrainerSpells.lua
 Data\EditModeLayout.lua
 Data\Dungeons.lua
+Data\BiS.lua
 
 Modules\QoL\Social.lua
 Modules\QoL\AutoInvite.lua
@@ -56,6 +57,7 @@ Modules\QoL\Whispers.lua
 Modules\QoL\Notes.lua
 Modules\QoL\Session.lua
 Modules\QoL\Companion.lua
+Modules\QoL\BiS.lua
 Modules\QoL\GearSets.lua
 Modules\QoL\Comforts.lua
 Modules\QoL\Chat.lua

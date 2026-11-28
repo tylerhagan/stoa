@@ -1848,6 +1848,9 @@ end
 
 -- The kit's lines under the experience bar, if the kit is on.
 function Console:UpdateKitLines()
+	-- At max level the bar's room holds your next BiS place (Modules/QoL/BiS.lua).
+	local bis = Stoa.modules.BiS
+	if bis and bis.UpdateConsole and bis.enabled then xpcall(bis.UpdateConsole, Stoa.catch, bis) end
 	local kit = Stoa.modules.Kit
 	if kit and kit.UpdateConsole and kit.enabled then kit:UpdateConsole() end
 	local trainer = Stoa.modules.Trainer

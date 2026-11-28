@@ -83,6 +83,8 @@ local function updateSlot(button, unit, withWear)
 	local beside = button.stoaSide and withWear
 	local parts = Stoa.ItemSkin.markSlot(button, link and quality or 0, not beside and level or nil)
 	if not (parts and withWear) then return end
+	-- Your best-in-slot pick worn here: a gold diamond (Modules/QoL/BiS.lua).
+	if Stoa.BiS then Stoa.BiS:Mark(button, link) end
 	local word = link and wearWord(slotID)
 	if beside then Character.fillSide(button, link, quality, level, word) end
 	local fs = wearText(button)
@@ -323,6 +325,7 @@ local function footer()
 	text:SetPoint("LEFT", 22, 0)
 	bar.text = text
 	footerBar = bar
+	Character.footerBar = bar
 	return bar
 end
 

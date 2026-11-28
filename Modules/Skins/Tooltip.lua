@@ -524,6 +524,7 @@ function Tooltip:DressItem(tip, data)
 
 	if tip ~= GameTooltip or InCombatLockdown() then return end
 	self:Upgrade(tip, link)
+	if Stoa.BiS then Stoa.BiS:TooltipLines(tip, link) end
 	if link and not Stoa:IsSecret(link) and Stoa.Items.isMarkedJunk(link) then
 		tip:AddLine("Marked as junk", Stoa:Color("muted"))
 		tip:Show()

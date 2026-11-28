@@ -497,6 +497,12 @@ function Companion:FillCard(data)
 			row(quest.name, quest.done and "Ready" or quest.progress, quest.done and "done", quest.id)
 		end
 	end
+	-- Your best-in-slot picks that drop here (Modules/QoL/BiS.lua).
+	local wanted = Stoa.BiS and Stoa.BiS.Here and Stoa.BiS:Here(data.where) or {}
+	if #wanted > 0 then
+		head("BiS here")
+		for _, pick in ipairs(wanted) do row(pick.name, pick.got and "Got it" or pick.boss, pick.got and "done") end
+	end
 	card:SetHeight(-y + PAD)
 end
 
