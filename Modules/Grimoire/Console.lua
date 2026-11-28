@@ -1411,11 +1411,11 @@ local function slotHandle(parent, heading)
 				end
 			end
 		end
-		-- Ready's count of jobs stands clear of the dots.
-		local badge = own.column and own.column.stoaBadge
-		if badge then
-			badge:ClearAllPoints()
-			badge:SetPoint("TOPRIGHT", own.column, "TOPRIGHT", n > 0 and -(n * (SLOT_DOT + SLOT_DOT_GAP) + 4) or 0, 2)
+		-- Ready's count of jobs stands clear of the dots, just left of the
+		-- first one (the badge is placed again whenever its count changes).
+		if own.column then
+			own.column.stoaFirstDot = n > 0 and dots[1] or nil
+			Console.PlaceJobBadge(own.column)
 		end
 	end
 	if slate then handle:SetScript("OnShow", function(own) rest(own) end) end
@@ -2301,7 +2301,21 @@ function Console:BuildSlateJobs(col, role)
 		row:Hide()
 		rows[i] = row
 	end
-	self.slateJobs = { count = count, rows = rows }
+	self.slateJobs = { count = count, rows = rows, col = col }
+end
+
+-- Ready's job count: left of the page dots when the card shows them,
+-- else at the card's top right.
+function Console.PlaceJobBadge(col)
+	local badge = col and col.stoaBadge
+	if not badge then return end
+	badge:ClearAllPoints()
+	local first = col.stoaFirstDot
+	if first and first:IsShown() then
+		badge:SetPoint("RIGHT", first, "LEFT", -6, 0)
+	else
+		badge:SetPoint("TOPRIGHT", col, "TOPRIGHT", 0, 2)
+	end
 end
 
 -- Fills the Slate job rows; true when they show (the one-line note waits).
@@ -2310,6 +2324,7 @@ function Console:ShowSlateJobs(list)
 	if not jobs then return false end
 	local any = list and #list > 0 and not InCombatLockdown()
 	jobs.count:Set(any and tostring(#list) or nil, "accent")
+	Console.PlaceJobBadge(jobs.col)
 	local last
 	for i, row in ipairs(jobs.rows) do
 		local job = any and list[i]
