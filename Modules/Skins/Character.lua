@@ -384,10 +384,11 @@ function Character:PaintSidebarWords()
 			previous = word
 			local on = tab.GetChecked and tab:GetChecked()
 			local usable = not tab.IsEnabled or tab:IsEnabled()
-			word.text:SetTextColor(Stoa:Color(on and "accent" or "muted"))
+			word.text:SetTextColor(Stoa:Color(on and "text" or "muted"))
 			word:SetAlpha(usable and 1 or 0.4)
 			word.under:SetVertexColor(Stoa:Color("accent"))
 			word.under:SetShown(on and true or false)
+			if word.gem then word.gem:SetShown(on and true or false) end
 		end
 	end
 end
@@ -410,6 +411,10 @@ local function sidebarWords(bar)
 			under:SetPoint("BOTTOMRIGHT", 0, 4)
 			under:SetColorTexture(1, 1, 1)
 			word.under = under
+			if UI.tooled() then
+				word.gem = UI.chosenMark(word, 6)
+				word.gem:SetPoint("CENTER", under, "CENTER", 0, -1)
+			end
 			word:SetScript("OnClick", function(self)
 				if not self.tab.IsEnabled or self.tab:IsEnabled() then self.tab:Click() end
 			end)
@@ -521,7 +526,7 @@ function Character:PaintTabs()
 	for _, tab in ipairs(tabs or {}) do
 		if tab.stoaWord then
 			local on = Character.TabOn(tab)
-			tab.stoaWord:SetTextColor(Stoa:Color(on and "accent" or "muted"))
+			tab.stoaWord:SetTextColor(Stoa:Color((on and (tab.stoaChip and "accent" or "text")) or "muted"))
 			tab.stoaUnder:SetVertexColor(Stoa:Color("accent"))
 			tab.stoaUnder:SetShown(on and not tab.stoaChip and true or false)
 			if tab.stoaChip then
@@ -666,7 +671,7 @@ local function dressStatRow(row)
 	hide(row.Background)
 	if row.Title then
 		Stoa:SetFont(row.Title, "sans", Stoa.typeSize.caption)
-		row.Title:SetTextColor(Stoa:Color("accent"))
+		row.Title:SetTextColor(Stoa:Color("muted"))
 		row.Title:ClearAllPoints()
 		row.Title:SetPoint("BOTTOMLEFT", 11, 6)
 	end
@@ -778,13 +783,16 @@ local ILVL_H = 44
 -- a caster finds spell power without scrolling past Strength. They are
 -- STOA's own figures, read from the game's stat functions; the game's list
 -- below is not reordered (doing that from addon code tainted it).
-local TILE_H, TILE_GAP, TILES_TOP = 36, 4, 8
+local TILE_H, TILE_GAP, TILES_TOP = 44, 8, 12
+-- The block's sides: in line with the list's own headings and labels
+-- below it on the left, with the item level figure on the right.
+local SIDE_L, SIDE_R = 21, 10
 -- Under the tiles: how far your hit chance is toward never missing a raid
 -- boss (a skull, three levels up), with a tick where an enemy of your own
 -- level stops being missed. Forever's caps: spells 4% and 17%, attacks 5%
 -- and 8%, two weapons 24% and 29%. Healers have no gauge: heals can't miss.
-local CAP_H = 26
-local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + 8 + CAP_H
+local CAP_H, CAP_GAP = 30, 12
+local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + CAP_GAP + CAP_H
 local HIT_CAPS = { spell = { 4, 17 }, attack = { 5, 8 }, dual = { 24, 29 } }
 
 local function plainOf(fn, ...)
@@ -818,7 +826,7 @@ local FIGURES = {
 	healing = { "Healing", function() return whole((plainOf(rawget(_G, "GetSpellBonusHealing")))) end },
 	spellHit = { "Spell hit", function() return percent(sumOf(rating("CR_HIT_SPELL"), (plainOf(rawget(_G, "GetSpellHitModifier"))))) end },
 	spellCrit = { "Spell crit", function() return percent(bestSchool("GetSpellCritChance")) end },
-	regen = { "Mana per 5s", function()
+	regen = { "Mana per 5", function()
 		local base = plainOf(rawget(_G, "GetManaRegen"))
 		return whole(base and base * 5)
 	end },
@@ -845,14 +853,37 @@ local FIGURES = {
 	dodge = { "Dodge", function() return percent((plainOf(rawget(_G, "GetDodgeChance")))) end },
 	parry = { "Parry", function() return percent((plainOf(rawget(_G, "GetParryChance")))) end },
 }
-local function figureSet()
-	local role = Stoa.GetRole and Stoa:GetRole()
+-- Every figure a tile can show, in the order its menu lists them.
+local FIGURE_MENU = {
+	{ "spellPower", "Spell power" }, { "healing", "Healing" }, { "spellHit", "Spell hit" },
+	{ "spellCrit", "Spell crit" }, { "regen", "Mana per 5" }, { "mana", "Mana" }, { "health", "Health" },
+	{ "attack", "Attack power" }, { "hit", "Melee hit" }, { "crit", "Melee crit" },
+	{ "ranged", "Ranged power" }, { "rangedHit", "Ranged hit" }, { "rangedCrit", "Ranged crit" },
+	{ "armor", "Armor" }, { "dodge", "Dodge" }, { "parry", "Parry" },
+}
+local function roleKey()
+	return (Stoa.GetRole and Stoa:GetRole()) or "RANGED"
+end
+local function usualSet()
+	local role = roleKey()
 	local _, class = UnitClass("player")
 	if role == "TANK" then return { "health", "armor", "dodge", "parry" } end
 	if role == "HEALER" then return { "healing", "spellCrit", "regen", "mana" } end
 	if class == "HUNTER" then return { "ranged", "rangedHit", "rangedCrit", "attack" } end
 	if role == "MELEE" then return { "attack", "hit", "crit", "armor" } end
 	return { "spellPower", "spellHit", "spellCrit", "mana" }
+end
+-- Your role's usual four, with any tile you picked yourself in its place
+-- (Character.db.tiles, kept per role, so an off-spec has its own).
+local function figureSet()
+	local set = usualSet()
+	local own = Character.db and Character.db.tiles and Character.db.tiles[roleKey()]
+	if own then
+		for i = 1, 4 do
+			if own[i] and FIGURES[own[i]] then set[i] = own[i] end
+		end
+	end
+	return set
 end
 
 -- Your hit chance and which caps it is measured against, or nil (healers).
@@ -898,13 +929,41 @@ local function fillCap(block)
 	cap.same, cap.boss, cap.hit = same, boss, hit
 end
 
+-- A tile is narrow, so a small mark says the kind (book for spell,
+-- sword for melee, bow for ranged, shield for defence) and a short word follows it;
+-- the tooltip and the menu keep the full name.
+local TILE_WORD = {
+	spellPower = "Power", spellHit = "Hit", spellCrit = "Crit",
+	attack = "Power", hit = "Hit", crit = "Crit",
+	ranged = "Power", rangedHit = "Hit", rangedCrit = "Crit", regen = "MP5",
+}
+local TILE_MARK = {
+	spellPower = "MarkBook", spellHit = "MarkBook", spellCrit = "MarkBook", healing = "MarkBook",
+	attack = "MarkSword", hit = "MarkSword", crit = "MarkSword",
+	ranged = "MarkBow", rangedHit = "MarkBow", rangedCrit = "MarkBow",
+	armor = "MarkShield", dodge = "MarkShield", parry = "MarkShield",
+}
+-- The mark sits large and faint in the tile's bottom right, cut off by
+-- the tile's edge: a watermark, not an icon to read.
+local TILE_MARK_SIZE, TILE_MARK_OUT, TILE_MARK_ALPHA = 54, 14, 0.14
+-- A wide, short mark (the book) sits higher, so its spine stays whole.
+local TILE_MARK_LIFT = { MarkBook = 8 }
+
 local function fillTiles(block)
 	if not (block and block.tiles and block:IsVisible()) then return end
 	guarded(fillCap, block)
 	local set = figureSet()
 	for i, tile in ipairs(block.tiles) do
 		local figure = FIGURES[set[i]]
-		tile.label:SetText(figure and figure[1] or "")
+		tile.label:SetText(figure and (TILE_WORD[set[i]] or figure[1]) or "")
+		local mark = figure and TILE_MARK[set[i]]
+		if mark then
+			tile.mark:SetTexture(UI.MEDIA .. "Textures\\" .. mark)
+			tile.mark:ClearAllPoints()
+			tile.mark:SetPoint("BOTTOMRIGHT", tile.markClip, "BOTTOMRIGHT", TILE_MARK_OUT, -TILE_MARK_OUT + (TILE_MARK_LIFT[mark] or 0))
+		end
+		tile.mark:SetShown(mark and true or false)
+		tile.full = figure and figure[1]
 		local ok, words = pcall(figure and figure[2] or tostring, "")
 		tile.value:SetText(ok and words or "--")
 	end
@@ -913,46 +972,115 @@ end
 local function buildTiles(block)
 	block.tiles = {}
 	for i = 1, 4 do
-		local tile = CreateFrame("Frame", nil, block)
+		local tile = CreateFrame("Button", nil, block)
 		tile:SetHeight(TILE_H)
+		tile.index = i
 		local y = -ILVL_H - TILES_TOP - (i > 2 and (TILE_H + TILE_GAP) or 0)
 		if i % 2 == 1 then
-			tile:SetPoint("TOPLEFT", block, "TOPLEFT", 12, y)
+			tile:SetPoint("TOPLEFT", block, "TOPLEFT", SIDE_L, y)
 			tile:SetPoint("RIGHT", block, "CENTER", -TILE_GAP / 2, 0)
 		else
-			tile:SetPoint("TOPRIGHT", block, "TOPRIGHT", -10, y)
+			tile:SetPoint("TOPRIGHT", block, "TOPRIGHT", -SIDE_R, y)
 			tile:SetPoint("LEFT", block, "CENTER", TILE_GAP / 2, 0)
 		end
-		local fill = UI.sliced(tile, "BACKGROUND", "CardFill.tga")
-		if fill then fill:SetVertexColor(0, 0, 0, 0.24) end
-		local edge = UI.roundBorder(tile, "CardEdge.tga", 1)
-		local r, g, b = Stoa:Color("text")
-		edge:Set(r, g, b, 0.07)
-		tile.label = UI.text(tile, "sans", Stoa.typeSize.micro, "muted", "LEFT")
-		tile.label:SetPoint("TOPLEFT", 9, -6)
-		tile.value = UI.text(tile, "sans", Stoa.typeSize.label, "text", "LEFT")
-		tile.value:SetPoint("BOTTOMLEFT", 9, 6)
-		tile.value:SetPoint("RIGHT", -6, 0)
+		-- Leather and Matte: a well pressed into the material. Slate: a
+		-- flat dark tile with a fine edge.
+		if UI.tooled() then
+			UI.pressIn(tile, "CardFill.tga")
+		else
+			local fill = UI.sliced(tile, "BACKGROUND", "CardFill.tga")
+			if fill then fill:SetVertexColor(0, 0, 0, 0.24) end
+			local edge = UI.roundBorder(tile, "CardEdge.tga", 1)
+			local r, g, b = Stoa:Color("text")
+			edge:Set(r, g, b, 0.07)
+		end
+		-- The watermark lives in a clipping frame inset 1px (the well's
+		-- edge stays clean); the words sit in a frame above it.
+		local clip = CreateFrame("Frame", nil, tile)
+		clip:SetPoint("TOPLEFT", 1, -1)
+		clip:SetPoint("BOTTOMRIGHT", -1, 1)
+		clip:SetClipsChildren(true)
+		local art = CreateFrame("Frame", nil, clip)
+		art:SetAllPoints(clip)
+		tile.mark = art:CreateTexture(nil, "ARTWORK")
+		tile.mark:SetSize(TILE_MARK_SIZE, TILE_MARK_SIZE)
+		tile.markClip = clip
+		tile.mark:SetAlpha(TILE_MARK_ALPHA)
+		tile.mark:Hide()
+		local words = CreateFrame("Frame", nil, tile)
+		words:SetAllPoints(tile)
+		words:SetFrameLevel(art:GetFrameLevel() + 1)
+		tile.label = UI.text(words, "sans", Stoa.typeSize.micro, "muted", "LEFT")
+		tile.label:SetPoint("TOPLEFT", 10, -8)
+		tile.label:SetPoint("RIGHT", -8, 0)
+		tile.label:SetWordWrap(false)
+		tile.value = UI.text(words, "sans", Stoa.typeSize.label, "text", "LEFT")
+		tile.value:SetPoint("BOTTOMLEFT", 10, 8)
+		tile.value:SetPoint("RIGHT", -8, 0)
 		tile.value:SetWordWrap(false)
+		-- A click picks what the tile shows, from the same list the
+		-- settings' choices use.
+		tile:SetScript("OnClick", function(self)
+			local window = Stoa.SettingsWindow
+			if not (window and window.OpenMenu) then return end
+			local options = { { "usual", "Your role's usual" } }
+			for _, entry in ipairs(FIGURE_MENU) do options[#options + 1] = entry end
+			window.OpenMenu(self, {
+				options = options,
+				get = function() return figureSet()[self.index] end,
+				set = function(v)
+					local db = Character.db
+					if not db then return end
+					db.tiles = db.tiles or {}
+					local own = db.tiles[roleKey()] or {}
+					own[self.index] = v ~= "usual" and v or nil
+					db.tiles[roleKey()] = own
+					guarded(fillTiles, block)
+				end,
+			})
+		end)
+		tile:SetScript("OnEnter", function(self)
+			self.label:SetTextColor(Stoa:Color("text"))
+			if GameTooltip then
+				GameTooltip:SetOwner(self, "ANCHOR_TOP")
+				GameTooltip:SetText(self.full or "Figure")
+				GameTooltip:AddLine("Click to choose what this tile shows", 0.7, 0.7, 0.7)
+				GameTooltip:Show()
+			end
+		end)
+		tile:SetScript("OnLeave", function(self)
+			self.label:SetTextColor(Stoa:Color("muted"))
+			if GameTooltip then GameTooltip:Hide() end
+		end)
 		block.tiles[i] = tile
 	end
 	local cap = CreateFrame("Frame", nil, block)
 	cap:SetHeight(CAP_H)
-	cap:SetPoint("TOPLEFT", block, "TOPLEFT", 12, -ILVL_H - TILES_TOP - TILE_H * 2 - TILE_GAP - 4)
-	cap:SetPoint("RIGHT", block, "RIGHT", -10, 0)
+	cap:SetPoint("TOPLEFT", block, "TOPLEFT", SIDE_L, -ILVL_H - TILES_TOP - TILE_H * 2 - TILE_GAP - CAP_GAP)
+	cap:SetPoint("RIGHT", block, "RIGHT", -SIDE_R, 0)
 	cap.label = UI.text(cap, "sans", Stoa.typeSize.micro, "muted", "LEFT")
-	cap.label:SetPoint("TOPLEFT", 2, -2)
+	cap.label:SetPoint("TOPLEFT", 0, 0)
 	cap.words = UI.text(cap, "sans", Stoa.typeSize.micro, "text", "RIGHT")
-	cap.words:SetPoint("TOPRIGHT", -2, -2)
+	cap.words:SetPoint("TOPRIGHT", 0, 0)
 	cap.track = cap:CreateTexture(nil, "BACKGROUND")
 	cap.track:SetTexture(UI.WHITE)
 	cap.track:SetVertexColor(0, 0, 0, 0.4)
-	cap.track:SetHeight(3)
-	cap.track:SetPoint("BOTTOMLEFT", 2, 4)
-	cap.track:SetPoint("BOTTOMRIGHT", -2, 4)
+	cap.track:SetHeight(4)
+	cap.track:SetPoint("BOTTOMLEFT", 0, 6)
+	cap.track:SetPoint("BOTTOMRIGHT", 0, 6)
+	-- Leather and Matte: the track is pressed in, a catch of light under it.
+	if UI.tooled() then
+		cap.track:SetVertexColor(0, 0, 0, 0.55)
+		local catch = cap:CreateTexture(nil, "BACKGROUND")
+		catch:SetTexture(UI.WHITE)
+		UI.pixel(catch, "height")
+		catch:SetPoint("TOPLEFT", cap.track, "BOTTOMLEFT")
+		catch:SetPoint("TOPRIGHT", cap.track, "BOTTOMRIGHT")
+		UI.paint(catch, "text", UI.TOOLED.catch)
+	end
 	cap.fill = cap:CreateTexture(nil, "BORDER")
 	cap.fill:SetTexture(UI.WHITE)
-	cap.fill:SetHeight(3)
+	cap.fill:SetHeight(4)
 	cap.fill:SetPoint("LEFT", cap.track, "LEFT", 0, 0)
 	cap.tick = cap:CreateTexture(nil, "ARTWORK")
 	cap.tick:SetTexture(UI.WHITE)
@@ -977,8 +1105,7 @@ local function buildTiles(block)
 		Stoa:On(event, later)
 	end
 end
--- In line with the list's own headings and labels below it.
-local ILVL_LEFT = 21
+local ILVL_LEFT = SIDE_L
 local function levelBlock()
 	local pane = CharacterStatsPaneScrollBox
 	if not pane or blocked(pane) then return nil end
@@ -987,18 +1114,24 @@ local function levelBlock()
 	block:SetHeight(ILVL_H + TILES_H)
 	block:SetPoint("BOTTOMLEFT", pane, "TOPLEFT", 0, 0)
 	block:SetPoint("BOTTOMRIGHT", pane.ScrollBox or pane, "TOPRIGHT", 0, 0)
-	local heading = UI.text(block, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
+	local heading = UI.text(block, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	heading:SetPoint("LEFT", block, "TOPLEFT", ILVL_LEFT, -ILVL_H / 2)
 	heading:SetText(rawget(_G, "STAT_AVERAGE_ITEM_LEVEL") or "Item Level")
-	block.number = UI.text(block, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	block.number:SetPoint("RIGHT", block, "TOPRIGHT", -10, -ILVL_H / 2)
+	-- The sheet's one key figure: in the accent under Leather and Matte.
+	block.number = UI.text(block, "serif", Stoa.typeSize.title, UI.tooled() and "accent" or "text", "RIGHT")
+	block.number:SetPoint("RIGHT", block, "TOPRIGHT", -SIDE_R, -ILVL_H / 2)
 	block.worn = UI.text(block, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	block.worn:SetPoint("RIGHT", block.number, "LEFT", -10, 0)
-	local rule = block:CreateTexture(nil, "ARTWORK")
-	rule:SetHeight(1)
+	local rule
+	if UI.tooled() then
+		rule = UI.crease(block)
+	else
+		rule = block:CreateTexture(nil, "ARTWORK")
+		rule:SetHeight(1)
+		rule:SetColorTexture(1, 1, 1, 0.08)
+	end
 	rule:SetPoint("TOPLEFT", ILVL_LEFT, -ILVL_H)
-	rule:SetPoint("TOPRIGHT", -10, -ILVL_H)
-	rule:SetColorTexture(1, 1, 1, 0.08)
+	rule:SetPoint("TOPRIGHT", -SIDE_R, -ILVL_H)
 	guarded(buildTiles, block)
 	pane.stoaLevel = block
 	return block
@@ -1090,7 +1223,7 @@ local function dressListRow(row, token)
 		end
 		if row.Name then
 			Stoa:SetFont(row.Name, "sans", Stoa.typeSize.caption)
-			row.Name:SetTextColor(Stoa:Color(UI.slate() and "muted" or "accent"))
+			row.Name:SetTextColor(Stoa:Color("muted"))
 			row.Name:ClearAllPoints()
 			row.Name:SetPoint("BOTTOMLEFT", 4, 8)
 		end

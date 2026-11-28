@@ -324,7 +324,7 @@ function Trainer:BuildRow(page, i)
 	-- Headings fold: a quiet plus or minus before the caption.
 	local fold = UI.glyph(row, "Minus", 12, "muted")
 	fold:SetPoint("LEFT", 0, -1)
-	local head = UI.text(row, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+	local head = UI.text(row, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	head:SetPoint("LEFT", fold, "RIGHT", 4, -1)
 	-- Slate: a main heading sits on a faint band.
 	local band = row:CreateTexture(nil, "BACKGROUND", nil, -1)
@@ -527,7 +527,7 @@ function Trainer:Fill()
 			row.cost:SetTextColor(Stoa:Color("muted"))
 		elseif entry then
 			row.head:SetText(entry.empty or entry.heading)
-			row.head:SetTextColor(Stoa:Color((entry.empty or entry.sub) and "muted" or UI.slate() and "text" or "accent"))
+			row.head:SetTextColor(Stoa:Color((entry.empty or entry.sub) and "muted" or "text"))
 			if entry.key then row.fold:SetTexture(UI.MEDIA .. "Textures\\Glyph" .. (entry.folded and "Plus" or "Minus")) end
 			row.cost:SetText(entry.price or "")
 			row.cost:SetTextColor(Stoa:Color("text"))

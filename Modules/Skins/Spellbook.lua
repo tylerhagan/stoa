@@ -43,7 +43,7 @@ local function dressHeader(header)
 	header.Border:SetAlpha(0)
 	Stoa:SetFont(header.Text, "serif", Stoa.typeSize.name)
 	header.Text:SetShadowOffset(0, 0)
-	header.Text:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent"))
+	header.Text:SetTextColor(Stoa:Color("text"))
 	local rule = header:CreateTexture(nil, "ARTWORK")
 	rule:SetTexture(UI.WHITE)
 	rule:SetHeight(1)
@@ -395,7 +395,7 @@ local function buildRow(list)
 	row.detail:SetPoint("RIGHT", pill, "LEFT", -10, 0)
 	row.detail:SetWordWrap(false)
 	-- A school heading: its name in the accent (Slate: plain text), the count quiet, a rule.
-	row.head = UI.text(row, "sans", Stoa.typeSize.micro, UI.slate() and "text" or "accent", "LEFT")
+	row.head = UI.text(row, "sans", Stoa.typeSize.micro, "text", "LEFT")
 	row.head:SetPoint("BOTTOMLEFT", 2, 13)
 	row.count = UI.text(row, "sans", Stoa.typeSize.micro, "muted", "LEFT")
 	row.count:SetPoint("LEFT", row.head, "RIGHT", 8, 0)
@@ -542,11 +542,26 @@ local function buildTools(book)
 	local back = UI.pillFill(box, 0)
 	back:SetVertexColor(0, 0, 0, 0.35)
 	local edge = UI.pillEdge(box, 0)
+	-- Leather and Matte: a field pressed into the material.
+	local tooled = UI.tooled()
+	if tooled then
+		back:Hide()
+		UI.pressIn(box, "PlateFill.tga")
+	end
 	local hint = UI.text(box, "sans", Stoa.typeSize.body, "muted")
 	hint:SetPoint("LEFT", 10, 0)
 	hint:SetText("Search spells")
 	local function paintBox()
 		hint:SetShown(box:GetText() == "" and not box:HasFocus())
+		if tooled then
+			if box:HasFocus() then
+				local r, g, b = Stoa:Color("accent")
+				edge:Set(r, g, b, 0.5)
+			else
+				edge:Clear()
+			end
+			return
+		end
 		edge:Set(Stoa:Color(box:HasFocus() and "accent" or "hairline"))
 	end
 	box:SetScript("OnEditFocusGained", paintBox)
@@ -1125,7 +1140,7 @@ function Spellbook.PaintTalentTabs(talents)
 		Stoa.frames.strip(tab)
 		local chosen = tab.isSelected
 		if chosen == nil and talents.GetTab and tab.tabID then chosen = talents:GetTab() == tab.tabID end
-		if tab.stoaLabel then tab.stoaLabel:SetTextColor(Stoa:Color(chosen and "accent" or "muted")) end
+		if tab.stoaLabel then tab.stoaLabel:SetTextColor(Stoa:Color(chosen and "text" or "muted")) end
 		if tab.stoaUnder then tab.stoaUnder:SetShown(chosen and true or false) end
 	end
 end

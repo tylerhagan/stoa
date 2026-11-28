@@ -146,17 +146,18 @@ local function dressButton(button)
 	local function colour(over)
 		if text then
 			local enabled = not button.IsEnabled or button:IsEnabled()
-			text:SetTextColor(Stoa:Color(not enabled and "muted" or over and not UI.slate() and "accent" or "text"))
+			text:SetTextColor(Stoa:Color(not enabled and "muted" or "text"))
 		end
 		if UI.slate() then
 			-- Slate: an outlined key whose edge lifts under the mouse; no
 			-- accent on a plain button.
 			local r, g, b = Stoa:Color("text")
 			glow:Set(r, g, b, over and 0.22 or 0.1)
-		elseif over then
-			glow:Set(Stoa:Color("accent"))
 		else
-			glow:Clear()
+			-- Leather and Matte: an outlined key whose edge warms to the
+			-- accent under the mouse; the word stays in the text colour.
+			local r, g, b = Stoa:Color(over and "accent" or "text")
+			glow:Set(r, g, b, over and 0.5 or 0.12)
 		end
 	end
 	button:HookScript("OnEnter", function() colour(true) end)
@@ -174,7 +175,7 @@ local function dressClose(button)
 	button:HookScript("OnShow", plainTextures)
 	local cross = Stoa.UI.glyph(button, "Cross", 16, "muted")
 	cross:SetPoint("CENTER", 0, 0)
-	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
+	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("text")) end)
 	button:HookScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
 end
 
@@ -190,7 +191,7 @@ local function dressMaxMin(holder)
 			button:HookScript("OnShow", plainTextures)
 			local glyph = Stoa.UI.glyph(button, glyphName, 14, "muted")
 			glyph:SetPoint("CENTER", 0, 0)
-			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
+			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color("text")) end)
 			button:HookScript("OnLeave", function() glyph:SetVertexColor(Stoa:Color("muted")) end)
 		end
 	end
@@ -238,7 +239,7 @@ local function plainTick(check)
 end
 
 local function dressTick(check, switch)
-	if not check or check.stoaTick or forbidden(check) or not UI.slate() then return end
+	if not check or check.stoaTick or forbidden(check) then return end
 	check.stoaTick = true
 	plainTick(check)
 	local paint
@@ -305,10 +306,9 @@ end
 -- tick box beside them.
 local function dressButtonsIn(frame, depth)
 	if not (frame and frame.GetChildren) or depth <= 0 then return end
-	local slate = UI.slate()
 	for _, child in ipairs({ frame:GetChildren() }) do
 		if not forbidden(child) then
-			if slate and child.IsObjectType and child:IsObjectType("CheckButton") then
+			if child.IsObjectType and child:IsObjectType("CheckButton") then
 				if not child.stoaTick and isTickBox(child) then dressTick(child) end
 			elseif child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
 				dressButton(child)
@@ -335,7 +335,28 @@ local function dressSearch(box)
 	end
 	local edge = UI.roundBorder(box, "CardEdge.tga", 1)
 	if edge.edges[1] then edge.edges[1]:SetPoint("TOPLEFT", -6, 0) end
+	-- Leather and Matte: the field is pressed in (a catch of light under
+	-- its foot), with no outline until you type in it.
+	local tooled = UI.tooled()
+	if tooled then
+		if fill then fill:SetVertexColor(0, 0, 0, UI.TOOLED.well + 0.04) end
+		local catch = box:CreateTexture(nil, "BACKGROUND")
+		catch:SetTexture(UI.WHITE)
+		UI.pixel(catch, "height")
+		catch:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, 0)
+		catch:SetPoint("TOPRIGHT", box, "BOTTOMRIGHT", -5, 0)
+		UI.paint(catch, "text", UI.TOOLED.catch)
+	end
 	local function paint()
+		if tooled then
+			if box:HasFocus() then
+				local r, g, b = Stoa:Color("accent")
+				edge:Set(r, g, b, 0.5)
+			else
+				edge:Clear()
+			end
+			return
+		end
 		if box:HasFocus() then edge:Set(Stoa:Color("accent")) else edge:Set(Stoa:Color("hairline")) end
 	end
 	box:HookScript("OnEditFocusGained", paint)
@@ -359,8 +380,9 @@ local function dressArrowDropdown(button)
 	chevron:SetPoint("CENTER", 0, 0)
 	chevron:SetRotation(-math.pi / 2)
 	button:HookScript("OnEnter", function()
-		glow:Set(Stoa:Color("accent"))
-		chevron:SetVertexColor(Stoa:Color("accent"))
+		local r, g, b = Stoa:Color("accent")
+		glow:Set(r, g, b, 0.5)
+		chevron:SetVertexColor(Stoa:Color("text"))
 	end)
 	button:HookScript("OnLeave", function()
 		glow:Clear()
@@ -531,7 +553,7 @@ local function dressTabs(frame)
 		xpcall(tabArt, Stoa.catch, tab)
 		tab:HookScript("OnEnter", function(self)
 			local words = self.Text or (self.GetFontString and self:GetFontString())
-			if words and not tabSelected(self) then words:SetTextColor(Stoa:Color("accent")) end
+			if words and not tabSelected(self) then words:SetTextColor(Stoa:Color("text")) end
 		end)
 		tab:HookScript("OnLeave", function() colourTabs(frame) end)
 		if tab.Icon and tab.SetChecked then hooksecurefunc(tab, "SetChecked", function() colourTabs(frame) end) end
@@ -797,7 +819,7 @@ end
 local function light(fs, title)
 	if not (fs and fs.SetTextColor) then return end
 	if title then
-		fs:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent"))
+		fs:SetTextColor(Stoa:Color("text"))
 	else
 		fs:SetTextColor(Stoa:Color("text"))
 	end
@@ -908,10 +930,10 @@ local function questFonts()
 	face(QuestFontNormalSmall, sans, 12)
 end
 
--- Slate sets every word in Inter. The game's own windows, tracker and
--- lists draw from a handful of base fonts, so those take STOA's face and
--- keep their own sizes and outlines. (Picking another Style reloads, which
--- gives the game's faces back.)
+-- One face per job, in every Style: the game's own windows, tracker and
+-- lists draw from a handful of base fonts, so those take Inter and keep
+-- their own sizes and outlines. Titles keep the display face (questFonts
+-- below; Slate sets those in Inter too).
 local BASE_FONTS = {
 	"SystemFont_Tiny", "SystemFont_Tiny2", "SystemFont_Small", "SystemFont_Small2", "SystemFont_Med1", "SystemFont_Med2",
 	"SystemFont_Med3", "SystemFont_Large", "SystemFont_Large2", "SystemFont_Huge1", "SystemFont_Huge2",
@@ -1138,9 +1160,9 @@ local function dressDropdownButton(dropdown)
 			text:SetJustifyH("RIGHT")
 			text:ClearAllPoints()
 			text:SetPoint("RIGHT", chevron, "LEFT", -5, 0)
-			text:SetTextColor(Stoa:Color(over and "accent" or "muted"))
+			text:SetTextColor(Stoa:Color(over and "text" or "muted"))
 		end
-		chevron:SetTextColor(Stoa:Color(over and "accent" or "muted"))
+		chevron:SetTextColor(Stoa:Color(over and "text" or "muted"))
 	end
 	dropdown:HookScript("OnEnter", function() paint(true) end)
 	dropdown:HookScript("OnLeave", function() paint(false) end)
@@ -1323,13 +1345,13 @@ local function paintMenuKey(button, over)
 	if text then
 		Stoa:SetFont(text, "sans", Stoa.typeSize.label)
 		text:SetShadowOffset(0, 0)
-		text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+		text:SetTextColor(Stoa:Color(not enabled and "muted" or "text"))
 	end
 	local hot = over and enabled
 	key.lift:SetShown(hot)
 	if key.edge then
 		local r, g, b = Stoa:Color("accent")
-		key.edge:SetVertexColor(r, g, b, 0.85)
+		key.edge:SetVertexColor(r, g, b, 0.5)
 		key.edge:SetShown(hot)
 	end
 end
@@ -1530,7 +1552,7 @@ end
 local guarded = Stoa.safe.guarded
 
 function Windows:OnEnable()
-	if UI.slate() then guarded(slateFonts) end
+	guarded(slateFonts)
 	guarded(questFonts)
 	guarded(dressQuest)
 	guarded(dressGossip)

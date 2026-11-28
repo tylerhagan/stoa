@@ -193,7 +193,7 @@ end
 -- can't sit over the bar).
 local LINES = {
 	line = { width = 120, height = 8, gap = 28, y = 8, top = 4 },
-	numbers = { width = 84, height = 3, gap = 28, y = 8, top = 34, below = true, numbers = true },
+	numbers = { width = 84, height = 4, gap = 28, y = 8, top = 34, below = true, numbers = true },
 }
 Halo.LINE = {}
 for key, value in pairs(LINES.line) do Halo.LINE[key] = value end
@@ -216,7 +216,7 @@ local LINE_ALPHA = 0.82
 -- The side rail: both bars as short uprights together on your left (the
 -- target docks on the right), with the numbers and coins beyond them. x
 -- and bottom are from the Halo's centre; the health rail is the nearer.
-Halo.RAIL = { x = 74, bottom = -52, width = 10, height = 48, gap = 6 }
+Halo.RAIL = { x = 74, bottom = -52, width = 6, height = 48, gap = 6 }
 local RAIL = Halo.RAIL
 
 function Halo:Rail()
@@ -231,12 +231,11 @@ local function railBar(parent, token, index)
 	sb:SetStatusBarTexture(UI.WHITE)
 	if UI.slate() then UI.barShade(sb) end
 	UI.paint(sb, token)
-	local track = sb:CreateTexture(nil, "BACKGROUND")
 	-- Uprights stand against whatever is behind you (green on jungle,
-	-- blue on sky), so they get a dark seat.
-	track:SetPoint("TOPLEFT", -2, 2)
-	track:SetPoint("BOTTOMRIGHT", 2, -2)
-	track:SetColorTexture(0.03, 0.04, 0.05, 0.6)
+	-- blue on sky), so each gets a dark groove with rounded ends.
+	local track = UI.pillFill(sb, 2)
+	track:SetVertexColor(0.03, 0.04, 0.05)
+	track:SetAlpha(0.6)
 	sb:SetAlpha(RAIL_ALPHA)
 	sb.stoaAlpha = RAIL_ALPHA
 	sb:SetMinMaxValues(0, 1)
@@ -286,6 +285,7 @@ local function lineBar(parent, token, reverse)
 			mask:SetSize(artW + 2 * proud, artH + 2 * proud)
 			mask:SetPoint(outer, sb, outer, reverse and -proud or proud, 0)
 			tex:AddMaskTexture(mask)
+			if proud == 0 then sb.stoaFillMask = mask end
 		end
 	end
 	-- A little of the world shows through, like the console's own bars.
@@ -353,8 +353,8 @@ function Halo:Build()
 		healthText:SetPoint("BOTTOMRIGHT", manaText, "TOPRIGHT", 0, 4)
 	elseif line and LINE.numbers then
 		-- The numbers are the frame: large, each over its hairline.
-		healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 5)
-		manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 5)
+		healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 3)
+		manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 3)
 	elseif line then
 		-- The numbers stand at the bars' outer ends.
 		healthText:SetPoint("RIGHT", health, "LEFT", -10, 0)
@@ -373,13 +373,26 @@ function Halo:Build()
 	-- under the power number.
 	if self.db.shield then
 		local shield = UI.shieldGauge(frame, 22)
-		shield:SetPoint("TOPRIGHT", healthText, "BOTTOMRIGHT", 1, -3)
+		if rail then
+			-- The power number sits under the health number here, so the
+			-- shield goes under both, flush with their right edge, and the
+			-- class mark stands beside it.
+			shield:SetPoint("TOPRIGHT", manaText, "BOTTOMRIGHT", 1, -3)
+		else
+			shield:SetPoint("TOPRIGHT", healthText, "BOTTOMRIGHT", 1, -3)
+		end
 		self.shield = shield
 	end
 	-- And your class mark under the power number, mirroring it.
 	if self.db.classMark and Stoa.Mark then
 		local mark = Stoa.Mark.attach(frame, 22)
-		if mark then mark:SetPoint("TOPLEFT", manaText, "BOTTOMLEFT", -1, -3) end
+		if mark and rail and self.shield then
+			mark:SetPoint("RIGHT", self.shield, "LEFT", -4, 0)
+		elseif mark and rail then
+			mark:SetPoint("TOPRIGHT", manaText, "BOTTOMRIGHT", 1, -3)
+		elseif mark then
+			mark:SetPoint("TOPLEFT", manaText, "BOTTOMLEFT", -1, -3)
+		end
 		self.classMark = mark
 	end
 
@@ -488,9 +501,10 @@ function Halo:BuildSignature(frame)
 	slot:SetPoint("CENTER", frame, "BOTTOM", 0, 8)
 	self.signature = slot
 
-	-- The tapered ground line runs in under a dark seat in the groove's
-	-- tone, which makes the bars and the signature one object.
-	if self:Line() and not LINE.numbers and flared() then
+	-- The ground line (and Numbers first) runs in under a dark seat in the
+	-- groove's tone, which makes the bars and the signature one object.
+	-- Every style; only Slate's bars flare into it.
+	if self:Line() then
 		-- On the Halo itself, so it lies behind the bars: a disc and two
 		-- fading bands (LineSeat.tga), and the bars start at the disc's edge.
 		local seat = frame:CreateTexture(nil, "BACKGROUND")
@@ -1222,15 +1236,62 @@ function Halo:SeatMood()
 	ease:Play()
 end
 
--- A form's look (Forms.lua: Shadowform) breathes round the seat: the ring
--- glow in the form's smoke, slowly rising and falling. The only standing
--- motion on the ground line, so it stays low and slow.
-local SEAT_BREATH, SEAT_BREATH_LOW = 1.8, 0.3
+-- A form's look (Forms.lua: Shadowform) smokes the signature's edge: the
+-- form's shade hugs the ring, slowly breathing; the face stays clear. The
+-- only standing motion on the Halo, so it stays low and slow. Stepping
+-- in, the smoke also drifts briefly out along the bars and clears.
+local SEAT_BREATH, SEAT_BREATH_LOW, SEAT_BREATH_HIGH = 1.8, 0.3, 1
+local EDGE_SMOKE_OUT = 4  -- where the smoke peaks, out from the face
+local BAR_SMOKE = { alpha = 0.55, rise = 0.4, hold = 1.0, clear = 1.4 }
+
+-- The brief drift over one bar: thickest by the signature, clear at the
+-- bar's far end. It covers the bar's fill only, so it keeps the fill's shape.
+local function barSmoke(bar, shade, nearRight)
+	if not (bar and bar.GetStatusBarTexture) then return end
+	local fill = bar:GetStatusBarTexture()
+	local smoke = bar.stoaFormSmoke
+	if not smoke then
+		smoke = bar:CreateTexture(nil, "ARTWORK", nil, 7)
+		smoke:SetColorTexture(1, 1, 1, 1)
+		smoke:SetAllPoints(fill)
+		if bar.stoaFillMask then smoke:AddMaskTexture(bar.stoaFillMask) end
+		local drift = smoke:CreateAnimationGroup()
+		local rise = drift:CreateAnimation("Alpha")
+		rise:SetFromAlpha(0)
+		rise:SetToAlpha(1)
+		rise:SetDuration(BAR_SMOKE.rise)
+		rise:SetOrder(1)
+		local hold = drift:CreateAnimation("Alpha")
+		hold:SetFromAlpha(1)
+		hold:SetToAlpha(1)
+		hold:SetDuration(BAR_SMOKE.hold)
+		hold:SetOrder(2)
+		local clear = drift:CreateAnimation("Alpha")
+		clear:SetFromAlpha(1)
+		clear:SetToAlpha(0)
+		clear:SetDuration(BAR_SMOKE.clear)
+		clear:SetSmoothing("IN")
+		clear:SetOrder(3)
+		drift:SetScript("OnFinished", function() smoke:Hide() end)
+		smoke.drift = drift
+		bar.stoaFormSmoke = smoke
+	end
+	-- The colour goes on the texture itself too, so if the gradient doesn't
+	-- take, the worst case is the shade, never white.
+	smoke:SetColorTexture(shade[1], shade[2], shade[3], 1)
+	UI.setGradient(smoke, { "HORIZONTAL", nearRight and 0 or 1, nearRight and 1 or 0 }, shade[1], shade[2], shade[3], BAR_SMOKE.alpha)
+	smoke.drift:Stop()
+	smoke:Show()
+	smoke.drift:Play()
+end
+
 function Halo:SeatForm(look)
 	local slot = self.signature
-	if not (slot and slot.seat) then return end
-	local smoke = slot.seatSmoke
+	if not (slot and slot.icon) then return end
+	local smoke = slot.edgeSmoke
 	local shade = type(look) == "table" and look.shade
+	local was = self.formShade
+	self.formShade = shade
 	if not shade then
 		if smoke then
 			smoke.breath:Stop()
@@ -1241,24 +1302,30 @@ function Halo:SeatForm(look)
 	if not smoke then
 		smoke = self.frame:CreateTexture(nil, "BACKGROUND", nil, -1)
 		smoke:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
-		-- The glow peaks 55/77 of the way out: set that just past the
-		-- signature's ring.
-		local size = (SIGNATURE_SIZE / 2 + 14) / (55 / 77) * 2
+		-- The glow peaks 55/77 of the way out: set that on the signature's
+		-- own edge, so the smoke hugs the ring rather than standing off it.
+		local size = (SIGNATURE_SIZE / 2 + EDGE_SMOKE_OUT) / (55 / 77) * 2
 		smoke:SetSize(size, size)
 		smoke:SetPoint("CENTER", slot, "CENTER")
 		local breath = smoke:CreateAnimationGroup()
 		breath:SetLooping("BOUNCE")
 		local fade = breath:CreateAnimation("Alpha")
 		fade:SetFromAlpha(SEAT_BREATH_LOW)
-		fade:SetToAlpha(1)
+		fade:SetToAlpha(SEAT_BREATH_HIGH)
 		fade:SetDuration(SEAT_BREATH)
 		fade:SetSmoothing("IN_OUT")
 		smoke.breath = breath
-		slot.seatSmoke = smoke
+		slot.edgeSmoke = smoke
 	end
 	smoke:SetVertexColor(shade[1], shade[2], shade[3])
 	smoke:Show()
 	if not smoke.breath:IsPlaying() then smoke.breath:Play() end
+	-- Only on the way in: health on the left (the signature at its right
+	-- end), mana on the right.
+	if not was and self:Line() then
+		barSmoke(self.health, shade, true)
+		barSmoke(self.mana, shade, false)
+	end
 end
 
 function Halo:SeatThreat()

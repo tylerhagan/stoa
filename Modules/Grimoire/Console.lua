@@ -330,10 +330,11 @@ end
 -- and empty until you have a target, then holds its portrait, wherever the
 -- target's own plaque is showing. It fades with the arch when the console
 -- folds.
-function Console:BuildTargetCone(frame)
+-- `mirror` builds the same tab on the dial's left (the pet's, Pet.lua).
+function Console:BuildCone(frame, mirror)
 	local holder = CreateFrame("Frame", nil, frame)
 	holder:SetSize(MATTE_TAB_W, MATTE_TAB_H)
-	holder:SetPoint("BOTTOMLEFT", frame, "TOP", 0, -1)
+	holder:SetPoint(mirror and "BOTTOMRIGHT" or "BOTTOMLEFT", frame, "TOP", 0, -1)
 	local tab = holder:CreateTexture(nil, "BACKGROUND")
 	tab:SetTexture(UI.MEDIA .. "Textures\\MatteTab")
 	tab:SetAllPoints()
@@ -347,6 +348,10 @@ function Console:BuildTargetCone(frame)
 	-- Unsnapped like the docked block that runs on from it.
 	UI.unsnap(tab)
 	UI.unsnap(lines)
+	if mirror then
+		tab:SetTexCoord(1, 0, 0, 1)
+		lines:SetTexCoord(1, 0, 0, 1)
+	end
 	-- The cone stands on its own frame above the docked target block (a
 	-- LOW button that starts under the cone's right edge), so the block
 	-- runs on beneath the bezel and never cuts it.
@@ -358,7 +363,7 @@ function Console:BuildTargetCone(frame)
 	local bezel = face:CreateTexture(nil, "BORDER")
 	bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
 	bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
-	bezel:SetPoint("CENTER", holder, "BOTTOMLEFT", CONE_X, CONE_Y + 1)
+	bezel:SetPoint("CENTER", holder, mirror and "BOTTOMRIGHT" or "BOTTOMLEFT", mirror and -CONE_X or CONE_X, CONE_Y + 1)
 	local pit = circle(face, "BORDER", 1, size + 4)
 	pit:SetColorTexture(0, 0, 0, 0.55)
 	pit:SetPoint("CENTER", bezel)
@@ -371,8 +376,12 @@ function Console:BuildTargetCone(frame)
 	round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 	round:SetAllPoints(portrait)
 	portrait:AddMaskTexture(round)
-	self.cone = { holder = holder, portrait = portrait, rim = rim }
 	table.insert(self.archParts, holder)
+	return { holder = holder, portrait = portrait, rim = rim }
+end
+
+function Console:BuildTargetCone(frame)
+	self.cone = self:BuildCone(frame)
 	local function update() self:UpdateTargetCone() end
 	Stoa:On("PLAYER_TARGET_CHANGED", update)
 	Stoa:On("PLAYER_ENTERING_WORLD", update)
@@ -786,7 +795,7 @@ function Console:BuildSeal(frame)
 	-- Halo's settings; slim leaves them to the Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db then
-		local crest = art and 29 or matteSeal and CREST_SOCKET_MARK or you and YOU_CREST or 22
+		local crest = art and 24 or matteSeal and CREST_SOCKET_MARK or you and YOU_CREST or 22
 		self.crestSize, self.crestPortrait = crest, portrait
 		if matteSeal then
 			-- A small round socket for each, set in the shell between the
@@ -844,6 +853,9 @@ function Console:BuildSeal(frame)
 
 	if art then
 		self:BuildResources(frame)
+		-- The crest stands at the bars' outer ends, so place it again now
+		-- they're built.
+		self:PlaceCrest()
 		return
 	end
 
@@ -1411,11 +1423,11 @@ local function slotHandle(parent, heading)
 				end
 			end
 		end
-		-- Ready's count of jobs stands clear of the dots.
-		local badge = own.column and own.column.stoaBadge
-		if badge then
-			badge:ClearAllPoints()
-			badge:SetPoint("TOPRIGHT", own.column, "TOPRIGHT", n > 0 and -(n * (SLOT_DOT + SLOT_DOT_GAP) + 4) or 0, 2)
+		-- Ready's count of jobs stands clear of the dots, just left of the
+		-- first one (the badge is placed again whenever its count changes).
+		if own.column then
+			own.column.stoaFirstDot = n > 0 and dots[1] or nil
+			Console.PlaceJobBadge(own.column)
 		end
 	end
 	if slate then handle:SetScript("OnShow", function(own) rest(own) end) end
@@ -1731,15 +1743,14 @@ function Console:BuildFellowship(frame, space)
 	open:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
--- The crest: the shield and the class mark. With the art they sit in the
--- open corner left of the ring, over the gold line where it sweeps down off
--- the ring and runs flat (the right is left clear for the target); one
--- alone takes the spot nearest the ring, both sit in a row outwards.
--- Measured on ConsoleMedallionLines.tga, from the ring's centre: the line
--- runs flat about 10 px up from 90 px out, and climbs to 22 px up at 83
--- px out and 45 px up at 58 px out. Without the art they sit at the top
--- of the ring, their feet in the band between the portrait and the ring.
-local CREST_X, CREST_Y = -106, 30
+-- The crest: the shield and the class mark. With the art they stand at
+-- the outer ends of the resource row, the shield before HEALTH and the
+-- mark after MANA (both sides of the medallion are taken by the docked
+-- target and pet), CREST_OUT past the bars' ends and CREST_LIFT above
+-- the bars, level with the caption over them. Without the art they sit at
+-- the top of the ring, their feet in the band between the portrait and
+-- the ring.
+local CREST_OUT, CREST_LIFT = 10, 7
 local CREST_FOOT = 3
 
 -- Hovering the shield or the mark says what it is and what's left.
@@ -1803,11 +1814,9 @@ function Console:PlaceCrest()
 		self:PlaceYouBars(n)
 		return
 	end
-	if self:Art() then
-		local step = size + 4
-		for i, gauge in ipairs(shown) do
-			gauge:SetPoint("CENTER", self.crestPortrait, "CENTER", CREST_X - (i - 1) * step + nudge, CREST_Y + nudge)
-		end
+	if self:Art() and self.health and self.mana then
+		if shield then shield:SetPoint("RIGHT", self.health, "LEFT", -CREST_OUT + nudge, CREST_LIFT + nudge) end
+		if mark then mark:SetPoint("LEFT", self.mana, "RIGHT", CREST_OUT + nudge, CREST_LIFT + nudge) end
 		return
 	end
 	if self:Matte() then
@@ -2301,7 +2310,21 @@ function Console:BuildSlateJobs(col, role)
 		row:Hide()
 		rows[i] = row
 	end
-	self.slateJobs = { count = count, rows = rows }
+	self.slateJobs = { count = count, rows = rows, col = col }
+end
+
+-- Ready's job count: left of the page dots when the card shows them,
+-- else at the card's top right.
+function Console.PlaceJobBadge(col)
+	local badge = col and col.stoaBadge
+	if not badge then return end
+	badge:ClearAllPoints()
+	local first = col.stoaFirstDot
+	if first and first:IsShown() then
+		badge:SetPoint("RIGHT", first, "LEFT", -6, 0)
+	else
+		badge:SetPoint("TOPRIGHT", col, "TOPRIGHT", 0, 2)
+	end
 end
 
 -- Fills the Slate job rows; true when they show (the one-line note waits).
@@ -2310,6 +2333,7 @@ function Console:ShowSlateJobs(list)
 	if not jobs then return false end
 	local any = list and #list > 0 and not InCombatLockdown()
 	jobs.count:Set(any and tostring(#list) or nil, "accent")
+	Console.PlaceJobBadge(jobs.col)
 	local last
 	for i, row in ipairs(jobs.rows) do
 		local job = any and list[i]

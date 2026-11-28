@@ -461,7 +461,7 @@ local function build()
 	group = "Your pet"
 	local pet = of("Pet")
 	local petRefresh = function() if Stoa.Pet and Stoa.Pet.enabled then Stoa.Pet:UpdateAll() end end
-	toggle(pet, "plaque", "Pet plaque", "In a fight, a plaque like the target's at the Halo's upper left: your pet's mood, health, power, stance and what it's attacking. Under the tank watch when you heal.", true, { id = "petPlaque", classes = PETS, reload = true, words = "hunter warlock demon minion" })
+	toggle(pet, "plaque", "Pet ring", "In a fight, your pet as a small ring on the Halo: its portrait, red when it's low, with its name, health and what it's attacking beside it.", true, { id = "petPlaque", classes = PETS, reload = true, words = "hunter warlock demon minion" })
 	toggle(pet, "arc", "Pet health on the Halo", "A thin arc inside your own health with the pet's.", true, { id = "petArc", classes = PETS, reload = true, words = "hunter warlock" })
 	toggle(pet, "row", "Pet row under the combat bar", "Your pet's buttons, smaller, under the combat bar in a fight. Right-click one to switch its autocast. Out of a fight the game's pet bar stays where it is, in STOA's dress.", true, { id = "petRow", classes = PETS, reload = true, words = "pet bar autocast stance" })
 	toggle(pet, "coin", "Pet coin on the medallion", "Out of a fight, a small coin off the medallion with your pet's health as a ring and its mood under it. Click it to feed it food from your bags when it isn't happy; right-click targets it.", true, { id = "petCoin", classes = PETS, reload = true, words = "feed happiness hunter" })
@@ -912,7 +912,7 @@ local function build()
 	toggle(of("Alts"), "tooltipCounts", "Count items on every character", "Item tooltips add how many your other characters carry and keep in the bank, from when each last played.", true, { words = "alts bags bank tooltip owned" })
 	toggle(of("GearSets"), "enabled", "Gear for each spec", "Put on an equipment set in a spec and STOA puts it back on whenever you change to that spec, after any fight. A set assigned to a spec in the equipment manager always wins.", true, { id = "gearSetsOn", scope = "This character", words = "equipment manager dual spec swap outfit" })
 	group = "Keys"
-	button("bind", "Bind keys", "Hover any action, pet or stance button and press a key, mouse button or wheel, with any modifier. Backspace clears; Esc finishes and keeps the keys.", "Start", command("bind"), { cmd = "/stoa bind", words = "keybind hotkey keybinding kb" })
+	button("bind", "Bind keys", "Hover any action, pet or stance button, or the Shadowform button, and press a key, mouse button or wheel, with any modifier. Backspace clears; Esc finishes and keeps the keys.", "Start", command("bind"), { cmd = "/stoa bind", words = "keybind hotkey keybinding kb" })
 	group = "The game's own settings"
 	button("restore", "Put the game's settings back", "Puts back the game settings STOA changed (far camera, map fade, target nameplate size, combined bags, proc art), as they were before STOA. One you've changed yourself since stays as you set it.", "Put back", command("restore"), { cmd = "/stoa restore", words = "cvar ledger reset camera" })
 	group = "Other addons"

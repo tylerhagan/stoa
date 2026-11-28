@@ -27,7 +27,7 @@ local plain = function(v) return Stoa.safe.plain(v) end
 
 local PLAQUE_WIDTH, PLAQUE_HEIGHT = 294, 112
 local PAD = 12
--- Slate's companion ring: its size, and where on the pet's arc it sits
+-- The companion ring: its size, and where on the pet's arc it sits
 -- (degrees below the Halo's left).
 local RING, RING_AT = 38, 68
 -- Ground line: the gap between the health number and the ring.
@@ -38,7 +38,7 @@ local COIN = 46
 local LOW = 0.35
 -- When the game shows the pet row and the pet coin.
 local ROW_RULE = "[combat,@pet,exists,nopossessbar] show; hide"
--- Slate: the row also stands over the pet's card at rest.
+-- With a card, the row also stands over it at rest.
 local ROW_RULE_REST = "[@pet,exists,nopossessbar] show; hide"
 local COIN_RULE = "[combat] hide; [@pet,exists] show; hide"
 
@@ -180,8 +180,7 @@ function Pet:BuildPlaque()
 	frame:SetSize(PLAQUE_WIDTH, PLAQUE_HEIGHT)
 	frame:SetAlpha(0)
 	frame:EnableMouse(false)
-	-- Slate draws no plate: the pet is a ring on the Halo (see below).
-	if not UI.slate() then frame.plaque = UI.plaque(frame, "RIGHT") end
+	-- No plate: the pet is a ring on the Halo (see below), in every style.
 
 	-- The words sit in a column centred top to bottom, with room between
 	-- each group (caption, name, bars, the line underneath).
@@ -203,8 +202,6 @@ function Pet:BuildPlaque()
 	percent:SetPoint("TOPRIGHT", word, "BOTTOMRIGHT", 0, -8)
 	local hp = UI.bar(column, width, 7, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -8)
-	-- The slab's line is shorter (see below): 244 less its pads and percent.
-	if not UI.slate() then UI.engrave(hp, UI.slabCards() and 176 or width) end
 	local power = UI.bar(column, width, 3, "accent")
 	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -8)
 	local foot = UI.caption(column, "")
@@ -214,42 +211,11 @@ function Pet:BuildPlaque()
 	on:SetWidth(width - 90)
 	on:SetWordWrap(false)
 
-	-- Matte: the target slab's twin. The name and mood on one line over
-	-- a slim health line with its percent at the right end; the caption
-	-- stands on top of the block and the stance line hangs under it.
-	frame.slab = UI.slabCards() and not UI.slate()
-	if frame.slab then
-		local pad, numW = 11, 46
-		local barW = 244 - pad * 2 - numW
-		frame:SetSize(244, 50)
-		frame.plaque:SetPlain(true)
-		column:ClearAllPoints()
-		column:SetAllPoints(frame)
-		caption:ClearAllPoints()
-		caption:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", pad, 5)
-		word:ClearAllPoints()
-		word:SetPoint("TOPRIGHT", -pad, -10)
-		Stoa:SetFont(name, "serif", Stoa.typeSize.label)
-		name:ClearAllPoints()
-		name:SetPoint("TOPLEFT", pad, -9)
-		name:SetPoint("RIGHT", word, "LEFT", -8, 0)
-		hp:ClearAllPoints()
-		hp:SetPoint("TOPLEFT", pad, -29)
-		hp:SetSize(barW, 8)
-		Stoa:SetFont(percent, "serif", Stoa.typeSize.label)
-		percent:ClearAllPoints()
-		percent:SetPoint("RIGHT", frame, "TOPRIGHT", -pad, -33)
-		power:ClearAllPoints()
-		power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -3)
-		power:SetWidth(barW)
-		foot:ClearAllPoints()
-		foot:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", pad, -6)
-	end
-	-- Slate: a companion ring at the foot of the pet's arc on the Halo, as
-	-- if the arc grew out of it. The portrait in a ring that carries the
-	-- pet's colour (red when it is low), its name and one line beside it
-	-- inside the Halo, the percent under the ring. No plate at all.
-	if UI.slate() then
+	-- A companion ring at the foot of the pet's arc on the Halo, as if the
+	-- arc grew out of it. The portrait in a ring that carries the pet's
+	-- colour (red when it is low), its name and one line beside it inside
+	-- the Halo, the percent under the ring. No plate at all.
+	do
 		frame.ring = true
 		frame:SetSize(RING, RING)
 		caption:Hide()
@@ -310,7 +276,7 @@ end
 -- Ground line: the room the pet's ring takes in the row left of the health
 -- number, for the pieces that stand further out. Nothing without a pet class.
 function Pet:LineRoom()
-	if not (UI.slate() and (self.demo or self:Keeper())) then return 0 end
+	if not (self.plaqueFrame and (self.demo or self:Keeper())) then return 0 end
 	return LINE_CLEAR + RING + 8
 end
 
@@ -352,21 +318,14 @@ function Pet:PlacePlaque()
 		frame:SetPoint("CENTER", halo, "CENTER", -radius * math.cos(at), -radius * math.sin(at))
 		return
 	end
-	if not halo then
-		frame:SetPoint("CENTER", UIParent, "CENTER", -300, 120)
-	elseif Stoa:GetRole() == "HEALER" then
-		-- Clear of the watch block's buff tags above it.
-		frame:SetPoint("TOPRIGHT", halo, "LEFT", -52, frame.slab and -8 or 24)
-	else
-		frame:SetPoint("BOTTOMRIGHT", halo, "LEFT", -52, frame.slab and 36 or 30)
-	end
+	frame:SetPoint("CENTER", UIParent, "CENTER", -300, 120)
 end
 
 function Pet:UpdatePlaque()
 	local frame = self.plaqueFrame
 	if not frame then return end
-	-- The demo shows it at rest too, unless Slate's card is there to look at.
-	-- Slate's card by the Halo only shows in a fight: at rest the console's
+	-- The demo shows it at rest too, unless the card is there to look at.
+	-- The ring by the Halo only shows in a fight: at rest the console's
 	-- own card stands in for it, even in the demo.
 	local show = self.db.plaque and hasPet() and (Stoa:GetState() == Stoa.STATE_COMBAT or Stoa.previewing or (self.demo and not self.card))
 	frame:SetAlpha(show and 1 or 0)
@@ -433,11 +392,14 @@ function Pet:UpdatePlaque()
 	frame.foot:SetText(Stoa.UI.join(foot))
 end
 
--- The card (Slate) --------------------------------------------------------------
--- At rest on Slate the pet has a card of its own left of yours, the mirror
--- of the target's on the right, contents flipped too. It belongs to
--- the console and fades with it; clicks go to the coin's button, laid over
--- it on the screen (see BuildCoin).
+-- The card --------------------------------------------------------------------
+-- At rest the pet has a card of its own left of yours, the mirror of the
+-- target's on the right, contents flipped too: on Slate a twin of your
+-- card, on Leather and Matte a block docked on the console's rim, coming
+-- out of the medallion's left as the target's comes out of its right
+-- (Matte gives it a tab with a cone for the portrait, like the target's).
+-- It belongs to the console and fades with it; clicks go to the coin's
+-- button, laid over it on the screen (see BuildCoin).
 local CARD_H, CARD_PAD, CARD_GAP = 50, 11, 10
 local CARD_NAME_W, CARD_NAME_GAP = 124, 12
 local CARD_W_LEAST = 260
@@ -447,9 +409,70 @@ function Pet:CardWidth()
 	return math.max(CARD_W_LEAST, halo and halo.TwinWidth and halo:TwinWidth() or CARD_W_LEAST)
 end
 
+-- Leather and Matte: the docked block's rows, from its medallion end.
+local DOCK_Y, DOCK_TEXT = -1, 60
+local DOCK_NAME_W, DOCK_BAR_W = 110, 110
+
+-- Where the card stands on the screen: its right end's x from the
+-- screen's centre, its bottom from the screen's bottom, its size.
+function Pet:CardSpot()
+	local console, card = Stoa.modules.Grimoire, self.card
+	if card.docked then
+		return -card.docked, console:OpenHeight() + DOCK_Y, card:GetWidth(), card:GetHeight()
+	end
+	local you = console.YOU_CARD
+	return -(you.width / 2 + CARD_GAP), console:OpenHeight() + you.y - you.height / 2, self:CardWidth(), CARD_H
+end
+
+-- Leather (the drawn console) and Matte, open full size: the docked block.
+function Pet:BuildDockCard(console)
+	local matte = console:Matte()
+	if console.db.slim or not (matte or console:Art()) then return end
+	local x = matte and console.MATTE_DOCK_X or UI.PLAQUE_SOCKET_X
+	local near = matte and console.MATTE_DOCK_TEXT or DOCK_TEXT
+	local h = UI.plaqueDockHeight()
+	local curve = near + DOCK_NAME_W + CARD_NAME_GAP + DOCK_BAR_W + 8
+	local card = CreateFrame("Frame", nil, console.frame)
+	card:SetSize(curve + UI.PLAQUE_JOIN_SPAN, h)
+	card:SetPoint("BOTTOMRIGHT", console.frame, "TOP", -x, DOCK_Y)
+	card.docked = x
+	card.plate = UI.dockPlate(card, true)
+	card.plate:Layout(curve)
+	-- Matte: the tab with the portrait's cone, built the first time a pet
+	-- (or the demo's) is out and shown only while one is.
+	card.coneOn = matte and console
+	console:AddPage(card)
+
+	-- The name and stance by the medallion, the bar beyond them with the
+	-- percent and one word under it.
+	local top = math.floor(h / 2) - 14
+	local name = UI.text(card, "serif", Stoa.typeSize.label, "text", "RIGHT")
+	name:SetPoint("TOPRIGHT", -near, -top)
+	name:SetWidth(DOCK_NAME_W)
+	name:SetWordWrap(false)
+	local doing = UI.caption(card, "")
+	doing:SetPoint("TOPRIGHT", name, "BOTTOMRIGHT", 0, -5)
+	doing:SetWidth(DOCK_NAME_W)
+	doing:SetJustifyH("RIGHT")
+	doing:SetWordWrap(false)
+	local hp = UI.bar(card, DOCK_BAR_W, 8, "health")
+	hp:SetPoint("TOPRIGHT", -(near + DOCK_NAME_W + CARD_NAME_GAP), -(top + 3))
+	local power = UI.bar(card, DOCK_BAR_W, 3, "accent")
+	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -3)
+	local word = UI.caption(card, "")
+	word:SetPoint("TOPRIGHT", power, "BOTTOMRIGHT", 0, -5)
+	local percent = UI.text(card, "sans", Stoa.typeSize.body, "muted", "LEFT")
+	percent:SetPoint("TOPLEFT", power, "BOTTOMLEFT", 0, -3)
+	card.name, card.doing, card.hp, card.power, card.word, card.percent = name, doing, hp, power, word, percent
+	card:Hide()
+	self.card = card
+	return card
+end
+
 function Pet:BuildCard()
 	local console = Stoa.modules.Grimoire
-	if not (console and console.enabled and console.youCard and console.SlatePlate and console.YOU_CARD) then return end
+	if not (console and console.enabled and console.frame) then return end
+	if not (console.youCard and console.SlatePlate and console.YOU_CARD) then return self:BuildDockCard(console) end
 	local you = console.YOU_CARD
 	local card = CreateFrame("Frame", nil, console.frame)
 	card:SetSize(self:CardWidth(), CARD_H)
@@ -490,9 +513,18 @@ function Pet:UpdateCard()
 	local card = self.card
 	if not card then return end
 	local show = hasPet()
+	local was = card:IsShown()
 	card:SetShown(show)
+	if show and card.coneOn and not card.cone then
+		card.cone = card.coneOn:BuildCone(card.coneOn.frame, true)
+	end
+	if card.cone then
+		card.cone.holder:SetShown(show)
+		if show then SetPortraitTexture(card.cone.portrait, unit()) end
+	end
 	if not show then return end
-	card:SetWidth(self:CardWidth())
+	if card.plate and not was then card.plate:PlayDock() end
+	if not card.docked then card:SetWidth(self:CardWidth()) end
 	card.name:SetText(self.demo and "Ashmane" or UnitName(unit()))
 	UI.setUnitBar(card.hp, unit(), "health")
 	UI.setHealthPercent(card.percent, unit(), nil, true)
@@ -672,18 +704,17 @@ function Pet:RowRule()
 end
 
 -- Under the combat bar's last row; the party row moves down to make room.
--- Slate, at rest: standing on the pet's card, its right end over the
--- card's. Pinned to the screen, never to the console, which folds.
+-- At rest: standing on the pet's card, its right end over the card's.
+-- Pinned to the screen, never to the console, which folds.
 function Pet:PlaceRow()
 	local row, halo = self.row, _G.StoaHalo
 	if not row or not halo or InCombatLockdown() or Stoa:HasSavedPosition("petrow") then return end
-	local console = Stoa.modules.Grimoire
 	local resting = self.card and Stoa:GetState() == Stoa.STATE_WORLD
 	if row.label then row.label:SetShown(not resting) end
 	if resting then
-		local you = console.YOU_CARD
+		local x, y, _, h = self:CardSpot()
 		row:ClearAllPoints()
-		row:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOM", -(you.width / 2 + CARD_GAP), console:OpenHeight() + you.y + you.height / 2 + 6)
+		row:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOM", x, y + h + 6)
 		return
 	end
 	local bar = Stoa.modules.CombatBar
@@ -739,18 +770,17 @@ function Pet:FoodSlot()
 	return found
 end
 
--- With Slate's card the coin draws nothing: its button is laid over the
+-- With a card the coin draws nothing: its button is laid over the
 -- card as the thing that takes the clicks.
 function Pet:PlaceCoin()
 	local coin, card = self.coin, self.card
 	if not (coin and card) or InCombatLockdown() then return end
-	local console = Stoa.modules.Grimoire
-	local you = console.YOU_CARD
+	local x, y, w, h = self:CardSpot()
 	coin:ClearAllPoints()
-	coin:SetSize(self:CardWidth(), CARD_H)
+	coin:SetSize(w, h)
 	-- On the screen where the open console holds the card, never on the
 	-- console itself, which folds in a fight.
-	coin:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOM", -(you.width / 2 + CARD_GAP), console:OpenHeight() + you.y - you.height / 2)
+	coin:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOM", x, y)
 end
 
 function Pet:BuildCoin()
@@ -1020,7 +1050,7 @@ function Pet:OnEnable()
 	Stoa:On("UNIT_HAPPINESS", refresh)
 	Stoa:On("STOA_STATE_CHANGED", function()
 		refresh()
-		-- The row has a resting spot on Slate; it moves while it still may.
+		-- The row has a resting spot with a card; it moves while it still may.
 		if self.card and not InCombatLockdown() then self:PlaceRow() end
 	end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() if self.card then self:PlaceRow() end end)

@@ -618,11 +618,11 @@ function Alts:Build()
 	self:BuildBand(list)
 	local headY = -(LIST_TOP - HEADER - 14)
 	for _, column in ipairs(COLUMNS) do
-		local head = UI.text(list, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
+		local head = UI.text(list, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 		head:SetPoint("TOPLEFT", column[2] + (column[2] == 0 and (CREST + 26) or 0), headY)
 		head:SetText(column[1]:upper())
 	end
-	local ilvlHead = UI.text(list, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "RIGHT")
+	local ilvlHead = UI.text(list, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	ilvlHead:SetPoint("TOPRIGHT", -12, headY)
 	ilvlHead:SetText("ITEM LEVEL")
 	local headRule = UI.line(list, "hairline")
@@ -1057,7 +1057,7 @@ function Alts:BuildSide()
 	local lines = {}
 	local y = -HEADER - 32 - STAGE_HEIGHT - 16
 	for _, group in ipairs(GROUPS) do
-		local head = UI.text(side, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+		local head = UI.text(side, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 		head:SetPoint("TOPLEFT", PAD, y)
 		head:SetText(group[1]:upper())
 		local rule = UI.line(side, "hairline")
