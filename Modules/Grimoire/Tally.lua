@@ -964,8 +964,11 @@ function Tally:NarrowSpeaking(shown)
 	local last = narrow and SPEAKS_WIDTH or COLUMN_WIDTH
 	for i = first, #self.rows do
 		local row = self.rows[i]
+		local was = plain(row:GetWidth())
 		row:SetWidth(last)
 		row.value:SetWidth(last - 10)
+		-- Its label's place depends on the width: place it again.
+		if row.key and row:IsShown() and was and math.abs(was - last) > 0.5 then self:DrawFigure(row, row.key) end
 	end
 	local width = columns == 2 and (COLUMN_WIDTH + COLUMN_GAP + last) or COLUMN_WIDTH
 	local before = plain(self.page:GetWidth())
@@ -1027,7 +1030,7 @@ function Tally:DrawFigure(row, key)
 	end
 	local valueWidth = plain(row.value:GetStringWidth()) or 30
 	-- A line that speaks for itself: its figure sits by the value, and its
-	-- label (shown on hover) stands right-aligned just before them.
+	-- label (shown on hover) stands at the column's left.
 	row.label:ClearAllPoints()
 	if row.speaks then
 		local shift = valueWidth + 8
@@ -1043,9 +1046,17 @@ function Tally:DrawFigure(row, key)
 			figure:Show()
 			shift = shift + FIGURE_WIDTH + 6
 		end
+		-- Left-aligned with the column, like every other label; only when
+		-- a long value leaves no room does it hug the value instead.
 		row.label:SetWidth(0)
-		row.label:SetJustifyH("RIGHT")
-		row.label:SetPoint("RIGHT", row, "RIGHT", -shift, 0)
+		local need = plain(row.label:GetStringWidth()) or 0
+		if need + shift <= (plain(row:GetWidth()) or COLUMN_WIDTH) then
+			row.label:SetJustifyH("LEFT")
+			row.label:SetPoint("LEFT")
+		else
+			row.label:SetJustifyH("RIGHT")
+			row.label:SetPoint("RIGHT", row, "RIGHT", -shift, 0)
+		end
 		return
 	end
 	row.label:SetJustifyH("LEFT")
