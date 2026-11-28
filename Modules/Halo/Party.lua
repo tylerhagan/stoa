@@ -1309,13 +1309,60 @@ local function probeLine(unit)
 	return unit .. ": " .. table.concat(parts, "  /  ")
 end
 
-local function probeNote(unit)
-	if not (probeOn and PROBE_UNITS[unit] and InCombatLockdown()) or #probeNotes >= PROBE_MOST then return end
-	local ok, line = pcall(probeLine, unit)
-	if not ok then line = unit .. ": probe error" end
-	if probeSeen[line] then return end
+-- What the notice itself carries: the game sends, with each change, the
+-- effects added and the ids of those changed. Each field is named as
+-- plain, secret or unreadable; a plain dispel kind is printed.
+local PROBE_FIELDS = { "isHarmful", "dispelName", "spellId", "auraInstanceID" }
+local function probeField(aura, key)
+	local read, value = pcall(function() return aura[key] end)
+	if not read then return key .. "=error" end
+	if Stoa:IsSecret(value) then return key .. "=secret" end
+	if key == "dispelName" or key == "isHarmful" then return key .. "=" .. tostring(value) end
+	return key .. "=" .. type(value)
+end
+
+local function probeSize(list)
+	if list == nil then return "none" end
+	if Stoa:IsSecret(list) then return "secret" end
+	if type(list) ~= "table" then return type(list) end
+	local sized, n = pcall(function() return #list end)
+	return sized and (Stoa:IsSecret(n) and "secret" or tostring(n)) or "error"
+end
+
+local function probeNotice(unit, info)
+	if info == nil then return unit .. " notice: nothing sent" end
+	if Stoa:IsSecret(info) then return unit .. " notice: secret" end
+	if type(info) ~= "table" then return unit .. " notice: " .. type(info) end
+	local parts = { "added " .. probeSize(info.addedAuras), "changed " .. probeSize(info.updatedAuraInstanceIDs) }
+	local first = type(info.addedAuras) == "table" and not Stoa:IsSecret(info.addedAuras) and info.addedAuras[1]
+	if first ~= nil and first ~= false then
+		if Stoa:IsSecret(first) then
+			parts[#parts + 1] = "first secret"
+		elseif type(first) == "table" then
+			for _, key in ipairs(PROBE_FIELDS) do parts[#parts + 1] = probeField(first, key) end
+		end
+	end
+	local ids = info.updatedAuraInstanceIDs
+	local id = type(ids) == "table" and not Stoa:IsSecret(ids) and ids[1]
+	if id and C_UnitAuras.GetAuraDataByAuraInstanceID then
+		local ok, aura = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, id)
+		parts[#parts + 1] = "by id " .. probeWord(ok, aura)
+	end
+	return unit .. " notice: " .. table.concat(parts, " · ")
+end
+
+local function probeKeep(line)
+	if probeSeen[line] or #probeNotes >= PROBE_MOST then return end
 	probeSeen[line] = true
 	probeNotes[#probeNotes + 1] = line
+end
+
+local function probeNote(unit, info)
+	if not (probeOn and PROBE_UNITS[unit] and InCombatLockdown()) then return end
+	local ok, line = pcall(probeLine, unit)
+	probeKeep(ok and line or (unit .. ": probe error"))
+	local read, notice = pcall(probeNotice, unit, info)
+	probeKeep(read and notice or (unit .. " notice: probe error"))
 end
 
 Stoa.commands.dispel = function()
@@ -1332,7 +1379,7 @@ Stoa.commands.dispel = function()
 	end
 	if probeHooked then return end
 	probeHooked = true
-	Stoa:On("UNIT_AURA", function(unit) probeNote(unit) end)
+	Stoa:On("UNIT_AURA", function(unit, info) probeNote(unit, info) end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function()
 		if not probeOn or #probeNotes == 0 then return end
 		Stoa:Print("Debuff probe, this fight:")
