@@ -286,6 +286,7 @@ local function lineBar(parent, token, reverse)
 			mask:SetSize(artW + 2 * proud, artH + 2 * proud)
 			mask:SetPoint(outer, sb, outer, reverse and -proud or proud, 0)
 			tex:AddMaskTexture(mask)
+			if proud == 0 then sb.stoaFillMask = mask end
 		end
 	end
 	-- A little of the world shows through, like the console's own bars.
@@ -1222,15 +1223,59 @@ function Halo:SeatMood()
 	ease:Play()
 end
 
--- A form's look (Forms.lua: Shadowform) breathes round the seat: the ring
--- glow in the form's smoke, slowly rising and falling. The only standing
--- motion on the ground line, so it stays low and slow.
-local SEAT_BREATH, SEAT_BREATH_LOW = 1.8, 0.3
+-- A form's look (Forms.lua: Shadowform) smokes the signature itself: the
+-- form's shade rises over the coin's face from below, slowly breathing.
+-- The only standing motion on the Halo, so it stays low and slow. Stepping
+-- in, the smoke also drifts briefly out along the bars and clears.
+local SEAT_BREATH, SEAT_BREATH_LOW = 1.8, 0.45
+local FACE_SMOKE = { 0.85, 0.15 }  -- bottom and top of the face
+local BAR_SMOKE = { alpha = 0.55, rise = 0.4, hold = 1.0, clear = 1.4 }
+
+-- The brief drift over one bar: thickest by the signature, clear at the
+-- bar's far end. It covers the bar's fill only, so it keeps the fill's shape.
+local function barSmoke(bar, shade, nearRight)
+	if not (bar and bar.GetStatusBarTexture) then return end
+	local fill = bar:GetStatusBarTexture()
+	local smoke = bar.stoaFormSmoke
+	if not smoke then
+		smoke = bar:CreateTexture(nil, "ARTWORK", nil, 7)
+		smoke:SetTexture(UI.WHITE)
+		smoke:SetAllPoints(fill)
+		if bar.stoaFillMask then smoke:AddMaskTexture(bar.stoaFillMask) end
+		local drift = smoke:CreateAnimationGroup()
+		local rise = drift:CreateAnimation("Alpha")
+		rise:SetFromAlpha(0)
+		rise:SetToAlpha(1)
+		rise:SetDuration(BAR_SMOKE.rise)
+		rise:SetOrder(1)
+		local hold = drift:CreateAnimation("Alpha")
+		hold:SetFromAlpha(1)
+		hold:SetToAlpha(1)
+		hold:SetDuration(BAR_SMOKE.hold)
+		hold:SetOrder(2)
+		local clear = drift:CreateAnimation("Alpha")
+		clear:SetFromAlpha(1)
+		clear:SetToAlpha(0)
+		clear:SetDuration(BAR_SMOKE.clear)
+		clear:SetSmoothing("IN")
+		clear:SetOrder(3)
+		drift:SetScript("OnFinished", function() smoke:Hide() end)
+		smoke.drift = drift
+		bar.stoaFormSmoke = smoke
+	end
+	UI.setGradient(smoke, { "HORIZONTAL", nearRight and 0 or 1, nearRight and 1 or 0 }, shade[1], shade[2], shade[3], BAR_SMOKE.alpha)
+	smoke.drift:Stop()
+	smoke:Show()
+	smoke.drift:Play()
+end
+
 function Halo:SeatForm(look)
 	local slot = self.signature
-	if not (slot and slot.seat) then return end
-	local smoke = slot.seatSmoke
+	if not (slot and slot.icon) then return end
+	local smoke = slot.faceSmoke
 	local shade = type(look) == "table" and look.shade
+	local was = self.formShade
+	self.formShade = shade
 	if not shade then
 		if smoke then
 			smoke.breath:Stop()
@@ -1239,13 +1284,9 @@ function Halo:SeatForm(look)
 		return
 	end
 	if not smoke then
-		smoke = self.frame:CreateTexture(nil, "BACKGROUND", nil, -1)
-		smoke:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
-		-- The glow peaks 55/77 of the way out: set that just past the
-		-- signature's ring.
-		local size = (SIGNATURE_SIZE / 2 + 14) / (55 / 77) * 2
-		smoke:SetSize(size, size)
-		smoke:SetPoint("CENTER", slot, "CENTER")
+		smoke = UI.circle(slot, "ARTWORK", 7, SIGNATURE_SIZE)
+		smoke:SetTexture(UI.WHITE)
+		smoke:SetPoint("CENTER", slot.icon, "CENTER")
 		local breath = smoke:CreateAnimationGroup()
 		breath:SetLooping("BOUNCE")
 		local fade = breath:CreateAnimation("Alpha")
@@ -1254,11 +1295,17 @@ function Halo:SeatForm(look)
 		fade:SetDuration(SEAT_BREATH)
 		fade:SetSmoothing("IN_OUT")
 		smoke.breath = breath
-		slot.seatSmoke = smoke
+		slot.faceSmoke = smoke
 	end
-	smoke:SetVertexColor(shade[1], shade[2], shade[3])
+	UI.setGradient(smoke, { "VERTICAL", FACE_SMOKE[1], FACE_SMOKE[2] }, shade[1], shade[2], shade[3], 1)
 	smoke:Show()
 	if not smoke.breath:IsPlaying() then smoke.breath:Play() end
+	-- Only on the way in: health on the left (the signature at its right
+	-- end), mana on the right.
+	if not was and self:Line() then
+		barSmoke(self.health, shade, true)
+		barSmoke(self.mana, shade, false)
+	end
 end
 
 function Halo:SeatThreat()
