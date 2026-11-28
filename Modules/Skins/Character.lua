@@ -826,7 +826,7 @@ local FIGURES = {
 	healing = { "Healing", function() return whole((plainOf(rawget(_G, "GetSpellBonusHealing")))) end },
 	spellHit = { "Spell hit", function() return percent(sumOf(rating("CR_HIT_SPELL"), (plainOf(rawget(_G, "GetSpellHitModifier"))))) end },
 	spellCrit = { "Spell crit", function() return percent(bestSchool("GetSpellCritChance")) end },
-	regen = { "Mana per 5s", function()
+	regen = { "Mana per 5", function()
 		local base = plainOf(rawget(_G, "GetManaRegen"))
 		return whole(base and base * 5)
 	end },
@@ -856,7 +856,7 @@ local FIGURES = {
 -- Every figure a tile can show, in the order its menu lists them.
 local FIGURE_MENU = {
 	{ "spellPower", "Spell power" }, { "healing", "Healing" }, { "spellHit", "Spell hit" },
-	{ "spellCrit", "Spell crit" }, { "regen", "Mana per 5s" }, { "mana", "Mana" }, { "health", "Health" },
+	{ "spellCrit", "Spell crit" }, { "regen", "Mana per 5" }, { "mana", "Mana" }, { "health", "Health" },
 	{ "attack", "Attack power" }, { "hit", "Melee hit" }, { "crit", "Melee crit" },
 	{ "ranged", "Ranged power" }, { "rangedHit", "Ranged hit" }, { "rangedCrit", "Ranged crit" },
 	{ "armor", "Armor" }, { "dodge", "Dodge" }, { "parry", "Parry" },
@@ -935,7 +935,7 @@ end
 local TILE_WORD = {
 	spellPower = "Power", spellHit = "Hit", spellCrit = "Crit",
 	attack = "Power", hit = "Hit", crit = "Crit",
-	ranged = "Power", rangedHit = "Hit", rangedCrit = "Crit", regen = "Regen",
+	ranged = "Power", rangedHit = "Hit", rangedCrit = "Crit", regen = "MP5",
 }
 local TILE_MARK = {
 	spellPower = "MarkFlame", spellHit = "MarkFlame", spellCrit = "MarkFlame", healing = "MarkFlame",
