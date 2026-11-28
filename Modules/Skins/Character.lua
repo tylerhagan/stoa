@@ -929,9 +929,20 @@ local function fillCap(block)
 	cap.same, cap.boss, cap.hit = same, boss, hit
 end
 
--- A tile is narrow, so a long figure gets a short word there; its
--- tooltip and the menu keep the full name.
-local TILE_WORD = { spellPower = "Power", attack = "Attack", ranged = "Ranged", regen = "Regen" }
+-- A tile is narrow, so a small mark says the kind (flame for spell,
+-- dagger for melee, shield for defence) and a short word follows it;
+-- the tooltip and the menu keep the full name.
+local TILE_WORD = {
+	spellPower = "Power", spellHit = "Hit", spellCrit = "Crit",
+	attack = "Power", hit = "Hit", crit = "Crit",
+	ranged = "Ranged", regen = "Regen",
+}
+local TILE_MARK = {
+	spellPower = "MarkFlame", spellHit = "MarkFlame", spellCrit = "MarkFlame", healing = "MarkFlame",
+	attack = "MarkDagger", hit = "MarkDagger", crit = "MarkDagger",
+	armor = "MarkShield", dodge = "MarkShield", parry = "MarkShield",
+}
+local TILE_MARK_SIZE = 12
 
 local function fillTiles(block)
 	if not (block and block.tiles and block:IsVisible()) then return end
@@ -940,6 +951,10 @@ local function fillTiles(block)
 	for i, tile in ipairs(block.tiles) do
 		local figure = FIGURES[set[i]]
 		tile.label:SetText(figure and (TILE_WORD[set[i]] or figure[1]) or "")
+		local mark = figure and TILE_MARK[set[i]]
+		if mark then tile.mark:SetTexture(UI.MEDIA .. "Textures\\" .. mark) end
+		tile.mark:SetShown(mark and true or false)
+		tile.label:SetPoint("TOPLEFT", mark and (10 + TILE_MARK_SIZE + 4) or 10, -8)
 		tile.full = figure and figure[1]
 		local ok, words = pcall(figure and figure[2] or tostring, "")
 		tile.value:SetText(ok and words or "--")
@@ -972,6 +987,11 @@ local function buildTiles(block)
 			edge:Set(r, g, b, 0.07)
 		end
 		tile.label = UI.text(tile, "sans", Stoa.typeSize.micro, "muted", "LEFT")
+		tile.mark = tile:CreateTexture(nil, "OVERLAY")
+		tile.mark:SetSize(TILE_MARK_SIZE, TILE_MARK_SIZE)
+		tile.mark:SetPoint("LEFT", tile.label, "LEFT", -(TILE_MARK_SIZE + 4), 0)
+		tile.mark:SetVertexColor(0.85, 0.85, 0.85, 0.9)
+		tile.mark:Hide()
 		tile.label:SetPoint("TOPLEFT", 10, -8)
 		tile.label:SetPoint("RIGHT", -8, 0)
 		tile.label:SetWordWrap(false)
