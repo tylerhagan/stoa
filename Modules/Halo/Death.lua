@@ -3,7 +3,8 @@
 -- cast as a finisher. STOA works out the smallest hit Death will do (the
 -- low end of the spell's own description, which carries your spell power,
 -- less a safety margin) and shows where that reaches:
---   Target plaque and nameplates: a fine line on the health bar where
+--   Target plaque and the plates of enemies fighting you (or targeted):
+--   a fine line on the health bar where
 --   Death's hit ends, and the health left inside it tinted, so once Death
 --   will finish the target the whole of its health is tinted.
 --   Combat bar: a ring round the Death button while it will kill.
@@ -142,6 +143,16 @@ local function drawMarks(marks, unit, hit)
 	marks.clip:SetShown(ok)
 end
 
+-- On a nameplate only the enemies that matter now: your target, and any
+-- in a fight with you (on your threat list). A hidden answer counts.
+local function engaged(unit)
+	local isTarget = UnitIsUnit(unit, "target")
+	if Stoa:IsSecret(isTarget) or isTarget then return true end
+	if not UnitThreatSituation then return true end
+	local threat = UnitThreatSituation("player", unit)
+	return Stoa:IsSecret(threat) or threat ~= nil
+end
+
 local function alive(unit)
 	if not UnitExists(unit) then return false end
 	local hostile = UnitCanAttack("player", unit)
@@ -233,7 +244,7 @@ function Death:DrawPlates(hit)
 		local bar = unit and plates:HealthBar(unit)
 		if bar then
 			local marks = self.plateMarks[bar]
-			if alive(unit) then
+			if alive(unit) and engaged(unit) then
 				if not marks then
 					marks = buildMarks(bar)
 					self.plateMarks[bar] = marks
