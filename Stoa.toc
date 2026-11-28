@@ -58,6 +58,7 @@ Modules\QoL\Session.lua
 Modules\QoL\Companion.lua
 Modules\QoL\GearSets.lua
 Modules\QoL\Comforts.lua
+Modules\QoL\Rider.lua
 Modules\QoL\Chat.lua
 Modules\QoL\ChatLook.lua
 Modules\QoL\Uprank.lua
