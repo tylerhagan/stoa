@@ -943,7 +943,9 @@ local TILE_MARK = {
 	ranged = "MarkBow", rangedHit = "MarkBow", rangedCrit = "MarkBow",
 	armor = "MarkShield", dodge = "MarkShield", parry = "MarkShield",
 }
-local TILE_MARK_SIZE = 12
+-- The mark sits large and faint in the tile's bottom right, cut off by
+-- the tile's edge: a watermark, not an icon to read.
+local TILE_MARK_SIZE, TILE_MARK_OUT, TILE_MARK_ALPHA = 54, 14, 0.14
 
 local function fillTiles(block)
 	if not (block and block.tiles and block:IsVisible()) then return end
@@ -955,7 +957,6 @@ local function fillTiles(block)
 		local mark = figure and TILE_MARK[set[i]]
 		if mark then tile.mark:SetTexture(UI.MEDIA .. "Textures\\" .. mark) end
 		tile.mark:SetShown(mark and true or false)
-		tile.label:SetPoint("TOPLEFT", mark and (10 + TILE_MARK_SIZE + 4) or 10, -8)
 		tile.full = figure and figure[1]
 		local ok, words = pcall(figure and figure[2] or tostring, "")
 		tile.value:SetText(ok and words or "--")
@@ -987,16 +988,27 @@ local function buildTiles(block)
 			local r, g, b = Stoa:Color("text")
 			edge:Set(r, g, b, 0.07)
 		end
-		tile.label = UI.text(tile, "sans", Stoa.typeSize.micro, "muted", "LEFT")
-		tile.mark = tile:CreateTexture(nil, "OVERLAY")
+		-- The watermark lives in a clipping frame inset 1px (the well's
+		-- edge stays clean); the words sit in a frame above it.
+		local clip = CreateFrame("Frame", nil, tile)
+		clip:SetPoint("TOPLEFT", 1, -1)
+		clip:SetPoint("BOTTOMRIGHT", -1, 1)
+		clip:SetClipsChildren(true)
+		local art = CreateFrame("Frame", nil, clip)
+		art:SetAllPoints(clip)
+		tile.mark = art:CreateTexture(nil, "ARTWORK")
 		tile.mark:SetSize(TILE_MARK_SIZE, TILE_MARK_SIZE)
-		tile.mark:SetPoint("LEFT", tile.label, "LEFT", -(TILE_MARK_SIZE + 4), 0)
-		tile.mark:SetVertexColor(0.85, 0.85, 0.85, 0.9)
+		tile.mark:SetPoint("BOTTOMRIGHT", clip, "BOTTOMRIGHT", TILE_MARK_OUT, -TILE_MARK_OUT)
+		tile.mark:SetAlpha(TILE_MARK_ALPHA)
 		tile.mark:Hide()
+		local words = CreateFrame("Frame", nil, tile)
+		words:SetAllPoints(tile)
+		words:SetFrameLevel(art:GetFrameLevel() + 1)
+		tile.label = UI.text(words, "sans", Stoa.typeSize.micro, "muted", "LEFT")
 		tile.label:SetPoint("TOPLEFT", 10, -8)
 		tile.label:SetPoint("RIGHT", -8, 0)
 		tile.label:SetWordWrap(false)
-		tile.value = UI.text(tile, "sans", Stoa.typeSize.label, "text", "LEFT")
+		tile.value = UI.text(words, "sans", Stoa.typeSize.label, "text", "LEFT")
 		tile.value:SetPoint("BOTTOMLEFT", 10, 8)
 		tile.value:SetPoint("RIGHT", -8, 0)
 		tile.value:SetWordWrap(false)
