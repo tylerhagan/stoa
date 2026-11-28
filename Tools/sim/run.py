@@ -347,6 +347,23 @@ do
 	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Cooldown Manager: " .. e end
 end
+-- Keybinding: a form chip is a button a key can press, bound as a click.
+if Stoa.modules.Bind and Stoa.modules.Bind.enabled then
+	local ok, e = xpcall(function()
+		local B = Stoa.modules.Bind
+		local made = not _G.StoaFormChip1
+		if made then _G.StoaFormChip1 = CreateFrame("Button", "StoaFormChip1", UIParent, "SecureActionButtonTemplate") end
+		local found
+		for _, button in ipairs(B:Buttons()) do
+			if button == _G.StoaFormChip1 then found = button end
+		end
+		assert(found and found.stoaBindCommand == "CLICK StoaFormChip1:LeftButton", "form chip bindable")
+		B:Start()
+		B:Stop(true)
+		if made then _G.StoaFormChip1 = nil end
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Keybinding: " .. e end
+end
 -- Logging reminder: entering a raid unlogged asks; Start logs; leaving stops.
 if Stoa.modules.Logging and Stoa.modules.Logging.enabled then
 	local ok, e = xpcall(function()

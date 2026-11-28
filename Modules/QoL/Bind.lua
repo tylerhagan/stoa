@@ -1,5 +1,6 @@
 -- Stoa QoL: hover keybinding. /stoa bind (or the button in settings), then
--- hover any action, pet or stance button and press a key, a mouse button or
+-- hover any action, pet or stance button, or one of STOA's own form chips
+-- (Forms.lua: the Shadowform button), and press a key, a mouse button or
 -- the wheel, with any modifier. Backspace clears the button's keys; Esc or
 -- Done keeps the changes, Discard puts them all back. Out of combat only: a
 -- fight starting keeps what you've done and ends it.
@@ -24,6 +25,11 @@ local BARS = {
 	{ "StanceButton", "SHAPESHIFTBUTTON", 10 },
 }
 
+-- STOA's own secure buttons a key can press: bound as a click on the
+-- button, so the key does what a left click does. Named by the spell the
+-- button casts when it has one.
+local CLICKS = { { "StoaFormChip", 10 } }
+
 -- Keys that only modify, and mouse buttons that click as usual.
 local IGNORE = {
 	LSHIFT = true, RSHIFT = true, LCTRL = true, RCTRL = true, LALT = true, RALT = true,
@@ -43,6 +49,12 @@ local function withModifiers(key)
 	return out .. key
 end
 
+-- What the tooltip and notes call a button's action.
+local function nameOf(action, button)
+	if button and button.stoaBindName then return button.stoaBindName(button) end
+	return GetBindingName and GetBindingName(action) or action
+end
+
 local function keysOf(action)
 	return { GetBindingKey(action) }
 end
@@ -51,8 +63,9 @@ local function keyLabel(key)
 	return GetBindingText and GetBindingText(key) or key
 end
 
+-- Read again each time binding starts: a form chip appears when you learn
+-- the form.
 function Bind:Buttons()
-	if self.buttons then return self.buttons end
 	local list = {}
 	for _, bar in ipairs(BARS) do
 		for i = 1, bar[3] do
@@ -63,7 +76,17 @@ function Bind:Buttons()
 			end
 		end
 	end
-	self.buttons = list
+	for _, kind in ipairs(CLICKS) do
+		for i = 1, kind[2] do
+			local name = kind[1] .. i
+			local button = _G[name]
+			if button then
+				button.stoaBindCommand = "CLICK " .. name .. ":LeftButton"
+				button.stoaBindName = function(b) return b:GetAttribute("spell") or name end
+				list[#list + 1] = button
+			end
+		end
+	end
 	return list
 end
 
@@ -72,8 +95,7 @@ function Bind:Tooltip()
 	if not button then return end
 	GameTooltip:SetOwner(self.catcher, "ANCHOR_TOP")
 	local action = command(button)
-	local name = GetBindingName and GetBindingName(action) or action
-	GameTooltip:AddLine(name, Stoa:Color("text"))
+	GameTooltip:AddLine(nameOf(action, button), Stoa:Color("text"))
 	local keys = keysOf(action)
 	if #keys == 0 then
 		GameTooltip:AddLine("No key yet. Press one.", 0.7, 0.7, 0.7)
@@ -93,7 +115,7 @@ function Bind:Press(key)
 	if key == "BACKSPACE" or key == "DELETE" then
 		for _, old in ipairs(keysOf(action)) do SetBinding(old) end
 		self.changed = true
-		Stoa:Note("bind", (GetBindingName and GetBindingName(action) or action) .. " has no key now.")
+		Stoa:Note("bind", nameOf(action, self.over) .. " has no key now.")
 	else
 		key = withModifiers(key)
 		-- One key, one button: taking it from wherever it was.
@@ -166,9 +188,9 @@ function Bind:Start()
 		self:BuildCatcher()
 		self:BuildBar()
 	end
-	if not self.hooked then
-		self.hooked = true
-		for _, button in ipairs(self:Buttons()) do
+	for _, button in ipairs(self:Buttons()) do
+		if not button.stoaBindHooked then
+			button.stoaBindHooked = true
 			button:HookScript("OnEnter", function(b)
 				if not self.active or InCombatLockdown() then return end
 				self.over = b

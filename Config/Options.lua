@@ -914,7 +914,7 @@ local function build()
 	toggle(of("Alts"), "tooltipCounts", "Count items on every character", "Item tooltips add how many your other characters carry and keep in the bank, from when each last played.", true, { words = "alts bags bank tooltip owned" })
 	toggle(of("GearSets"), "enabled", "Gear for each spec", "Put on an equipment set in a spec and STOA puts it back on whenever you change to that spec, after any fight. A set assigned to a spec in the equipment manager always wins.", true, { id = "gearSetsOn", scope = "This character", words = "equipment manager dual spec swap outfit" })
 	group = "Keys"
-	button("bind", "Bind keys", "Hover any action, pet or stance button and press a key, mouse button or wheel, with any modifier. Backspace clears; Esc finishes and keeps the keys.", "Start", command("bind"), { cmd = "/stoa bind", words = "keybind hotkey keybinding kb" })
+	button("bind", "Bind keys", "Hover any action, pet or stance button, or the Shadowform button, and press a key, mouse button or wheel, with any modifier. Backspace clears; Esc finishes and keeps the keys.", "Start", command("bind"), { cmd = "/stoa bind", words = "keybind hotkey keybinding kb" })
 	group = "The game's own settings"
 	button("restore", "Put the game's settings back", "Puts back the game settings STOA changed (far camera, map fade, target nameplate size, combined bags, proc art), as they were before STOA. One you've changed yourself since stays as you set it.", "Put back", command("restore"), { cmd = "/stoa restore", words = "cvar ledger reset camera" })
 	group = "Other addons"
