@@ -275,6 +275,7 @@ local function decorateButton(button)
 	if not info then
 		button.stoaLink = nil
 		Item.markUpgrade(button, Item.markSlot(button, 0, nil), false)
+		if Stoa.BiS then Stoa.BiS:Mark(button, nil) end
 		markJunkWord(button, nil)
 		return
 	end
@@ -294,6 +295,8 @@ local function decorateButton(button)
 	end
 	-- Another addon's gear planner marks upgrades in bags already (Core/Companions.lua).
 	Item.markUpgrade(button, parts, button.stoaUpgrade and not Stoa:SharedBy("bagUpgrade"))
+	-- A best-in-slot pick for your spec: a gold diamond (Modules/QoL/BiS.lua).
+	if Stoa.BiS then Stoa.BiS:Mark(button, info.itemID) end
 end
 
 -- Gold, silver and copper with the game's coin icons, as the hover shows them.

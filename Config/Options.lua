@@ -769,6 +769,10 @@ local function build()
 	choice(companion, "view", "How it shows", "A card where the quest list sits, or one slim line over the console with the bosses as dots and the upgrades on hover. The card's minus and a click on the line switch too.", "card", {
 		{ "card", "Card" }, { "line", "One line" },
 	}, { words = "dungeon companion compact", change = function() Stoa.modules.Companion:Refresh() end })
+	group = "Best in slot"
+	local bis = of("BiS")
+	toggle(bis, "enabled", "Best-in-slot list", "Your spec's pre-raid list from WoWSims Forever's simmed sets: a gold diamond on the picks in bags, on the character sheet, at vendors and on quest rewards (an open one for the next best), a line on their tooltips, the picks a dungeon drops on the companion's card, and at max level the place with most still to get on the console. The BiS word in the character sheet's footer, or /stoa bis, opens the list.", true, { words = "bis best in slot gear pre-raid prebis wowsims list import", change = function() Stoa.modules.BiS:Changed() end })
+	button("bisNow", "See the list", "Opens your spec's list. Import there adds lists other players shared; they stay on your account.", "Open", command("bis"), { cmd = "/stoa bis", words = "bis best in slot" })
 	group = "People"
 	local social = of("Social")
 	toggle(social, "acceptFriendInvites", "Accept friend and guild invites", "A party invite from a friend, Battle.net friend or guildmate is taken as it comes, and noted in chat.", true, { words = "party group" })
