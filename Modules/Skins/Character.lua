@@ -929,13 +929,18 @@ local function fillCap(block)
 	cap.same, cap.boss, cap.hit = same, boss, hit
 end
 
+-- A tile is narrow, so a long figure gets a short word there; its
+-- tooltip and the menu keep the full name.
+local TILE_WORD = { spellPower = "Power", attack = "Attack", ranged = "Ranged", regen = "Regen" }
+
 local function fillTiles(block)
 	if not (block and block.tiles and block:IsVisible()) then return end
 	guarded(fillCap, block)
 	local set = figureSet()
 	for i, tile in ipairs(block.tiles) do
 		local figure = FIGURES[set[i]]
-		tile.label:SetText(figure and figure[1] or "")
+		tile.label:SetText(figure and (TILE_WORD[set[i]] or figure[1]) or "")
+		tile.full = figure and figure[1]
 		local ok, words = pcall(figure and figure[2] or tostring, "")
 		tile.value:SetText(ok and words or "--")
 	end
@@ -968,6 +973,8 @@ local function buildTiles(block)
 		end
 		tile.label = UI.text(tile, "sans", Stoa.typeSize.micro, "muted", "LEFT")
 		tile.label:SetPoint("TOPLEFT", 10, -8)
+		tile.label:SetPoint("RIGHT", -8, 0)
+		tile.label:SetWordWrap(false)
 		tile.value = UI.text(tile, "sans", Stoa.typeSize.label, "text", "LEFT")
 		tile.value:SetPoint("BOTTOMLEFT", 10, 8)
 		tile.value:SetPoint("RIGHT", -8, 0)
@@ -997,7 +1004,8 @@ local function buildTiles(block)
 			self.label:SetTextColor(Stoa:Color("text"))
 			if GameTooltip then
 				GameTooltip:SetOwner(self, "ANCHOR_TOP")
-				GameTooltip:SetText("Click to choose what this tile shows")
+				GameTooltip:SetText(self.full or "Figure")
+				GameTooltip:AddLine("Click to choose what this tile shows", 0.7, 0.7, 0.7)
 				GameTooltip:Show()
 			end
 		end)
