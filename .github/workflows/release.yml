@@ -34,7 +34,14 @@ jobs:
           awk -v v="$VERSION" '
             /^## / { if (found) exit; if ($2 == v || $2 == "[" v "]") { found = 1; next } }
             found { print }
-          ' CHANGELOG.md > notes.md
+          ' CHANGELOG.md > notes.raw
+          # A blank line between bullets makes a loose list, which CurseForge
+          # and Wago draw with each dot on a line of its own. Keep lists tight.
+          awk '
+            NF == 0 { blank++; next }
+            { if (blank && !(prev ~ /^- / && $0 ~ /^- /)) for (i = 0; i < blank; i++) print ""
+              blank = 0; print; prev = $0 }
+          ' notes.raw > notes.md
           if ! grep -q '[^[:space:]]' notes.md; then
             echo "::error::CHANGELOG.md has no section (or an empty one) for $VERSION"
             exit 1

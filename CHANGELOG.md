@@ -7,37 +7,23 @@ Pushing a tag such as `v1.0.1` runs `.github/workflows/release.yml`, which build
 ## 2.1.2
 
 - **Outline the next press, your way**: Settings > Combat > Combat bar > Outline the next press is now a choice. STOA's order (the default) keeps STOA's priority, The game's suggestion outlines Forever's own pick instead, and Off never outlines a button.
-
 - **Up-to-date next press for every spec**: STOA's order now follows Warcraft Tavern's current Forever guides for every damage and tank spec, with Forever's new spells. Warlocks get a list per tree (Banes, your last Curse, Wrack, Conflagrate, Incinerate, Demonic Brand), fire mages Pyroblast at 3 Heating Up and Scorch to 5 stacks, arcane Arcane Wrath, rogues their spec's builder and finishers (Mutilate, Venom, Hemorrhage, Shank, Death Mark), hunters Aimed Shot, Sniper Shot and hawks, shamans Lava Burst and instant Lightning Bolt on Maelstrom, warriors separate Arms, Fury and Protection lists, paladins Judgement first, Consecration and the Unsealed Wrath swap, and ferals the guide's Bite and Shifting Power thresholds. Heroic Strike is no longer outlined, since it doesn't use the global cooldown.
-
 - **Next press in a fight**: the game hides cooldowns from addons in combat, so Mind Blast, Shadow Word: Death, Judgement and other cooldowns never read as ready and the outline fell back to the game's suggestion. STOA now times them from your own casts, with the length the game last showed out of combat.
-
 - **Cooldowns page finds running profession cooldowns**: a transmute or Mooncloth cooldown that was started before STOA could see it (on an older version, or before a profile reset) now shows after the next login, not only after the next cast. Transmutes share one cooldown in the game, so they share one row named Transmute.
-
 - **Cooldowns page headline**: the big line (1 ready, None ready) could stay unseen. Its small pulse is now drawn another way. It also runs the column's full width when there is no note beside it, so Nothing cooling is no longer cut off.
-
 - **Welcome page, for healers**: with a healing spec picked, the roles step now says that your party cards cast on a click with their own bindings, what the click grid is, and where to change and move them.
-
 - **Flight map**: the flight map was left in the game's own frame. STOA now dresses it when you open a flight master.
-
 - **One-line tooltips**: a tooltip with only a title showed a sliver of the body under its header. A one-line tooltip is now all header.
 
 ## 2.1.1
 
 - **Class colours on names**: a new choice on Settings > Look. As the theme sets (the default) keeps things as they were: Bone and the class themes colour names by class, while Tide, Graphite, Matte and the colour vision modes keep them in the text colour. Always and Never override the theme, on party and raid cards, the target, nameplates, tooltips, the threat list, meters and the roster.
-
 - **Cooldowns page**: a cooldown with no name no longer takes a row, the hearthstone is no longer listed a second time as ready on your other characters, and the headline keeps its full strength. The page also stops adding to STOA's list of themed parts every few seconds.
-
 - **Unit tooltips in a dungeon fight**: when the game hides which unit a tooltip is for, STOA now reads what the mouse is over instead of leaving the game's lines undressed.
-
 - **`/stoa report` remembers blocked actions**: the last few times the game said an interface action failed because of an addon are kept past a reload, with the addon and the function it named, so the report still shows them afterwards.
-
 - **Dungeon companion**: a boss the game names a little differently from the list (Handler Ashka for War Handler Ashka) is now ticked on its own row, not added as a second one. Bosses that end no encounter (Bossman Toof) are now also found dead as the fight ends from your party's targets and the nameplates in view, from the game's own boss-kill signal, and from the dungeon's lock where the game keeps one.
-
 - **Chat while riding**: the chat no longer goes clear and turns into a short fading feed on the travel line. It stays your normal chat, standing above the line.
-
 - **Two cast bars**: the game's own cast bar could come back beside STOA's after a fresh profile or an Edit Mode layout change. STOA now puts it away again whenever the game brings it back.
-
 - **Halo sits higher**: the ring's default spot is 20 units higher, so your character stands in the middle of it instead of riding high. A Halo you have moved yourself stays where you put it.
 
 ## 2.1.0
@@ -435,7 +421,6 @@ The first release for WoW Forever's launch: every class has a signature, and eve
 - Every class has a signature now. Warriors: Rend, Sunder Armor and Battle Shout coins (Sunder, Thunder Clap and Demoralizing Shout for tanks), SUNDER n/5 and your stance under them, TAUNT for tanks. Rogues: Slice and Dice, Rupture and your big cooldown, COMBO n under them (the game drew combo points on frames Stoa hides). Hunters: Hunter's Mark, Serpent Sting and Rapid Fire, NO ASPECT when none is up. Warlocks: Corruption, Curse of Agony and Immolate coins, SHARDS n and TAP. Shamans: Flame Shock, your shield with its charges and Earth Shock (Nature's Swiftness and Mana Tide for healers), TOTEMS n/4, and the game's totem bar now moves under the Halo instead of vanishing with the player frame. Each has a next-press outline of its own before falling back to the game's suggestion.
 - The Training page's icons get their round mask again.
 - Shadow: the next-press outline follows a `/castsequence` macro on your bars. The macro lights when its next step is the press, and so does that spell's own button (Combat > Shadow priest).
-
 - Pets: a pet plaque in a fight, its health as an inner arc on the Halo, a pet row under the combat bar, a pet coin on the medallion (click to feed), pet reminders, and pet cells under party cards for healers. Settings > Combat > Your pet.
 - Restock: each character keeps a list of things to carry (candles, ammo, poisons, food, water) and how many; vendors top it up in whole bundles. Settings > Comforts, `/stoa restock`.
 - Mail: Take gold beside Open All, a line saying what Open All took, and a Mine button listing your characters and people you mailed lately.
@@ -481,7 +466,6 @@ The first release for WoW Forever's launch: every class has a signature, and eve
 - Chat: a time column on each line, more space between lines, the chat buttons in one quiet column, and a quiet typing strip.
 - Buffs as a list (name and time left), click grid shows each spell's cost and dims what you can't afford.
 - Comforts: hide other people's duel results and drunken lines, decline duels, release in battlegrounds, accept resurrections.
-
 - Minimap: a square with rounded corners by default, framed like Stoa's windows; the round map is a setting (new texture: restart the game once).
 - Shared core for every feature: spellbook ranks and costs, item worth and junk, the group as a list, mana and the five-second rule, show rules (combat, group, raid, solo, target, mouseover), settings per spec, and unit events for just the units that matter. Raid cells redraw at most ten times a second.
 - Combat rows, the click grid, the bar tray and the tally now keep their own setting in each spec.
@@ -508,7 +492,6 @@ The first release for WoW Forever's launch: every class has a signature, and eve
 - Druid signatures (Balance, Cat, Bear, Restoration) and Mage signatures (Arcane, Fire, Frost), built on a shared signature kit (`Modules/Halo/Sign.lua`). Other classes get a main cooldown in the Halo's slot and the game's suggested next press. The power arc follows your power type. The launch check now only checks your own class's spells.
 - Click grid folds to its title by default and opens while you hover a party or raid card or hold Shift; click its title to keep it open. A Click grid setting and `/stoa grid` choose always open, folded or hidden.
 - Shift and drag moves quest, gossip, merchant, bag, character, spellbook, mail and similar windows; each remembers its spot.
-
 - Discipline signature: coins on the Halo for Penance, Inner Focus and Power Infusion, SHIELDS and RENEW counts, and an outline on Greater Heal while Inner Focus is up.
 - Twist of Light for Paladins: after a main-hand swing lands, the other seal of the pair is outlined and named so the next swing carries both.
 - Vampiric Embrace coin for Shadow Priests now counts down from 30 seconds.
