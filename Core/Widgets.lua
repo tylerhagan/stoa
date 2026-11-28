@@ -2519,7 +2519,9 @@ local DOCK_OUT_FROM = 0.1
 local function dockArt(name)
 	return UI.MEDIA .. "Textures\\" .. name .. (UI.matte() and "Matte" or "")
 end
-local function buildDock(frame, plaque)
+-- `mirror` builds it the other way round: the socket at the right end, by
+-- a medallion on the frame's right, and the sweep at the left end.
+local function buildDock(frame, plaque, mirror)
 	local dock = {}
 	local body = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 	body:SetColorTexture(1, 1, 1)
@@ -2536,10 +2538,14 @@ local function buildDock(frame, plaque)
 	local socket = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 	socket:SetTexture(dockArt("PlaqueSocket"))
 	socket:SetSize(SOCKET_W, UI.matte() and MATTE_DOCK_ART_H or SOCKET_ART_H)
-	socket:SetPoint("BOTTOMLEFT")
+	socket:SetPoint(mirror and "BOTTOMRIGHT" or "BOTTOMLEFT")
 	local socketLines = frame:CreateTexture(nil, "BORDER", nil, 1)
 	socketLines:SetTexture(dockArt("PlaqueSocket") .. "Lines")
 	socketLines:SetAllPoints(socket)
+	if mirror then
+		for _, art in ipairs({ join, lines, socket, socketLines }) do art:SetTexCoord(1, 0, 0, 1) end
+	end
+	plaque.mirror = mirror
 	dock.body, dock.top, dock.join, dock.lines = body, top, join, lines
 	dock.socket, dock.socketLines = socket, socketLines
 	plaque.dock = dock
@@ -2561,7 +2567,7 @@ local function buildDock(frame, plaque)
 			local grow = group(region):CreateAnimation("Scale")
 			grow:SetScaleFrom(DOCK_OUT_FROM, 1)
 			grow:SetScaleTo(1, 1)
-			grow:SetOrigin("LEFT", 0, 0)
+			grow:SetOrigin(mirror and "RIGHT" or "LEFT", 0, 0)
 			grow:SetDuration(UI.DOCK_OUT)
 			grow:SetSmoothing("OUT")
 		end
@@ -2583,11 +2589,74 @@ local function buildDock(frame, plaque)
 	local shadow = frame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	shadow:SetTexture(UI.MEDIA .. "Textures\\PlaqueJoinShadow")
 	shadow:SetSize(SHADOW_W, JOIN_ART_H)
-	shadow:SetPoint("BOTTOMLEFT", join, "BOTTOMLEFT")
+	shadow:SetPoint(mirror and "BOTTOMRIGHT" or "BOTTOMLEFT", join, mirror and "BOTTOMRIGHT" or "BOTTOMLEFT")
+	if mirror then shadow:SetTexCoord(1, 0, 0, 1) end
 	shadow:SetVertexColor(0, 0, 0, 1)
 	shadow:Hide()
 	plaque.shadow = shadow
 	return dock
+end
+
+-- Lays a dock out: `curve` is where the join's curve starts, measured
+-- from the socket's end (the left, or the right when mirrored).
+local function layoutDock(frame, dock, curve, mirror)
+	local s = mirror and -1 or 1
+	local near, far = mirror and "RIGHT" or "LEFT", mirror and "LEFT" or "RIGHT"
+	dock.body:ClearAllPoints()
+	dock.body:SetPoint("BOTTOM" .. near, s * SOCKET_W, 0)
+	dock.body:SetPoint("TOP" .. far, frame, "TOP" .. near, s * curve, 0)
+	-- Centred on the top edge, as the art draws its line.
+	local lift = UI.matte() and 0 or 1
+	dock.top:ClearAllPoints()
+	dock.top:SetPoint("TOP" .. near, s * SOCKET_W, lift)
+	-- Up to where the join's own line starts.
+	dock.top:SetPoint("TOP" .. far, frame, "TOP" .. near, s * (curve - (UI.matte() and JOIN_LEAD or 0)), lift)
+	dock.join:ClearAllPoints()
+	dock.join:SetPoint("BOTTOM" .. near, frame, "BOTTOM" .. near, s * (curve - JOIN_LEAD), 0)
+end
+
+-- Matte: plays a docked block coming out of the dial. Its far end starts
+-- where the shorter body ends.
+local function playDock(plaque)
+	if not plaque.dockMotion then return end
+	local back = (plaque.curve - SOCKET_W) * (1 - DOCK_OUT_FROM) * (plaque.mirror and -1 or 1)
+	for _, pair in ipairs(plaque.dockRides) do
+		pair[1]:SetOffset(-back, 0)
+		pair[2]:SetOffset(back, 0)
+	end
+	for _, g in ipairs(plaque.dockMotion) do
+		g:Stop()
+		g:Play()
+	end
+	return true
+end
+
+-- A docked block on its own, for a medallion's other side (the pet, left
+-- of yours): the docked plaque's body, join and socket, mirrored when
+-- `mirror`, with no card behind it. plate:Layout(curve) places it (the
+-- frame should be UI.plaqueDockHeight() tall and curve + PLAQUE_JOIN_SPAN
+-- wide), plate:PlayDock() runs Matte's motion.
+function UI.dockPlate(frame, mirror)
+	local plate = {}
+	local dock = buildDock(frame, plate, mirror)
+	local function paint()
+		local r, g, b = Stoa:Color("panel")
+		for _, part in ipairs({ dock.body, dock.join, dock.socket }) do part:SetVertexColor(r, g, b, 1) end
+		local dr, dg, db = Stoa:Color("accent")
+		local da = 1
+		if UI.matte() then dr, dg, db, da = 1, 1, 1, DOCK_BEVEL_A end
+		for _, part in ipairs({ dock.top, dock.lines, dock.socketLines }) do part:SetVertexColor(dr, dg, db, da) end
+	end
+	paint()
+	Stoa:On("STOA_THEME_CHANGED", paint)
+	function plate:Layout(curve)
+		plate.curve = curve
+		layoutDock(frame, dock, curve, mirror)
+	end
+	function plate:PlayDock()
+		return plate.curve and playDock(plate)
+	end
+	return plate
 end
 
 -- A lower slab standing on the rim behind a docked plaque (the target of
@@ -2790,17 +2859,7 @@ function UI.plaque(frame, coinSide, opts)
 			for _, part in pairs(dock) do part:SetShown(on) end
 		end
 		if on then
-			dock.body:ClearAllPoints()
-			dock.body:SetPoint("BOTTOMLEFT", SOCKET_W, 0)
-			dock.body:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve, 0)
-			-- Centred on the top edge, as the art draws its line.
-			local lift = UI.matte() and 0 or 1
-			dock.top:ClearAllPoints()
-			dock.top:SetPoint("TOPLEFT", SOCKET_W, lift)
-			-- Up to where the join's own line starts.
-			dock.top:SetPoint("TOPRIGHT", frame, "TOPLEFT", curve - (UI.matte() and JOIN_LEAD or 0), lift)
-			dock.join:ClearAllPoints()
-			dock.join:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", curve - JOIN_LEAD, 0)
+			layoutDock(frame, dock, curve, false)
 		else
 			plaque.placeCoin(plaque.bare and 0.75 or 1)
 		end
@@ -2815,17 +2874,8 @@ function UI.plaque(frame, coinSide, opts)
 	-- Matte: plays the docked block coming out of the dial. Its far end
 	-- starts where the shorter body ends.
 	function plaque:PlayDock()
-		if not (plaque.docked and plaque.dockMotion) then return end
-		local back = (plaque.curve - SOCKET_W) * (1 - DOCK_OUT_FROM)
-		for _, pair in ipairs(plaque.dockRides) do
-			pair[1]:SetOffset(-back, 0)
-			pair[2]:SetOffset(back, 0)
-		end
-		for _, g in ipairs(plaque.dockMotion) do
-			g:Stop()
-			g:Play()
-		end
-		return true
+		if not plaque.docked then return end
+		return playDock(plaque)
 	end
 
 	-- The docked sweep's shadow, for when something stands behind it.
