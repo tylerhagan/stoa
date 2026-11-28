@@ -375,8 +375,9 @@ function Halo:Build()
 		local shield = UI.shieldGauge(frame, 22)
 		if rail then
 			-- The power number sits under the health number here, so the
-			-- shield stands to the left of the health number instead.
-			shield:SetPoint("RIGHT", healthText, "LEFT", -6, 0)
+			-- shield goes under both, flush with their right edge, and the
+			-- class mark stands beside it.
+			shield:SetPoint("TOPRIGHT", manaText, "BOTTOMRIGHT", 1, -3)
 		else
 			shield:SetPoint("TOPRIGHT", healthText, "BOTTOMRIGHT", 1, -3)
 		end
@@ -385,7 +386,13 @@ function Halo:Build()
 	-- And your class mark under the power number, mirroring it.
 	if self.db.classMark and Stoa.Mark then
 		local mark = Stoa.Mark.attach(frame, 22)
-		if mark then mark:SetPoint("TOPLEFT", manaText, "BOTTOMLEFT", -1, -3) end
+		if mark and rail and self.shield then
+			mark:SetPoint("RIGHT", self.shield, "LEFT", -4, 0)
+		elseif mark and rail then
+			mark:SetPoint("TOPRIGHT", manaText, "BOTTOMRIGHT", 1, -3)
+		elseif mark then
+			mark:SetPoint("TOPLEFT", manaText, "BOTTOMLEFT", -1, -3)
+		end
 		self.classMark = mark
 	end
 
