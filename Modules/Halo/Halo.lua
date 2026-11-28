@@ -1611,7 +1611,9 @@ function Halo:UpdateTarget()
 	if not UnitExists("target") then return end
 	-- The removable-debuff marks are for someone you can help. On an
 	-- enemy the game would mark your own magic and disease effects there.
-	if target.dispelBox then target.dispelBox:SetShown(Stoa.safe.plain(UnitCanAttack("player", "target")) == false) end
+	-- By alpha, never Show or Hide: the box holds the game's own protected
+	-- marks, and showing or hiding it in a fight is a blocked action.
+	if target.dispelBox then target.dispelBox:SetAlpha(Stoa.safe.plain(UnitCanAttack("player", "target")) == false and 1 or 0) end
 	local name = UnitName("target")
 	target.name:SetText(name)
 	-- The first time the serif face is drawn the game may not have loaded
