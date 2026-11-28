@@ -1223,12 +1223,12 @@ function Halo:SeatMood()
 	ease:Play()
 end
 
--- A form's look (Forms.lua: Shadowform) smokes the signature itself: the
--- form's shade rises over the coin's face from below, slowly breathing.
--- The only standing motion on the Halo, so it stays low and slow. Stepping
+-- A form's look (Forms.lua: Shadowform) smokes the signature's edge: the
+-- form's shade hugs the ring, slowly breathing; the face stays clear. The
+-- only standing motion on the Halo, so it stays low and slow. Stepping
 -- in, the smoke also drifts briefly out along the bars and clears.
-local SEAT_BREATH, SEAT_BREATH_LOW, SEAT_BREATH_HIGH = 1.8, 0.35, 0.8
-local FACE_SMOKE = { 0.85, 0.15 }  -- bottom and top of the face
+local SEAT_BREATH, SEAT_BREATH_LOW, SEAT_BREATH_HIGH = 1.8, 0.3, 1
+local EDGE_SMOKE_OUT = 4  -- where the smoke peaks, out from the face
 local BAR_SMOKE = { alpha = 0.55, rise = 0.4, hold = 1.0, clear = 1.4 }
 
 -- The brief drift over one bar: thickest by the signature, clear at the
@@ -1275,7 +1275,7 @@ end
 function Halo:SeatForm(look)
 	local slot = self.signature
 	if not (slot and slot.icon) then return end
-	local smoke = slot.faceSmoke
+	local smoke = slot.edgeSmoke
 	local shade = type(look) == "table" and look.shade
 	local was = self.formShade
 	self.formShade = shade
@@ -1287,9 +1287,13 @@ function Halo:SeatForm(look)
 		return
 	end
 	if not smoke then
-		smoke = UI.circle(slot, "ARTWORK", 7, SIGNATURE_SIZE)
-		smoke:SetColorTexture(1, 1, 1, 1)
-		smoke:SetPoint("CENTER", slot.icon, "CENTER")
+		smoke = self.frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+		smoke:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
+		-- The glow peaks 55/77 of the way out: set that on the signature's
+		-- own edge, so the smoke hugs the ring rather than standing off it.
+		local size = (SIGNATURE_SIZE / 2 + EDGE_SMOKE_OUT) / (55 / 77) * 2
+		smoke:SetSize(size, size)
+		smoke:SetPoint("CENTER", slot, "CENTER")
 		local breath = smoke:CreateAnimationGroup()
 		breath:SetLooping("BOUNCE")
 		local fade = breath:CreateAnimation("Alpha")
@@ -1298,10 +1302,9 @@ function Halo:SeatForm(look)
 		fade:SetDuration(SEAT_BREATH)
 		fade:SetSmoothing("IN_OUT")
 		smoke.breath = breath
-		slot.faceSmoke = smoke
+		slot.edgeSmoke = smoke
 	end
-	smoke:SetColorTexture(shade[1], shade[2], shade[3], 1)
-	UI.setGradient(smoke, { "VERTICAL", FACE_SMOKE[1], FACE_SMOKE[2] }, shade[1], shade[2], shade[3], 1)
+	smoke:SetVertexColor(shade[1], shade[2], shade[3])
 	smoke:Show()
 	if not smoke.breath:IsPlaying() then smoke.breath:Play() end
 	-- Only on the way in: health on the left (the signature at its right
