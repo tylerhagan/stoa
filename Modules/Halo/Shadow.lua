@@ -37,7 +37,8 @@ local SPELLS = {
 	plague = 2944,      -- Devouring Plague
 	embrace = 15286,    -- Vampiric Embrace
 	blast = 8092,       -- Mind Blast
-	death = 32379,      -- Shadow Word: Death (from level 32)
+	death = 1309595,    -- Shadow Word: Death (from level 32; Forever's own ID,
+	                    -- the old 32379 isn't known there)
 	flay = 15407,       -- Mind Flay
 	form = 15473,       -- Shadowform
 	weaving = 15258,    -- Shadow Weaving (the debuff)
