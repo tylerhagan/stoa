@@ -216,7 +216,7 @@ local LINE_ALPHA = 0.82
 -- The side rail: both bars as short uprights together on your left (the
 -- target docks on the right), with the numbers and coins beyond them. x
 -- and bottom are from the Halo's centre; the health rail is the nearer.
-Halo.RAIL = { x = 74, bottom = -52, width = 10, height = 48, gap = 6 }
+Halo.RAIL = { x = 74, bottom = -52, width = 6, height = 48, gap = 6 }
 local RAIL = Halo.RAIL
 
 function Halo:Rail()
@@ -224,7 +224,6 @@ function Halo:Rail()
 end
 
 local RAIL_ALPHA = 0.8
-local RAIL_SEAT_PAD = 4
 local function railBar(parent, token, index)
 	local sb = CreateFrame("StatusBar", nil, parent)
 	sb:SetSize(RAIL.width, RAIL.height)
@@ -232,13 +231,11 @@ local function railBar(parent, token, index)
 	sb:SetStatusBarTexture(UI.WHITE)
 	if UI.slate() then UI.barShade(sb) end
 	UI.paint(sb, token)
-	local track = sb:CreateTexture(nil, "BACKGROUND")
 	-- Uprights stand against whatever is behind you (green on jungle,
-	-- blue on sky), so they get a dark seat.
-	track:SetPoint("TOPLEFT", -2, 2)
-	track:SetPoint("BOTTOMRIGHT", 2, -2)
-	track:SetColorTexture(0.03, 0.04, 0.05, 0.6)
-	sb.stoaTrack = track
+	-- blue on sky), so each gets a dark groove with rounded ends.
+	local track = UI.pillFill(sb, 2)
+	track:SetVertexColor(0.03, 0.04, 0.05)
+	track:SetAlpha(0.6)
 	sb:SetAlpha(RAIL_ALPHA)
 	sb.stoaAlpha = RAIL_ALPHA
 	sb:SetMinMaxValues(0, 1)
@@ -376,7 +373,13 @@ function Halo:Build()
 	-- under the power number.
 	if self.db.shield then
 		local shield = UI.shieldGauge(frame, 22)
-		shield:SetPoint("TOPRIGHT", healthText, "BOTTOMRIGHT", 1, -3)
+		if rail then
+			-- The power number sits under the health number here, so the
+			-- shield stands to the left of the health number instead.
+			shield:SetPoint("RIGHT", healthText, "LEFT", -6, 0)
+		else
+			shield:SetPoint("TOPRIGHT", healthText, "BOTTOMRIGHT", 1, -3)
+		end
 		self.shield = shield
 	end
 	-- And your class mark under the power number, mirroring it.
@@ -490,27 +493,6 @@ function Halo:BuildSignature(frame)
 	slot:SetSize(SIGNATURE_SIZE + 8, SIGNATURE_SIZE + 8)
 	slot:SetPoint("CENTER", frame, "BOTTOM", 0, 8)
 	self.signature = slot
-
-	-- Side rail: the signature docks at the rails' foot, under the pair,
-	-- and one dark rounded plate stands behind both uprights in place of
-	-- their own grooves. The plate is the rail's seat: it carries the
-	-- danger tones the ground line's seat does.
-	if self:Rail() and self.health and self.mana then
-		local pairX = -(RAIL.x + RAIL.width + RAIL.gap / 2)
-		slot:ClearAllPoints()
-		slot:SetPoint("TOP", frame, "CENTER", pairX, RAIL.bottom - RAIL_SEAT_PAD - 2)
-		local host = CreateFrame("Frame", nil, frame)
-		host:SetFrameLevel(frame:GetFrameLevel())
-		host:SetPoint("TOPLEFT", self.mana, "TOPLEFT", -RAIL_SEAT_PAD, RAIL_SEAT_PAD)
-		host:SetPoint("BOTTOMRIGHT", self.health, "BOTTOMRIGHT", RAIL_SEAT_PAD, -RAIL_SEAT_PAD)
-		local plate = UI.pillFill(host, 0)
-		plate:SetVertexColor(0.04, 0.05, 0.06)
-		plate:SetAlpha(0.75)
-		for _, bar in ipairs({ self.health, self.mana }) do
-			if bar.stoaTrack then bar.stoaTrack:Hide() end
-		end
-		slot.seat = plate
-	end
 
 	-- The ground line (and Numbers first) runs in under a dark seat in the
 	-- groove's tone, which makes the bars and the signature one object.
