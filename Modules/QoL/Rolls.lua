@@ -138,10 +138,12 @@ function Rolls:ResultCard(i)
 	card.icon:SetPoint("TOPLEFT", 12, -9)
 	card.name = UI.text(card, "serif", Stoa.typeSize.label, "text")
 	card.name:SetPoint("LEFT", card.icon, "RIGHT", 8, 0)
-	card.name:SetPoint("RIGHT", card, "RIGHT", -124, 0)
 	card.name:SetWordWrap(false)
 	card.status = UI.text(card, "sans", Stoa.typeSize.body, "accent", "RIGHT")
 	card.status:SetPoint("RIGHT", card, "TOPRIGHT", -12, -23)
+	-- The item's name ends where the status starts, however long the
+	-- winner's name is, and is cut short there.
+	card.name:SetPoint("RIGHT", card.status, "LEFT", -10, 0)
 	card.names, card.choices = columns(card)
 	card.names:SetPoint("TOPLEFT", card.icon, "BOTTOMLEFT", 0, -8)
 	card.choices:SetPoint("TOPRIGHT", card, "TOPRIGHT", -12, -45)
@@ -263,11 +265,21 @@ function Rolls:OnDrop(encounterID, key)
 	self:Layout()
 end
 
--- Default spot: right of the middle of the screen, clear of the bars, the
--- Halo and the party cards.
+-- Default spot: right of the Halo and above the target, which stands
+-- there in a fight with its cast and auras hanging under it. The cards
+-- stack upward, so they never reach down over it. Without the Halo:
+-- right of the middle of the screen, clear of the bars.
+local OVER_TARGET_X, OVER_TARGET_Y = 52 + 147, 36 + 100 + 16
+
 function Rolls:Place()
-	self.anchor:ClearAllPoints()
-	self.anchor:SetPoint("BOTTOM", UIParent, "CENTER", 380, -120)
+	local anchor, halo = self.anchor, _G.StoaHalo
+	anchor:ClearAllPoints()
+	if halo then
+		local scale = halo:GetScale() or 1
+		anchor:SetPoint("BOTTOM", halo, "RIGHT", OVER_TARGET_X * scale, OVER_TARGET_Y * scale)
+	else
+		anchor:SetPoint("BOTTOM", UIParent, "CENTER", 380, -120)
+	end
 end
 
 function Rolls:OnEnable()
@@ -277,6 +289,11 @@ function Rolls:OnEnable()
 	self.anchor = anchor
 	self:Place()
 	Stoa:RegisterMover("lootRolls", anchor, "Loot rolls", { default = function() self:Place() end })
+	-- The Halo is built after this module; hang from it once it is there,
+	-- unless the player has put the cards somewhere.
+	Stoa:On("PLAYER_ENTERING_WORLD", function()
+		if not Stoa:HasSavedPosition("lootRolls") then self:Place() end
+	end)
 
 	if type(_G.GroupLootContainer_Update) == "function" then
 		hooksecurefunc("GroupLootContainer_Update", function()

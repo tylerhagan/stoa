@@ -4,7 +4,8 @@
 --
 -- Offered, in order: grey junk, then what you marked as junk, then white
 -- food and drink of the plain kind (health or mana back and nothing more).
--- Never food with a buff, an elixir or a scroll, a quest item, a spell reagent, gear that
+-- Never food with a buff, an elixir or a scroll, a quest item, a spell reagent, a
+-- crafting material you haven't marked as junk, gear that
 -- isn't junk,
 -- anything you keep in Restock, or anything a vendor won't buy. Grey goes
 -- on one click; anything else turns red and asks for a second.
@@ -116,6 +117,16 @@ local function plainConsumable(bag, slot, id)
 	return plain
 end
 
+-- Trade goods, and anything the game itself calls a crafting reagent.
+local TRADE_CLASS = 7
+local function isCraftingMaterial(id, classID)
+	if classID == TRADE_CLASS then return true end
+	local getInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
+	if not getInfo then return false end
+	local ok, flag = pcall(function() return (select(17, getInfo(id))) end)
+	return ok and flag == true
+end
+
 -- The stacks that may go, least valuable first within grey, marked, white.
 local function candidates()
 	local list = {}
@@ -127,6 +138,9 @@ local function candidates()
 		if not quality or price <= 0 then return end
 		if REAGENTS[id] or classID == REAGENT_CLASS or (classID == MISC_CLASS and subclassID == MISC_REAGENT) then return end
 		local marked = Items.isMarkedJunk(id)
+		-- Crafting materials stay too, grey or not, unless you marked
+		-- them as junk yourself.
+		if not marked and isCraftingMaterial(id, classID) then return end
 		local tier = quality == POOR and 1 or marked and 2 or quality == COMMON and 3 or nil
 		if not tier or keep[id] then return end
 		-- Of white items only food, drink and the like are offered: they are

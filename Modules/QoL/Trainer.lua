@@ -157,7 +157,8 @@ local function money(copper)
 	local out = {}
 	if gold > 0 then out[#out + 1] = gold .. "g" end
 	if silver > 0 then out[#out + 1] = silver .. "s" end
-	if rest > 0 or #out == 0 then out[#out + 1] = rest .. "c" end
+	-- Copper is dropped once there's gold: the line has one column's room.
+	if (rest > 0 and gold == 0) or #out == 0 then out[#out + 1] = rest .. "c" end
 	return Stoa:TintMoney(table.concat(out, " "))
 end
 
@@ -325,6 +326,13 @@ function Trainer:BuildRow(page, i)
 	fold:SetPoint("LEFT", 0, -1)
 	local head = UI.text(row, "sans", Stoa.typeSize.caption, "accent", "LEFT")
 	head:SetPoint("LEFT", fold, "RIGHT", 4, -1)
+	-- Slate: a main heading sits on a faint band.
+	local band = row:CreateTexture(nil, "BACKGROUND", nil, -1)
+	band:SetPoint("TOPLEFT", -6, -1)
+	band:SetPoint("BOTTOMRIGHT", 6, 2)
+	UI.paint(band, "text", 0.03)
+	band:Hide()
+	row.band = band
 	local rule = UI.line(row, "hairline", 0.8)
 	rule:SetPoint("BOTTOMLEFT", 0, 2)
 	rule:SetPoint("BOTTOMRIGHT", 0, 2)
@@ -441,7 +449,9 @@ function Trainer:Rows()
 	local list = {}
 	local function section(key, label, spells, emptyText)
 		local folded = self:Folded(key)
-		list[#list + 1] = { heading = label, key = key, folded = folded, price = #spells > 0 and priceOf(self, spells) or nil }
+		-- The heading carries how many spells it holds.
+		local words = #spells > 0 and (label .. UI.WIDE_SEP .. #spells) or label
+		list[#list + 1] = { heading = words, key = key, folded = folded, price = #spells > 0 and priceOf(self, spells) or nil }
 		if folded then return end
 		if #spells == 0 then
 			list[#list + 1] = { heading = "", empty = emptyText }
@@ -494,6 +504,7 @@ function Trainer:Fill()
 		row.level:SetShown(spell)
 		row.head:SetShown(entry and entry.heading and true or false)
 		row.rule:SetShown(entry and entry.heading and entry.heading ~= "" and not entry.sub and true or false)
+		row.band:SetShown(UI.slate() and entry and entry.key and not entry.sub and true or false)
 		row.fold:SetShown(entry and entry.key and true or false)
 		row.fold:ClearAllPoints()
 		row.fold:SetPoint("LEFT", entry and entry.sub and 14 or 0, -1)
@@ -516,7 +527,7 @@ function Trainer:Fill()
 			row.cost:SetTextColor(Stoa:Color("muted"))
 		elseif entry then
 			row.head:SetText(entry.empty or entry.heading)
-			row.head:SetTextColor(Stoa:Color((entry.empty or entry.sub) and "muted" or "accent"))
+			row.head:SetTextColor(Stoa:Color((entry.empty or entry.sub) and "muted" or UI.slate() and "text" or "accent"))
 			if entry.key then row.fold:SetTexture(UI.MEDIA .. "Textures\\Glyph" .. (entry.folded and "Plus" or "Minus")) end
 			row.cost:SetText(entry.price or "")
 			row.cost:SetTextColor(Stoa:Color("text"))

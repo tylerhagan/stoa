@@ -21,6 +21,32 @@ local function forbidden(frame)
 	return frame.IsForbidden and frame:IsForbidden()
 end
 
+-- In a fight the game refuses changes to protected frames, and to anything
+-- one of them is anchored to. A window with none of those inside can be
+-- dressed and settled at once; the rest wait for the fight to end.
+local function protectedInside(frame, depth)
+	if forbidden(frame) then return true end
+	if frame.IsProtected and frame:IsProtected() then return true end
+	if frame.IsAnchoringRestricted and frame:IsAnchoringRestricted() then return true end
+	if depth <= 0 or not frame.GetChildren then return false end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		if protectedInside(child, depth - 1) then return true end
+	end
+	return false
+end
+local fight = 0
+function Windows.Locked(frame)
+	if not InCombatLockdown() then return false end
+	if type(frame) ~= "table" then return true end
+	-- The walk is long for a window full of buttons: one answer a window
+	-- for each fight.
+	if frame.stoaLockedFight == fight then return frame.stoaLocked end
+	local ok, locked = pcall(protectedInside, frame, 6)
+	frame.stoaLockedFight, frame.stoaLocked = fight, not ok or locked
+	return frame.stoaLocked
+end
+Stoa:On("PLAYER_REGEN_DISABLED", function() fight = fight + 1 end)
+
 -- Strips the plain frames inside a window too, down a few levels, leaving
 -- buttons, bars and edit boxes (and their icons) alone.
 local KEEP = { Button = true, CheckButton = true, StatusBar = true, EditBox = true, Cooldown = true }
@@ -120,9 +146,18 @@ local function dressButton(button)
 	local function colour(over)
 		if text then
 			local enabled = not button.IsEnabled or button:IsEnabled()
-			text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+			text:SetTextColor(Stoa:Color(not enabled and "muted" or over and not UI.slate() and "accent" or "text"))
 		end
-		if over then glow:Set(Stoa:Color("accent")) else glow:Clear() end
+		if UI.slate() then
+			-- Slate: an outlined key whose edge lifts under the mouse; no
+			-- accent on a plain button.
+			local r, g, b = Stoa:Color("text")
+			glow:Set(r, g, b, over and 0.22 or 0.1)
+		elseif over then
+			glow:Set(Stoa:Color("accent"))
+		else
+			glow:Clear()
+		end
 	end
 	button:HookScript("OnEnter", function() colour(true) end)
 	button:HookScript("OnLeave", function() colour(false) end)
@@ -139,7 +174,7 @@ local function dressClose(button)
 	button:HookScript("OnShow", plainTextures)
 	local cross = Stoa.UI.glyph(button, "Cross", 16, "muted")
 	cross:SetPoint("CENTER", 0, 0)
-	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("accent")) end)
+	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
 	button:HookScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
 end
 
@@ -155,18 +190,127 @@ local function dressMaxMin(holder)
 			button:HookScript("OnShow", plainTextures)
 			local glyph = Stoa.UI.glyph(button, glyphName, 14, "muted")
 			glyph:SetPoint("CENTER", 0, 0)
-			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color("accent")) end)
+			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
 			button:HookScript("OnLeave", function() glyph:SetVertexColor(Stoa:Color("muted")) end)
 		end
 	end
 end
 
--- Every red button inside a window, however deep.
+-- Tick boxes (Slate): the game's yellow box and tick become a quiet rounded
+-- square with the tick in the accent, or, where a row has the room (the
+-- AddOns list), a small switch like the ones in STOA's settings. Only the
+-- box's art changes: its size, place and clicks stay the game's. A grey
+-- (desaturated) tick is the AddOns list's "on for some characters": a dash
+-- in the square, the knob resting mid-track on the switch.
+local TICK_ART = { "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture", "GetCheckedTexture", "GetDisabledCheckedTexture" }
+-- The switch keeps inside the game box's 24 width, and under the AddOns
+-- list's 16 row height so two rows' switches never touch.
+local TICK_BOX, SWITCH_W, SWITCH_H, SWITCH_KNOB = 24, 24, 12, 8
+-- Interface\Buttons\UI-CheckBox-Up, where the client names files by number.
+local TICK_FILE = 130755
+
+local function isTickBox(check)
+	if check.icon or check.Icon or check.stoaTabParts then return false end
+	if check.IsProtected and check:IsProtected() then return false end
+	local w, h = check:GetSize()
+	if type(w) ~= "number" or type(h) ~= "number" or w < 12 or w > 34 or math.abs(w - h) > 4 then return false end
+	local normal = check.GetNormalTexture and check:GetNormalTexture()
+	if not normal then return false end
+	local atlas = normal.GetAtlas and normal:GetAtlas()
+	if type(atlas) == "string" and atlas:lower():find("checkbox", 1, true) then return true end
+	local file = normal.GetTexture and normal:GetTexture()
+	if type(file) == "string" then return file:lower():find("checkbox", 1, true) ~= nil end
+	return file == TICK_FILE
+end
+
+local function tickState(check)
+	if not check:GetChecked() then return false end
+	local tex = check.GetCheckedTexture and check:GetCheckedTexture()
+	if tex and tex.IsDesaturated and tex:IsDesaturated() then return "some" end
+	return true
+end
+
+local function plainTick(check)
+	for _, getter in ipairs(TICK_ART) do
+		local tex = check[getter] and check[getter](check)
+		if tex then tex:SetAlpha(0) end
+	end
+end
+
+local function dressTick(check, switch)
+	if not check or check.stoaTick or forbidden(check) or not UI.slate() then return end
+	check.stoaTick = true
+	plainTick(check)
+	local paint
+	if switch then
+		local parts = { UI.circle(check, "ARTWORK", 0, SWITCH_H), UI.circle(check, "ARTWORK", 0, SWITCH_H), check:CreateTexture(nil, "ARTWORK") }
+		parts[1]:SetPoint("LEFT", check, "CENTER", -SWITCH_W / 2, 0)
+		parts[2]:SetPoint("RIGHT", check, "CENTER", SWITCH_W / 2, 0)
+		parts[3]:SetPoint("TOPLEFT", parts[1], "TOP", 0, 0)
+		parts[3]:SetPoint("BOTTOMRIGHT", parts[2], "BOTTOM", 0, 0)
+		for _, part in ipairs(parts) do part:SetColorTexture(1, 1, 1, 1) end
+		local knob = UI.circle(check, "OVERLAY", 0, SWITCH_KNOB)
+		knob:SetColorTexture(1, 1, 1, 1)
+		local travel = (SWITCH_W - SWITCH_KNOB) / 2 - 2
+		function paint()
+			local state = tickState(check)
+			local enabled = not check.IsEnabled or check:IsEnabled()
+			local r, g, b = Stoa:Color(state and "accent" or "text")
+			-- Off: a dim grey. On: a dark track only tinted by the accent,
+			-- and the knob carries the colour, so a long list of switches
+			-- stays calm whatever the theme (a full orange track shouted).
+			local k = state == true and 0.3 or state and 0.18 or 0.2
+			for _, part in ipairs(parts) do part:SetVertexColor(r * k, g * k, b * k, enabled and 1 or 0.5) end
+			local kr, kg, kb = Stoa:Color(state == true and "accent" or state and "text" or "muted")
+			knob:SetVertexColor(kr, kg, kb, enabled and 1 or 0.5)
+			knob:ClearAllPoints()
+			knob:SetPoint("CENTER", check, "CENTER", state == true and travel or state and 0 or -travel, 0)
+		end
+	else
+		local box = UI.glyph(check, "Box", TICK_BOX, "muted")
+		box:SetDrawLayer("ARTWORK")
+		box:SetPoint("CENTER")
+		local tick = UI.glyph(check, "Tick", TICK_BOX - 4, "accent")
+		tick:SetPoint("CENTER")
+		local dash = check:CreateTexture(nil, "OVERLAY")
+		dash:SetSize(8, 2)
+		dash:SetPoint("CENTER")
+		local over = false
+		function paint()
+			local state = tickState(check)
+			local enabled = not check.IsEnabled or check:IsEnabled()
+			local r, g, b = Stoa:Color((over and enabled) and "accent" or "muted")
+			box:SetVertexColor(r, g, b, enabled and (state == true and 0.9 or 0.6) or 0.3)
+			tick:SetShown(state == true)
+			tick:SetAlpha(enabled and 1 or 0.4)
+			dash:SetShown(state == "some")
+			dash:SetColorTexture(Stoa:Color("muted"))
+		end
+		check:HookScript("OnEnter", function() over = true paint() end)
+		check:HookScript("OnLeave", function() over = false paint() end)
+	end
+	-- A click turns the box without SetChecked; the game's own code sets
+	-- it (and greys the tick) when a list is drawn again.
+	hooksecurefunc(check, "SetChecked", paint)
+	check:HookScript("PostClick", paint)
+	local checked = check.GetCheckedTexture and check:GetCheckedTexture()
+	if checked and checked.SetDesaturated then hooksecurefunc(checked, "SetDesaturated", paint) end
+	for _, script in ipairs({ "OnShow", "OnEnable", "OnDisable" }) do
+		check:HookScript(script, function(own) plainTick(own) paint() end)
+	end
+	paint()
+end
+
+-- Every red button inside a window, however deep, and under Slate every
+-- tick box beside them.
 local function dressButtonsIn(frame, depth)
 	if not (frame and frame.GetChildren) or depth <= 0 then return end
+	local slate = UI.slate()
 	for _, child in ipairs({ frame:GetChildren() }) do
 		if not forbidden(child) then
-			if child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
+			if slate and child.IsObjectType and child:IsObjectType("CheckButton") then
+				if not child.stoaTick and isTickBox(child) then dressTick(child) end
+			elseif child.IsObjectType and child:IsObjectType("Button") and isPanelButton(child) then
 				dressButton(child)
 			end
 			dressButtonsIn(child, depth - 1)
@@ -277,6 +421,7 @@ Windows.DressScrollBar = dressScrollBar
 Windows.DressArrowDropdown = dressArrowDropdown
 Windows.DressButtonsIn = dressButtonsIn
 Windows.DressButton = dressButton
+Windows.DressTick = dressTick
 Windows.DressClose = dressClose
 Windows.DressMaxMin = dressMaxMin
 
@@ -299,12 +444,33 @@ local function colourTabs(frame)
 		local selected = tabSelected(tab)
 		local text = tab.Text or (tab.GetFontString and tab:GetFontString())
 		if text then text:SetTextColor(Stoa:Color(selected and "text" or "muted")) end
-		if tab.stoaShade then
+		if tab.stoaWordOnly then
+			-- A tab drawn as a word only (macros): the chosen one in the
+			-- text colour over the accent line, and every word on one line,
+			-- where Blizzard sits the chosen tab's word higher.
+			tab.stoaUnderline:SetShown(selected)
+			if text then
+				text:ClearAllPoints()
+				text:SetPoint("CENTER", tab, "CENTER", 0, -(tab.stoaWordDrop or 0))
+			end
+		elseif tab.stoaShade and UI.slate() then
+			-- Slate: the chosen tab is a raised grey plate with its word
+			-- in the text colour, no underline (the segmented control).
+			if selected then
+				local r, g, b = Stoa:Color("text")
+				tab.stoaShade:SetVertexColor(r, g, b, 0.1)
+			else
+				tab.stoaShade:SetVertexColor(0, 0, 0, TAB_SHADE.other)
+			end
+			tab.stoaUnderline:Hide()
+		elseif tab.stoaShade then
 			tab.stoaShade:SetVertexColor(0, 0, 0, selected and TAB_SHADE.selected or TAB_SHADE.other)
 			tab.stoaUnderline:SetShown(selected)
 		end
 	end
 end
+
+Windows.ColourTabs = colourTabs
 
 local function tabArt(tab)
 	if tab.stoaShade then return end
@@ -423,7 +589,7 @@ Windows.RAISE = RAISE
 
 local function seatTitle(frame, title, close)
 	local header = frame.stoaHeader
-	if not header or InCombatLockdown() then return end
+	if not header or Windows.Locked(frame) then return end
 	-- A skin may ask for a smaller title (bags name themselves in label
 	-- size); the size is applied here so a settle never grows it back.
 	if title and (frame.stoaPlainHeader or frame.stoaTitleSize) and not frame.stoaOwnTitle then
@@ -518,14 +684,25 @@ local function liftPanel(frame, raise)
 	-- The raised strip lies outside the window's own edge, so a click (or a
 	-- Shift-drag to move it) on its top part went through to the world:
 	-- the window's clickable area reaches up to cover it.
-	if frame.SetHitRectInsets and frame.GetHitRectInsets and not mapFill and not InCombatLockdown() then
+	if frame.SetHitRectInsets and frame.GetHitRectInsets and not mapFill then
 		local left, right, _, bottom = frame:GetHitRectInsets()
 		pcall(frame.SetHitRectInsets, frame, left or 0, right or 0, -raise, bottom or 0)
 	end
 end
 
 function Windows:Settle(frame)
-	if not frame or InCombatLockdown() then return end
+	if not frame then return end
+	if Windows.Locked(frame) then
+		-- Catch up once the fight ends.
+		if not frame.stoaSettleWaits then
+			frame.stoaSettleWaits = true
+			Stoa:AfterCombat(function()
+				frame.stoaSettleWaits = nil
+				Windows:Settle(frame)
+			end)
+		end
+		return
+	end
 	hide(frame.NineSlice)
 	hide(frame.PortraitContainer)
 	-- Guild & Communities draws its guild tabard or club icon on its own
@@ -620,7 +797,7 @@ end
 local function light(fs, title)
 	if not (fs and fs.SetTextColor) then return end
 	if title then
-		fs:SetTextColor(Stoa:Color("accent"))
+		fs:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent"))
 	else
 		fs:SetTextColor(Stoa:Color("text"))
 	end
@@ -720,6 +897,8 @@ end
 -- Quest fonts in Stoa's type: titles in the display face, body in Inter.
 local function questFonts()
 	local display, sans = Stoa.fonts.serif[1], Stoa.fonts.sans[1]
+	-- Slate sets every word in the sans, titles too.
+	if UI.slate() then display = sans end
 	local function face(fontObject, file, size)
 		if fontObject and fontObject.SetFont then pcall(fontObject.SetFont, fontObject, file[1], size * file[2], "") end
 	end
@@ -727,6 +906,40 @@ local function questFonts()
 	face(QuestTitleFontBlackShadow, display, 18)
 	face(QuestFont, sans, 13)
 	face(QuestFontNormalSmall, sans, 12)
+end
+
+-- Slate sets every word in Inter. The game's own windows, tracker and
+-- lists draw from a handful of base fonts, so those take STOA's face and
+-- keep their own sizes and outlines. (Picking another Style reloads, which
+-- gives the game's faces back.)
+local BASE_FONTS = {
+	"SystemFont_Tiny", "SystemFont_Tiny2", "SystemFont_Small", "SystemFont_Small2", "SystemFont_Med1", "SystemFont_Med2",
+	"SystemFont_Med3", "SystemFont_Large", "SystemFont_Large2", "SystemFont_Huge1", "SystemFont_Huge2",
+	"SystemFont_Shadow_Small", "SystemFont_Shadow_Small2", "SystemFont_Shadow_Med1", "SystemFont_Shadow_Med2",
+	"SystemFont_Shadow_Med3", "SystemFont_Shadow_Large", "SystemFont_Shadow_Large2", "SystemFont_Shadow_Huge1",
+	"SystemFont_Shadow_Huge2", "SystemFont_Outline_Small", "SystemFont_Outline", "SystemFont_Shadow_Outline_Small",
+	"Game10Font_o1", "Game11Font", "Game12Font", "Game13Font", "Game13FontShadow", "Game15Font", "Game15Font_Shadow", "Game16Font",
+	"Game18Font", "Game20Font", "Game24Font", "Game27Font", "ObjectiveFont", "ObjectiveTrackerFont12",
+	"ObjectiveTrackerFont13", "ObjectiveTrackerFont14", "ObjectiveTrackerHeaderFont", "ObjectiveTrackerLineFont",
+	"QuestFont_Large", "QuestFont_Shadow_Small", "QuestFont_Huge", "QuestFont_Shadow_Huge", "QuestFont_Super_Huge",
+	"Fancy12Font", "Fancy14Font", "Fancy16Font", "Fancy18Font", "Fancy20Font", "Fancy22Font", "Fancy24Font",
+	"FriendsFont_Normal", "FriendsFont_Small", "FriendsFont_Large", "FriendsFont_UserText", "FriendsFont_11",
+	"GameFontNormal", "GameFontNormalSmall", "GameFontNormalMed1", "GameFontNormalMed2", "GameFontNormalMed3",
+	"GameFontNormalLarge", "GameFontNormalHuge", "GameFontHighlight", "GameFontHighlightSmall",
+	"GameFontHighlightSmall2", "GameFontHighlightMedium", "GameFontHighlightLarge", "GameFontHighlightHuge",
+	"GameFontDisable", "GameFontDisableSmall", "GameFontDisableLarge", "GameFontWhite", "GameFontWhiteSmall",
+	"MailFont_Large", "InvoiceFont_Med", "InvoiceFont_Small", "ReputationDetailFont", "AchievementFont_Small",
+}
+local function slateFonts()
+	local file = Stoa.fonts.sans[1]
+	if not file then return end
+	for _, name in ipairs(BASE_FONTS) do
+		local object = rawget(_G, name)
+		if type(object) == "table" and object.GetFont and object.SetFont then
+			local _, size, flags = object:GetFont()
+			if type(size) == "number" and size > 0 then pcall(object.SetFont, object, file[1], size, flags or "") end
+		end
+	end
 end
 
 local function dressQuest()
@@ -797,6 +1010,54 @@ local function dressMerchant()
 	end
 	hide(MerchantBuyBackItemSlotTexture)
 	hide(MerchantBuyBackItemNameFrame)
+	-- The page turners: Blizzard's framed arrows and gold words become a
+	-- chevron and a quiet word, dim when there is no page that way.
+	local page = rawget(_G, "MerchantPageText")
+	if page and page.SetTextColor then
+		Stoa:SetFont(page, "sans", Stoa.typeSize.caption)
+		page:SetTextColor(Stoa:Color("muted"))
+	end
+	for name, turn in pairs({ MerchantPrevPageButton = math.pi, MerchantNextPageButton = 0 }) do
+		local button = rawget(_G, name)
+		if type(button) == "table" and button.CreateTexture and not forbidden(button) and not button.stoaTurn then
+			button.stoaTurn = true
+			local words = {}
+			for _, region in ipairs({ button:GetRegions() }) do
+				local kind = region.GetObjectType and region:GetObjectType()
+				if kind == "Texture" then
+					region:SetAlpha(0)
+				elseif kind == "FontString" then
+					Stoa:SetFont(region, "sans", Stoa.typeSize.body)
+					words[#words + 1] = region
+				end
+			end
+			local glyph = UI.glyph(button, "Chevron", 12, "text")
+			glyph:SetPoint("CENTER")
+			glyph:SetRotation(turn)
+			local function paint()
+				local on = not button.IsEnabled or button:IsEnabled()
+				local token = on and (button:IsMouseOver() and "accent" or "text") or "muted"
+				local r, g, b = Stoa:Color(token)
+				glyph:SetVertexColor(r, g, b, on and 1 or 0.4)
+				for _, word in ipairs(words) do word:SetTextColor(r, g, b, on and 1 or 0.4) end
+			end
+			-- The word beside the arrow turns the page too.
+			local left, right = 0, 0
+			for _, word in ipairs(words) do
+				local reach = math.ceil(word:GetStringWidth() or 0) + 10
+				local wx, bx = word:GetCenter(), button:GetCenter()
+				if (wx and bx and wx < bx) or (not wx and turn == 0) then left = reach else right = reach end
+			end
+			if button.SetHitRectInsets then button:SetHitRectInsets(-left, -right, -4, -4) end
+			button:HookScript("OnEnter", paint)
+			button:HookScript("OnLeave", paint)
+			button:HookScript("OnShow", paint)
+			for _, method in ipairs({ "Enable", "Disable", "SetEnabled" }) do
+				if button[method] then hooksecurefunc(button, method, paint) end
+			end
+			paint()
+		end
+	end
 end
 
 -- One trainer row (and the skill-step row above the list): Blizzard's
@@ -1201,7 +1462,17 @@ end
 local function dressTooltips()
 	for _, name in ipairs(TOOLTIPS) do dressTooltip(_G[name]) end
 	local link = _G.ItemRefTooltip
-	if link then pcall(dressClose, link.CloseButton or _G.ItemRefCloseButton) end
+	local linkClose = link and (link.CloseButton or _G.ItemRefCloseButton)
+	if linkClose then
+		pcall(dressClose, linkClose)
+		-- The cross sat in the tip's very corner: it comes in from the
+		-- right and down onto the name's line (Tooltip.lua sets the name
+		-- 14 down, so its middle is about 21).
+		if not forbidden(linkClose) and linkClose.ClearAllPoints then
+			linkClose:ClearAllPoints()
+			linkClose:SetPoint("CENTER", link, "TOPRIGHT", -18, -21)
+		end
+	end
 	local bar = GameTooltipStatusBar
 	if bar then
 		bar:SetStatusBarTexture(UI.WHITE)
@@ -1259,6 +1530,7 @@ end
 local guarded = Stoa.safe.guarded
 
 function Windows:OnEnable()
+	if UI.slate() then guarded(slateFonts) end
 	guarded(questFonts)
 	guarded(dressQuest)
 	guarded(dressGossip)

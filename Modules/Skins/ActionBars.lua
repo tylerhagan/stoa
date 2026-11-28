@@ -30,6 +30,7 @@ local function hideSquareArt(button)
 end
 
 local MASK = UI.MEDIA .. "Textures\\ButtonMask"
+local SLATE_ICON_INSET = 3
 
 -- Swaps Blizzard's icon mask for Stoa's rounded square.
 local function roundMask(button, icon)
@@ -51,11 +52,32 @@ function Bars:Skin(button)
 	local icon = button.icon or button.Icon
 	if icon then icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
 	local mask = roundMask(button, icon)
+	-- Slate: the icon sits a little inside its socket, as on the mock-up,
+	-- so each button reads as a framed slot rather than a bright tile.
+	if UI.slate() and icon then
+		icon:ClearAllPoints()
+		icon:SetPoint("TOPLEFT", SLATE_ICON_INSET, -SLATE_ICON_INSET)
+		icon:SetPoint("BOTTOMRIGHT", -SLATE_ICON_INSET, SLATE_ICON_INSET)
+		mask:ClearAllPoints()
+		mask:SetAllPoints(icon)
+	end
 
 	-- Highlight, pressed and checked states follow the rounded shape.
 	for _, getter in ipairs({ "GetHighlightTexture", "GetPushedTexture", "GetCheckedTexture" }) do
 		local tex = button[getter] and button[getter](button)
 		if tex then pcall(tex.AddMaskTexture, tex, mask) end
+	end
+
+	-- Slate: the icon and its mask sit inside the socket, which cut the
+	-- game's "this one is queued" frame away entirely (a next-swing attack
+	-- showed nothing when pressed). There it is a light wash over the icon.
+	local checked = button.GetCheckedTexture and button:GetCheckedTexture()
+	if UI.slate() and icon and checked then
+		checked:SetTexture(UI.WHITE)
+		checked:SetVertexColor(1, 1, 1, 0.32)
+		checked:SetBlendMode("ADD")
+		checked:ClearAllPoints()
+		checked:SetAllPoints(icon)
 	end
 
 	-- The socket: a dark rounded square with a hairline edge, seen through
@@ -64,11 +86,22 @@ function Bars:Skin(button)
 
 	local cooldown = button.cooldown or button.Cooldown
 	if cooldown and cooldown.SetSwipeTexture then cooldown:SetSwipeTexture(MASK) end
+	if UI.slate() and icon and cooldown and cooldown.SetAllPoints then
+		cooldown:ClearAllPoints()
+		cooldown:SetAllPoints(icon)
+	end
 
 	local hotkey = button.HotKey
 	if hotkey then
-		Stoa:SetFont(hotkey, "sans", Stoa.typeSize.micro, "OUTLINE")
+		-- Slate: quiet labels, a soft shadow under them instead of a hard
+		-- outline round every letter.
+		local slate = UI.slate()
+		Stoa:SetFont(hotkey, "sans", Stoa.typeSize.micro, slate and "" or "OUTLINE")
 		hotkey:SetTextColor(Stoa:Color("muted"))
+		if slate then
+			hotkey:SetShadowColor(0, 0, 0, 0.9)
+			hotkey:SetShadowOffset(1, -1)
+		end
 	end
 	local count = button.Count
 	if count then Stoa:SetFont(count, "sans", Stoa.typeSize.body, "OUTLINE") end

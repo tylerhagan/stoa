@@ -163,7 +163,8 @@ function Manager:CopyWidget(item, cooldown)
 	if not (source and source.GetCooldownTimes) then return false end
 	local ok, start, duration = pcall(source.GetCooldownTimes, source)
 	if not ok or start == nil then return false end
-	-- GetCooldownTimes is in milliseconds.
+	-- GetCooldownTimes is in milliseconds; hidden times cannot be divided.
+	if Stoa:IsSecret(start) or Stoa:IsSecret(duration) then return false end
 	return pcall(function() cooldown:SetCooldown(start / 1000, duration / 1000) end)
 end
 

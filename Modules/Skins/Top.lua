@@ -196,6 +196,8 @@ local function trackerFonts()
 		local fontObject, kind, extra = entry[1], entry[2], entry[3]
 		if fontObject and fontObject.GetFont then
 			local _, size = fontObject:GetFont()
+			-- Slate sets every word in the sans, headings too.
+			if Stoa.UI.slate() then kind = "sans" end
 			local candidate = Stoa.fonts[kind] and Stoa.fonts[kind][1]
 			if size and candidate then
 				pcall(fontObject.SetFont, fontObject, candidate[1], (size + extra) * candidate[2], "")
@@ -205,10 +207,28 @@ local function trackerFonts()
 	end
 end
 
+local function stripColour(words)
+	return (words:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
 local function titleColour(block)
 	local header = block and block.HeaderText
 	if not header then return end
 	header:SetTextColor(Stoa:Color(block.isHighlighted and "accent" or "text"))
+	-- Slate: one calm colour for every title. Colours another addon writes
+	-- into the title itself (quest levels by difficulty, say) come out,
+	-- and come back while the mouse is on the quest.
+	if not UI.slate() then return end
+	local words = header:GetText()
+	if type(words) ~= "string" or Stoa:IsSecret(words) then return end
+	if words:find("|c", 1, true) then
+		block.stoaTitle, block.stoaPlain = words, stripColour(words)
+	elseif block.stoaPlain ~= words then
+		block.stoaTitle, block.stoaPlain = nil, nil
+	end
+	if not block.stoaTitle then return end
+	local want = block.isHighlighted and block.stoaTitle or block.stoaPlain
+	if want ~= words then header:SetText(want) end
 end
 
 local function dressBlock(block)
@@ -223,10 +243,13 @@ local function dressHeader(header, collapsed)
 	if not header or header.stoaDressed then return end
 	header.stoaDressed = true
 	bury(header.Background)
+	-- Slate: section names with no rule, like its cards.
+	local slate = UI.slate()
 	if header.Text then header.Text:SetTextColor(Stoa:Color("text")) end
 	local line = UI.line(header)
 	line:SetPoint("BOTTOMLEFT", 7, 2)
 	line:SetPoint("BOTTOMRIGHT", -2, 2)
+	line:SetShown(not slate)
 	UI.applyTheme()
 	if header.MinimizeButton then
 		local fold = UI.foldGlyph(header.MinimizeButton)
@@ -368,6 +391,9 @@ function Top:SeatHeader()
 	elseif style and style.housing then
 		-- Matte: the row sits on the housing's top rim and takes its width.
 		width = (Stoa:PlainNumber(map:GetWidth()) or 0) + style.housing * 2 - 4
+	elseif style and style.slateCard then
+		-- Slate: the row runs the map's full width inside its card.
+		width = (Stoa:PlainNumber(map:GetWidth()) or 0) - 4
 	end
 	seating = true
 	strip:ClearAllPoints()
@@ -376,7 +402,7 @@ function Top:SeatHeader()
 	-- Where the zone button is its own piece inside the strip, it grows with
 	-- it, keeping its left inset on both sides.
 	local zone = cluster.ZoneTextButton
-	if style and style.housing and zone and zone ~= strip and width and width > 0 then
+	if style and (style.housing or style.slateCard) and zone and zone ~= strip and width and width > 0 then
 		local stripLeft, zoneLeft = Stoa:PlainNumber(strip:GetLeft()), Stoa:PlainNumber(zone:GetLeft())
 		local inset = stripLeft and zoneLeft and math.max(zoneLeft - stripLeft, 0) or 0
 		zone:SetWidth(width - inset * 2)

@@ -347,7 +347,8 @@ local function healthValue(frame)
 	if not parts or not parts.value:IsShown() then return end
 	local ok = pcall(function()
 		local now = UnitHealth(frame.unit)
-		parts.value:SetText(AbbreviateLargeNumbers and AbbreviateLargeNumbers(now) or now)
+		-- A hidden value can be shown but not shortened.
+		parts.value:SetText(not Stoa:IsSecret(now) and AbbreviateLargeNumbers and AbbreviateLargeNumbers(now) or now)
 	end)
 	if not ok then parts.value:SetText("") end
 end

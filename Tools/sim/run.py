@@ -69,12 +69,26 @@ if os.environ.get("SIM_EXTRA"):  # a scratch Lua file run after the toc, to try 
 for f in files:
     loader(open(os.path.join(ROOT, f), encoding="utf-8").read(), f, ns)
 
-# STOA_SIM_SETUP=slim, minimal, matte, matteslim, matteminimal or pages (the level 60 slot pages) starts the run on that console setting (as a
+# STOA_SIM_SETUP=slim, minimal, matte, matteslim, slate, slatecompact, slateline, slatenumbers, slaterail, leatherline, slateslim, matteminimal or pages (the level 60 slot pages) starts the run on that console setting (as a
 # saved account would), so those builds are exercised too.
 if os.environ.get("STOA_SIM_SETUP") == "slim":
     lua.execute("StoaDB = { modules = { Grimoire = { slim = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "matte":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', grain = 'satin', modules = { Halo = { arcStyle = 'visor' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slate":
+    lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { arcStyle = 'line' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slatecompact":
+    lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { arcStyle = 'line', targetCompact = true } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slateline":
+    lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { shape = 'line', lineQuiet = true, restArcs = true } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slatenumbers":
+    lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { shape = 'numbers', restArcs = true } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slaterail":
+    lua.execute("StoaDB = { theme = 'Ice', material = 'slate', modules = { Halo = { shape = 'rail', lineQuiet = true, restArcs = true } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "leatherline":
+    lua.execute("StoaDB = { modules = { Halo = { shape = 'line' } } }")
+elif os.environ.get("STOA_SIM_SETUP") == "slateslim":
+    lua.execute("StoaDB = { theme = 'Ember', material = 'slate', modules = { Grimoire = { slim = true } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "matteslim":
     lua.execute("StoaDB = { theme = 'Matte', material = 'matte', modules = { Grimoire = { slim = true }, Halo = { arcStyle = 'gauge' } } }")
 elif os.environ.get("STOA_SIM_SETUP") == "pages":
@@ -481,7 +495,10 @@ do
 		Stoa.daylight = nil
 		console.previewHour = 1
 		console:UpdateDaylight()
-		if not (Stoa.daylight and Stoa.daylight.mix > 0.3) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: preview hour not shown" end
+		-- Only Leather has gold for the sky to light.
+		local leather = (Stoa.db.material or "leather") == "leather"
+		if leather and not (Stoa.daylight and Stoa.daylight.mix > 0.3) then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: preview hour not shown" end
+		if not leather and Stoa.daylight then SIM_ERRORS[#SIM_ERRORS + 1] = "Daylight: lit outside Leather" end
 		console.previewHour = nil
 		console:UpdateDaylight()
 	end
@@ -1405,7 +1422,19 @@ end
 -- Console dividers: a hairline in each wide gap, none in a narrow one.
 do
 	local console = Stoa.modules.Grimoire
-	if console and console.dividers and console.PlaceDividers then
+	if console and console.dividers and console.PlaceDividers and console:Slate() then
+		-- Slate: no lines; the zones and each page column are cards.
+		local ok, e = xpcall(function()
+			console:FitPages()
+			console:PlaceDividers(3440, 400, 400)
+			assert(not console.dividers[3]:IsShown(), "Slate drew a line between cards")
+			local shown = 0
+			for _, well in pairs(console.wells or {}) do if well[1]:IsShown() then shown = shown + 1 end end
+			assert(shown >= 2, "Slate: only " .. shown .. " console cards")
+			if console:HousesChat() then assert(_G.StoaChatTabs, "Slate: no chat pills") end
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Slate console cards: " .. e end
+	elseif console and console.dividers and console.PlaceDividers then
 		local ok, e = xpcall(function()
 			console:PlaceDividers(3440, 400, 400)
 			assert(console.dividers[3]:IsShown(), "no line between the bars and the pages")
@@ -1444,8 +1473,17 @@ do
 			local list = console:Jobs()
 			assert(#list == 5, "jobs: " .. #list)
 			console:UpdateJobs()
-			assert(console.roleNote:IsShown(), "the jobs line is hidden")
-			assert(console.roleNote.words:GetText() == "5 small jobs", "line reads " .. tostring(console.roleNote.words:GetText()))
+			if console.slateJobs then
+				-- Slate lists them as rows with a count chip instead.
+				local jobs = console.slateJobs
+				assert(not console.roleNote:IsShown(), "Slate showed the one-line note over its rows")
+				assert(jobs.rows[1]:IsShown() and jobs.rows[2]:IsShown(), "Slate's job rows are hidden")
+				assert(jobs.count:IsShown() and jobs.count.word == "5", "Slate's count chip reads " .. tostring(jobs.count.word))
+				assert(not console.gear:IsShown(), "Slate's gear row stayed under the jobs")
+			else
+				assert(console.roleNote:IsShown(), "the jobs line is hidden")
+				assert(console.roleNote.words:GetText() == "5 small jobs", "line reads " .. tostring(console.roleNote.words:GetText()))
+			end
 			console:ShowJobs(console.roleNote)
 			GetActionInfo = function(slot) if slot == 7 then return "spell", 42 end end
 			Stoa.Spells.name = function(id) return id == 42 and "Holy Fire" or nil end
@@ -1457,6 +1495,10 @@ do
 			if tips then tips.db.enabled = false end
 			console:UpdateJobs()
 			assert(not console.roleNote:IsShown(), "the line shows with nothing to do")
+			if console.slateJobs then
+				assert(not console.slateJobs.rows[1]:IsShown() and not console.slateJobs.count:IsShown(), "Slate's job rows stayed with nothing to do")
+				assert(console.gear:IsShown(), "Slate's gear row didn't come back")
+			end
 			if tips then tips.db.enabled = true end
 			C_ClassTalents, C_Item.GetItemCount, GetInventoryItemID, GetActionInfo, Stoa.missingBuffs, Stoa.Spells.each, Stoa.Spells.name = unpack(real, 1, 7)
 		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)

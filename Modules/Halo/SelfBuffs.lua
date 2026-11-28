@@ -211,7 +211,18 @@ function SelfBuffs:Place()
 	local halo = _G.StoaHalo
 	frame:ClearAllPoints()
 	if halo then
-		frame:SetPoint("RIGHT", halo, "LEFT", -60, 24)
+		local line = Stoa.Sign and Stoa.Sign.groundLine()
+		local rail = Stoa.Sign and Stoa.Sign.sideRail()
+		if rail then
+			-- The side rail: beyond the numbers, level with the rails' middle.
+			frame:SetPoint("RIGHT", halo, "CENTER", -(Stoa.Sign.railLeft(rail) + 64), rail.bottom + rail.height / 2)
+		elseif line then
+			-- The ground line: in the same row, past the emergency button.
+			local petRoom = Stoa.modules.Pet and Stoa.modules.Pet.LineRoom and Stoa.modules.Pet:LineRoom() or 0
+			frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76) + 40 + 10 + petRoom), line.y)
+		else
+			frame:SetPoint("RIGHT", halo, "LEFT", -60, 24)
+		end
 	else
 		frame:SetPoint("BOTTOM", UIParent, "BOTTOM", -300, 380)
 	end

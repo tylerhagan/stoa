@@ -196,19 +196,27 @@ function Roster:Build()
 
 	self.tabs = {}
 	for i, entry in ipairs({ { "friends", "Friends" }, { "guild", "Guild" } }) do
-		local tab = UI.button(page, entry[2], 96, function()
+		local tab = UI.wordTab(page, entry[2], function()
 			self.db.tab = entry[1]
 			self.offset = 0
 			self:Refresh()
 		end)
-		tab:SetPoint("TOPLEFT", PAD + (i - 1) * 104, -104)
+		if i == 1 then
+			tab:SetPoint("TOPLEFT", PAD + 4, -104)
+		else
+			tab:SetPoint("LEFT", self.tabs.friends, "RIGHT", 22, 0)
+		end
 		self.tabs[entry[1]] = tab
 	end
+	local tabRule = UI.line(page, "hairline")
+	tabRule:SetPoint("TOPLEFT", PAD, -128)
+	tabRule:SetPoint("TOPRIGHT", -PAD, -128)
 
 	self.rows = {}
 	for i = 1, ROWS do self.rows[i] = self:BuildRow(page, i) end
-	self.empty = UI.text(page, "italic", Stoa.typeSize.label, "muted")
-	self.empty:SetPoint("TOPLEFT", PAD + 4, -146)
+	self.empty = UI.emptyState(page)
+	self.empty:SetPoint("TOPLEFT", PAD, -150)
+	self.empty:SetPoint("RIGHT", page, "RIGHT", -PAD, 0)
 
 	self.offset = 0
 	page:EnableMouseWheel(true)
@@ -235,7 +243,10 @@ function Roster:Refresh()
 	if not (self.page and self.page:IsShown()) then return end
 	local tab = self.db.tab == "guild" and "guild" or "friends"
 	for name, button in pairs(self.tabs) do button:SetSelected(name == tab) end
-	local list = tab == "guild" and gatherGuild() or gatherFriends()
+	local friends, guild = gatherFriends(), IsInGuild() and gatherGuild() or {}
+	self.tabs.friends:SetCount(#friends)
+	self.tabs.guild:SetCount(IsInGuild() and #guild or nil)
+	local list = tab == "guild" and guild or friends
 	table.sort(list, function(a, b) return a.label < b.label end)
 	self.list = list
 	self.offset = math.min(self.offset or 0, math.max(#list - ROWS, 0))
@@ -255,9 +266,11 @@ function Roster:Refresh()
 		end
 	end
 	if tab == "guild" and not IsInGuild() then
-		self.empty:SetText("You're not in a guild.")
+		self.empty:Set("You're not in a guild", "Guild members who are online show here once you join one.")
+	elseif #list == 0 then
+		self.empty:Set("Nobody's online right now", tab == "guild" and "Guild members show here as they log in." or "Friends show here as they log in.")
 	else
-		self.empty:SetText(#list == 0 and "Nobody's online right now." or "")
+		self.empty:Set(nil)
 	end
 	self.count:SetText(#list == 1 and "1 online" or (#list .. " online"))
 end

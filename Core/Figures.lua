@@ -24,6 +24,17 @@ local function fill(parent, layer, token, alpha)
 	return tex
 end
 
+-- Slate draws its figures as small rounded pills (PlateFill, nine-sliced
+-- at 5), not square cells and strips.
+local function pill(parent, layer, token, alpha)
+	if not UI.slate() then return fill(parent, layer, token, alpha) end
+	local tex = UI.sliced(parent, layer or "ARTWORK", "PlateFill.tga", 0, 5, true)
+	if not tex then return fill(parent, layer, token, alpha) end
+	tex:ClearAllPoints()
+	if token then UI.tint(tex, token, alpha) end
+	return tex
+end
+
 local function color(tex, token, alpha)
 	local r, g, b = Stoa:Color(token)
 	tex:SetVertexColor(r, g, b, alpha or 1)
@@ -39,6 +50,16 @@ end
 -- Segments ------------------------------------------------------------------------
 
 function Figures.segments(parent, count, width, height, gap)
+	-- Slate: one rounded bar, a little thinner, in place of the cells.
+	if UI.slate() then
+		local frame = Figures.bar(parent, width, math.max(4, height - 2))
+		local set = frame.Set
+		function frame:Set(fraction, token)
+			fraction = math.max(0, math.min(1, fraction or 0))
+			set(self, fraction, token or Figures.wear(fraction))
+		end
+		return frame
+	end
 	gap = gap or 2
 	local frame = CreateFrame("Frame", nil, parent)
 	frame:SetSize(width, height)
@@ -71,11 +92,11 @@ function Figures.columns(parent, count, columnWidth, height, gap)
 	frame:SetSize(count * columnWidth + (count - 1) * gap, height)
 	frame.bars = {}
 	for i = 1, count do
-		local track = fill(frame, "BACKGROUND")
+		local track = pill(frame, "BACKGROUND")
 		track:SetSize(columnWidth, height)
 		track:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", (i - 1) * (columnWidth + gap), 0)
 		color(track, "text", 0.12)
-		local used = fill(frame)
+		local used = pill(frame)
 		used:SetWidth(columnWidth)
 		used:SetPoint("BOTTOMLEFT", track, "BOTTOMLEFT")
 		frame.bars[i] = { track = track, used = used }
@@ -101,17 +122,19 @@ end
 function Figures.bar(parent, width, height)
 	local frame = CreateFrame("Frame", nil, parent)
 	frame:SetSize(width, height)
-	local track = fill(frame, "BACKGROUND")
+	local track = pill(frame, "BACKGROUND")
 	track:SetAllPoints()
 	color(track, "text", 0.14)
-	local value = fill(frame)
+	local value = pill(frame)
 	value:SetPoint("TOPLEFT")
 	value:SetPoint("BOTTOMLEFT")
 	frame.track, frame.value = track, value
+	-- A rounded fill can't be narrower than it is tall.
+	local least = UI.slate() and height or 1
 	function frame:Set(fraction, token)
 		fraction = math.max(0, math.min(1, fraction or 0))
 		self.value:SetShown(fraction > 0)
-		self.value:SetWidth(math.max(1, width * fraction))
+		self.value:SetWidth(math.max(least, width * fraction))
 		color(self.track, "text", 0.14)
 		color(self.value, token or "text")
 	end
@@ -194,30 +217,81 @@ end
 
 -- Experience --------------------------------------------------------------------
 
+-- Slate's rested stretch: dashes this wide, as far apart, and no more of
+-- them than this on one bar.
+local DASH, DASH_MOST = 3, 48
 function Figures.xp(parent, width, height)
 	local frame = CreateFrame("Frame", nil, parent)
 	frame:SetSize(width, height)
-	local track = fill(frame, "BACKGROUND", "text", 0.12)
+	local slate = UI.slate()
+	local track = pill(frame, "BACKGROUND", "text", 0.12)
 	track:SetAllPoints()
-	local rested = fill(frame, "BORDER", "mana", 0.55)
+	local rested = pill(frame, "BORDER", "mana", 0.55)
 	rested:SetPoint("TOPLEFT")
 	rested:SetPoint("BOTTOMLEFT")
-	local earned = fill(frame, "ARTWORK", "text")
+	-- Slate: what's earned in the accent, as on its mock-up.
+	local earned = pill(frame, "ARTWORK", slate and "accent" or "text")
 	earned:SetPoint("TOPLEFT")
 	earned:SetPoint("BOTTOMLEFT")
-	local mark = fill(frame, "OVERLAY", "accent")
+	-- (In the text colour under Slate, where the earned stretch is the accent.)
+	local mark = fill(frame, "OVERLAY", slate and "text" or "accent")
 	mark:SetSize(2, height + 8)
 	frame.rested, frame.earned, frame.mark = rested, earned, mark
+	-- Slate, as on its mock-up: a lit knob where you are, and an open ring
+	-- where your rest runs out.
+	if slate then
+		local halo = UI.circle(frame, "OVERLAY", 1, height + 15, "accent", 0.22)
+		halo:SetPoint("CENTER", earned, "RIGHT")
+		local knob = UI.circle(frame, "OVERLAY", 2, height + 7, "accent")
+		knob:SetPoint("CENTER", earned, "RIGHT")
+		local ring = UI.circle(frame, "ARTWORK", 1, height + 7, "mana")
+		ring:SetPoint("CENTER", rested, "RIGHT")
+		local hole = UI.circle(frame, "ARTWORK", 2, height + 3, "panel", 1)
+		hole:SetPoint("CENTER", rested, "RIGHT")
+		frame.knob, frame.restRing = { halo, knob }, { ring, hole }
+		frame.dashes = {}
+	end
+	local least = slate and height or 1
 	local function share(tex, fraction)
 		fraction = math.max(0, math.min(1, fraction or 0))
 		tex:SetShown(fraction > 0)
-		tex:SetWidth(math.max(1, width * fraction))
+		tex:SetWidth(math.max(least, width * fraction))
 	end
 	-- Shares of the bar: earned, earned plus rest, and where an hour at
 	-- your pace gets you (nil hides the mark).
 	function frame:Set(earnedShare, restedShare, hourShare)
 		share(self.earned, earnedShare)
 		share(self.rested, restedShare)
+		if self.knob then
+			local on = self.earned:IsShown()
+			for _, part in ipairs(self.knob) do part:SetShown(on) end
+			-- The ring only where rest reaches past what's earned.
+			local past = self.rested:IsShown() and (restedShare or 0) > (earnedShare or 0) + 0.02
+			for _, part in ipairs(self.restRing) do part:SetShown(past) end
+			-- And the rest between the two is a dotted stretch, not a
+			-- solid one: short dashes from the knob to the ring.
+			self.rested:Hide()
+			local from = width * math.max(0, math.min(1, earnedShare or 0)) + height / 2 + 6
+			local to = width * math.max(0, math.min(1, restedShare or 0)) - height / 2 - 4
+			local n = 0
+			if past then
+				local x = from
+				while x + DASH <= to and n < DASH_MOST do
+					n = n + 1
+					local dash = self.dashes[n]
+					if not dash then
+						dash = fill(self, "BORDER", "mana", 0.6)
+						dash:SetSize(DASH, math.max(2, height - 2))
+						self.dashes[n] = dash
+					end
+					dash:ClearAllPoints()
+					dash:SetPoint("LEFT", self, "LEFT", x, 0)
+					dash:Show()
+					x = x + DASH * 2
+				end
+			end
+			for i = n + 1, #self.dashes do self.dashes[i]:Hide() end
+		end
 		self.mark:SetShown(hourShare ~= nil)
 		if hourShare then
 			self.mark:ClearAllPoints()

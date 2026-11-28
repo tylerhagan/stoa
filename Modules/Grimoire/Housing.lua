@@ -33,6 +33,16 @@ local function artOn()
 	return Console:Art() or (Console:Matte() and not Console.db.slim)
 end
 
+-- Slate: the tabs are small chips standing just over the chat card, as
+-- Leather's stand on its rim, so the card is all messages. The picked one
+-- is in the accent (Blizzard's own row stays, working, unseen).
+local function pillsOn()
+	return Console:Slate() and not Console.db.slim
+end
+local PILL_H, PILL_PAD, PILL_GAP, PILL_LIFT = 22, 11, 4, 4
+-- With the chips out of the card, the messages start just under its top.
+local SLATE_CHAT_TOP = 18
+
 local function tabFile(kind)
 	return UI.MEDIA .. "Textures\\ChatTab" .. (Console:Matte() and "Matte" or "") .. kind
 end
@@ -61,8 +71,13 @@ end
 -- it for the typing box and above it for Blizzard's own tabs.
 local SLIM_CHAT_LIFT = 38
 local SLIM_CHAT_HEIGHT = 150
--- Air between the travel line and the chat's last line on a ride.
-local RIDE_CHAT_GAP = 10
+-- The ride card: its air over the travel line, and the room it keeps
+-- under the messages for the typing strip (the strip and the card's pad).
+local SLATE_RIDE_AIR, SLATE_RIDE_INPUT = 8, 28
+local CHAT_GROUND = {
+	"Background", "TopLeftTexture", "BottomLeftTexture", "TopRightTexture", "BottomRightTexture",
+	"LeftTexture", "RightTexture", "BottomTexture", "TopTexture",
+}
 
 local function placeChat()
 	local chat = ChatFrame1
@@ -78,16 +93,33 @@ local function placeChat()
 	local bottom = CHAT_BOTTOM
 	-- Stoa's typing strip sits under the messages, inside the console.
 	local look = Stoa.modules.ChatLook
+	-- Stepped aside for Prat, STOA's strip isn't there to make room for.
+	if Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook") then look = nil end
 	if look and look.db and look.db.enabled ~= false and look.db.input then bottom = bottom + 8 end
 	-- On a ride the console is the travel line: the chat's foot stands
 	-- clear of it, and its top stays where it was.
-	if Console.riding and Console.RIDE_HEIGHT then bottom = math.max(bottom, Console.RIDE_HEIGHT + RIDE_CHAT_GAP) end
-	local top = artOn() and ART_CHAT_GAP or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
+	if Console.riding and Console.RIDE_HEIGHT then
+		-- The chat rides in a card of its own (Console:ChatShade), in
+		-- every style, which holds the typing strip too and stands clear
+		-- of the line.
+		local typing = look and look.db and look.db.enabled ~= false and look.db.input
+		bottom = Console.RIDE_HEIGHT + SLATE_RIDE_AIR + (typing and SLATE_RIDE_INPUT or 6)
+	end
+	local top = (pillsOn() and SLATE_CHAT_TOP) or (artOn() and ART_CHAT_GAP) or CHAT_TOP_PAD + CHAT_TAB_HEIGHT
 	chat:ClearAllPoints()
 	chat:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), bottom)
 	chat:SetSize(Console:ChatWidth(), Console:OpenHeight() - bottom - top)
 	-- The ink panel is the background, so the chat window's own goes.
 	if FCF_SetWindowAlpha then FCF_SetWindowAlpha(chat, 0) end
+	-- Blizzard fades that background (a flat black block) back in under
+	-- the mouse, but only the parts that are shown. Slate's cards are the
+	-- ground, so the block and its border are hidden outright.
+	if pillsOn() then
+		for _, part in ipairs(CHAT_GROUND) do
+			local tex = _G["ChatFrame1" .. part]
+			if tex and tex.Hide then tex:Hide() end
+		end
+	end
 	placing = false
 end
 
@@ -227,7 +259,35 @@ local function showsWhispers(chatFrame)
 	return ChatFrame_ContainsMessageGroup ~= nil and ChatFrame_ContainsMessageGroup(chatFrame, "WHISPER")
 end
 
+local function paintPill(tab)
+	local hover = tab:IsMouseOver()
+	if tab.selected and tab.chatFrame then unread[tab.chatFrame] = nil end
+	local waiting = not tab.selected and tab.chatFrame and unread[tab.chatFrame]
+	-- Each chip is the panel's own dark, so its word reads over the world;
+	-- the picked one takes a breath of the accent and an accent line.
+	local r, g, b = Stoa:Color(tab.selected and "accent" or "text")
+	local pr, pg, pb = Stoa:Color("panel")
+	local mix = tab.selected and 0.16 or (hover and 0.07 or 0)
+	tab.fill:SetVertexColor(pr + (r - pr) * mix, pg + (g - pg) * mix, pb + (b - pb) * mix, 0.94)
+	tab.edge:Set(r, g, b, tab.selected and 0.45 or (hover and 0.14 or 0))
+	tab.label:SetTextColor(Stoa:Color((tab.selected or hover or waiting) and "text" or "muted"))
+	tab:SetFrameLevel(strip:GetFrameLevel() + 1)
+	if tab.dot then
+		tab.dot:SetVertexColor(Stoa:Color("accent"))
+		if waiting then
+			if not tab.dot:IsShown() then
+				tab.dot:Show()
+				tab.pulse:Play()
+			end
+		else
+			tab.pulse:Stop()
+			tab.dot:Hide()
+		end
+	end
+end
+
 local function paintTab(tab)
+	if tab.pill then return paintPill(tab) end
 	-- Matte: a key under a click goes down like the selected one.
 	local kind = (tab.selected or tab.down) and "Open" or "Closed"
 	if tab.kind ~= kind then
@@ -257,14 +317,22 @@ end
 
 local function makeTab()
 	local tab = CreateFrame("Button", nil, strip)
-	tab:SetHeight(tabRise())
 	tab:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
-	tab.base = capped(tab, 1)
-	tab.lines = capped(tab, 2, true)
+	local pill = pillsOn()
+	if pill then
+		tab.pill = true
+		tab:SetHeight(PILL_H)
+		tab.fill = UI.pillFill(tab, 0)
+		tab.edge = UI.pillEdge(tab, 0)
+	else
+		tab:SetHeight(tabRise())
+		tab.base = capped(tab, 1)
+		tab.lines = capped(tab, 2, true)
+	end
 	local label = tab:CreateFontString(nil, "OVERLAY")
-	Stoa:SetFont(label, "sans", Stoa.typeSize.body)
+	Stoa:SetFont(label, "sans", pill and Stoa.typeSize.caption or Stoa.typeSize.body)
 	label:SetShadowOffset(0, 0)
-	label:SetPoint("CENTER", 0, -3)
+	label:SetPoint("CENTER", 0, pill and 0 or -3)
 	tab.label = label
 	local dot = UI.glyph(tab, "Dot", 10, "accent")
 	dot:SetPoint("LEFT", label, "RIGHT", 4, 0)
@@ -334,11 +402,11 @@ local function refreshTabs()
 		tab.label:Show()
 		local width = tab.label:GetStringWidth()
 		if type(width) ~= "number" then width = 40 end
-		tab:SetWidth(width + TAB_TEXT_PAD * 2)
+		tab:SetWidth(width + (tab.pill and PILL_PAD or TAB_TEXT_PAD) * 2)
 		tab:ClearAllPoints()
 		tab:SetPoint("BOTTOMLEFT", strip, "BOTTOMLEFT", x, 0)
 		-- The matte keys stand in one bank, side against side.
-		x = x + tab:GetWidth() + (Console:Matte() and 0 or TAB_GAP)
+		x = x + tab:GetWidth() + (Console:Matte() and 0 or tab.pill and PILL_GAP or TAB_GAP)
 		tab.selected = chatFrame == selected
 		paintTab(tab)
 		tab:Show()
@@ -346,14 +414,35 @@ local function refreshTabs()
 	for i = #windows + 1, #tabs do tabs[i]:Hide() end
 end
 
+-- The combat log's own row of quick filters ("What happened to me?" and
+-- the rest) hangs from Blizzard's tab, which is unseen, so the row went
+-- unseen with it while the log still left room for it. It shows again,
+-- without its black bar.
+local function showLogLinks()
+	local bar = rawget(_G, "CombatLogQuickButtonFrame_Custom")
+	if type(bar) ~= "table" or bar.stoaShown or (bar.IsForbidden and bar:IsForbidden()) then return end
+	if not bar.SetIgnoreParentAlpha then return end
+	bar.stoaShown = true
+	bar:SetIgnoreParentAlpha(true)
+	local ground = rawget(_G, "CombatLogQuickButtonFrame_CustomTexture")
+	if type(ground) == "table" and ground.SetAlpha then ground:SetAlpha(0) end
+end
+
 local function buildTabs()
+	showLogLinks()
 	if strip then return end
 	strip = CreateFrame("Frame", "StoaChatTabs", UIParent)
 	-- Above the chat frames, so these take the clicks rather than
 	-- Blizzard's invisible tabs underneath.
 	strip:SetFrameStrata("MEDIUM")
-	strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight())
-	strip:SetSize(CHAT_WIDTH, tabRise())
+	if pillsOn() then
+		-- Standing just over the chat card's top edge.
+		strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight() + (Console.SLATE_TOP or 0) + PILL_LIFT)
+		strip:SetSize(CHAT_WIDTH, PILL_H)
+	else
+		strip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", (Console:PageInset()), Console:OpenHeight())
+		strip:SetSize(CHAT_WIDTH, tabRise())
+	end
 	Console.tabArt = Console.tabArt or {}
 	table.insert(Console.tabArt, strip)
 	-- Blizzard's tab row stays where it is, working, just unseen.
@@ -363,6 +452,7 @@ end
 
 local function safeRefresh()
 	xpcall(refreshTabs, Stoa.catch)
+	if strip then xpcall(showLogLinks, Stoa.catch) end
 end
 
 -- On a cold start the game can measure a label (the tab takes its width)
@@ -700,13 +790,30 @@ end
 -- are Stoa's own frames laid on the game's rows' near corners, so they
 -- follow wherever the rows are put. BAGS opens the bags on a click, as the
 -- backpack does; MENU takes no clicks, so the button under it has them.
+-- Slate: each word is a small chip of its own (the panel colour, rounded),
+-- so it doesn't float loose over the world above the cards.
+local CHIP_PAD, CHIP_H = 9, 18
 local function menuWord(row, label, click)
 	local word = CreateFrame("Button", nil, UIParent)
 	local text = UI.caption(word, label)
-	text:SetPoint("RIGHT")
 	word.text = text
-	word:SetSize(math.max(text:GetStringWidth() or 0, 24) + 4, MENU_WORD_ROOM - 4)
-	word:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+	if Console:Slate() then
+		text:SetPoint("CENTER")
+		local fill = UI.pillFill(word, 0)
+		UI.tint(fill, "panel", 0.94)
+		fill:SetVertexColor(Stoa:Color("panel"))
+		word:SetSize(math.max(text:GetStringWidth() or 0, 24) + CHIP_PAD * 2, CHIP_H)
+	else
+		text:SetPoint("RIGHT")
+		word:SetSize(math.max(text:GetStringWidth() or 0, 24) + 4, MENU_WORD_ROOM - 4)
+	end
+	if Console:Slate() and not Console.db.slim then
+		-- Standing just over the cards' top edge, level with the chat's
+		-- tab chips, rather than floating at the row's middle.
+		word:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, (Console.SLATE_TOP or 0) + PILL_LIFT - MENU_LIFT)
+	else
+		word:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+	end
 	word:EnableMouse(click ~= nil)
 	if click then word:SetScript("OnClick", click) end
 	return word
@@ -734,7 +841,9 @@ local function watchMenu()
 				entry.state = state
 				row:SetAlpha(over and 1 or 0)
 				word.text:SetTextColor(Stoa:Color(over and "accent" or "muted"))
-				word:SetAlpha(over and 0 or (fight and MENU_WORD_FIGHT or MENU_WORD_REST))
+				-- (A Slate chip keeps its panel solid; its word is muted.)
+				local rest = Console:Slate() and 1 or MENU_WORD_REST
+				word:SetAlpha(over and 0 or (fight and MENU_WORD_FIGHT or rest))
 			end
 		end
 	end
@@ -750,10 +859,12 @@ local function safely(fn)
 	end)
 end
 
--- Chat is housed only while no other chat addon was kept for the job
--- (Core/Conflicts.lua): theirs draws its own frame and tabs.
+-- Chat is housed unless a chat addon that draws its own frame and tabs
+-- was kept for the job (Core/Conflicts.lua). Prat and Chatter change the
+-- game's own window, so that window sits on the console all the same.
 local function housesChat(db)
-	return db.houseChat and not (Stoa.Conflicts and Stoa.Conflicts:SteppedAside("ChatLook"))
+	local conflicts = Stoa.Conflicts
+	return db.houseChat and not (conflicts and conflicts:SteppedAside("ChatLook") and conflicts:OwnWindow("chat"))
 end
 Console.HousesChat = function(self) return housesChat(self.db) end
 
@@ -1086,7 +1197,7 @@ function Console:House()
 		if housesChat(db) then
 			safely(placeChat)
 			safely(guardChat)
-			if artOn() then safely(buildTabs) end
+			if artOn() or pillsOn() then safely(buildTabs) end
 		elseif db.houseChat then
 			safely(clearChat)
 			-- The other addon and Edit Mode place the chat a moment after login.
@@ -1126,7 +1237,7 @@ function Console:House()
 		EventRegistry:RegisterCallback("EditMode.Exit", apply, self)
 	end
 
-	if housesChat(db) and artOn() then
+	if housesChat(db) and (artOn() or pillsOn()) then
 		-- Read-only hooks: Stoa's tabs follow the dock, nothing is changed.
 		for _, name in ipairs({ "FCFDock_UpdateTabs", "FCFDock_SelectWindow", "FCF_SetWindowName", "FCF_OpenNewWindow", "FCF_Close", "FCF_DockFrame", "FCF_UnDockFrame" }) do
 			if _G[name] then hooksecurefunc(name, safeRefresh) end

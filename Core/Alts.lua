@@ -39,7 +39,18 @@ local function record()
 	entry.faction = plain(UnitFactionGroup("player"))
 	local _, _, raceID = UnitRace("player")
 	entry.raceID, entry.sex = plain(raceID), plain(UnitSex("player"))
+	entry.guid = plain(UnitGUID("player"))
 	entry.seen = time()
+	-- A realm can change its name, which left this same character listed
+	-- twice. A note under another realm name for the same name, class, race
+	-- and sex (and not known to be someone else) is this one's old self.
+	for other, old in pairs(all) do
+		if other ~= key and old.name == name and old.class == entry.class
+			and old.raceID == entry.raceID and old.sex == entry.sex
+			and (not old.guid or not entry.guid or old.guid == entry.guid) then
+			all[other] = nil
+		end
+	end
 	return entry
 end
 
@@ -486,27 +497,7 @@ end
 
 -- Header words: Characters and Search.
 local function tabWord(page, label, onClick)
-	local tab = CreateFrame("Button", nil, page)
-	tab:SetHeight(24)
-	local text = UI.text(tab, "sans", Stoa.typeSize.label, "muted", "LEFT")
-	text:SetPoint("LEFT")
-	text:SetText(label)
-	tab:SetWidth(math.max(40, (text:GetStringWidth() or 60) + 2))
-	local mark = UI.line(tab, "accent")
-	mark:SetPoint("BOTTOMLEFT", 0, 0)
-	mark:SetPoint("BOTTOMRIGHT", 0, 0)
-	tab.text, tab.mark = text, mark
-	local grow = UI.growIn(mark)
-	function tab:SetSelected(on)
-		if on and not self.on then grow:Play() end
-		self.on = on
-		mark:SetShown(on)
-		text:SetTextColor(Stoa:Color(on and "text" or "muted"))
-	end
-	tab:SetScript("OnClick", onClick)
-	tab:SetScript("OnEnter", function() text:SetTextColor(Stoa:Color("accent")) end)
-	tab:SetScript("OnLeave", function() tab:SetSelected(tab.on) end)
-	return tab
+	return UI.wordTab(page, label, onClick)
 end
 
 local function closeButton(parent, onClick)
@@ -627,11 +618,11 @@ function Alts:Build()
 	self:BuildBand(list)
 	local headY = -(LIST_TOP - HEADER - 14)
 	for _, column in ipairs(COLUMNS) do
-		local head = UI.text(list, "sans", Stoa.typeSize.caption, "accent", "LEFT")
+		local head = UI.text(list, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
 		head:SetPoint("TOPLEFT", column[2] + (column[2] == 0 and (CREST + 26) or 0), headY)
 		head:SetText(column[1]:upper())
 	end
-	local ilvlHead = UI.text(list, "sans", Stoa.typeSize.caption, "accent", "RIGHT")
+	local ilvlHead = UI.text(list, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "RIGHT")
 	ilvlHead:SetPoint("TOPRIGHT", -12, headY)
 	ilvlHead:SetText("ITEM LEVEL")
 	local headRule = UI.line(list, "hairline")
@@ -649,9 +640,10 @@ function Alts:Build()
 		self.offset = math.min(math.max(self.offset - delta, 0), maxOffset)
 		self:Refresh()
 	end)
-	local empty = UI.text(list, "italic", Stoa.typeSize.label, "muted")
-	empty:SetPoint("CENTER", 0, -40)
-	empty:SetText("Each character fills in when you play it.")
+	local empty = UI.emptyState(list)
+	empty:SetPoint("LEFT", 40, -40)
+	empty:SetPoint("RIGHT", -40, -40)
+	empty:Set("No characters yet", "Each one fills in when you play it.")
 	self.empty = empty
 
 	-- The search.
@@ -712,6 +704,7 @@ function Alts:Refresh()
 	end)
 	self.list = list
 	self.empty:SetShown(#list == 0)
+	self.tabs.list:SetCount(#list > 0 and #list or nil)
 	self:FillBand(list)
 	local arrive = self.arrive
 	self.arrive = false
@@ -728,7 +721,6 @@ function Alts:Refresh()
 			paintName(row.name, entry)
 			local about = {}
 			if className(entry) ~= "" then about[#about + 1] = className(entry) end
-			if entry.realm and entry.realm ~= "" and entry.realm ~= select(3, Alts.me()) then about[#about + 1] = entry.realm end
 			row.class:SetText(UI.join(about))
 			setBar(row, entry, 150)
 			row.zone:SetText(entry.zone or "Not seen yet")

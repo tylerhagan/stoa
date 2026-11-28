@@ -103,11 +103,15 @@ local setUnitBar, classColor = UI.setUnitBar, UI.classColor
 
 -- The slim console is always plain: the leather is cut for the full height.
 function Console:Art()
-	return self.db.art and not self.db.slim and not self:Matte()
+	return self.db.art and not self.db.slim and not self:Matte() and not self:Slate()
 end
 
 function Console:Matte()
 	return UI.matte()
+end
+
+function Console:Slate()
+	return UI.slate()
 end
 
 function Console:Build()
@@ -179,6 +183,8 @@ function Console:Build()
 		self.flatParts = { bg, leftEdge, rightEdge, inner }
 	elseif self:Matte() then
 		self:BuildMatte(frame, bg, { leftEdge, rightEdge, archRing }, inner, arch, archSize, archY)
+	elseif self:Slate() then
+		self:BuildSlate(frame, { bg, leftEdge, rightEdge, inner, archRing, arch, bridge })
 	end
 
 	if matte and not slim then self:BuildTargetCone(frame) end
@@ -201,9 +207,120 @@ function Console:PageInset()
 end
 
 -- The console's height when open.
+-- Slate's cards stand a line taller than the well, so Journey keeps its
+-- quest and trainer lines under the pace row with air beneath them.
+local SLATE_TALLER = 20
 function Console:OpenHeight()
 	if self.db.slim then return SLIM_HEIGHT end
-	return self:Art() and ART_HEIGHT or self.db.height
+	if self:Art() then return ART_HEIGHT end
+	return self.db.height + (self:Slate() and SLATE_TALLER or 0)
+end
+
+-- Slate: no slab along the bottom. Full is the console's zones (chat, At
+-- a glance, the bars, each page) as separate rounded cards standing over
+-- the world, placed by PlaceDividers and fading with the pages; Slim is
+-- one rounded bar lifted off the screen's edges. Both are flat: the
+-- panel colour and a fine light edge, in the card pieces every STOA card
+-- wears, so Slate adds no art.
+-- Only a breath of light at the edge: the cards are shaped by their fill
+-- and shadow, not an outline (a brighter line read as white over the world).
+local SLATE_EDGE = 0.045
+-- A soft drop shadow under each card (Tools/art/slate_shadow.py), so it
+-- stands over bright ground without a dark ring round it: laid
+-- SLATE_SHADOW out from the card and SLATE_DROP lower.
+local SLATE_SHADOW, SLATE_SHADOW_A, SLATE_DROP, SLATE_SHADOW_SLICE = 22, 0.45, 6, 28
+local SLATE_INSET, SLATE_LIFT = 10, 6
+
+-- The portrait stands a little higher, clear of the bars' card.
+local SLATE_SEAL_Y = 14
+-- Slate, full: the medallion is a card of your own over the bars' card,
+-- like the others: your portrait flat at its left with your level, your
+-- name and class, then health and mana as thin bars with their numbers,
+-- and your shield and class mark at its right end while they show.
+local YOU_W, YOU_H, YOU_Y = 360, 50, -9
+-- The portrait stands in the middle, a little taller than the card, with
+-- health on its left wing and mana on its right.
+local YOU_SEAL, YOU_PAD, YOU_GAP = 60, 12, 12
+local YOU_VALUE_W, YOU_CREST = 34, 18
+local YOU_BAR_H, YOU_BAR_APART = 4, 8
+-- For pieces pinned to the screen beside the card (the form chips): its
+-- size and its centre's height over the console's top edge.
+Console.YOU_CARD = { width = YOU_W, height = YOU_H, y = YOU_Y }
+
+local function slatePlate(owner, layer)
+	local fill = UI.sliced(owner, layer or "BACKGROUND", "CardFill.tga")
+	local edge = UI.sliced(owner, layer or "BACKGROUND", "CardEdge.tga")
+	if not fill then
+		fill = owner:CreateTexture(nil, layer or "BACKGROUND")
+		fill:SetAllPoints()
+		fill:SetColorTexture(1, 1, 1)
+	end
+	fill:SetDrawLayer(layer or "BACKGROUND", -3)
+	UI.tint(fill, "panel")
+	-- A tint waits for the next theme pass, and a card made later (At a
+	-- glance shows once its numbers are in) would stay white till then.
+	fill:SetVertexColor(Stoa:Color("panel"))
+	if edge then
+		edge:SetDrawLayer(layer or "BACKGROUND", -2)
+		UI.tint(edge, "text", SLATE_EDGE)
+		local r, g, b = Stoa:Color("text")
+		edge:SetVertexColor(r, g, b, SLATE_EDGE)
+	end
+	local shadow = UI.sliced(owner, layer or "BACKGROUND", "SlateShadow.tga", SLATE_SHADOW, SLATE_SHADOW_SLICE)
+	if shadow then
+		shadow:SetDrawLayer(layer or "BACKGROUND", -4)
+		shadow:SetVertexColor(1, 1, 1, SLATE_SHADOW_A)
+		shadow.stoaOutset, shadow.stoaDrop = SLATE_SHADOW, SLATE_DROP
+		shadow:ClearAllPoints()
+		shadow:SetPoint("TOPLEFT", -SLATE_SHADOW, SLATE_SHADOW - SLATE_DROP)
+		shadow:SetPoint("BOTTOMRIGHT", SLATE_SHADOW, -SLATE_SHADOW - SLATE_DROP)
+	end
+	-- Follows the fill wherever the card is placed.
+	local light = UI.topLight(owner, "text", 0.07, fill)
+	return fill, edge, shadow, light
+end
+
+-- Other modules' cards on the console (the pet's) wear the same plate.
+Console.SlatePlate = slatePlate
+
+function Console:BuildSlate(frame, drawn)
+	for _, part in ipairs(drawn) do
+		UI.unpaint(part)
+		part:Hide()
+	end
+	self.archParts = {}
+	if self.db.slim then
+		-- One rounded bar, off the screen's edges. It stays through a
+		-- fight, folded to the spine's height.
+		frame:ClearAllPoints()
+		frame:SetPoint("BOTTOMLEFT", SLATE_INSET, SLATE_LIFT)
+		frame:SetPoint("BOTTOMRIGHT", -SLATE_INSET, SLATE_LIFT)
+		slatePlate(frame)
+		return
+	end
+	-- Up to four zone cards and one per page column, made as they're needed.
+	self.wells = {}
+	self.slateCard = function(i)
+		local well = self.wells[i]
+		if well then return well end
+		-- On a frame of its own, which fades with the pages: a texture's
+		-- alpha is its colour's, so fading the parts themselves set the
+		-- faint edge and the shadow to full strength (a white outline).
+		local holder = CreateFrame("Frame", nil, frame)
+		holder:SetAllPoints(frame)
+		holder:SetFrameLevel(frame:GetFrameLevel())
+		local fill, edge, shadow, light = slatePlate(holder)
+		well = { fill, edge, shadow }
+		well.light = light
+		for _, part in ipairs(well) do
+			part:ClearAllPoints()
+			part:Hide()
+		end
+		if light then light:Hide() end
+		self:AddPage(holder)
+		self.wells[i] = well
+		return well
+	end
 end
 
 -- The matte console: the drawn panel made near solid, a grain over it one
@@ -371,8 +488,75 @@ end
 local WELL_PAD, WELL_BOTTOM = 12, 8
 -- The bars' well starts lower, under the bezel's foot.
 local WELL_BARS, WELL_BARS_TOP = 3, -48
+-- The cards stand from a little under the console's top to SLATE_BOTTOM
+-- over the screen's foot. The chat's tabs stand on the chat card's top.
+local SLATE_PAD, SLATE_TOP, SLATE_BOTTOM = 10, -8, 8
+Console.SLATE_TOP = SLATE_TOP
+-- The bars' card hugs the bars, so the portrait, health and mana stand
+-- over the world above it rather than in an empty band of card. The
+-- bars stand where Edit Mode puts them, so the card's top comes down to
+-- leave the same air above the upper row as there is under the lower one.
+local SLATE_BARS_TOP = -62
+-- The air kept between two cards, and the least a card pads its content.
+local SLATE_AIR, SLATE_PAD_LEAST, SLATE_AIR_LEAST = 20, 6, 10
 function Console:PlaceWells(zones, top)
 	if not self.wells then return end
+	if self.slateCard then
+		-- Zones first, then the page columns, each its own card.
+		local spans = {}
+		for i = 1, 3 do spans[#spans + 1] = zones[i] or false end
+		for _, span in ipairs(self.columnSpans or {}) do spans[#spans + 1] = span end
+		local used = {}
+		-- Each card's edges first, then air between neighbours: the cards
+		-- float, with the world between them, not one band.
+		local rects = {}
+		for i, zone in ipairs(spans) do
+			if zone and zone[2] - zone[1] > 40 then
+				local pad = math.min(zone.pad or SLATE_PAD, math.floor(((zone.gap or 40) - SLATE_AIR) / 2))
+				pad = math.max(SLATE_PAD_LEAST, pad)
+				rects[#rects + 1] = { i = i, left = zone[1] - pad, right = zone[2] + pad, from = zone[1], to = zone[2] }
+			end
+		end
+		table.sort(rects, function(a, b) return a.left < b.left end)
+		for n = 2, #rects do
+			local a, b = rects[n - 1], rects[n]
+			-- Where two cards are tight, the air between them thins first
+			-- (to SLATE_AIR_LEAST); only then do the cards pad less, so
+			-- numbers don't end up against a card's edge.
+			local short = SLATE_AIR_LEAST - (b.left - a.right)
+			if short > 0 then
+				-- Each gives half, but never past its own content.
+				a.right = math.max(a.to + SLATE_PAD_LEAST, a.right - short / 2)
+				b.left = math.min(b.from - SLATE_PAD_LEAST, b.left + short / 2)
+			end
+		end
+		for _, rect in ipairs(rects) do
+			local i = rect.i
+			local well = self.slateCard(i)
+			used[i] = true
+			if i == WELL_BARS then
+				-- The resting target ends where this card does (Halo.lua).
+				local width = Stoa:PlainNumber(self.frame:GetWidth())
+				local right = width and math.floor(rect.right + 0.5) - width / 2
+				if right and right ~= self.barsCardRight then
+					self.barsCardRight = right
+					local halo = Stoa.modules.Halo
+					if halo and halo.enabled and halo.PlaceTarget and not InCombatLockdown() then halo:PlaceTarget() end
+				end
+			end
+			for _, part in ipairs(well) do
+				local out, drop = part.stoaOutset or 0, part.stoaDrop or 0
+				part:ClearAllPoints()
+				part:SetPoint("TOPLEFT", self.frame, "TOPLEFT", math.floor(rect.left + 0.5) - out, (i == WELL_BARS and SLATE_BARS_TOP or SLATE_TOP) + out - drop)
+				part:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", math.floor(rect.right + 0.5) + out, SLATE_BOTTOM - out - drop)
+			end
+		end
+		for i, well in pairs(self.wells) do
+			for _, part in ipairs(well) do part:SetShown(used[i] == true) end
+			if well.light then well.light:SetShown(used[i] == true) end
+		end
+		return
+	end
 	for i, well in ipairs(self.wells) do
 		local zone = zones[i]
 		local on = zone and zone[2] - zone[1] > 40
@@ -477,7 +661,8 @@ end
 function Console:PaintGlass()
 	local glass = self.glass
 	if not glass then return end
-	glass:SetShown(self.db.daylight ~= false)
+	-- Slate's card keeps the portrait flat.
+	glass:SetShown(self.db.daylight ~= false and not self.youCard)
 	local light = Stoa.daylight
 	local m = light and light.mix or 0
 	local r, g, b = 1, 0.98, 0.94
@@ -498,12 +683,25 @@ function Console:BuildSeal(frame)
 	-- and the arch's own gold ring stands in for the seal's outer rings.
 	local art, slim = self:Art(), self.db.slim
 	local matteSeal = self:Matte() and not slim
-	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or matteSeal and MATTE_SEAL or SEAL_SIZE
+	local you = self:Slate() and not slim
+	local size = slim and SLIM_SEAL or art and ART_SEAL_SIZE or matteSeal and MATTE_SEAL or you and YOU_SEAL or SEAL_SIZE
+	local card
+	if you then
+		card = CreateFrame("Frame", nil, frame)
+		card:SetSize(YOU_W, YOU_H)
+		card:SetPoint("CENTER", frame, "TOP", 0, YOU_Y)
+		card:SetFrameLevel(frame:GetFrameLevel() + 1)
+		slatePlate(card)
+		self:AddPage(card)
+		self.youCard = card
+	end
 	local seal = CreateFrame("Frame", nil, frame)
 	seal:SetSize(size + 12, size + 12)
 	-- Slim: the seal sits in the line, its head just over the top edge.
-	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or 6
-	seal:SetPoint("CENTER", frame, "TOP", 0, sealY)
+	local sealY = slim and -14 or art and (MEDALLION_LINE - MEDALLION_CENTRE) * MEDALLION_SCALE or matteSeal and MATTE_SEAL_Y or you and YOU_Y or self:Slate() and SLATE_SEAL_Y or 6
+	local sealX = 0
+	seal:SetPoint("CENTER", frame, "TOP", sealX, sealY)
+	if card then seal:SetFrameLevel(card:GetFrameLevel() + 1) end
 	self.seal = seal
 
 	-- Click the seal to target yourself; right click for your unit menu.
@@ -512,7 +710,7 @@ function Console:BuildSeal(frame)
 	-- away in combat when the console folds.
 	local button = CreateFrame("Button", "StoaSealButton", UIParent, "SecureUnitButtonTemplate")
 	button:SetSize(size, size)
-	button:SetPoint("CENTER", UIParent, "BOTTOM", 0, self:OpenHeight() + sealY)
+	button:SetPoint("CENTER", UIParent, "BOTTOM", sealX, self:OpenHeight() + sealY)
 	button:SetFrameStrata("LOW")
 	button:SetAttribute("unit", "player")
 	button:SetAttribute("type1", "target")
@@ -554,6 +752,9 @@ function Console:BuildSeal(frame)
 			bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
 			bezel:SetPoint("CENTER")
 		else
+			-- Slate's card: the same disc, so the portrait breaks the card's
+			-- top and foot as one round body.
+			if you then seal:SetFrameLevel(frame:GetFrameLevel() + 3) end
 			local outer = circle(seal, "BORDER", 0, size + (matte and 14 or 12), not matte and "hairline" or nil)
 			if matte then outer:SetColorTexture(0, 0, 0, 0.85) end
 			outer:SetPoint("CENTER")
@@ -563,9 +764,14 @@ function Console:BuildSeal(frame)
 	end
 	local ring = circle(seal, "BORDER", 2, size + 4)
 	ring:SetPoint("CENTER")
-	self.daylitParts = self.daylitParts or {}
-	-- The ring hugs the portrait, so it only takes a touch of the sky.
-	table.insert(self.daylitParts, { region = ring, weight = 0.3 })
+	if you then
+		-- Slate's card: a neutral hairline, never the accent.
+		ring:SetColorTexture(1, 1, 1, 0.14)
+	else
+		self.daylitParts = self.daylitParts or {}
+		-- The ring hugs the portrait, so it only takes a touch of the sky.
+		table.insert(self.daylitParts, { region = ring, weight = 0.3 })
+	end
 
 	local portrait = circle(seal, "ARTWORK", 0, size)
 	portrait:SetPoint("CENTER")
@@ -580,7 +786,7 @@ function Console:BuildSeal(frame)
 	-- Halo's settings; slim leaves them to the Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db then
-		local crest = art and 29 or matteSeal and CREST_SOCKET_MARK or 22
+		local crest = art and 29 or matteSeal and CREST_SOCKET_MARK or you and YOU_CREST or 22
 		self.crestSize, self.crestPortrait = crest, portrait
 		if matteSeal then
 			-- A small round socket for each, set in the shell between the
@@ -609,7 +815,12 @@ function Console:BuildSeal(frame)
 	-- the rested blue the experience bar uses.
 	local rest = UI.badge(seal, "RESTING")
 	rest:SetFrameLevel(seal:GetFrameLevel() + 4)
-	rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1) + 4)
+	if card then
+		-- Just above the portrait, clear of your face.
+		rest:SetPoint("BOTTOM", portrait, "TOP", 0, 5)
+	else
+		rest:SetPoint("BOTTOM", portrait, "BOTTOM", 0, math.floor(size * 0.1) + 4)
+	end
 	rest:Hide()
 	self.restMark = rest
 
@@ -618,7 +829,9 @@ function Console:BuildSeal(frame)
 	-- nothing floats over the world.
 	local role = text(seal, "italic", Stoa.typeSize.label, "accent", "CENTER")
 	role:SetPoint("TOP", seal, "BOTTOM", 0, -2)
-	role:SetShown(not art and not slim and not self:Matte())
+	-- Slate: the Ready card says the role; under the seal it would sit
+	-- on the bars' card.
+	role:SetShown(not art and not slim and not self:Matte() and not self:Slate())
 	self.roleText = role
 
 	if slim then
@@ -634,9 +847,30 @@ function Console:BuildSeal(frame)
 		return
 	end
 
+	if card then
+		-- A form's look (Forms.lua: Shadowform) tints the card: the
+		-- portrait's ring in the form's bright colour, and its dark one
+		-- washed over the card.
+		local formRing = circle(seal, "BORDER", 3, size + 4)
+		formRing:SetPoint("CENTER")
+		formRing:Hide()
+		local wash = UI.sliced(card, "BACKGROUND", "CardFill.tga")
+		if wash then
+			wash:SetDrawLayer("BACKGROUND", -1)
+			wash:Hide()
+		end
+		self.youForm = { ring = formRing, wash = wash }
+		Stoa:On("STOA_FORM_LOOK", function(look) self:PaintForm(look) end)
+		self:PaintForm(Stoa.Forms and Stoa.Forms.look)
+		self:PlaceFormChips()
+		self:BuildYou(card)
+		return
+	end
+
 	-- Health on the left, filling towards the seal; mana on the right.
 	local matte = self:Matte()
-	local health = bar(frame, matte and MATTE_RESOURCE_W or 150, 3, "health")
+	local resourceH = self:Slate() and 4 or 3
+	local health = bar(frame, matte and MATTE_RESOURCE_W or 150, resourceH, "health")
 	health:SetReverseFill(true)
 	-- Matte: the values are as small as their captions, one line over the bar.
 	local valueFont, valueSize = matte and "sans" or "serif", matte and Stoa.typeSize.caption or Stoa.typeSize.title
@@ -644,7 +878,7 @@ function Console:BuildSeal(frame)
 	healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, matte and 5 or 4)
 	local healthCap = caption(frame, "Health")
 
-	local mana = bar(frame, matte and MATTE_RESOURCE_W or 150, 3, "mana")
+	local mana = bar(frame, matte and MATTE_RESOURCE_W or 150, resourceH, "mana")
 	local manaText = text(frame, valueFont, valueSize, "mana")
 	manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, matte and 5 or 4)
 	local manaCap = caption(frame, "Mana")
@@ -676,6 +910,95 @@ function Console:BuildSeal(frame)
 		manaCap:SetPoint("TOPLEFT", mana, "BOTTOMLEFT", 0, -5)
 	end
 	self:BuildManaPlay(mana, manaCap)
+end
+
+-- Slate's card for you: name and class beside the portrait, then health
+-- over mana, each a thin bar with its number at the right.
+function Console:BuildYou(card)
+	local inner = YOU_SEAL / 2 + YOU_GAP
+	-- Your name over the health wing, your class over the mana wing.
+	local name = text(card, "sans", Stoa.typeSize.body, "text", "LEFT")
+	name:SetPoint("LEFT", card, "LEFT", YOU_PAD, YOU_BAR_APART)
+	name:SetWidth(YOU_W / 2 - inner - YOU_PAD - YOU_VALUE_W - 6)
+	name:SetWordWrap(false)
+	local sub = text(card, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	sub:SetWordWrap(false)
+	self.youName, self.youSub = name, sub
+
+	local function meter(token, colour)
+		local value = text(card, "sans", Stoa.typeSize.caption, colour, "RIGHT")
+		value:SetWidth(YOU_VALUE_W)
+		value:SetWordWrap(false)
+		return bar(card, 60, YOU_BAR_H, token), value
+	end
+	local health, healthText = meter("health", "text")
+	local mana, manaText = meter("mana", "mana")
+	self.health, self.healthText = health, healthText
+	self.mana, self.manaText = mana, manaText
+	-- The card fades as one, so its parts need no fade of their own.
+	self.resourceParts = {}
+	self:PlaceYouBars(0)
+	-- The mana bar's five second rule and spirit ticks; their caption
+	-- has no place on the card.
+	local manaCap = caption(card, "Mana")
+	manaCap:Hide()
+	self:BuildManaPlay(mana, manaCap)
+	-- The shield and class mark were placed before the bars were made.
+	self:PlaceCrest()
+end
+
+-- Smoke, not colour: the card goes near black with only a breath of the
+-- form's shade in it, and the portrait's ring a dim ash of its colour.
+local YOU_FORM_WASH, YOU_FORM_TINT = 0.6, 0.18
+local YOU_FORM_RING = 0.35
+function Console:PaintForm(look)
+	local parts = self.youForm
+	if not parts then return end
+	local ring = type(look) == "table" and look.ring
+	local shade = type(look) == "table" and look.shade
+	parts.ring:SetShown(ring and true or false)
+	if ring then
+		local k = YOU_FORM_RING
+		local grey = 0.34
+		parts.ring:SetVertexColor(grey + (ring[1] - grey) * k, grey + (ring[2] - grey) * k, grey + (ring[3] - grey) * k, 1)
+	end
+	if parts.wash then
+		parts.wash:SetShown(shade and true or false)
+		if shade then
+			local k = YOU_FORM_TINT
+			parts.wash:SetVertexColor(shade[1] * k, shade[2] * k, shade[3] * k, YOU_FORM_WASH)
+		end
+	end
+end
+
+-- The bars run from the name to the card's right end, short of your
+-- shield and class mark while they show there.
+function Console:PlaceYouBars(crests)
+	local card = self.youCard
+	if not (card and self.health) then return end
+	crests = crests or self.youCrests or 0
+	self.youCrests = crests
+	local inner = YOU_SEAL / 2 + YOU_GAP
+	local right = YOU_PAD + (crests > 0 and crests * (YOU_CREST + 4) + 4 or 0)
+	local wing = YOU_W / 2 - inner
+	-- Left wing: the name, health's number by the portrait, its bar below.
+	self.healthText:ClearAllPoints()
+	self.healthText:SetJustifyH("RIGHT")
+	self.healthText:SetPoint("RIGHT", card, "CENTER", -inner, YOU_BAR_APART)
+	self.health:ClearAllPoints()
+	self.health:SetPoint("LEFT", card, "LEFT", YOU_PAD, -YOU_BAR_APART)
+	self.health:SetPoint("RIGHT", card, "CENTER", -inner, -YOU_BAR_APART)
+	-- Right wing, its mirror: mana's number by the portrait, your class
+	-- at the far end; the bar stops short of the shield and class mark.
+	self.manaText:ClearAllPoints()
+	self.manaText:SetJustifyH("LEFT")
+	self.manaText:SetPoint("LEFT", card, "CENTER", inner, YOU_BAR_APART)
+	self.mana:ClearAllPoints()
+	self.mana:SetPoint("LEFT", card, "CENTER", inner, -YOU_BAR_APART)
+	self.mana:SetPoint("RIGHT", card, "RIGHT", -right, -YOU_BAR_APART)
+	self.youSub:ClearAllPoints()
+	self.youSub:SetPoint("RIGHT", card, "RIGHT", -YOU_PAD, YOU_BAR_APART)
+	self.youSub:SetWidth(math.max(20, wing - YOU_PAD - YOU_VALUE_W - 6))
 end
 
 -- With the art: health and mana sit down in the leather either side of
@@ -774,6 +1097,15 @@ function Console:BuildSlim(frame)
 	end)
 	left:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	self.slimLevel, self.slimXP, self.slimShare = level, xp, share
+	-- Slate: resting reads here as a word; a badge has no room on the
+	-- small seal.
+	if self:Slate() then
+		local rest = caption(left, "Resting")
+		rest:SetPoint("LEFT", share, "RIGHT", 14, 0)
+		rest:SetTextColor(Stoa:Color("mana"))
+		rest:Hide()
+		self.slimRest = rest
+	end
 
 	-- Right: the readouts, laid right to left so Company keeps the corner.
 	local right = CreateFrame("Frame", nil, frame)
@@ -809,13 +1141,17 @@ function Console:BuildSlim(frame)
 	card:HookScript("OnShow", function(own) own.stoaRise:Play() end)
 	card:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -inset + CARD_PAD, CARD_LIFT)
 	card:EnableMouse(true)
-	local fill = card:CreateTexture(nil, "BACKGROUND")
-	fill:SetAllPoints()
-	paint(fill, "panel")
-	for _, edge in ipairs({ { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" } }) do
-		local rule = line(card)
-		rule:SetPoint(edge[1])
-		rule:SetPoint(edge[2])
+	if self:Slate() then
+		slatePlate(card)
+	else
+		local fill = card:CreateTexture(nil, "BACKGROUND")
+		fill:SetAllPoints()
+		paint(fill, "panel")
+		for _, edge in ipairs({ { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" } }) do
+			local rule = line(card)
+			rule:SetPoint(edge[1])
+			rule:SetPoint(edge[2])
+		end
 	end
 	card:Hide()
 	self.slimCard = card
@@ -915,7 +1251,7 @@ function Console:UpdateSlim()
 		reads.company.note:SetText("")
 	end
 	-- Left: level and experience.
-	local level = UnitLevel("player")
+	local level = Stoa:PlainNumber(UnitLevel("player")) or 0
 	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel()
 	local atMax = maxLevel and level >= maxLevel
 	self.slimLevel:SetText("Level " .. level)
@@ -1006,6 +1342,17 @@ local COLUMN_GAP = 40
 -- A page's caption is the handle of its slot: a chevron shows beside it
 -- under the mouse, and a click lists what the slot can hold. Only the
 -- caption takes the click, never the page.
+local SLOT_DOT, SLOT_DOT_GAP = 5, 4
+-- The game's quest list stands in a higher layer than the console, and its
+-- frame (and quests faded out where they'd run over the console) still
+-- took the mouse over the right-hand cards: Company's caption only
+-- answered along its foot. The console's own buttons there stand in the
+-- quest list's layer, well above its levels; windows are higher still.
+local OVER_TRACKER_LEVEL = 200
+function Console.OverTracker(button, lift)
+	button:SetFrameStrata("LOW")
+	button:SetFrameLevel(OVER_TRACKER_LEVEL + (lift or 0))
+end
 local function slotHandle(parent, heading)
 	local handle = CreateFrame("Button", nil, parent)
 	handle:SetPoint("TOPLEFT", heading, "TOPLEFT", -4, 5)
@@ -1013,21 +1360,80 @@ local function slotHandle(parent, heading)
 	-- Above anything else on the page that takes the mouse: Company's
 	-- whole column is a button, and it lay over half of this one.
 	handle:SetFrameLevel(parent:GetFrameLevel() + 6)
+	Console.OverTracker(handle, 6)
 	local chevron = UI.glyph(handle, "Chevron", 10, "text")
 	chevron:SetPoint("LEFT", heading, "RIGHT", 5, 0)
 	chevron:Hide()
+	-- Slate: no chevron. A row of dots stands at the card's top right, one
+	-- for each of STOA's pages the slot can hold, the one it holds lit: the
+	-- card reads as one of several before the mouse is near. The lit dot
+	-- takes the accent under the mouse. Not where the slot can't change.
+	local slate = UI.slate()
+	local dots = {}
+	local function rest(own, hot)
+		chevron:Hide()
+		if not slate then return end
+		local held
+		for kind, col in pairs(Console.pageColumns or {}) do
+			if col == own.column then held = kind end
+		end
+		local show = held and not (Console.slimCard or Console.db.freeRight)
+		local n = 0
+		if show then
+			for _, entry in ipairs(Console.SLOT_KINDS) do
+				if entry[4] == "STOA" or entry[4] == "Level 60" then
+					n = n + 1
+					local dot = dots[n]
+					if not dot then
+						dot = UI.circle(own, "ARTWORK", 1, SLOT_DOT)
+						dot:SetTexture("Interface\\Buttons\\WHITE8x8")
+						dots[n] = dot
+					end
+					dot.stoaKind = entry[1]
+				end
+			end
+		end
+		local r, g, b = Stoa:Color("muted")
+		local ar, ag, ab = Stoa:Color("accent")
+		for i, dot in ipairs(dots) do
+			dot:SetShown(i <= n)
+			if i <= n then
+				dot:ClearAllPoints()
+				dot:SetPoint("RIGHT", heading, "LEFT", COLUMN_WIDTH - (n - i) * (SLOT_DOT + SLOT_DOT_GAP), 0)
+				if dot.stoaKind ~= held then
+					-- Darker than the card, so the other pages read as
+					-- holes pressed into it rather than marks drawn on it.
+					dot:SetVertexColor(0, 0, 0, hot and 0.7 or 0.5)
+				elseif hot then
+					dot:SetVertexColor(ar, ag, ab, 1)
+				else
+					dot:SetVertexColor(r, g, b, 0.9)
+				end
+			end
+		end
+		-- Ready's count of jobs stands clear of the dots.
+		local badge = own.column and own.column.stoaBadge
+		if badge then
+			badge:ClearAllPoints()
+			badge:SetPoint("TOPRIGHT", own.column, "TOPRIGHT", n > 0 and -(n * (SLOT_DOT + SLOT_DOT_GAP) + 4) or 0, 2)
+		end
+	end
+	if slate then handle:SetScript("OnShow", function(own) rest(own) end) end
+	handle.Rest = rest
 	handle:SetScript("OnEnter", function(own)
 		if not Console:CanPick() then return end
-		chevron:Show()
-		heading:SetAlpha(1)
+		if slate then rest(own, true) else chevron:Show() end
+		-- A slot holding a meter keeps its caption unseen: the window's
+		-- own title stands in the same spot, and the two ran together.
+		heading:SetAlpha(own.dock and 0 or 1)
 		heading:SetTextColor(Stoa:Color("text"))
 		GameTooltip:SetOwner(own, "ANCHOR_TOP")
-		GameTooltip:AddLine(own.empty and "Add a page" or "Change this page")
+		GameTooltip:AddLine(own.empty and not own.dock and "Add a page" or "Change this page")
 		GameTooltip:AddLine("Click to choose what this slot holds.", 0.7, 0.7, 0.7)
 		GameTooltip:Show()
 	end)
 	handle:SetScript("OnLeave", function(own)
-		chevron:Hide()
+		rest(own)
 		heading:SetTextColor(Stoa:Color("muted"))
 		if own.empty then heading:SetAlpha(0) end
 		GameTooltip:Hide()
@@ -1040,12 +1446,18 @@ local function slotHandle(parent, heading)
 end
 
 local function column(col, label)
-	local heading = caption(col, label)
+	-- Slate: captions stay quiet, so the accent is left for where you are
+	-- and what wants doing.
+	local heading = UI.caption(col, label)
 	heading:SetPoint("TOPLEFT", col, "TOPLEFT", 0, 0)
 	local rule = line(col)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
 	rule:SetWidth(COLUMN_WIDTH)
-	slotHandle(col, heading).column = col
+	-- Slate: the card is the section, so no rule under its heading.
+	if UI.slate() then rule:SetAlpha(0) end
+	local handle = slotHandle(col, heading)
+	handle.column = col
+	handle:Rest()
 	return rule
 end
 
@@ -1065,7 +1477,7 @@ function Console:BuildFellowship(frame, space)
 	local ready = column(readyCol, "Ready")
 	-- The page's lead lines are a step under the title size, and what they
 	-- gave up is air before the line below.
-	local role = text(readyCol, "serif", Stoa.typeSize.page, "accent")
+	local role = text(readyCol, "serif", Stoa.typeSize.page, UI.slate() and "text" or "accent")
 	role:SetPoint("TOPLEFT", ready, "BOTTOMLEFT", 0, -6)
 	-- Click the role to switch spec (SpecSwitch.lua).
 	local roleHit = CreateFrame("Button", nil, readyCol)
@@ -1118,13 +1530,16 @@ function Console:BuildFellowship(frame, space)
 	local Figures = Stoa.Figures
 	local gear = CreateFrame("Button", nil, readyCol)
 	gear:SetSize(COLUMN_WIDTH, 12)
-	gear:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -8)
+	-- Slate: a little lower, so Gear and Bags share their lines with
+	-- Journey's two rows on the card beside them.
+	gear:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, UI.slate() and -12 or -8)
 	local gearLabel = text(gear, "sans", Stoa.typeSize.body, "muted")
 	gearLabel:SetPoint("LEFT")
 	gearLabel:SetText("Gear")
 	local gearValue = text(gear, "sans", Stoa.typeSize.body, "text", "RIGHT")
 	gearValue:SetPoint("RIGHT")
-	local cells = Figures.segments(gear, 10, COLUMN_WIDTH - 40 - 36, 6)
+	-- Room for "100%" with air before it.
+	local cells = Figures.segments(gear, 10, COLUMN_WIDTH - 40 - 44, 6)
 	cells:SetPoint("LEFT", gear, "LEFT", 40, 0)
 	gear.cells, gear.value = cells, gearValue
 	-- Bags: one column per bag, the free count to the right.
@@ -1138,6 +1553,24 @@ function Console:BuildFellowship(frame, space)
 	local of = text(bags, "sans", Stoa.typeSize.caption, "muted")
 	of:SetPoint("BOTTOMLEFT", columns, "BOTTOMRIGHT", 8, -1)
 	bags.columns, bags.free, bags.of = columns, free, of
+	-- Slate: the bags are a row like Gear above them, "Bags" on the left
+	-- and "5 free of 26" on the right, on the same 20 pitch as every other
+	-- line on the cards (At a glance's rows set it).
+	if UI.slate() then
+		bags:SetHeight(12)
+		bags:ClearAllPoints()
+		bags:SetPoint("TOPLEFT", gear, "BOTTOMLEFT", 0, -8)
+		columns:SetAlpha(0)
+		local bagsLabel = text(bags, "sans", Stoa.typeSize.body, "muted")
+		bagsLabel:SetPoint("LEFT")
+		bagsLabel:SetText("Bags")
+		Stoa:SetFont(of, "sans", Stoa.typeSize.body)
+		of:ClearAllPoints()
+		of:SetPoint("RIGHT")
+		Stoa:SetFont(free, "sans", Stoa.typeSize.body)
+		free:ClearAllPoints()
+		free:SetPoint("RIGHT", of, "LEFT", -4, 0)
+	end
 	-- Hover explains, click opens (the same as At a glance's lines).
 	for button, key in pairs({ [gear] = "durability", [bags] = "bags" }) do
 		button:SetScript("OnEnter", function(own)
@@ -1156,10 +1589,11 @@ function Console:BuildFellowship(frame, space)
 	end
 	-- Group buffs you could cast that someone near you lacks.
 	local groupBuffs = text(readyCol, "sans", Stoa.typeSize.body, "accent")
-	groupBuffs:SetPoint("TOPLEFT", bags, "BOTTOMLEFT", 0, -5)
+	groupBuffs:SetPoint("TOPLEFT", bags, "BOTTOMLEFT", 0, UI.slate() and -8 or -5)
 	groupBuffs:SetWidth(COLUMN_WIDTH)
 	groupBuffs:SetWordWrap(false)
 	self.roleWord, self.roleNote, self.gear, self.bags, self.groupBuffs = role, note, gear, bags, groupBuffs
+	if UI.slate() then self:BuildSlateJobs(readyCol, role) end
 
 	-- Journey.
 	local journey = column(journeyCol, "Journey")
@@ -1167,7 +1601,9 @@ function Console:BuildFellowship(frame, space)
 	-- stand a little closer and all of them stay inside it.
 	local tight = not self:Art()
 	local level = text(journeyCol, "serif", Stoa.typeSize.page, "text")
-	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, tight and -4 or -6)
+	-- Slate's cards have the room, and there the lead line of every card
+	-- (role, level, a page's title) stands at one height.
+	level:SetPoint("TOPLEFT", journey, "BOTTOMLEFT", 0, (tight and not UI.slate()) and -4 or -6)
 	-- Earned in the text colour, rest in blue behind it, and an accent mark
 	-- where an hour at your pace would take you.
 	-- Your share of the level on the same row, at the column's right edge.
@@ -1194,7 +1630,7 @@ function Console:BuildFellowship(frame, space)
 	xpHover:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	-- The one key kept on the page: what the gold mark is, under the bar's
 	-- right end.
-	local hourKey = Figures.key(journeyCol, "accent")
+	local hourKey = Figures.key(journeyCol, UI.slate() and "text" or "accent")
 	hourKey:SetPoint("TOPRIGHT", xp, "BOTTOMRIGHT", 0, -4)
 	hourKey:SetText(nil)
 	self.levelText, self.levelShare, self.xpBar, self.hourKey = level, share, xp, hourKey
@@ -1228,6 +1664,8 @@ function Console:BuildFellowship(frame, space)
 		toLevel:SetPoint("TOPLEFT", self, "TOPLEFT", left + math.floor((COLUMN_WIDTH - left) / 2), 0)
 	end
 	self.paceTight = tight
+	-- Slate's taller card has the room for the trainer's line as well.
+	self.paceRoom = UI.slate() and not self.db.slim
 	pace:Hide()
 	-- While the pace is still being worked out, a line of words instead.
 	local rate = text(journeyCol, "sans", Stoa.typeSize.body, "muted")
@@ -1267,11 +1705,11 @@ function Console:BuildFellowship(frame, space)
 	self.alone:SetPoint("TOPLEFT", company, "BOTTOMLEFT", 0, -6)
 	self.alone:SetText("Travelling alone")
 	local online = text(companyCol, "sans", Stoa.typeSize.body, "muted")
-	online:SetPoint("TOPLEFT", self.alone, "BOTTOMLEFT", 0, -4)
+	online:SetPoint("TOPLEFT", self.alone, "BOTTOMLEFT", 0, UI.slate() and -8 or -4)
 	self.onlineCount = online
 	-- A few of them by name, so the column says who as well as how many.
 	local names = text(companyCol, "serif", Stoa.typeSize.label, "text")
-	names:SetPoint("TOPLEFT", online, "BOTTOMLEFT", 0, -4)
+	names:SetPoint("TOPLEFT", online, "BOTTOMLEFT", 0, UI.slate() and -8 or -4)
 	names:SetWidth(COLUMN_WIDTH)
 	names:SetWordWrap(false)
 	self.onlineNames = names
@@ -1280,6 +1718,7 @@ function Console:BuildFellowship(frame, space)
 	local open = CreateFrame("Button", nil, companyCol)
 	open:SetPoint("TOPLEFT", company, "TOPLEFT", 0, 22)
 	open:SetSize(COLUMN_WIDTH, 104)
+	Console.OverTracker(open, 0)
 	open:SetScript("OnClick", function()
 		if Stoa.modules.Roster then Stoa.modules.Roster:Toggle() end
 	end)
@@ -1353,6 +1792,17 @@ function Console:PlaceCrest()
 	for _, gauge in ipairs(order) do
 		if gauge and not gauge:IsShown() then shown[#shown + 1] = gauge end
 	end
+	if self.youCard then
+		-- At the right end of the mana bar's row, the bar drawn in to
+		-- make room; your class keeps the row above to its end.
+		local n = 0
+		for _, gauge in ipairs(shown) do
+			gauge:SetPoint("RIGHT", self.youCard, "RIGHT", -YOU_PAD - n * (size + 4) + nudge, nudge - YOU_BAR_APART)
+			if gauge:IsShown() then n = n + 1 end
+		end
+		self:PlaceYouBars(n)
+		return
+	end
 	if self:Art() then
 		local step = size + 4
 		for i, gauge in ipairs(shown) do
@@ -1384,6 +1834,63 @@ local TICK_LENGTH = 5
 local TICK_GAP = 7
 local GLOW_SPREAD = 22
 
+-- Slate's card: its fine edge lights with experience, clockwise from the
+-- portrait's shoulder, as the dial does round a medallion. Short
+-- lengths laid end to end along the edge and round its corners.
+local EDGE_PART = 7
+local EDGE_CORNER_PARTS = 4
+local EDGE_THICK = 1.5
+local EDGE_INSET = 0.75
+local EDGE_CORNER = 6
+
+function Console:BuildEdge(card)
+	local w, h = card:GetWidth() / 2 - EDGE_INSET, card:GetHeight() / 2 - EDGE_INSET
+	local r = math.min(EDGE_CORNER, h)
+	local arc = math.pi / 2 * r
+	local flatW, flatH = w - r, 2 * (h - r)
+	-- The portrait stands over the top edge's middle: the run starts at
+	-- its right shoulder and ends at its left, so none of it hides.
+	local half = YOU_SEAL / 2
+	local skip = (h < half and math.sqrt(half * half - h * h) or 0) + 3
+	-- Each run: its length, then where and which way a point along it lies.
+	local runs = {
+		{ flatW - skip, function(d) return skip + d, h, 0 end },
+		{ arc, function(d) local a = math.pi / 2 - d / r return w - r + math.cos(a) * r, h - r + math.sin(a) * r, a - math.pi / 2 end },
+		{ flatH, function(d) return w, h - r - d, -math.pi / 2 end },
+		{ arc, function(d) local a = -d / r return w - r + math.cos(a) * r, -(h - r) + math.sin(a) * r, a - math.pi / 2 end },
+		{ 2 * flatW, function(d) return w - r - d, -h, math.pi end },
+		{ arc, function(d) local a = -math.pi / 2 - d / r return -(w - r) + math.cos(a) * r, -(h - r) + math.sin(a) * r, a - math.pi / 2 end },
+		{ flatH, function(d) return -w, -(h - r) + d, math.pi / 2 end },
+		{ arc, function(d) local a = math.pi - d / r return -(w - r) + math.cos(a) * r, h - r + math.sin(a) * r, a - math.pi / 2 end },
+		{ flatW - skip, function(d) return -(w - r) + d, h, 0 end },
+	}
+	local whole = 0
+	for _, run in ipairs(runs) do whole = whole + run[1] end
+	-- Straight runs in even lengths; each corner in short ones, so no
+	-- length pokes out past the curve.
+	local parts, before = {}, 0
+	for index, run in ipairs(runs) do
+		local corner = index % 2 == 0
+		local count = corner and EDGE_CORNER_PARTS or math.max(1, math.floor(run[1] / EDGE_PART + 0.5))
+		local length = run[1] / count
+		for i = 1, count do
+			local at = (i - 0.5) * length
+			local x, y, angle = run[2](at)
+			local part = card:CreateTexture(nil, "OVERLAY", nil, 2)
+			part:SetTexture(UI.WHITE)
+			part:SetSize(length, EDGE_THICK)
+			part:SetPoint("CENTER", card, "CENTER", x, y)
+			if part.SetRotation then part:SetRotation(angle) end
+			UI.unsnap(part)
+			part.stoaAt = (before + at) / whole
+			parts[#parts + 1] = part
+		end
+		before = before + run[1]
+	end
+	self.ringEdge = true
+	return parts
+end
+
 function Console:BuildRing(seal, portrait, size)
 	local radius = size / 2 + TICK_GAP
 	local ticks = {}
@@ -1398,6 +1905,12 @@ function Console:BuildRing(seal, portrait, size)
 		ticks[i] = tick
 	end
 	self.ringTicks = ticks
+	-- Slate: no dial. On its card the card's own edge lights instead
+	-- (BuildEdge); the plain seal elsewhere goes without.
+	if UI.slate() then
+		for _, tick in ipairs(ticks) do tick:Hide() end
+		if self.youCard then self.ringTicks = self:BuildEdge(self.youCard) end
+	end
 
 	-- The level in the display serif, a size up from the badge's caption, on
 	-- an opaque plate so the bezel ticks under it don't read as digits.
@@ -1406,8 +1919,21 @@ function Console:BuildRing(seal, portrait, size)
 	plate:SetHeight(18)
 	plate.fill:SetVertexColor(0, 0, 0, 0.95)
 	plate:Set("1", "accent")
+	if UI.slate() then
+		-- Slate: only the number is in the accent, no wash or edge round it.
+		if plate.wash then plate.wash:Hide() end
+		if plate.edge then plate.edge:Clear() end
+		plate.wash, plate.edge = nil, nil
+	end
 	plate:SetFrameLevel(seal:GetFrameLevel() + 5)
-	plate:SetPoint("CENTER", portrait, "BOTTOM", 0, -TICK_GAP + 1)
+	if self.youCard then
+		-- A small chip at the portrait's lower left.
+		Stoa:SetFont(plate.text, "sans", Stoa.typeSize.caption)
+		plate:SetHeight(14)
+		plate:SetPoint("CENTER", portrait, "BOTTOM", 0, 1)
+	else
+		plate:SetPoint("CENTER", portrait, "BOTTOM", 0, -TICK_GAP + 1)
+	end
 	self.levelPlate = plate
 
 	-- A soft halo (Tools/art/ring_glow.py), empty over the face.
@@ -1480,14 +2006,17 @@ function Console:UpdateRing()
 	local ar, ag, ab = Stoa:Color("accent")
 	local mr, mg, mb = Stoa:Color("mana")
 	local tr, tg, tb = Stoa:Color("text")
+	-- The card's edge: what's left to earn is a faint line, the
+	-- rested stretch is dashed, and at the cap the whole edge glows low.
+	local edge = self.ringEdge
 	for i, tick in ipairs(ticks) do
-		local at = (i - 0.5) / TICKS
+		local at = tick.stoaAt or (i - 0.5) / #ticks
 		if at <= done then
-			tick:SetVertexColor(ar, ag, ab, done >= 1 and 0.55 or 0.9)
+			tick:SetVertexColor(ar, ag, ab, done >= 1 and (edge and 0.3 or 0.55) or 0.9)
 		elseif at <= rested then
-			tick:SetVertexColor(mr, mg, mb, 0.75)
+			tick:SetVertexColor(mr, mg, mb, (edge and i % 2 == 0) and 0 or 0.75)
 		else
-			tick:SetVertexColor(tr, tg, tb, 0.16)
+			tick:SetVertexColor(tr, tg, tb, edge and 0.14 or 0.16)
 		end
 	end
 end
@@ -1515,7 +2044,8 @@ end
 function Console:UpdateSeal()
 	SetPortraitTexture(self.portrait, "player")
 	local resting = IsResting and IsResting() and true or false
-	if self.restMark then self.restMark:SetShown(resting) end
+	if self.restMark then self.restMark:SetShown(resting and not self.slimRest) end
+	if self.slimRest then self.slimRest:SetShown(resting) end
 	if resting and self.wasResting == false then self:Moment("rest", 1) end
 	self.wasResting = resting
 	self:UpdateRing()
@@ -1529,6 +2059,11 @@ function Console:UpdateSeal()
 		label = ("%s  %s%s|r"):format(label, Stoa:Hex("danger"), words)
 	end
 	self.roleText:SetText(label)
+	if self.youName then
+		self.youName:SetText(UnitName("player") or "")
+		self.youSub:SetText(UnitClass("player") or "")
+		self:PlaceYouBars()
+	end
 	if self.roleWord then
 		self.roleWord:SetText(role and Stoa.ROLE_LABELS[role] or "")
 		self:UpdateJobs()
@@ -1536,11 +2071,29 @@ function Console:UpdateSeal()
 	if self.groupBuffs then self.groupBuffs:SetText(Stoa.groupBuffLine or "") end
 end
 
+-- Power that is not mana: rage bone, energy the accent (the Halo's own choice).
+local POWER_TOKENS = { [1] = "text", [3] = "accent" }
+
 function Console:UpdateResources()
 	setUnitBar(self.health, "player", "health")
 	self.healthText:SetText(UnitHealth("player"))
 	setUnitBar(self.mana, "player", "power")
 	self.manaText:SetText(UnitPower("player"))
+	-- Rage and energy wear their own colours, as on the Halo; only mana is
+	-- blue. Once a bar has worn another colour it leaves the theme's pass
+	-- (which would paint it mana again) and is coloured here.
+	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType("player")))
+	local token = kind and POWER_TOKENS[kind] or "mana"
+	if token ~= (self.powerToken or "mana") then
+		if not self.powerOwn then
+			self.powerOwn = true
+			UI.unpaint(self.mana)
+			UI.unpaint(self.manaText)
+		end
+		self.powerToken = token
+		self.mana:SetStatusBarColor(Stoa:Color(token))
+		self.manaText:SetTextColor(Stoa:Color(token))
+	end
 end
 
 function Console:UpdateFellowship()
@@ -1719,6 +2272,66 @@ function Console:Jobs()
 	return list
 end
 
+-- Slate: the small jobs are listed on the Ready card itself, as rows
+-- under the role, with their count in a chip beside the heading (the
+-- mock-up's Ready card). Two rows fit; the chip and the hover say the
+-- rest. While there are jobs the gear row steps aside (worn gear is a
+-- job of its own) and the bags close up under the rows.
+local SLATE_JOB_ROWS, SLATE_JOB_H = 2, 20
+
+function Console:BuildSlateJobs(col, role)
+	local count = UI.badge(col, nil, "accent")
+	count:SetPoint("TOPRIGHT", col, "TOPRIGHT", 0, 2)
+	count:Hide()
+	col.stoaBadge = count
+	local rows = {}
+	for i = 1, SLATE_JOB_ROWS do
+		local row = CreateFrame("Button", nil, col)
+		row:SetSize(COLUMN_WIDTH, SLATE_JOB_H)
+		row:SetPoint("TOPLEFT", role, "BOTTOMLEFT", 0, -6 - (i - 1) * SLATE_JOB_H)
+		local mark = UI.glyph(row, "DiamondSmall", 8, "accent")
+		mark:SetPoint("LEFT", 0, 0)
+		local words = text(row, "sans", Stoa.typeSize.body, "text")
+		words:SetPoint("LEFT", mark, "RIGHT", 6, 0)
+		words:SetPoint("RIGHT")
+		words:SetWordWrap(false)
+		row.mark, row.words = mark, words
+		row:SetScript("OnEnter", function(own) self:ShowJobs(own) end)
+		row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		row:Hide()
+		rows[i] = row
+	end
+	self.slateJobs = { count = count, rows = rows }
+end
+
+-- Fills the Slate job rows; true when they show (the one-line note waits).
+function Console:ShowSlateJobs(list)
+	local jobs = self.slateJobs
+	if not jobs then return false end
+	local any = list and #list > 0 and not InCombatLockdown()
+	jobs.count:Set(any and tostring(#list) or nil, "accent")
+	local last
+	for i, row in ipairs(jobs.rows) do
+		local job = any and list[i]
+		if job then
+			row.words:SetText(job[1])
+			row.words:SetTextColor(Stoa:Color(job[3] and "danger" or "text"))
+			row.mark:SetVertexColor(Stoa:Color(job[3] and "danger" or "accent"))
+			-- A new job fades in, like the one-line note does.
+			UI.softShow(row, true)
+			last = row
+		else
+			row:Hide()
+		end
+	end
+	-- Gear steps aside while the rows show; the bags hang from whichever
+	-- is last.
+	self.gear:SetShown(not any)
+	self.bags:ClearAllPoints()
+	self.bags:SetPoint("TOPLEFT", any and last or self.gear, "BOTTOMLEFT", 0, any and -4 or -8)
+	return any and true or false
+end
+
 -- Shows the Ready line with a quick fade (one animation, made once).
 function Console:ShowNote(note)
 	if note:IsShown() then return end
@@ -1732,10 +2345,18 @@ end
 function Console:UpdateJobs()
 	local note = self.roleNote
 	if not (note and note.words) then return end
-	if InCombatLockdown() then note:Hide() return end
+	if InCombatLockdown() then
+		note:Hide()
+		self:ShowSlateJobs(nil)
+		return
+	end
 	local list = self:Jobs()
 	self.jobList = list
 	note.tip = nil
+	if self:ShowSlateJobs(list) then
+		note:Hide()
+		return
+	end
 	if #list == 0 then
 		-- Nothing to do: a tip's few words instead, muted, the rest on hover.
 		local tips = Stoa.modules.Tips
@@ -1814,7 +2435,7 @@ end
 
 function Console:UpdateJourney()
 	if not self.levelText then return end
-	local level = UnitLevel("player")
+	local level = Stoa:PlainNumber(UnitLevel("player")) or 0
 	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel()
 	self.levelText:SetText("Level " .. level)
 	local atMax = maxLevel and level >= maxLevel
@@ -1836,11 +2457,15 @@ function Console:UpdateJourney()
 	self.xpBar:Set(xp / xpMax, math.min(xp + rested, xpMax) / xpMax, hour)
 	local earned = math.floor(xp / xpMax * 100)
 	self.levelShare:SetText(earned .. "%")
-	local keys = { { "text", "Earned " .. earned .. "%" } }
+	local slate = UI.slate()
+	local keys = { { slate and "accent" or "text", "Earned " .. earned .. "%" } }
 	if rested > 0 then
 		keys[#keys + 1] = { "mana", "Rested to " .. math.floor(math.min(xp + rested, xpMax) / xpMax * 100) .. "%" }
 	end
-	if hour then keys[#keys + 1] = { "accent", "The gold mark: where an hour at your pace gets you" } end
+	if hour then
+		keys[#keys + 1] = slate and { "text", "The light mark: where an hour at your pace gets you" }
+			or { "accent", "The gold mark: where an hour at your pace gets you" }
+	end
 	self.xpKeyWords = keys
 	self.hourKey:SetText(hour and "In an hour" or nil)
 	self:UpdateKitLines()
@@ -1853,6 +2478,43 @@ function Console:UpdateKitLines()
 	local trainer = Stoa.modules.Trainer
 	if trainer and trainer.UpdateConsole and trainer.enabled then trainer:UpdateConsole() end
 	self:SettleNext()
+end
+
+-- Slate: the two lines under the pace read like every other row on the
+-- cards, a quiet label on the left and its figure on the right ("Akiris
+-- Reed" and "0/10", "To train" and "2 spells"). The note itself becomes
+-- the figure, set to the right; the label is a second string beside it.
+local function splitLine(console, note, key, label, value)
+	local labels = console.nextLabels or {}
+	console.nextLabels = labels
+	local fs = labels[key]
+	if not fs then
+		fs = text(note:GetParent(), "sans", Stoa.typeSize.body, "muted")
+		fs:SetWordWrap(false)
+		fs:SetPoint("LEFT", note, "LEFT")
+		Stoa:SetFont(note, "sans", Stoa.typeSize.body)
+		labels[key] = fs
+	end
+	if label then
+		note:SetText(value)
+		note:SetJustifyH("RIGHT")
+		fs:SetText(label)
+		local taken = Stoa:PlainNumber(note:GetStringWidth()) or 0
+		fs:SetWidth(math.max(20, COLUMN_WIDTH - taken - 10))
+	else
+		note:SetJustifyH("LEFT")
+		fs:SetText("")
+	end
+	return fs
+end
+
+local function questParts(line)
+	local count, what = line:match("^(%d+/%d+)%s+(.+)$")
+	if count then return what, count end
+	what, count = line:match("^(.-):?%s+(%d+/%d+)$")
+	if count and what ~= "" then return what, count end
+	what = line:match("^Hand in: (.+)$")
+	if what then return what, "Hand in" end
 end
 
 -- Under the pace, the nearest quest then the trainer line, each full width.
@@ -1878,14 +2540,35 @@ function Console:SettleNext()
 	note:SetText(full)
 	note:ClearAllPoints()
 	if quest then
-		note:SetPoint("TOPLEFT", questNote, "BOTTOMLEFT", 0, -4)
+		-- Slate's card has the room for the cards' 20 pitch, except under
+		-- the pace row, where both lines must still fit.
+		note:SetPoint("TOPLEFT", questNote, "BOTTOMLEFT", 0, (UI.slate() and not self.db.slim and not paced) and -8 or -4)
 	else
 		note:SetPoint("TOPLEFT", questNote, "TOPLEFT")
 	end
 	questNote:SetShown(quest)
 	-- In the well there is one line's room under the pace: the quest has
 	-- it, and the trainer's line waits (Ready's small jobs name it too).
-	note:SetShown(training and not (self.paceTight and paced and quest))
+	note:SetShown(training and not (self.paceTight and not self.paceRoom and paced and quest))
+	if UI.slate() and not self.db.slim then
+		local label, value
+		if quest then
+			local line = self.questLine
+			if not line or self.questSplit ~= questNote:GetText() then line = questNote:GetText() end
+			self.questLine = line
+			label, value = questParts(line)
+		end
+		splitLine(self, questNote, "quest", label, value):SetShown(quest and label ~= nil)
+		self.questSplit = questNote:GetText()
+		label, value = nil, nil
+		if training and self.trainerKind == "now" then
+			label, value = "To train", (full:gsub(" to train", "", 1))
+		elseif training and self.trainerKind == "next" then
+			local rest = full:match("^Next training: (.+)$")
+			if rest then label, value = "Next training", rest end
+		end
+		splitLine(self, note, "trainer", label, value):SetShown(note:IsShown() and label ~= nil)
+	end
 	self:UpdateSlim()
 end
 
@@ -1920,13 +2603,62 @@ local SEAL_CLEARANCE = 64
 -- floats over the world. A flat dark plate stands in for the leather, so
 -- its words stay readable over sand, snow and bright sky.
 local CHAT_SHADE = 0.2
+-- Slate: a card of its own instead, like the console's, round the chat's
+-- button column too. Near solid on a ride, where it also holds the typing
+-- strip; lighter in a fight, so less of the world is covered.
+local SLATE_CHAT_RIDE, SLATE_CHAT_FIGHT = 0.92, 0.5
+local SLATE_CHAT_PAD, SLATE_CHAT_RAIL, SLATE_CHAT_INPUT = 8, 28, 24
 
 function Console:ChatShade()
 	local housed = ChatFrame1 and self.HousesChat and self:HousesChat()
 	local shade = self.chatShade
 	if not housed then
 		if shade then shade:SetAlpha(0) end
+		if self.chatRideCard then self.chatRideCard:SetAlpha(0) end
 		return nil
+	end
+	if not shade and self:Slate() and not self.db.slim then
+		shade = CreateFrame("Frame", nil, UIParent)
+		shade:SetFrameStrata("BACKGROUND")
+		slatePlate(shade)
+		shade:SetAlpha(0)
+		shade.stoaCard = true
+		self.chatShade = shade
+	end
+	if shade and shade.stoaCard then
+		local look = Stoa.modules.ChatLook
+		local on = look and look.enabled and look.db
+		local left = SLATE_CHAT_PAD + ((on and on.rail) and SLATE_CHAT_RAIL or 0)
+		local foot = 6 + ((self.riding and on and on.input) and SLATE_CHAT_INPUT or 0)
+		shade:ClearAllPoints()
+		shade:SetPoint("TOPLEFT", ChatFrame1, "TOPLEFT", -left, 10)
+		shade:SetPoint("BOTTOMRIGHT", ChatFrame1, "BOTTOMRIGHT", SLATE_CHAT_PAD, -foot)
+		return shade, self.riding and SLATE_CHAT_RIDE or SLATE_CHAT_FIGHT
+	end
+	-- Leather and Matte on a ride: the chat keeps a card too, in the
+	-- style's own panel, from the console's top line (where the tabs
+	-- stand) down past the typing strip. In a fight they keep the shade.
+	local ride = self.chatRideCard
+	if self.riding and not self.db.slim then
+		if not ride then
+			ride = CreateFrame("Frame", nil, UIParent)
+			ride:SetFrameStrata("BACKGROUND")
+			UI.roundPanel(ride, 1)
+			ride:SetAlpha(0)
+			ride.stoaCard = true
+			self.chatRideCard = ride
+		end
+		local look = Stoa.modules.ChatLook
+		local on = look and look.enabled and look.db
+		local left = SLATE_CHAT_PAD + ((on and on.rail) and SLATE_CHAT_RAIL or 0)
+		local foot = 6 + ((on and on.input) and SLATE_CHAT_INPUT or 0)
+		ride:ClearAllPoints()
+		ride:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", (self:PageInset()) - left, self:OpenHeight())
+		ride:SetPoint("BOTTOMRIGHT", ChatFrame1, "BOTTOMRIGHT", SLATE_CHAT_PAD, -foot)
+		if shade then shade:SetAlpha(0) end
+		return ride, SLATE_CHAT_RIDE
+	elseif ride then
+		ride:SetAlpha(0)
 	end
 	if not shade then
 		local holder = CreateFrame("Frame", nil, UIParent)
@@ -1954,7 +2686,8 @@ function Console:SetOpen(open, instant)
 
 	local pagesAlpha = open and 1 or 0
 	-- The slim seal is small already, so it shrinks less into the spine.
-	local sealScale = open and 1 or ((self.db.slim or riding) and 0.6 or 0.4)
+	-- Slate's card for you fades whole, its portrait with it.
+	local sealScale = (open or self.youCard) and 1 or ((self.db.slim or riding) and 0.6 or 0.4)
 	if self.slimCard and not open then self.slimCard:Hide() end
 	-- Combat rows that reach down to the folded seal (a raid grid over
 	-- three rows) take its place: it fades out for the fight.
@@ -1963,11 +2696,12 @@ function Console:SetOpen(open, instant)
 	local crowded = foot and foot < SEAL_CLEARANCE or false
 	if open then crowded = self.sealCrowded else self.sealCrowded = crowded end
 
-	local chatShade = self:ChatShade()
+	local chatShade, shadeMost = self:ChatShade()
+	shadeMost = shadeMost or CHAT_SHADE
 
 	local function step(progress)
 		frame:SetHeight(from + (target - from) * progress)
-		if chatShade then chatShade:SetAlpha((open and 1 - progress or progress) * CHAT_SHADE) end
+		if chatShade then chatShade:SetAlpha((open and 1 - progress or progress) * shadeMost) end
 		self.leftPage:SetAlpha(open and progress or 1 - progress)
 		self.rightPage:SetAlpha(open and progress or 1 - progress)
 		for _, page in ipairs(self.extraPages or {}) do
@@ -1996,8 +2730,10 @@ function Console:SetOpen(open, instant)
 			part:SetShown(open or progress < 1)
 		end
 		UI.fadeTo(self.bridge, open and 1 - progress or progress)
+		-- The ride card is the whole chat, so its tabs stay on it.
+		local tabsStay = riding and chatShade and chatShade.stoaCard
 		for _, part in ipairs(self.tabArt or {}) do
-			UI.fadeTo(part, open and progress or 1 - progress)
+			UI.fadeTo(part, tabsStay and 1 or (open and progress or 1 - progress))
 		end
 		for _, part in ipairs(self.flatParts) do
 			UI.fadeTo(part, open and 1 - progress or progress)
@@ -2006,7 +2742,7 @@ function Console:SetOpen(open, instant)
 		self.seal:SetScale(scale + (sealScale - scale) * progress)
 		-- On the slim line the seal goes altogether in a fight; shrunk, it
 		-- only peeked over the folded line.
-		if self.db.slim or crowded then self.seal:SetAlpha(open and progress or 1 - progress) end
+		if self.db.slim or crowded or self.youCard then self.seal:SetAlpha(open and progress or 1 - progress) end
 		-- The shrunk seal is too small to read a shield on; the Halo has it.
 		if self.sealShield then self.sealShield:SetAlpha(open and progress or 1 - progress) end
 		if self.sealMark then self.sealMark:SetAlpha(open and progress or 1 - progress) end
@@ -2074,6 +2810,89 @@ local function rect(frame, scale)
 	return left * k, bottom * k, (left + width) * k, (bottom + height) * k
 end
 
+-- Slate's form chips (Shadowform, a druid's forms). Where the player's
+-- bars leave a gap under the portrait (room kept for a stance bar or the
+-- large medallion), the chips sit in it. Otherwise they stand just left of
+-- the card, level with it and running outwards; the target rests on its
+-- right (Halo.lua). Pinned to the seal's button, which stays put.
+local GAP_BUTTONS = { "ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
+	"MultiBar5Button", "MultiBar6Button", "MultiBar7Button" }
+local GAP_REACH, GAP_DEEP, GAP_PAD = 320, 150, 6
+function Console:PlaceFormChips()
+	local forms, seal = Stoa.Forms, _G.StoaSealButton
+	if not (seal and forms and forms.SetChipSpot) or InCombatLockdown() then return end
+	local size = forms.CHIP_SIZE or 30
+	local pitch = size + 6
+	if not self.youCard then
+		-- Slate's slim line: the small seal has no room beside it, so the
+		-- chips sit on the line just past the mana bar's caption.
+		if not (self.db.slim and self:Slate()) then return end
+		local cap = self.resourceParts and self.resourceParts[6]
+		local scale = seal:GetEffectiveScale()
+		local sl, sb, sr, st = rect(seal, scale)
+		local cl, cb, cr, ct = rect(cap, scale)
+		if not (sl and cl) then return end
+		local x, y = cr - (sl + sr) / 2 + 16 + size / 2, (cb + ct) / 2 - (sb + st) / 2
+		local was = self.formSpot
+		if was and math.abs(was[1] - x) < 0.5 and math.abs(was[2] - y) < 0.5 then return end
+		self.formSpot = { x, y, pitch }
+		forms:SetChipSpot(seal, "CENTER", x, y, pitch)
+		return
+	end
+	local count = 0
+	for _, chip in ipairs(forms.chips or {}) do
+		if chip.spellID then count = count + 1 end
+	end
+	count = math.max(count, 1)
+	local x, y, step = -(YOU_W / 2 + 8 + size / 2), 0, -pitch
+
+	local scale = seal:GetEffectiveScale()
+	local sl, sb, sr, st = rect(seal, scale)
+	if sl then
+		local cx, cy = (sl + sr) / 2, (sb + st) / 2
+		-- The first row of buttons under the card, either side of centre.
+		local row = {}
+		local rowTop
+		for _, prefix in ipairs(GAP_BUTTONS) do
+			for i = 1, 12 do
+				local button = _G[prefix .. i]
+				if button and button.IsVisible and button:IsVisible() then
+					local l, b, r, t = rect(button, scale)
+					if l and t < cy - YOU_H / 2 + 4 and t > cy - GAP_DEEP and r > cx - GAP_REACH and l < cx + GAP_REACH then
+						row[#row + 1] = { l, b, r, t }
+						if not rowTop or t > rowTop then rowTop = t end
+					end
+				end
+			end
+		end
+		local left, right, bottom
+		for _, box in ipairs(row) do
+			if rowTop - box[4] < 6 then
+				bottom = box[2]
+				if box[3] <= cx then
+					left = math.max(left or box[3], box[3])
+				elseif box[1] >= cx then
+					right = math.min(right or box[1], box[1])
+				else
+					-- A button under the portrait: no gap.
+					left, right = nil, nil
+					break
+				end
+			end
+		end
+		local run = count * pitch - 6
+		if left and right and right - left >= run + GAP_PAD * 2 then
+			x = (left + right) / 2 - cx - (run - size) / 2
+			y = (rowTop + bottom) / 2 - cy
+			step = pitch
+		end
+	end
+	local was = self.formSpot
+	if was and math.abs(was[1] - x) < 0.5 and math.abs(was[2] - y) < 0.5 and was[3] == step then return end
+	self.formSpot = { x, y, step }
+	forms:SetChipSpot(seal, "CENTER", x, y, step)
+end
+
 -- How far either side of the console's centre the pages must stay out of.
 function Console:CentreClear()
 	local frame = self.frame
@@ -2090,8 +2909,12 @@ function Console:CentreClear()
 		left = math.max(left, centre - l)
 		right = math.max(right, r - centre)
 	end
-	take(self.health)
-	take(self.mana)
+	if self.youCard then
+		take(self.youCard)
+	else
+		take(self.health)
+		take(self.mana)
+	end
 	for _, name in ipairs(CENTRE_BARS) do
 		local bar = _G[name]
 		if bar and bar.IsShown and bar:IsShown() then take(bar, true) end
@@ -2207,12 +3030,13 @@ function Console:PlaceDividers(width, leftClear, rightClear)
 	if self.wells then
 		self:PlaceWells({
 			chatRight and { inset, chatRight },
-			glanceShown and { inset + 484, inset + 484 + (Stoa:PlainNumber(glance:GetWidth()) or 0) },
+			-- The same 16 round its content as the page cards (SLATE_PAGE_PAD).
+			glanceShown and { inset + 484, inset + 484 + (Stoa:PlainNumber(glance:GetWidth()) or 0), pad = 16, gap = 56 },
 			{ barsLeft, barsRight },
 			not self.db.freeRight and pageWidth > 1 and { width - inset - pageWidth, width - inset },
 		}, top)
 	end
-	local on = self.db.dividers ~= false
+	local on = self.db.dividers ~= false and not self:Slate()
 	for i, div in ipairs(dividers) do
 		local spot = spots[i]
 		if on and spot and spot[2] - spot[1] >= DIVIDER_ROOM then
@@ -2334,10 +3158,34 @@ function Console:EmptyHandle(n)
 		local heading = caption(self.rightPage, "Add a page")
 		handle = slotHandle(self.rightPage, heading)
 		handle.heading, handle.empty, handle.slot = heading, true, n
+		handle:Rest()
 		heading:SetAlpha(0)
 		self.emptyHandles[n] = handle
 	end
 	return handle
+end
+
+-- A dock slot's caption names what it waits for ("METER 2") and shows
+-- while that window is missing; with the window there it is seen only
+-- under the mouse, like an empty slot's.
+local function dockWindow(kind)
+	local n = kind:match("%d+$")
+	local frame = _G[(kind:find("^meter") and "DamageMeterSessionWindow" or "DetailsBaseFrame") .. (n or "")]
+	return type(frame) == "table" and frame.IsVisible and frame:IsVisible()
+end
+function Console:SettleDockHandles()
+	for _, handle in pairs(self.emptyHandles or {}) do
+		local kind = handle.dock
+		local label = "Add a page"
+		if kind then
+			for _, entry in ipairs(self.SLOT_KINDS) do
+				if entry[1] == kind then label = entry[2] end
+			end
+		end
+		handle.heading:SetText(label:upper())
+		handle.empty = not kind or dockWindow(kind) or false
+		if not handle:IsMouseOver() then handle.heading:SetAlpha(handle.empty and 0 or 1) end
+	end
 end
 
 -- What the slots hold, in order. Something chosen twice counts once.
@@ -2382,6 +3230,12 @@ end
 -- Which right-page columns fit, right to left. Company goes first; then
 -- Journey at the level cap, Ready while you level.
 local PAGE_GAPS = { COLUMN_GAP, 24 }
+-- Slate: each page is a card; the air between them matches the chat and
+-- At a glance cards on the left.
+local SLATE_PAGE_GAPS = { COLUMN_GAP + 16, COLUMN_GAP + 4, 30 }
+-- The page cards pad their words a little more than the rest, for
+-- breathing room, where the gap between columns allows it.
+local SLATE_PAGE_PAD = 16
 
 function Console:FitPages()
 	local frame, page, cols = self.frame, self.rightPage, self.pageColumns
@@ -2394,7 +3248,7 @@ function Console:FitPages()
 	-- On the slim console's card the columns have the room they need.
 	if self.slimCard then room = COLUMN_WIDTH * 3 + COLUMN_GAP * 2 end
 
-	local capped = (GetMaxPlayerLevel and UnitLevel("player") >= GetMaxPlayerLevel())
+	local capped = (GetMaxPlayerLevel and (Stoa:PlainNumber(UnitLevel("player")) or 0) >= GetMaxPlayerLevel())
 	local orders = {
 		{ "ready", "journey", "company" },
 		{ "ready", "journey" },
@@ -2423,7 +3277,7 @@ function Console:FitPages()
 		return total
 	end
 	for _, order in ipairs(orders) do
-		for _, g in ipairs(PAGE_GAPS) do
+		for _, g in ipairs(self:Slate() and not self.slimCard and SLATE_PAGE_GAPS or PAGE_GAPS) do
 			if span(order, g) <= room then
 				chosen, gap = order, g
 				break
@@ -2434,11 +3288,27 @@ function Console:FitPages()
 	local total = span(chosen, gap)
 	local shown, docks, x = {}, {}, 0
 	local usedEmpty = {}
+	-- Slate: where each column lies from the console's left, for its card.
+	local spans = {}
+	self.columnSpans = spans
 	local _, pageTop = self:PageInset()
 	for i, key in ipairs(chosen) do
 		local w = slotWidth(key)
+		if key ~= "empty" then
+			local left = width - inset - total + x
+			spans[#spans + 1] = { left, left + w, gap = gap, pad = SLATE_PAGE_PAD }
+		end
 		if cols[key] then
 			shown[key] = true
+			-- Slate: a page that comes back into view, or moves to another
+			-- slot, fades in there rather than snapping. Not the first time
+			-- it is placed, at login.
+			local col = cols[key]
+			if self:Slate() and col.stoaX and (col.stoaX ~= x or not col:IsShown()) then
+				col.stoaIn = col.stoaIn or UI.fadeIn(col)
+				col.stoaIn:Play()
+			end
+			col.stoaX = x
 			cols[key]:ClearAllPoints()
 			cols[key]:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
 		elseif key == "empty" then
@@ -2449,15 +3319,30 @@ function Console:FitPages()
 			handle.heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
 		else
 			docks[key] = { right = inset + total - x - w, top = self:OpenHeight() + pageTop, width = w, height = page:GetHeight() }
+			-- A slot kept for a window that isn't there (no second meter
+			-- window made, Details not loaded) would be a blank with
+			-- nothing to click: it keeps a caption to change it by.
+			usedEmpty[i] = key
+			local handle = self:EmptyHandle(i)
+			handle.heading:ClearAllPoints()
+			handle.heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, 0)
 		end
 		x = x + w + gap
 	end
 	for key, col in pairs(cols) do col:SetShown(shown[key] == true) end
-	for n, handle in pairs(self.emptyHandles or {}) do
-		handle:SetShown(usedEmpty[n] == true)
-		handle.heading:SetShown(usedEmpty[n] == true)
-	end
 	self:PlaceDocks(docks)
+	for n, handle in pairs(self.emptyHandles or {}) do
+		local used = usedEmpty[n]
+		handle:SetShown(used ~= nil)
+		handle.heading:SetShown(used ~= nil)
+		handle.dock = used ~= true and used or nil
+	end
+	self:SettleDockHandles()
+	-- The game and Details set their windows up a little after login.
+	if next(docks) and not self.dockRecheck and C_Timer and C_Timer.After then
+		self.dockRecheck = true
+		C_Timer.After(6, function() xpcall(self.SettleDockHandles, Stoa.catch, self) end)
+	end
 	page:SetWidth(math.max(1, total))
 	if self.slimCard then self.slimCard:SetSize(page:GetWidth() + CARD_PAD * 2, page:GetHeight() + CARD_PAD * 2) end
 	if Stoa.modules.Tally and Stoa.modules.Tally.Fit then Stoa.modules.Tally:Fit() end
@@ -2466,6 +3351,7 @@ function Console:FitPages()
 		local leftClear = self:CentreClear()
 		self:PlaceDividers(width, leftClear, rightClear)
 	end
+	if self.youCard or self.db.slim then self:PlaceFormChips() end
 end
 
 -- Runs a moment after anything that moves the centre or the screen.
@@ -2548,7 +3434,9 @@ end
 
 function Console:UpdateDaylight()
 	local light = nil
-	if self.db.daylight ~= false and GetGameTime then
+	-- The sky lights Leather's gold; Matte black and Slate have none.
+	local leather = Stoa.db and (Stoa.db.material or "leather") == "leather"
+	if leather and self.db.daylight ~= false and GetGameTime then
 		local hour, minute = GetGameTime()
 		if self.previewHour then hour, minute = self.previewHour, 0 end
 		if type(hour) == "number" then light = Console.lightAt(hour + (minute or 0) / 60) end
@@ -2593,10 +3481,38 @@ function Console:OnEnable()
 		end
 		update()
 	end
+	-- On a cold start the card's words can be drawn before the face has
+	-- loaded and come out blank, though set and measuring fine. They are
+	-- drawn again a moment after each loading screen.
+	-- Every word on the console's own frames, the game's frames left alone.
+	local function redrawWords(frame, depth)
+		if not frame or (frame.IsForbidden and frame:IsForbidden()) or (frame.IsProtected and frame:IsProtected()) then return end
+		for _, region in ipairs({ frame:GetRegions() }) do
+			if region.GetObjectType and region:GetObjectType() == "FontString" then UI.redraw(region) end
+		end
+		if depth <= 0 then return end
+		for _, child in ipairs({ frame:GetChildren() }) do redrawWords(child, depth - 1) end
+	end
+	local function redrawYou()
+		redrawWords(self.frame, 8)
+		if _G.StoaConsoleCard then redrawWords(_G.StoaConsoleCard, 8) end
+		for _, fs in ipairs({ self.youName, self.youSub, self.healthText, self.manaText, self.levelPlate and self.levelPlate.text }) do
+			UI.redraw(fs)
+		end
+		-- A hidden value cannot be read back, so the numbers are asked
+		-- for again instead.
+		self.healthText:SetText("")
+		self.manaText:SetText("")
+		self:UpdateResources()
+	end
 	Stoa:On("PLAYER_ENTERING_WORLD", function()
 		self:UpdateSeal()
 		self:UpdateResources()
 		self:UpdateFellowship()
+		if self.youCard then
+			C_Timer.After(1, function() Stoa.safe.guarded(redrawYou) end)
+			C_Timer.After(4, function() Stoa.safe.guarded(redrawYou) end)
+		end
 		if IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
 	end)
 
@@ -2621,6 +3537,10 @@ function Console:OnEnable()
 	Stoa:OnUnit("UNIT_MAXPOWER", { "player" }, function(unit)
 		if unit == "player" then self:UpdateResources() end
 	end)
+	-- A druid changing form swaps the power itself.
+	Stoa:OnUnit("UNIT_DISPLAYPOWER", { "player" }, function(unit)
+		if unit == "player" then self:UpdateResources() end
+	end)
 	Stoa:On("GROUP_ROSTER_UPDATE", function() self:UpdateFellowship() end)
 
 	for _, event in ipairs({ "PLAYER_XP_UPDATE", "UPDATE_EXHAUSTION", "PLAYER_LEVEL_UP" }) do
@@ -2641,7 +3561,14 @@ function Console:OnEnable()
 	end)
 	Stoa:On("PLAYER_REGEN_ENABLED", function() self:CheckLowHealth() end)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() self:Settle("low") end)
-	Stoa:On("STOA_THEME_CHANGED", function() self:UpdateRing() self:PaintDaylit() end)
+	Stoa:On("STOA_THEME_CHANGED", function()
+		self:UpdateRing()
+		self:PaintDaylit()
+		if self.powerOwn then
+			self.mana:SetStatusBarColor(Stoa:Color(self.powerToken or "mana"))
+			self.manaText:SetTextColor(Stoa:Color(self.powerToken or "mana"))
+		end
+	end)
 	self:UpdateDaylight()
 	self:PaintDaylit()
 	Stoa:NewTicker(60, function() self:UpdateDaylight() end)

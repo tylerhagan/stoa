@@ -27,10 +27,20 @@ local plain = function(v) return Stoa.safe.plain(v) end
 
 local PLAQUE_WIDTH, PLAQUE_HEIGHT = 294, 112
 local PAD = 12
+-- Slate's companion ring: its size, and where on the pet's arc it sits
+-- (degrees below the Halo's left).
+local RING, RING_AT = 38, 68
+-- Ground line: the gap between the health number and the ring.
+local LINE_CLEAR = 8
 local COIN_SPACE = UI.PLAQUE_COIN_SPACE
 local ROW_SIZE, ROW_GAP, ROW_BREAK = 26, 5, 8
 local COIN = 46
 local LOW = 0.35
+-- When the game shows the pet row and the pet coin.
+local ROW_RULE = "[combat,@pet,exists,nopossessbar] show; hide"
+-- Slate: the row also stands over the pet's card at rest.
+local ROW_RULE_REST = "[@pet,exists,nopossessbar] show; hide"
+local COIN_RULE = "[combat] hide; [@pet,exists] show; hide"
 
 -- Spells that say you play with a pet: Call Pet and Revive Pet, the
 -- Warlock's summons.
@@ -73,7 +83,14 @@ function Pet:Keeper()
 	end
 end
 
+-- The demo (/stoa pet demo) draws every piece with your own character
+-- standing in for a pet, so the look can be judged without one.
+local function unit()
+	return Pet.demo and "player" or "pet"
+end
+
 local function hasPet()
+	if Pet.demo then return true end
 	return plain(UnitExists("pet")) and true or false
 end
 
@@ -85,6 +102,7 @@ local function healthFraction(unit)
 end
 
 function Pet:Mood()
+	if self.demo then return 3 end
 	if not (C_PetInfo and C_PetInfo.GetPetHappiness) or not hasPet() then return nil end
 	local ok, happiness = pcall(C_PetInfo.GetPetHappiness)
 	happiness = ok and plain(happiness)
@@ -93,6 +111,7 @@ end
 
 -- The pet bar's current stance and command, from Blizzard's tokens.
 function Pet:Stance()
+	if self.demo then return "DEFENSIVE", "FOLLOWING" end
 	if not GetPetActionInfo then return nil end
 	local stance, command
 	for i = 1, (NUM_PET_ACTION_SLOTS or 10) do
@@ -161,7 +180,8 @@ function Pet:BuildPlaque()
 	frame:SetSize(PLAQUE_WIDTH, PLAQUE_HEIGHT)
 	frame:SetAlpha(0)
 	frame:EnableMouse(false)
-	frame.plaque = UI.plaque(frame, "RIGHT")
+	-- Slate draws no plate: the pet is a ring on the Halo (see below).
+	if not UI.slate() then frame.plaque = UI.plaque(frame, "RIGHT") end
 
 	-- The words sit in a column centred top to bottom, with room between
 	-- each group (caption, name, bars, the line underneath).
@@ -184,7 +204,7 @@ function Pet:BuildPlaque()
 	local hp = UI.bar(column, width, 7, "health")
 	hp:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -8)
 	-- The slab's line is shorter (see below): 244 less its pads and percent.
-	UI.engrave(hp, UI.slabCards() and 176 or width)
+	if not UI.slate() then UI.engrave(hp, UI.slabCards() and 176 or width) end
 	local power = UI.bar(column, width, 3, "accent")
 	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -8)
 	local foot = UI.caption(column, "")
@@ -197,7 +217,7 @@ function Pet:BuildPlaque()
 	-- Matte: the target slab's twin. The name and mood on one line over
 	-- a slim health line with its percent at the right end; the caption
 	-- stands on top of the block and the stance line hangs under it.
-	frame.slab = UI.slabCards()
+	frame.slab = UI.slabCards() and not UI.slate()
 	if frame.slab then
 		local pad, numW = 11, 46
 		local barW = 244 - pad * 2 - numW
@@ -225,6 +245,42 @@ function Pet:BuildPlaque()
 		foot:ClearAllPoints()
 		foot:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", pad, -6)
 	end
+	-- Slate: a companion ring at the foot of the pet's arc on the Halo, as
+	-- if the arc grew out of it. The portrait in a ring that carries the
+	-- pet's colour (red when it is low), its name and one line beside it
+	-- inside the Halo, the percent under the ring. No plate at all.
+	if UI.slate() then
+		frame.ring = true
+		frame:SetSize(RING, RING)
+		caption:Hide()
+		word:Hide()
+		hp:Hide()
+		power:Hide()
+		local gap = UI.circle(frame, "BACKGROUND", 0, RING, "panel", 1)
+		gap:SetPoint("CENTER")
+		local band = UI.circle(frame, "BORDER", 0, RING - 2, "accent", 1)
+		band:SetPoint("CENTER")
+		local face = CreateFrame("Frame", nil, frame)
+		face:SetAllPoints()
+		face:SetFrameLevel(frame:GetFrameLevel() + 2)
+		local inset = UI.circle(face, "BACKGROUND", 0, RING - 6, "panel", 1)
+		inset:SetPoint("CENTER")
+		local portrait = UI.circle(face, "ARTWORK", 0, RING - 8)
+		portrait:SetPoint("CENTER")
+		frame.band, frame.portrait = band, portrait
+		Stoa:SetFont(name, "serif", Stoa.typeSize.label, "OUTLINE")
+		name:ClearAllPoints()
+		name:SetPoint("LEFT", frame, "RIGHT", 6, 9)
+		name:SetWidth(0)
+		foot:ClearAllPoints()
+		foot:SetPoint("BOTTOMLEFT", name, "TOPLEFT", 0, 4)
+		on:ClearAllPoints()
+		on:SetPoint("BOTTOMLEFT", name, "TOPLEFT", 0, 4)
+		on:SetWidth(0)
+		Stoa:SetFont(percent, "sans", Stoa.typeSize.caption, "OUTLINE")
+		percent:ClearAllPoints()
+		percent:SetPoint("TOP", frame, "BOTTOM", 0, -3)
+	end
 	frame.caption, frame.word, frame.name, frame.percent = caption, word, name, percent
 	frame.hp, frame.power, frame.foot, frame.on = hp, power, foot, on
 	for _, fs in ipairs({ caption, word, name, percent, foot, on }) do UI.legible(fs) end
@@ -251,12 +307,51 @@ function Pet:BuildPlaque()
 	Stoa:RegisterClickFrame(clicker)
 end
 
+-- Ground line: the room the pet's ring takes in the row left of the health
+-- number, for the pieces that stand further out. Nothing without a pet class.
+function Pet:LineRoom()
+	if not (UI.slate() and (self.demo or self:Keeper())) then return 0 end
+	return LINE_CLEAR + RING + 8
+end
+
 -- Where the tank watch goes, at the Halo's upper left; a healer keeps that
 -- spot for the watch, so the pet sits just under it.
 function Pet:PlacePlaque()
 	local frame, halo = self.plaqueFrame, _G.StoaHalo
 	if not frame or Stoa:HasSavedPosition("pet") then return end
 	frame:ClearAllPoints()
+	local module = Stoa.modules.Halo
+	if frame.ring and halo and module and module.Rail and module:Rail() then
+		-- Side rail: the ring hangs under the rails, its name beside it.
+		local rail = module.RAIL
+		frame:SetPoint("TOP", halo, "CENTER", -(rail.x + rail.width + rail.gap / 2), rail.bottom - 8)
+		frame.percent:ClearAllPoints()
+		frame.percent:SetPoint("LEFT", frame.name, "RIGHT", 6, 0)
+		return
+	end
+	if frame.ring and halo and module and module.Line and module:Line() then
+		-- Ground line: the ring stands off to the left in the line's own
+		-- row, just past the health number; the emergency button and your
+		-- buffs step further out to make room (LineRoom). Its words stack
+		-- over it and the percent under it, so nothing reaches sideways.
+		local line = module.LINE
+		frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76) + LINE_CLEAR), line.y)
+		frame.name:ClearAllPoints()
+		frame.name:SetPoint("BOTTOM", frame, "TOP", 0, 3)
+		frame.name:SetJustifyH("CENTER")
+		for _, fs in ipairs({ frame.foot, frame.on }) do
+			fs:ClearAllPoints()
+			fs:SetPoint("BOTTOM", frame.name, "TOP", 0, 2)
+			fs:SetJustifyH("CENTER")
+		end
+		return
+	end
+	if frame.ring and halo then
+		-- At the foot of the pet's arc (see BuildArc for its size).
+		local radius, at = halo:GetHeight() * 0.44, math.rad(RING_AT)
+		frame:SetPoint("CENTER", halo, "CENTER", -radius * math.cos(at), -radius * math.sin(at))
+		return
+	end
 	if not halo then
 		frame:SetPoint("CENTER", UIParent, "CENTER", -300, 120)
 	elseif Stoa:GetRole() == "HEALER" then
@@ -270,29 +365,32 @@ end
 function Pet:UpdatePlaque()
 	local frame = self.plaqueFrame
 	if not frame then return end
-	local show = self.db.plaque and hasPet() and (Stoa:GetState() == Stoa.STATE_COMBAT or Stoa.previewing)
+	-- The demo shows it at rest too, unless Slate's card is there to look at.
+	-- Slate's card by the Halo only shows in a fight: at rest the console's
+	-- own card stands in for it, even in the demo.
+	local show = self.db.plaque and hasPet() and (Stoa:GetState() == Stoa.STATE_COMBAT or Stoa.previewing or (self.demo and not self.card))
 	frame:SetAlpha(show and 1 or 0)
 	if not hasPet() then return end
 
-	local level = plain(UnitLevel("pet"))
-	local family = plain(UnitCreatureFamily and UnitCreatureFamily("pet"))
-	local kind = plain(UnitCreatureType("pet"))
+	local level = plain(UnitLevel(unit()))
+	local family = plain(UnitCreatureFamily and UnitCreatureFamily(unit()))
+	local kind = plain(UnitCreatureType(unit()))
 	local words = { self:Keeper() == "WARLOCK" and "DEMON" or "PET" }
 	if level then words[#words + 1] = "LEVEL " .. level end
 	if family and family ~= "" then words[#words + 1] = family:upper()
 	elseif kind then words[#words + 1] = kind:upper() end
 	frame.caption:SetText(Stoa.UI.join(words))
 
-	frame.name:SetText(UnitName("pet"))
-	UI.setUnitBar(frame.hp, "pet", "health")
-	UI.setHealthPercent(frame.percent, "pet")
-	UI.setUnitBar(frame.power, "pet", "power")
-	local powerType = plain(UnitPowerType("pet"))
+	frame.name:SetText(self.demo and "Ashmane" or UnitName(unit()))
+	UI.setUnitBar(frame.hp, unit(), "health")
+	UI.setHealthPercent(frame.percent, unit(), nil, frame.ring)
+	UI.setUnitBar(frame.power, unit(), "power")
+	local powerType = plain(UnitPowerType(unit()))
 	tint(frame.power, powerType == 0 and "mana" or "accent", powerType == 0 and 1 or 0.75)
 
 	-- One word at the top right: dead, low, else the mood.
-	local dead = plain(UnitIsDead("pet"))
-	local fraction = healthFraction("pet")
+	local dead = plain(UnitIsDead(unit()))
+	local fraction = healthFraction(unit())
 	local mood = self:Mood()
 	local word, token = "", "muted"
 	if dead then
@@ -319,7 +417,116 @@ function Pet:UpdatePlaque()
 		if command and mood ~= 1 then foot[#foot + 1] = command end
 		frame.on:SetText("")
 	end
+	if frame.ring then
+		SetPortraitTexture(frame.portrait, unit())
+		local r, g, b = Stoa:Color((dead or word == "LOW") and "danger" or "accent")
+		frame.band:SetVertexColor(r, g, b, 1)
+		frame.percent:SetTextColor(r, g, b)
+		-- One line over the name, the most pressing first.
+		local onName = plain(target) and plain(UnitName("pettarget"))
+		local line = dead and "DEAD" or word == "LOW" and "LOW" or mood == 1 and "FEED IT" or ""
+		frame.on:SetText(line == "" and onName and ("On " .. onName) or "")
+		frame.foot:SetText(line ~= "" and line or onName and "" or stance or "")
+		frame.foot:SetTextColor(Stoa:Color(line ~= "" and "danger" or "muted"))
+		return
+	end
 	frame.foot:SetText(Stoa.UI.join(foot))
+end
+
+-- The card (Slate) --------------------------------------------------------------
+-- At rest on Slate the pet has a card of its own left of yours, the mirror
+-- of the target's on the right, contents flipped too. It belongs to
+-- the console and fades with it; clicks go to the coin's button, laid over
+-- it on the screen (see BuildCoin).
+local CARD_H, CARD_PAD, CARD_GAP = 50, 11, 10
+local CARD_NAME_W, CARD_NAME_GAP = 124, 12
+local CARD_W_LEAST = 260
+
+function Pet:CardWidth()
+	local halo = Stoa.modules.Halo
+	return math.max(CARD_W_LEAST, halo and halo.TwinWidth and halo:TwinWidth() or CARD_W_LEAST)
+end
+
+function Pet:BuildCard()
+	local console = Stoa.modules.Grimoire
+	if not (console and console.enabled and console.youCard and console.SlatePlate and console.YOU_CARD) then return end
+	local you = console.YOU_CARD
+	local card = CreateFrame("Frame", nil, console.frame)
+	card:SetSize(self:CardWidth(), CARD_H)
+	card:SetPoint("RIGHT", console.frame, "TOP", -(you.width / 2 + CARD_GAP), you.y)
+	card:SetFrameLevel(console.youCard:GetFrameLevel())
+	console.SlatePlate(card)
+	console:AddPage(card)
+
+	-- The target card's layout flipped: the name and stance on the right,
+	-- next to you, the bar on the left with its percent at the outer end.
+	local name = UI.text(card, "serif", Stoa.typeSize.label, "text", "RIGHT")
+	name:SetPoint("TOPRIGHT", -CARD_PAD, -10)
+	name:SetWidth(CARD_NAME_W)
+	name:SetWordWrap(false)
+	local doing = UI.caption(card, "")
+	doing:SetPoint("TOPRIGHT", -CARD_PAD, -30)
+	doing:SetWidth(CARD_NAME_W)
+	doing:SetJustifyH("RIGHT")
+	doing:SetWordWrap(false)
+	local right = CARD_PAD + CARD_NAME_W + CARD_NAME_GAP
+	local hp = UI.bar(card, 10, 8, "health")
+	hp:SetPoint("TOPLEFT", CARD_PAD, -13)
+	hp:SetPoint("RIGHT", -right, 0)
+	local power = UI.bar(card, 10, 3, "accent")
+	power:SetPoint("TOPLEFT", hp, "BOTTOMLEFT", 0, -3)
+	power:SetPoint("RIGHT", hp, "RIGHT")
+	local word = UI.caption(card, "")
+	word:SetPoint("RIGHT", card, "TOPRIGHT", -right, -37)
+	local percent = UI.text(card, "sans", Stoa.typeSize.body, "muted", "LEFT")
+	percent:SetPoint("LEFT", card, "TOPLEFT", CARD_PAD, -37)
+	card.name, card.doing, card.hp, card.power, card.word, card.percent = name, doing, hp, power, word, percent
+	card:Hide()
+	self.card = card
+	return card
+end
+
+function Pet:UpdateCard()
+	local card = self.card
+	if not card then return end
+	local show = hasPet()
+	card:SetShown(show)
+	if not show then return end
+	card:SetWidth(self:CardWidth())
+	card.name:SetText(self.demo and "Ashmane" or UnitName(unit()))
+	UI.setUnitBar(card.hp, unit(), "health")
+	UI.setHealthPercent(card.percent, unit(), nil, true)
+	UI.setUnitBar(card.power, unit(), "power")
+	local powerType = plain(UnitPowerType(unit()))
+	tint(card.power, powerType == 0 and "mana" or "accent", powerType == 0 and 1 or 0.75)
+
+	local dead = plain(UnitIsDead(unit()))
+	local fraction = healthFraction(unit())
+	local low = fraction and fraction < LOW
+	local mood = self:Mood()
+	local stance, command = self:Stance()
+	-- One word under the bar, the most pressing first. Following is the
+	-- usual state and goes unsaid; staying or moving is worth a word.
+	local word, token = "", "muted"
+	if dead then
+		word, token = "DEAD", "danger"
+	elseif mood == 1 then
+		word, token = "FEED IT", "danger"
+	elseif low then
+		word, token = "LOW", "danger"
+	elseif mood == 2 then
+		word, token = MOODS[mood], "accent"
+	elseif command and command ~= "FOLLOWING" then
+		word = command
+	elseif mood then
+		word = MOODS[mood]
+	end
+	card.word:SetText(word)
+	card.word:SetTextColor(Stoa:Color(token))
+	card.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
+
+	-- The stance alone fits the name's column whole.
+	card.doing:SetText(stance or "")
 end
 
 -- The arc ---------------------------------------------------------------------
@@ -327,6 +534,45 @@ end
 function Pet:BuildArc()
 	local halo = _G.StoaHalo
 	if not halo then return end
+	-- Ground line: the pet's health is a hairline riding on your own bar.
+	local module = Stoa.modules.Halo
+	if module and module.Rail and module:Rail() then
+		-- Side rail: a third, thinner upright just inside your health.
+		local rail = module.RAIL
+		local sb = CreateFrame("StatusBar", nil, halo)
+		sb:SetSize(3, rail.height)
+		sb:SetOrientation("VERTICAL")
+		sb:SetPoint("BOTTOMLEFT", halo, "CENTER", -(rail.x - 5), rail.bottom)
+		sb:SetStatusBarTexture(UI.WHITE)
+		UI.paint(sb, "accent", 0.7)
+		local track = sb:CreateTexture(nil, "BACKGROUND")
+		track:SetPoint("TOPLEFT", -1, 1)
+		track:SetPoint("BOTTOMRIGHT", 1, -1)
+		track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+		sb:SetMinMaxValues(0, 1)
+		sb:SetValue(0)
+		sb:Hide()
+		self.arcBar = sb
+		return
+	end
+	if module and module.Line and module:Line() then
+		local line = module.LINE
+		local sb = CreateFrame("StatusBar", nil, halo)
+		sb:SetSize(line.width, 3)
+		sb:SetPoint("BOTTOMRIGHT", halo, "BOTTOM", -line.gap, line.y + (line.top or line.height / 2) + 4)
+		sb:SetStatusBarTexture(UI.WHITE)
+		if sb.SetReverseFill then sb:SetReverseFill(true) end
+		UI.paint(sb, "accent", 0.7)
+		local track = sb:CreateTexture(nil, "BACKGROUND")
+		track:SetPoint("TOPLEFT", -1, 1)
+		track:SetPoint("BOTTOMRIGHT", 1, -1)
+		track:SetColorTexture(0.04, 0.05, 0.06, 0.6)
+		sb:SetMinMaxValues(0, 1)
+		sb:SetValue(0)
+		sb:Hide()
+		self.arcBar = sb
+		return
+	end
 	local size = halo:GetHeight() * 0.88
 	local file = UI.MEDIA .. "Textures\\HaloArcLeft"
 	local sb = CreateFrame("StatusBar", nil, halo)
@@ -351,10 +597,20 @@ function Pet:UpdateArc()
 	local show = self.db.arc and hasPet()
 	sb:SetShown(show)
 	if not show then return end
-	UI.setUnitBar(sb, "pet", "health")
-	local fraction = healthFraction("pet")
+	UI.setUnitBar(sb, unit(), "health")
+	local fraction = healthFraction(unit())
 	tint(sb, fraction and fraction < LOW and "danger" or "accent", 0.7)
 end
+
+-- What the demo's row holds: attack, follow, stay, four spells, then
+-- aggressive, defensive, passive.
+local ICONS = "Interface\\Icons\\"
+local DEMO_ICONS = {
+	ICONS .. "Ability_GhoulFrenzy", ICONS .. "Ability_Tracking", ICONS .. "Spell_Nature_TimeStop",
+	ICONS .. "Ability_Physical_Taunt", ICONS .. "Ability_Racial_Cannibalize", ICONS .. "Ability_Druid_Dash",
+	ICONS .. "Ability_Druid_Rake",
+	ICONS .. "Ability_Racial_BloodRage", ICONS .. "Ability_Defend", ICONS .. "Ability_Seal",
+}
 
 -- The pet row -----------------------------------------------------------------
 -- Secure buttons that click Blizzard's own pet buttons, so left casts and
@@ -405,15 +661,31 @@ function Pet:BuildRow()
 	local label = UI.caption(row, "Pet")
 	label:SetPoint("RIGHT", row, "LEFT", -8, 0)
 	UI.legible(label)
-	RegisterStateDriver(row, "visibility", "[combat,@pet,exists,nopossessbar] show; hide")
+	row.label = label
+	RegisterStateDriver(row, "visibility", self:RowRule())
 	Stoa:RegisterMover("petrow", row, "Pet row", { default = function() self:PlaceRow() end })
 	self:PlaceRow()
 end
 
+function Pet:RowRule()
+	return self.card and ROW_RULE_REST or ROW_RULE
+end
+
 -- Under the combat bar's last row; the party row moves down to make room.
+-- Slate, at rest: standing on the pet's card, its right end over the
+-- card's. Pinned to the screen, never to the console, which folds.
 function Pet:PlaceRow()
 	local row, halo = self.row, _G.StoaHalo
 	if not row or not halo or InCombatLockdown() or Stoa:HasSavedPosition("petrow") then return end
+	local console = Stoa.modules.Grimoire
+	local resting = self.card and Stoa:GetState() == Stoa.STATE_WORLD
+	if row.label then row.label:SetShown(not resting) end
+	if resting then
+		local you = console.YOU_CARD
+		row:ClearAllPoints()
+		row:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOM", -(you.width / 2 + CARD_GAP), console:OpenHeight() + you.y + you.height / 2 + 6)
+		return
+	end
 	local bar = Stoa.modules.CombatBar
 	local offset = bar and bar.enabled and bar.groupOffset and (bar.groupOffset - (bar.shift or 0))
 	if not offset then
@@ -432,6 +704,9 @@ function Pet:UpdateRow()
 	for i, button in ipairs(self.rowButtons) do
 		local _, texture, isToken, isActive, allowed, enabled = GetPetActionInfo(i)
 		if isToken and texture then texture = _G[texture] end
+		if self.demo and not texture then
+			texture, isActive, allowed, enabled = DEMO_ICONS[i], i == 2 or i == 9, i == 4, i == 4
+		end
 		button.icon:SetTexture(texture)
 		button:SetAlpha(texture and 1 or 0.25)
 		local active = plain(isActive)
@@ -462,6 +737,20 @@ function Pet:FoodSlot()
 		if ok and can then found = { bag, slot, info.itemID } end
 	end)
 	return found
+end
+
+-- With Slate's card the coin draws nothing: its button is laid over the
+-- card as the thing that takes the clicks.
+function Pet:PlaceCoin()
+	local coin, card = self.coin, self.card
+	if not (coin and card) or InCombatLockdown() then return end
+	local console = Stoa.modules.Grimoire
+	local you = console.YOU_CARD
+	coin:ClearAllPoints()
+	coin:SetSize(self:CardWidth(), CARD_H)
+	-- On the screen where the open console holds the card, never on the
+	-- console itself, which folds in a fight.
+	coin:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOM", -(you.width / 2 + CARD_GAP), console:OpenHeight() + you.y - you.height / 2)
 end
 
 function Pet:BuildCoin()
@@ -526,31 +815,40 @@ function Pet:BuildCoin()
 		GameTooltip:Show()
 	end)
 	coin:SetScript("OnLeave", GameTooltip_Hide)
-	RegisterStateDriver(coin, "visibility", "[combat] hide; [@pet,exists] show; hide")
+	RegisterStateDriver(coin, "visibility", COIN_RULE)
 	coin.portrait, coin.ring, coin.mood, coin.nameText, coin.track = portrait, ring, mood, name, track
 	self.coin = coin
+	if self.card then
+		coin.plain = true
+		for _, part in ipairs({ gap, track, face, ring, mood, name }) do part:Hide() end
+		self:PlaceCoin()
+	end
 end
 
 function Pet:UpdateCoin()
 	local coin = self.coin
 	if not coin then return end
 	if not hasPet() then return end
-	SetPortraitTexture(coin.portrait, "pet")
-	local fraction = healthFraction("pet")
-	local r, g, b = Stoa:Color(fraction and fraction < LOW and "danger" or "health")
-	if fraction then
-		coin.ring:SetSwipeColor(r, g, b, 1)
-		pcall(function()
-			coin.ring:SetCooldown(GetTime() - 100 * (1 - fraction), 100)
-			coin.ring:Pause()
-		end)
-	end
 	local mood = self:Mood()
-	coin.mood:SetText(mood and MOODS[mood] or "")
-	coin.mood:SetTextColor(Stoa:Color(mood and MOOD_TOKEN[mood] or "muted"))
-	coin.nameText:SetText((plain(UnitName("pet")) or ""):upper())
-	coin.mood:SetShown(self.db.coin)
-	coin.nameText:SetShown(self.db.coin)
+	if coin.plain then
+		self:PlaceCoin()
+	else
+		SetPortraitTexture(coin.portrait, unit())
+		local fraction = healthFraction(unit())
+		local r, g, b = Stoa:Color(fraction and fraction < LOW and "danger" or "health")
+		if fraction then
+			coin.ring:SetSwipeColor(r, g, b, 1)
+			pcall(function()
+				coin.ring:SetCooldown(GetTime() - 100 * (1 - fraction), 100)
+				coin.ring:Pause()
+			end)
+		end
+		coin.mood:SetText(mood and MOODS[mood] or "")
+		coin.mood:SetTextColor(Stoa:Color(mood and MOOD_TOKEN[mood] or "muted"))
+		coin.nameText:SetText(self.demo and "ASHMANE" or (plain(UnitName(unit())) or ""):upper())
+		coin.mood:SetShown(self.db.coin)
+		coin.nameText:SetShown(self.db.coin)
+	end
 
 	-- Feeding: a macro set out of combat, only while there's food it eats.
 	if InCombatLockdown() then return end
@@ -636,10 +934,49 @@ function Pet:UpdateCells()
 	for _, cell in ipairs(self.cells or {}) do self:UpdateCell(cell) end
 end
 
+-- The demo ----------------------------------------------------------------------
+-- The row and the coin are shown by the game from whether a pet exists;
+-- the demo takes that rule off them while it runs and puts it back after.
+-- Feeding and pet commands do nothing in it: there is no pet to take them.
+function Pet:SetDemo(on)
+	if InCombatLockdown() then
+		Stoa:Print("The pet demo can be switched once you're out of the fight.")
+		return
+	end
+	self.demo = on and true or nil
+	-- The row beside the ground line opens or closes the ring's place.
+	for _, name in ipairs({ "Emergency", "SelfBuffs" }) do
+		local module = Stoa.modules[name]
+		if module and module.Place then module:Place() end
+	end
+	for frame, rule in pairs({ [self.row or false] = self:RowRule(), [self.coin or false] = COIN_RULE }) do
+		if frame then
+			if on then
+				UnregisterStateDriver(frame, "visibility")
+				frame:Show()
+			else
+				RegisterStateDriver(frame, "visibility", rule)
+			end
+		end
+	end
+	xpcall(self.UpdateAll, Stoa.catch, self)
+	Stoa:Print(on and "Pet demo on: your own character stands in for a pet. /stoa pet demo again to end it."
+		or "Pet demo off.")
+end
+
+Stoa.commands.pet = function(rest)
+	if (rest or ""):lower():match("^%s*demo") then
+		Pet:SetDemo(not Pet.demo)
+	else
+		Stoa:Print("/stoa pet demo shows STOA's pet pieces without a pet.")
+	end
+end
+
 -- Lifecycle -------------------------------------------------------------------
 
 function Pet:UpdateAll()
 	self:UpdatePlaque()
+	self:UpdateCard()
 	self:UpdateArc()
 	self:UpdateRow()
 	self:UpdateCoin()
@@ -658,6 +995,8 @@ end
 function Pet:OnEnable()
 	if self.db.plaque then self:BuildPlaque() end
 	if self.db.arc then self:BuildArc() end
+	-- The card first: the row and the coin take their place from it.
+	if self.db.coin then self:BuildCard() end
 	if self.db.row then self:BuildRow() end
 	if self.db.coin then self:BuildCoin() end
 	if self.db.partyPets then self:BuildCells() end
@@ -679,7 +1018,12 @@ function Pet:OnEnable()
 	Stoa:On("PET_UI_UPDATE", refresh)
 	Stoa:On("PET_BAR_UPDATE_COOLDOWN", function() xpcall(self.UpdateRow, Stoa.catch, self) end)
 	Stoa:On("UNIT_HAPPINESS", refresh)
-	Stoa:On("STOA_STATE_CHANGED", refresh)
+	Stoa:On("STOA_STATE_CHANGED", function()
+		refresh()
+		-- The row has a resting spot on Slate; it moves while it still may.
+		if self.card and not InCombatLockdown() then self:PlaceRow() end
+	end)
+	Stoa:On("PLAYER_REGEN_ENABLED", function() if self.card then self:PlaceRow() end end)
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		self:PlacePlaque()
 		self:Relayout()
@@ -691,6 +1035,7 @@ function Pet:OnEnable()
 		if unit == "pet" then
 			if plain(UnitIsDead("pet")) then self.char().dead = true end
 			xpcall(self.UpdatePlaque, Stoa.catch, self)
+			xpcall(self.UpdateCard, Stoa.catch, self)
 			xpcall(self.UpdateArc, Stoa.catch, self)
 			if not InCombatLockdown() then xpcall(self.UpdateCoin, Stoa.catch, self) end
 		end
@@ -698,7 +1043,10 @@ function Pet:OnEnable()
 			if cell.unit == unit then xpcall(self.UpdateCell, Stoa.catch, self, cell) end
 		end
 	end)
-	Stoa:OnUnit("UNIT_POWER_UPDATE", { "pet" }, function() xpcall(self.UpdatePlaque, Stoa.catch, self) end)
+	Stoa:OnUnit("UNIT_POWER_UPDATE", { "pet" }, function()
+		xpcall(self.UpdatePlaque, Stoa.catch, self)
+		xpcall(self.UpdateCard, Stoa.catch, self)
+	end)
 	Stoa:OnUnit("UNIT_TARGET", { "pet" }, function() xpcall(self.UpdatePlaque, Stoa.catch, self) end)
 	refresh()
 end

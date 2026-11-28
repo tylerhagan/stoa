@@ -90,7 +90,14 @@ function QuestItems:Place()
 	local halo = _G.StoaHalo
 	frame:ClearAllPoints()
 	if halo then
-		frame:SetPoint("RIGHT", halo, "LEFT", -150, -40)
+		local line = Stoa.Sign and Stoa.Sign.groundLine and Stoa.Sign.groundLine()
+		if line then
+			-- A straight Halo shape: a row under the emergency button, at
+			-- the line's left end.
+			frame:SetPoint("RIGHT", halo, "BOTTOM", -(line.gap + line.width + (line.numbers and 14 or 76)), line.y - 46)
+		else
+			frame:SetPoint("RIGHT", halo, "LEFT", -150, -40)
+		end
 	else
 		frame:SetPoint("BOTTOM", UIParent, "BOTTOM", -380, 300)
 	end

@@ -255,13 +255,74 @@ end
 
 -- Building -----------------------------------------------------------------------
 
+-- The ground line (Halo shape) has no ring to stand beside: the coins sit
+-- in a row over the power bar instead, from its inner end outwards.
+local function groundLine()
+	local module = Stoa.modules.Halo
+	return module and module.Line and module:Line() and module.LINE or nil
+end
+local LINE_COIN_GAP, LINE_COIN_LIFT = 6, 10
+
+-- For the specs that draw their own coins (Shadow, Discipline, Paladin):
+-- the same row. Each answers true when it placed the piece.
+Sign.groundLine = groundLine
+-- Where the coin row's bottom edge sits: over the power bar, or beside it
+-- when the shape keeps its numbers above.
+local function coinRowY(line)
+	-- Beside the bar: level with it.
+	if line.below then return line.y - Sign.COIN / 2 end
+	return line.y + (line.top or line.height / 2) + LINE_COIN_LIFT
+end
+-- Where the row starts: the bar's inner end, or past its outer end when
+-- the shape keeps its numbers above the bars.
+local function coinRowX(line)
+	return line.below and (line.gap + line.width + 12) or line.gap
+end
+-- The side rail (on your left): the coins run in a row above the rails,
+-- outwards from their inner edge, so they clear the numbers beside them.
+local function sideRail()
+	local module = Stoa.modules.Halo
+	return module and module.Rail and module:Rail() and module.RAIL or nil
+end
+Sign.sideRail = sideRail
+local function railLeft(rail)
+	return rail.x + 2 * rail.width + rail.gap + 8
+end
+Sign.railLeft = railLeft
+function Sign.lineCoin(coin, halo, i)
+	local rail = sideRail()
+	if rail then
+		coin:SetPoint("BOTTOMRIGHT", halo, "CENTER", -(rail.x + (i - 1) * (Sign.COIN + LINE_COIN_GAP)), rail.bottom + rail.height + 8)
+		return true
+	end
+	local line = groundLine()
+	if not line then return false end
+	coin:SetPoint("BOTTOMLEFT", halo, "BOTTOM", coinRowX(line) + (i - 1) * (Sign.COIN + LINE_COIN_GAP), coinRowY(line))
+	return true
+end
+function Sign.lineCaption(caption, halo)
+	local rail = sideRail()
+	if rail then
+		caption:SetJustifyH("RIGHT")
+		caption:SetPoint("BOTTOMRIGHT", halo, "CENTER", -rail.x, rail.bottom + rail.height + 8 + Sign.COIN + 4)
+		return true
+	end
+	local line = groundLine()
+	if not line then return false end
+	caption:SetJustifyH("LEFT")
+	caption:SetPoint("BOTTOMLEFT", halo, "BOTTOM", coinRowX(line), coinRowY(line) + Sign.COIN + 6)
+	return true
+end
+
 function Sign.buildCoins(halo)
 	local coins = {}
 	for i = 1, #Sign.ANGLES do
 		local coin = CreateFrame("Frame", nil, halo)
 		coin:SetSize(Sign.COIN, Sign.COIN)
-		local angle = math.rad(Sign.ANGLES[i])
-		coin:SetPoint("CENTER", halo, "CENTER", Sign.RADIUS * math.cos(angle), Sign.RADIUS * math.sin(angle))
+		if not Sign.lineCoin(coin, halo, i) then
+			local angle = math.rad(Sign.ANGLES[i])
+			coin:SetPoint("CENTER", halo, "CENTER", Sign.RADIUS * math.cos(angle), Sign.RADIUS * math.sin(angle))
+		end
 		local ring = UI.circle(coin, "BORDER", 0, Sign.COIN)
 		ring:SetPoint("CENTER")
 		ring:SetColorTexture(1, 1, 1)
@@ -293,8 +354,10 @@ end
 -- The caption under the coins: counts, procs, stacks.
 function Sign.buildCaption(halo)
 	local caption = UI.caption(halo, "")
-	local angle = math.rad(Sign.ANGLES[#Sign.ANGLES])
-	caption:SetPoint("TOP", halo, "CENTER", Sign.RADIUS * math.cos(angle), Sign.RADIUS * math.sin(angle) - Sign.COIN / 2 - 4)
+	if not Sign.lineCaption(caption, halo) then
+		local angle = math.rad(Sign.ANGLES[#Sign.ANGLES])
+		caption:SetPoint("TOP", halo, "CENTER", Sign.RADIUS * math.cos(angle), Sign.RADIUS * math.sin(angle) - Sign.COIN / 2 - 4)
+	end
 	UI.legible(caption)
 	return caption
 end

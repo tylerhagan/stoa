@@ -32,6 +32,12 @@ local _, ns = ...
 local Stoa = ns.Stoa
 local UI = Stoa.UI
 
+-- The headline's size. Slate sets it in the sans, which runs wider and
+-- taller than the serif at the same size, so it steps down one.
+local function headSize()
+	return UI.slate() and Stoa.typeSize.label or Stoa.typeSize.name
+end
+
 local Tooltip = Stoa:NewModule("Tooltip", {
 	-- "console": above the console's right corner; "cursor": at the mouse.
 	anchor = "console",
@@ -52,6 +58,10 @@ local LINE_GAP = 18
 -- What the two add over the game's own spacing (10 above, 2 between).
 local HEADER_ROOM = (HEADER_TOP - 10) + (LINE_GAP - 2)
 local FADE_ALPHA = 0.22
+-- Slate: the header's colour is a hint, not a wash, and the lines under
+-- it stand a little apart (the game sets them 2 apart).
+local SLATE_FADE_ALPHA = 0.1
+local SLATE_AIR = 3
 -- Cards with more than a name are at least this wide.
 local MIN_WIDTH = 210
 -- What an emptied line still takes, and the extra foot under STOA's lines.
@@ -393,7 +403,7 @@ function Tooltip:DressUnit(tip)
 		unit = known(UnitExists("mouseover")) and "mouseover" or nil
 		if not unit then
 			local name = line(tip, 1)
-			if name then Stoa:SetFont(name, "serif", Stoa.typeSize.name) end
+			if name then Stoa:SetFont(name, "serif", headSize()) end
 			for i = 2, tip:NumLines() do
 				local text = line(tip, i)
 				if text then text:SetTextColor(Stoa:Color("muted")) end
@@ -405,7 +415,7 @@ function Tooltip:DressUnit(tip)
 	local name = line(tip, 1)
 	if name then
 		name:SetTextColor(r, g, b)
-		Stoa:SetFont(name, "serif", Stoa.typeSize.name)
+		Stoa:SetFont(name, "serif", headSize())
 	end
 	self:Rank(tip, known(UnitClassification(unit)))
 
@@ -520,7 +530,7 @@ function Tooltip:DressItem(tip, data)
 	tip.stoaEdge:Clear()
 	self:Fade(tip, r, g, b)
 	local name = line(tip, 1)
-	if name then Stoa:SetFont(name, "serif", Stoa.typeSize.name) end
+	if name then Stoa:SetFont(name, "serif", headSize()) end
 
 	if tip ~= GameTooltip or InCombatLockdown() then return end
 	self:Upgrade(tip, link)
@@ -734,7 +744,7 @@ function Tooltip:Fade(tip, r, g, b)
 	local fade = tip.stoaFade
 	if not fade then return end
 	if not r then fade:Hide() return end
-	UI.setGradient(fade, { "HORIZONTAL", 1, 0 }, r, g, b, FADE_ALPHA)
+	UI.setGradient(fade, { "HORIZONTAL", 1, 0 }, r, g, b, UI.slate() and SLATE_FADE_ALPHA or FADE_ALPHA)
 	fade:Show()
 end
 
@@ -767,7 +777,7 @@ local function clear(tip)
 		end
 		tip.stoaMoved = nil
 	end
-	tip.stoaQuest = nil
+	tip.stoaQuest, tip.stoaQuestID, tip.stoaQuestMine = nil, nil, nil
 	tip.stoaLower, tip.stoaWide, tip.stoaDropped = nil, nil, nil
 	if tip.stoaRule then tip.stoaRule:Hide() end
 	if tip.stoaGear then tip.stoaGear:Hide() end
@@ -855,9 +865,44 @@ local function questSpacing(tip, check)
 	return extra, true
 end
 
+-- Slate: every line from the third down steps SLATE_AIR further from the
+-- one above it, and the card grows by as much at its foot. Only lines the
+-- game hung straight under the line above are moved (the quest box's two
+-- are placed above); `check` only reports whether the game has laid them
+-- out again since. Each moved line is remembered like the quest box's, so
+-- the next card gets it back where the game keeps it.
+local function airLines(tip, check)
+	if not UI.slate() then return 0, true end
+	local count = tip.NumLines and tip:NumLines()
+	if Stoa:IsSecret(count) or type(count) ~= "number" then return 0, true end
+	local questFirst, questLast = questRange(tip)
+	local extra = 0
+	for i = 3, count do
+		local text, above = line(tip, i), line(tip, i - 1)
+		if not (text and above and text:IsShown()) then break end
+		if not (questFirst and (i == questFirst or i == questLast + 1)) then
+			local _, rel, _, x, y = text:GetPoint(1)
+			if Stoa:IsSecret(x) or Stoa:IsSecret(y) or Stoa:IsSecret(rel) then return extra, true end
+			if rel == above and type(y) == "number" and math.abs(x or 0) < 0.5 then
+				if math.abs(y + 2) < 0.5 then
+					if check then return 0, false end
+					text:ClearAllPoints()
+					text:SetPoint("TOPLEFT", above, "BOTTOMLEFT", 0, -(2 + SLATE_AIR))
+					tip.stoaMoved = tip.stoaMoved or {}
+					tip.stoaMoved[text] = above
+					extra = extra + SLATE_AIR
+				elseif math.abs(y + 2 + SLATE_AIR) < 0.5 then
+					extra = extra + SLATE_AIR
+				end
+			end
+		end
+	end
+	return extra, true
+end
+
 local function settle(tip)
 	placeLines(tip)
-	local questRoom = questSpacing(tip)
+	local questRoom = questSpacing(tip) + airLines(tip)
 	if not (tip.SetPadding and tip.GetPadding) then return end
 	-- A one-line card (a minimap blip, a name) only needs the name's drop.
 	local second = tip:GetName() and _G[tip:GetName() .. "TextLeft2"]
@@ -896,6 +941,15 @@ local function settle(tip)
 	end
 end
 
+-- /stoa tooltip watch: counts how often, and why, a card had to be put
+-- right a frame after the game laid it out again (a card that twitches).
+local watch
+local function note(tip, why)
+	if not watch then return end
+	local key = (tip:GetName() or "?") .. " " .. why
+	watch[key] = (watch[key] or 0) + 1
+end
+
 local function keepHeader(tip)
 	local name = tip:GetName()
 	local first, second = name and _G[name .. "TextLeft1"], name and _G[name .. "TextLeft2"]
@@ -903,13 +957,27 @@ local function keepHeader(tip)
 	local _, relative, _, _, y = second:GetPoint(1)
 	-- In combat the game can hand back secret positions; leave the card be.
 	if Stoa:IsSecret(y) or Stoa:IsSecret(relative) then return end
-	if relative ~= first or math.abs((y or 0) + LINE_GAP) > 0.5 then settle(tip) end
+	if relative ~= first or math.abs((y or 0) + LINE_GAP) > 0.5 then
+		note(tip, "lines")
+		settle(tip)
+	end
 	local padded = tip.GetPadding and select(2, tip:GetPadding())
 	if Stoa:IsSecret(padded) then return end
-	if tip.stoaPad ~= tip.stoaRoom and padded == tip.stoaPad then return settle(tip) end
+	if tip.stoaPad ~= tip.stoaRoom and padded == tip.stoaPad then
+		note(tip, "foot")
+		return settle(tip)
+	end
 	-- The game lays lines out again as quest objectives arrive.
 	local _, placed = questSpacing(tip, true)
-	if not placed then settle(tip) end
+	if not placed then
+		note(tip, "quest")
+		return settle(tip)
+	end
+	local _, aired = airLines(tip, true)
+	if not aired then
+		note(tip, "air")
+		settle(tip)
+	end
 end
 
 local function header(tip)
@@ -953,14 +1021,26 @@ local function edge(tip)
 		UI.roundBorder(tip, "CardEdge.tga", 1, -4),
 	}
 	xpcall(header, Stoa.catch, tip)
-	Stoa.SafeHook(tip, "Show", function(self) xpcall(settle, Stoa.catch, self) end)
+	Stoa.SafeHook(tip, "Show", function(self)
+		note(self, "Show")
+		xpcall(settle, Stoa.catch, self)
+	end)
 	-- The game can show the card without calling Show from Lua, and it lays
 	-- the lines out again when it adds one (quest objectives arrive after
 	-- the card is up), so a moved line is checked each frame it is shown.
-	tip:HookScript("OnShow", function(self) xpcall(settle, Stoa.catch, self) end)
+	tip:HookScript("OnShow", function(self)
+		note(self, "OnShow")
+		xpcall(settle, Stoa.catch, self)
+	end)
 	tip:HookScript("OnUpdate", function(self) xpcall(keepHeader, Stoa.catch, self) end)
-	tip:HookScript("OnTooltipCleared", clear)
-	tip:HookScript("OnHide", clear)
+	tip:HookScript("OnTooltipCleared", function(self)
+		note(self, "cleared")
+		clear(self)
+	end)
+	tip:HookScript("OnHide", function(self)
+		note(self, "hidden")
+		clear(self)
+	end)
 end
 
 -- The game's tooltip fonts in Stoa's faces and sizes (the text size
@@ -969,7 +1049,7 @@ local function fonts()
 	local function face(object, kind, size)
 		if object and object.SetFont then Stoa:SetFont(object, kind, size) end
 	end
-	face(GameTooltipHeaderText, "serif", Stoa.typeSize.name)
+	face(GameTooltipHeaderText, "serif", headSize())
 	face(GameTooltipText, "sans", Stoa.typeSize.body)
 	face(GameTooltipTextSmall, "sans", Stoa.typeSize.caption)
 end
@@ -1010,6 +1090,45 @@ function Tooltip:PlaceQuestBox(tip)
 	box.fill:Show()
 end
 
+-- The card's count can trail the quest log (a kill or a pickup counted
+-- there a moment before the card's own data catches up, most of all in a
+-- party). Your own objective lines take the log's count when the two differ.
+local COUNT = "%d+%s*/%s*%d+"
+
+local function questFor(data, title)
+	local id = known(data.id) or known(data.questID)
+	if type(id) == "number" and id > 0 then return id end
+	local log = C_QuestLog
+	if type(title) ~= "string" or not (log and log.GetNumQuestLogEntries and log.GetInfo) then return nil end
+	local count = Stoa:PlainNumber((Stoa.safe.call(log.GetNumQuestLogEntries))) or 0
+	for i = 1, count do
+		local info = Stoa.safe.call(log.GetInfo, i)
+		if type(info) == "table" and not known(info.isHeader) and known(info.title) == title then return known(info.questID) end
+	end
+end
+
+-- The line's words with the log's count, and whether the log has it done.
+local function logCount(tip, words)
+	local id = tip.stoaQuestMine and tip.stoaQuestID
+	local log = C_QuestLog
+	if not (id and log and log.GetQuestObjectives) then return words end
+	local shown, total = words:match("(%d+)%s*/%s*(%d+)")
+	if not shown then return words end
+	for _, goal in ipairs(Stoa.safe.call(log.GetQuestObjectives, id) or {}) do
+		local text, have, need = known(goal.text), Stoa:PlainNumber(goal.numFulfilled), Stoa:PlainNumber(goal.numRequired)
+		if type(text) == "string" and have and need and need > 0 and need == tonumber(total) then
+			local name = text:gsub(COUNT, ""):gsub("^[%s:%-]+", ""):gsub("[%s:%-]+$", "")
+			if name ~= "" and words:find(name, 1, true) then
+				if have ~= tonumber(shown) then
+					words = words:gsub(COUNT, function() return have .. "/" .. need end, 1)
+				end
+				return words, known(goal.finished) == true
+			end
+		end
+	end
+	return words
+end
+
 function Tooltip:QuestLine(tip, data)
 	local index = data and known(data.lineIndex)
 	local text = index and line(tip, index)
@@ -1019,8 +1138,20 @@ function Tooltip:QuestLine(tip, data)
 	local types = Enum.TooltipDataLineType
 	if data.type == types.QuestTitle then
 		text:SetTextColor(Stoa:Color("accent"))
+		tip.stoaQuestID, tip.stoaQuestMine = questFor(data, known(text:GetText())), true
+	elseif data.type == types.QuestPlayer then
+		-- The lines under a party member's name are theirs, not yours.
+		text:SetTextColor(Stoa:Color("text"))
+		tip.stoaQuestMine = known(text:GetText()) == known(UnitName("player"))
 	elseif data.type == types.QuestObjective then
-		if known(data.completed) then
+		local raw = known(text:GetText())
+		local done = known(data.completed)
+		if type(raw) == "string" and not raw:find("|c", 1, true) then
+			local fresh, finished = logCount(tip, raw)
+			if fresh ~= raw then text:SetText(fresh) end
+			done = done or finished
+		end
+		if done then
 			text:SetTextColor(Stoa:Color("muted"))
 		else
 			text:SetTextColor(Stoa:Color("text"))
@@ -1094,6 +1225,20 @@ function Tooltip:OnEnable()
 			end, "Tooltip"))
 		end
 	end
+	-- The game rebuilds the Equipped cards several times a second while an
+	-- item is pointed at; they are put right as soon as it has placed them.
+	local compare = _G.TooltipComparisonManager
+	if type(compare) == "table" and type(compare.AnchorShoppingTooltips) == "function" then
+		hooksecurefunc(compare, "AnchorShoppingTooltips", Stoa:Guard(function(manager)
+			local owner = manager.tooltip
+			for _, tip in ipairs(owner and owner.shoppingTooltips or {}) do
+				if usable(tip) and tip:IsShown() then
+					note(tip, "compare")
+					settle(tip)
+				end
+			end
+		end, "Tooltip"))
+	end
 	Stoa:On("INSPECT_READY", function(guid)
 		xpcall(self.InspectReady, Stoa.catch, self, guid)
 	end)
@@ -1102,6 +1247,26 @@ end
 -- /stoa tooltip cursor|console moves the card.
 Stoa.commands.tooltip = function(rest)
 	local where = rest and rest:lower():match("%a+")
+	if where == "watch" then
+		if watch then
+			watch = nil
+			Stoa:Print("Tooltip watch stopped.")
+			return
+		end
+		watch = {}
+		Stoa:Print("Tooltip watch on for 10 seconds: hover the item that twitches now.")
+		C_Timer.After(10, function()
+			if not watch then return end
+			local keys = {}
+			for key in pairs(watch) do keys[#keys + 1] = key end
+			table.sort(keys)
+			Stoa:Print("Tooltip watch, 10 seconds:")
+			for _, key in ipairs(keys) do Stoa:Print(key .. ": " .. watch[key]) end
+			if #keys == 0 then Stoa:Print("nothing noted.") end
+			watch = nil
+		end)
+		return
+	end
 	if where == "cursor" or where == "console" then
 		Tooltip.db.anchor = where
 		Stoa:Print(where == "cursor" and "Tooltips follow the cursor." or "Tooltips sit above the console's right corner.")

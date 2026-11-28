@@ -61,6 +61,47 @@ local function noteBlocked(event, addon, func)
 end
 Stoa:On("ADDON_ACTION_BLOCKED", function(addon, func) noteBlocked("ADDON_ACTION_BLOCKED", addon, func) end)
 Stoa:On("ADDON_ACTION_FORBIDDEN", function(addon, func) noteBlocked("ADDON_ACTION_FORBIDDEN", addon, func) end)
+-- Some refusals never reach those events: the game only writes its line
+-- in chat. That line is watched for too, and noted with what was going on
+-- (the fight, your health, the events STOA had just answered).
+Stoa:On("CHAT_MSG_SYSTEM", function(text)
+	if Stoa:IsSecret(text) or type(text) ~= "string" then return end
+	local line = rawget(_G, "INTERFACE_ACTION_BLOCKED")
+	if not line or text ~= line then return end
+	local now, events = GetTime and GetTime() or 0, {}
+	local names, times = Stoa:RecentEvents()
+	for i, name in ipairs(names) do
+		if name ~= "CHAT_MSG_SYSTEM" then
+			events[#events + 1] = ("%s -%.1fs"):format(name, now - (times[i] or now))
+		end
+	end
+	local health, max = UnitHealth("player"), UnitHealthMax("player")
+	local share = not Stoa:IsSecret(health) and not Stoa:IsSecret(max) and max and max > 0 and math.floor(health / max * 100) .. "%" or "hidden"
+	local dead = UnitIsDeadOrGhost and UnitIsDeadOrGhost("player")
+	noteBlocked("ADDON_ACTION_BLOCKED", "unnamed (chat line only)",
+		("health %s%s; events before it: %s"):format(share, dead == true and ", dead" or "", table.concat(events, ", ")))
+end)
+
+-- The game's own taint log names what these miss. Level 1 only: it
+-- records blocked actions. Level 2 writes every tainted read and makes
+-- the game stutter. /stoa taint keeps it
+-- switched on (it does not always stay on by itself); the log is the file
+-- Logs\taint.log, written when you reload or log out.
+local function taintLog(level)
+	local set = (C_CVar and C_CVar.SetCVar) or SetCVar
+	if set then pcall(set, "taintLog", level) end
+end
+Stoa:On("PLAYER_LOGIN", function()
+	if Stoa.db and Stoa.db.taintWatch then taintLog("1") end
+end)
+Stoa.commands = Stoa.commands or {}
+Stoa.commands.taint = function()
+	Stoa.db.taintWatch = not Stoa.db.taintWatch or nil
+	taintLog(Stoa.db.taintWatch and "1" or "0")
+	Stoa:Print(Stoa.db.taintWatch and "The game's taint log is on and STOA will keep it on. After the next \"Interface action failed\" line, /reload so the game writes it."
+		or "The game's taint log is off again.")
+end
+
 -- The same refusal reached through a macro or a secure click names only
 -- the function, not the addon.
 Stoa:On("MACRO_ACTION_BLOCKED", function(func) noteBlocked("ADDON_ACTION_BLOCKED", "a macro or secure click", func) end)
@@ -247,6 +288,12 @@ function Report:Text()
 		local ok, text = pcall(console.ChatState, console)
 		if ok then add("Chat: ", text, InCombatLockdown() and " (in combat)" or "") add("") end
 	end
+	do
+		local get = (C_CVar and C_CVar.GetCVar) or GetCVar
+		local level = get and get("taintLog")
+		add("Taint log: ", tostring(level), Stoa.db and Stoa.db.taintWatch and " (kept on by /stoa taint)" or "")
+		add("")
+	end
 	if #blocked > 0 then
 		add("Blocked actions this session (the game's \"Interface action failed because of an AddOn\"):")
 		for _, entry in ipairs(blocked) do
@@ -327,6 +374,7 @@ function Report:Build()
 		box:HighlightText()
 	end)
 	copy:SetPoint("BOTTOMLEFT", PAD, PAD - 8)
+	copy:SetMain()
 	local clear = UI.button(page, "Clear errors", 120, function()
 		wipe(kept)
 		wipe(byMessage)

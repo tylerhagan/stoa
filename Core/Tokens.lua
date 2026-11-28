@@ -80,6 +80,40 @@ Stoa.themes = {
 		classTint = false,
 		neutralAccent = true,
 	},
+	-- Made for Slate: flat near-black panels, fine light lines and one
+	-- accent kept for what you act on. Ice is pale frost, Ember warm orange.
+	Ice = {
+		text    = rgb("E9ECEF"),
+		muted   = rgb("8E98A2"),
+		panel   = rgb("131415", 0.94),
+		hairline = rgb("FFFFFF", 0.06),
+		health  = rgb("4FB477"),
+		mana    = rgb("4C9BF5"),
+		danger  = rgb("FFB547"),
+		hostile = rgb("E0443A"),
+		shield  = rgb("D6EEFF", 0.85),
+		-- A pale frost, well clear of mana's blue: the two used to read as
+		-- one colour, and the whole console went blue.
+		accent  = rgb("B4DDF2"),
+		magic   = rgb("6FA8FF"),
+		disease = rgb("B9A2F2"),
+		classTint = true,
+	},
+	Ember = {
+		text    = rgb("ECE7E2"),
+		muted   = rgb("9A928B"),
+		panel   = rgb("151413", 0.94),
+		hairline = rgb("ECE7E2", 0.06),
+		health  = rgb("4FB477"),
+		mana    = rgb("4C8FE0"),
+		danger  = rgb("F5C04A"),
+		hostile = rgb("D9534A"),
+		shield  = rgb("FFD3A6", 0.9),
+		accent  = rgb("E48A3C"),
+		magic   = rgb("4C8FE0"),
+		disease = rgb("C9A0FF"),
+		classTint = true,
+	},
 
 	-- Class themes: the class colour as the accent, the panel and words
 	-- tinted toward it. "Class" in the theme list follows whoever you log in.
@@ -221,7 +255,7 @@ Stoa.themes = {
 }
 
 Stoa.themeOrder = {
-	"Bone", "Tide", "Graphite", "Matte", "Class",
+	"Bone", "Tide", "Graphite", "Matte", "Ice", "Ember", "Class",
 	"Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior",
 }
 
@@ -307,6 +341,8 @@ function Stoa:SetFont(fontString, kind, size, flags)
 		fontString:SetShadowColor(0, 0, 0, 0.9)
 		fontString:SetShadowOffset(1, -1)
 	end
+	-- Slate sets every word in Inter, headings too.
+	if (kind == "serif" or kind == "italic") and self.db and self.db.material == "slate" then kind = "sans" end
 	for _, candidate in ipairs(self.fonts[kind] or self.fonts.sans) do
 		local path, scale = candidate[1], candidate[2]
 		local ok, loaded = pcall(fontString.SetFont, fontString, path, size * scale, flags or "")

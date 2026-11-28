@@ -6,11 +6,11 @@ local _, ns = ...
 local Stoa = ns.Stoa
 
 local SAMPLE = {
-	{ name = "Brunhok", class = "WARRIOR", mark = 8, health = 0.62, absorb = 0.18, halved = true, pips = { { "SHLD", "shield" }, { "HEALS HALF", "hostile" }, { "RNW 9" } } },
-	{ name = "Thalindra", class = "PRIEST", mark = 1, health = 0.95, pips = { { "INNR FR" } } },
-	{ name = "Seren", class = "ROGUE", health = 0.71, dispel = "magic", pips = { { "MAGIC", "magic" } } },
-	{ name = "Velaris", class = "MAGE", health = 0.78, absorb = 0.1, target = true, pips = { { "WS 4" } } },
-	{ name = "Orsun", class = "HUNTER", health = 0.28, far = true },
+	{ name = "Brunhok", class = "WARRIOR", role = "TANK", power = 0.4, mark = 8, health = 0.62, absorb = 0.18, halved = true, pips = { { "SHLD", "shield" }, { "HEALS HALF", "hostile" }, { "RNW 9" } } },
+	{ name = "Thalindra", class = "PRIEST", role = "HEALER", power = 0.82, mark = 1, health = 0.95, pips = { { "INNR FR" } } },
+	{ name = "Seren", class = "ROGUE", power = 0.65, health = 0.71, dispel = "magic", pips = { { "MAGIC", "magic" } } },
+	{ name = "Velaris", class = "MAGE", power = 0.54, health = 0.78, absorb = 0.1, target = true, pips = { { "WS 4" } } },
+	{ name = "Orsun", class = "HUNTER", power = 0.7, health = 0.28, far = true },
 	{ name = "Kaelith", class = "WARLOCK", status = "DEAD", coming = "RES", health = 0 },
 	{ name = "Aldren", class = "PALADIN", status = "OFFLINE", health = 1 },
 	{ name = "Mirelle", class = "DRUID", coming = "SUMMON", health = 1 },
@@ -29,6 +29,9 @@ local SAMPLE = {
 }
 
 local LOW_HEALTH = 0.35
+-- Slate's thin power line and role chip on the sample cards.
+local SAMPLE_POWER = { WARRIOR = "text", ROGUE = "accent" }
+local SAMPLE_ROLE = { TANK = { "Tank", "accent" }, HEALER = { "Healer", "health" } }
 local GROUPS = 4
 
 local active = false
@@ -46,14 +49,31 @@ local function fill(card, sample)
 	end
 	local strip = card.style and card.style.strip
 	local low = not sample.status and sample.health < (strip and 0.5 or LOW_HEALTH)
+	local slate = UI.slate()
+	-- Slate shows low health in its red, and marks your target in the accent.
+	local lowToken = slate and "hostile" or "danger"
+	local lined = slate and card.style and card.style.slateBar
+	if card.mp then
+		card.mp:SetShown(lined and sample.power ~= nil and not sample.status)
+		if card.mp:IsShown() then
+			card.mp:SetMinMaxValues(0, 1)
+			card.mp:SetValue(sample.power)
+			card.mp:SetStatusBarColor(Stoa:Color(SAMPLE_POWER[sample.class] or "mana"))
+		end
+	end
+	if card.role then
+		local role = lined and SAMPLE_ROLE[sample.role]
+		if role then card.role:Set(role[1], role[2]) else card.role:Hide() end
+		card.name:SetPoint("RIGHT", role and card.role or card.percent, "LEFT", -6, 0)
+	end
 	card.hp:SetMinMaxValues(0, 1)
 	card.hp:SetValue(sample.status and 0 or sample.health)
-	card.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
+	card.hp:SetStatusBarColor(Stoa:Color(low and lowToken or "health"))
 	card.absorb:SetMinMaxValues(0, 1)
 	card.absorb:SetValue(sample.absorb or 0)
 	UI.setHalved(card.hp, sample.halved and not Stoa.modules.Party:Quiet() or false)
 	card.percent:SetText(sample.status and "-" or math.floor(sample.health * 100 + 0.5))
-	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+	card.percent:SetTextColor(Stoa:Color(low and lowToken or "text"))
 
 	local pips = {}
 	-- Help on its way (a resurrection, a summon) takes the first word.
@@ -65,7 +85,7 @@ local function fill(card, sample)
 		for _, pip in ipairs(sample.pips or {}) do
 			if not quiet or (sample.dispel and pip[2] == sample.dispel) then pips[#pips + 1] = pip end
 		end
-		if low and not quiet then table.insert(pips, 1, { "LOW", "danger" }) end
+		if low and not quiet then table.insert(pips, 1, { "LOW", lowToken }) end
 		if coming then table.insert(pips, 1, { coming, "accent" }) end
 	end
 	UI.setPips(card, pips)
@@ -86,20 +106,25 @@ local function fill(card, sample)
 	elseif sample.dispel then
 		UI.cellWord(card, sample.pips[1][1], sample.dispel)
 	elseif low then
-		UI.cellWord(card, "LOW", "danger")
+		UI.cellWord(card, "LOW", lowToken)
 	end
 
 	card.glow:Clear()
 	if UI.stripRest(card, not (sample.status or sample.dispel or low or sample.target)) then
-		if low then card.name:SetTextColor(Stoa:Color("danger")) end
+		if low then card.name:SetTextColor(Stoa:Color(lowToken)) end
 	elseif sample.dispel then
 		local r, g, b = Stoa:Color(sample.dispel)
 		card.state:Set(r, g, b)
 		card.glow:Set(r, g, b, 0.22)
 	elseif low then
-		card.state:Set(Stoa:Color("danger"))
+		card.state:Set(Stoa:Color(lowToken))
 	elseif sample.target then
-		card.state:Set(Stoa:Color("text"))
+		if slate then
+			local r, g, b = Stoa:Color("accent")
+			card.state:Set(r, g, b, 0.4)
+		else
+			card.state:Set(Stoa:Color("text"))
+		end
 	else
 		card.state:Clear()
 	end

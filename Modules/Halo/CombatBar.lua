@@ -122,6 +122,18 @@ function Bar:MakeButton(name, parent, size)
 	highlight:SetColorTexture(1, 1, 1, 0.15)
 	highlight:AddMaskTexture(mask)
 
+	-- Lit while the game holds the press for later: an attack queued for
+	-- the next swing (Raptor Strike, Heroic Strike), a spell waiting for
+	-- its target, auto attack while it runs. Without it a key press on
+	-- such a spell showed nothing until the swing landed.
+	local queued = button:CreateTexture(nil, "OVERLAY")
+	queued:SetAllPoints()
+	queued:SetColorTexture(1, 1, 1, 0.32)
+	queued:SetBlendMode("ADD")
+	queued:AddMaskTexture(mask)
+	queued:Hide()
+	button.queued = queued
+
 	local cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
 	cooldown:SetAllPoints()
 	cooldown:SetSwipeTexture(MASK)
@@ -436,6 +448,7 @@ function Bar:UpdateState()
 		else
 			icon:SetVertexColor(1, 1, 1)
 		end
+		button.queued:SetShown(IsCurrentAction ~= nil and plain(IsCurrentAction(slot)) == true)
 		local far = inRange == false
 		icon:SetAlpha(far and 0.5 or 1)
 		button.key:SetTextColor(Stoa:Color(far and "danger" or "text"))
@@ -504,6 +517,7 @@ function Bar:OnEnable()
 	Stoa:On("ACTIONBAR_UPDATE_COOLDOWN", function() self:UpdateCooldowns() end)
 	Stoa:On("SPELL_UPDATE_COOLDOWN", function() self:UpdateCooldowns() end)
 	Stoa:On("ACTIONBAR_UPDATE_USABLE", function() self:UpdateState() end)
+	Stoa:On("ACTIONBAR_UPDATE_STATE", function() self:UpdateState() end)
 	Stoa:On("SPELL_UPDATE_USABLE", function() self:UpdateState() end)
 	Stoa:On("PLAYER_TARGET_CHANGED", function() self:UpdateState() end)
 	Stoa:OnUnit("UNIT_POWER_FREQUENT", { "player" }, function() self:UpdateState() end)

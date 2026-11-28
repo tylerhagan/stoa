@@ -600,6 +600,7 @@ function Planner:BuildPanel()
 	local y = -162 - LIST_ROWS * 24 - 16
 	local loadout = UI.button(panel, "Make game loadout", PANEL_WIDTH - PAD * 2, function() self:MakeLoadout() end)
 	loadout:SetPoint("TOPLEFT", PAD, y)
+	loadout:SetMain()
 	panel.loadout = loadout
 	local note = UI.text(panel, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	note:SetPoint("TOPLEFT", loadout, "BOTTOMLEFT", 0, -10)

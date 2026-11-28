@@ -31,6 +31,10 @@ function Console:RidingWanted()
 	if InCombatLockdown() or Stoa:GetState() ~= Stoa.STATE_WORLD then return false end
 	local mounted = IsMounted and plain(IsMounted())
 	local flying = UnitOnTaxi and plain(UnitOnTaxi("player"))
+	-- "Open console" on the line brings the full console back for the
+	-- rest of this ride; the line returns with the next mount or flight.
+	if not (mounted or flying) then self.rideOpened = nil end
+	if self.rideOpened then return false end
 	return (mounted or flying) and true or false
 end
 
@@ -80,6 +84,30 @@ function Console:BuildRide()
 	mark:SetColorTexture(Stoa:Color("accent"))
 	Stoa:On("STOA_THEME_CHANGED", function() mark:SetColorTexture(Stoa:Color("accent")) end)
 
+	-- Getting off: a plain button (the game lets an addon dismount you),
+	-- in the middle of the line, under your character where the hand
+	-- already is. Not on a flight, which can't be left.
+	local off = UI.button(band, "Dismount", 96, function()
+		if Dismount then Dismount() end
+	end)
+	off:SetPoint("RIGHT", band, "CENTER", -4, -2)
+	band.off = off
+	-- For when you need your bars or pages mid-ride.
+	local full = UI.button(band, "Open console", 108, function()
+		Console.rideOpened = true
+		Console:SetRiding(false)
+		Console:PlaceRideBack()
+	end)
+	full:SetPoint("LEFT", band, "CENTER", 4, -2)
+	band.full = full
+	full:HookScript("OnEnter", function(own)
+		GameTooltip:SetOwner(own, "ANCHOR_TOP")
+		GameTooltip:AddLine("Open console")
+		GameTooltip:AddLine("Shows the full console for the rest of this ride.", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	full:HookScript("OnLeave", function() GameTooltip:Hide() end)
+
 	band.speed, band.zone, band.sub = speed, zone, sub
 	band.stop, band.title, band.far, band.fill, band.mark = stop, title, far, fill, mark
 	self.ride = band
@@ -104,6 +132,47 @@ local function nextStop()
 	return id, log.GetTitleForQuestID and plain(log.GetTitleForQuestID(id)) or "", math.sqrt(squared)
 end
 
+-- The faded action bars still take clicks (they are secure, so they can't
+-- be switched off), so the buttons sit clear above the tallest bar that
+-- crosses the middle of the screen, not over it.
+local PAIR_HALF, PAIR_AIR = 106, 12
+local function barsTop(band)
+	local scale = band:GetEffectiveScale()
+	local middle = (band:GetLeft() + band:GetRight()) / 2
+	local top
+	for _, name in ipairs(BARS) do
+		local bar = _G[name]
+		if bar and bar.IsShown and not (bar.IsForbidden and bar:IsForbidden()) and bar:IsShown() then
+			local ratio = bar:GetEffectiveScale() / scale
+			local left, right, edge = bar:GetLeft(), bar:GetRight(), bar:GetTop()
+			if left and right and edge and left * ratio < middle + PAIR_HALF and right * ratio > middle - PAIR_HALF then
+				edge = edge * ratio
+				if not top or edge > top then top = edge end
+			end
+		end
+	end
+	return top
+end
+
+function Console:PlaceRideButtons(onTaxi)
+	local band = self.ride
+	if not (band and band.off and band.full and band:GetLeft() and band:GetBottom()) then return end
+	local top = barsTop(band)
+	local lift = top and math.floor(top - band:GetBottom() + PAIR_AIR + 0.5) or false
+	if band.pairLift == lift and band.pairAlone == onTaxi then return end
+	band.pairLift, band.pairAlone = lift, onTaxi
+	local off, full = band.off, band.full
+	off:ClearAllPoints()
+	full:ClearAllPoints()
+	if lift then
+		off:SetPoint("BOTTOMRIGHT", band, "BOTTOM", -4, lift)
+		full:SetPoint(onTaxi and "BOTTOM" or "BOTTOMLEFT", band, "BOTTOM", onTaxi and 0 or 4, lift)
+	else
+		off:SetPoint("RIGHT", band, "CENTER", -4, -2)
+		full:SetPoint(onTaxi and "CENTER" or "LEFT", band, "CENTER", onTaxi and 0 or 4, -2)
+	end
+end
+
 function Console:FillRide()
 	local band = self.ride
 	if not band then return end
@@ -113,6 +182,8 @@ function Console:FillRide()
 	local onTaxi = UnitOnTaxi and plain(UnitOnTaxi("player"))
 	local sub = GetSubZoneText and GetSubZoneText() or ""
 	band.sub:SetText(onTaxi and "On a flight" or sub)
+	band.off:SetShown(not onTaxi)
+	self:PlaceRideButtons(onTaxi and true or false)
 
 	local id, title, yards = nextStop()
 	band.stop:SetShown(id ~= nil)
@@ -161,6 +232,9 @@ function Console:SetRiding(on)
 		if self.ride then self.ride:Hide() end
 		if self.rideTicker then self.rideTicker:Cancel() self.rideTicker = nil end
 	end
+	-- A meter window in one of the console's slots goes with the cards.
+	local meters = Stoa.modules.Meters
+	if meters and meters.enabled and meters.SetRiding then xpcall(meters.SetRiding, Stoa.catch, meters, on) end
 	self:Refold()
 	-- The chat's foot steps up over the travel line, and back down after.
 	if self.ReplaceChat then self:ReplaceChat() end
@@ -169,8 +243,53 @@ function Console:SetRiding(on)
 	if halo and halo.enabled and halo.PlaceTarget then halo:PlaceTarget() end
 end
 
+-- After "Open console", the way back: "Ride view" in the same spot, clear
+-- above the bars and the console. It steps aside for a target, which
+-- docks there, and for a fight.
+local BACK_AIR, YOU_AIR = 6, 14
+function Console:PlaceRideBack()
+	local frame = self.frame
+	local mounted = (IsMounted and plain(IsMounted())) or (UnitOnTaxi and plain(UnitOnTaxi("player")))
+	local want = self.rideOpened and mounted and not self.riding and not InCombatLockdown()
+		and Stoa:GetState() == Stoa.STATE_WORLD and not UnitExists("target") and frame:GetBottom() and true or false
+	local back = self.rideBack
+	if not want then
+		if back then back:Hide() end
+		return
+	end
+	if not back then
+		back = UI.button(frame, "Ride view", 96, function()
+			Console.rideOpened = nil
+			Console:CheckRiding()
+		end)
+		back:HookScript("OnEnter", function(own)
+			GameTooltip:SetOwner(own, "ANCHOR_TOP")
+			GameTooltip:AddLine("Ride view")
+			GameTooltip:AddLine("Folds the console back to the travel line.", 1, 1, 1)
+			GameTooltip:Show()
+		end)
+		back:HookScript("OnLeave", function() GameTooltip:Hide() end)
+		self.rideBack = back
+	end
+	local lift = self:OpenHeight() + BACK_AIR
+	local top = barsTop(frame)
+	if top then lift = math.max(lift, math.floor(top - frame:GetBottom() + PAIR_AIR + 0.5)) end
+	-- Slate's own card (your name, health and portrait) stands on the rim
+	-- in the middle; its portrait rises a little past the card's top.
+	-- Worked out from the open console's height, not read off the card:
+	-- when Open console is pressed the console is still folded.
+	local you = self.youCard and self.YOU_CARD
+	if you then lift = math.max(lift, self:OpenHeight() + you.y + you.height / 2 + YOU_AIR) end
+	back:ClearAllPoints()
+	back:SetPoint("BOTTOM", frame, "BOTTOM", 0, lift)
+	back:Show()
+end
+
 function Console:CheckRiding()
-	xpcall(function() self:SetRiding(self:RidingWanted()) end, Stoa.catch)
+	xpcall(function()
+		self:SetRiding(self:RidingWanted())
+		self:PlaceRideBack()
+	end, Stoa.catch)
 end
 
 Stoa:On("STOA_READY", function()
@@ -179,12 +298,20 @@ Stoa:On("STOA_READY", function()
 		Stoa:On(event, function() Console:CheckRiding() end)
 	end
 	-- A fight takes the travel line away before anything else.
-	Stoa:On("PLAYER_REGEN_DISABLED", function() Console:SetRiding(false) end)
+	Stoa:On("PLAYER_REGEN_DISABLED", function()
+		Console:SetRiding(false)
+		if Console.rideBack then Console.rideBack:Hide() end
+	end)
+	for _, event in ipairs({ "PLAYER_TARGET_CHANGED", "PLAYER_REGEN_ENABLED" }) do
+		Stoa:On(event, function() xpcall(Console.PlaceRideBack, Stoa.catch, Console) end)
+	end
 	Console:CheckRiding()
 end)
 
 -- /stoa ride previews the travel line on foot; again puts it back.
 Stoa.commands.ride = function()
 	if not Console.frame then return end
+	Console.rideOpened = nil
 	Console:SetRiding(not Console.riding)
+	Console:PlaceRideBack()
 end

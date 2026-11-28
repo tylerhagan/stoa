@@ -57,12 +57,12 @@ function Companion:Bosses(where, run)
 	local list = {}
 	if not dungeon then return list end
 	if not dungeon.wings then
-		for _, name in ipairs(dungeon.bosses) do list[#list + 1] = { name = name } end
+		for _, name in ipairs(dungeon.bosses) do list[#list + 1] = { name = name, listed = true } end
 		return list
 	end
 	for _, wing in ipairs(dungeon.wings) do
 		if not run.wing or run.wing == wing.name then
-			for _, name in ipairs(wing.bosses) do list[#list + 1] = { name = name, wing = wing.name } end
+			for _, name in ipairs(wing.bosses) do list[#list + 1] = { name = name, wing = wing.name, listed = true } end
 		end
 	end
 	return list
@@ -83,6 +83,17 @@ function Companion:Killed(name)
 			if boss:lower() == name:lower() then run.wing = wing.name end
 		end
 	end
+end
+
+-- A click on a boss's row ticks it by hand, or unticks it: for a death
+-- STOA missed, or a boss the group has decided to skip.
+function Companion:Tick(name)
+	local where = self:Where()
+	if not where or type(name) ~= "string" then return end
+	local run = self:Run(where)
+	local key = name:lower()
+	if run.killed[key] then run.killed[key] = nil else self:Killed(name) end
+	self:Refresh()
 end
 
 -- Some bosses don't count as an encounter for the game (optional ones
@@ -200,11 +211,22 @@ function Companion:Gather()
 			end
 		end
 	end
+	-- Next is the first boss still standing after the last one that fell:
+	-- a boss the group skipped, or whose death STOA missed, doesn't hold
+	-- "Next" back for the rest of the run.
+	local firstUp
 	for _, boss in ipairs(bosses) do
 		local have = boss.name:lower()
 		boss.dead = (run.killed[have] or claimed[have]) and true or false
-		if boss.dead then down = down + 1 elseif not nextBoss then nextBoss = boss end
+		if boss.dead then
+			down = down + 1
+			nextBoss = nil
+		else
+			firstUp = firstUp or boss
+			nextBoss = nextBoss or boss
+		end
 	end
+	nextBoss = nextBoss or firstUp
 	-- A kill STOA's list doesn't have (a new dungeon, or the game names the
 	-- boss differently) still shows, ticked off, after the listed ones.
 	for _, name in ipairs(run.fell or {}) do
@@ -382,7 +404,7 @@ local function makeRow(card)
 		glow:Show()
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		GameTooltip:SetText(row.left:GetText() or "")
-		GameTooltip:AddLine("Click for the quest's details.", 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(row.questID and "Click for the quest's details." or "Click to tick or untick this boss.", 0.6, 0.6, 0.6)
 		GameTooltip:Show()
 	end)
 	hit:SetScript("OnLeave", function()
@@ -390,6 +412,10 @@ local function makeRow(card)
 		GameTooltip:Hide()
 	end)
 	hit:SetScript("OnClick", function()
+		if row.bossName then
+			Stoa.modules.Companion:Tick(row.bossName)
+			return
+		end
 		if InCombatLockdown() or not row.questID then return end
 		local open = _G.QuestMapFrame_OpenToQuestDetails or _G.QuestLog_OpenToQuest
 		if open then xpcall(open, Stoa.catch, row.questID) end
@@ -426,7 +452,7 @@ function Companion:FillCard(data)
 		y = y - 8 - 18
 	end
 	-- state: "done", "next" or nil (still to come).
-	local function row(left, right, state, questID)
+	local function row(left, right, state, questID, bossName)
 		rows = rows + 1
 		local r = card.lines[rows]
 		if not r then
@@ -470,8 +496,8 @@ function Companion:FillCard(data)
 			card.band:Show()
 			card.bandBar:Show()
 		end
-		r.questID = questID
-		if questID then
+		r.questID, r.bossName = questID, bossName
+		if questID or bossName then
 			r.hit:ClearAllPoints()
 			r.hit:SetPoint("TOPLEFT", card, "TOPLEFT", PAD - 8, y)
 			r.hit:SetPoint("BOTTOMRIGHT", card, "TOPRIGHT", -PAD + 8, y - ROW_H)
@@ -489,7 +515,7 @@ function Companion:FillCard(data)
 			wing = boss.wing
 			head(wing and (wing .. " bosses") or "Bosses")
 		end
-		row(boss.name, boss.dead and "Done" or (boss.next and "Next") or "", boss.dead and "done" or (boss.next and "next"))
+		row(boss.name, boss.dead and "Done" or (boss.next and "Next") or "", boss.dead and "done" or (boss.next and "next"), nil, boss.listed and boss.name)
 	end
 	if #data.quests > 0 then
 		head("Dungeon quests")
@@ -539,7 +565,12 @@ function Companion:PlaceLine()
 	bar:ClearAllPoints()
 	local console = _G.StoaConsole
 	if console and console:IsShown() then
-		bar:SetPoint("BOTTOM", console, "TOP", 0, 8)
+		-- Slate's own card (name, health, portrait) stands on the console's
+		-- rim in the middle; the line clears its portrait.
+		local grimoire = Stoa.modules.Grimoire
+		local you = grimoire and grimoire.youCard and grimoire.YOU_CARD
+		local lift = you and (you.y + you.height / 2 + 14) or 8
+		bar:SetPoint("BOTTOM", console, "TOP", 0, lift)
 	else
 		bar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 140)
 	end

@@ -35,6 +35,10 @@ local ROWS_PER_COLUMN = 4
 local COLUMN_WIDTH = 170
 local COLUMN_GAP = 36
 local ROW_GAP = 20
+-- Slate's card is taller than the well: the four rows keep close to each
+-- other and stand as one block midway between the heading and the card's
+-- foot, so the card isn't full at the top and empty below.
+local SLATE_ROW_GAP, SLATE_ROW_TOP = 21, -16
 -- Room left from the chat's right edge, and kept clear either side of the
 -- centre for the medallion and the health bar.
 local CHAT_RIGHT = 440 + 44
@@ -233,7 +237,7 @@ local function profession(key, fallback)
 		figure = function()
 			local p = professions[key]
 			local rank, max = p and plain(p[2]), p and plain(p[3])
-			if rank and max and max > 0 then return "bar", rank / max, "text" end
+			if rank and max and max > 0 then return "bar", rank / max, UI.slate() and "muted" or "text" end
 		end,
 		detail = function(add)
 			local p = professions[key]
@@ -445,7 +449,7 @@ local ENTRIES = {
 		return ("%d / %d"):format(into, span)
 	end, figure = function()
 		local into, span = standing()
-		if into then return "bar", into / span, "text" end
+		if into then return "bar", into / span, UI.slate() and "muted" or "text" end
 	end, detail = function(add)
 		local data = C_Reputation and call(C_Reputation.GetWatchedFactionData)
 		local name, reaction, value
@@ -795,7 +799,8 @@ function Tally:BuildRow(page, index)
 	local slot = (index - 1) % ROWS_PER_COLUMN
 	local row = CreateFrame("Button", nil, page)
 	row:SetSize(COLUMN_WIDTH, 18)
-	row:SetPoint("TOPLEFT", self.rule, "BOTTOMLEFT", column * (COLUMN_WIDTH + COLUMN_GAP), -6 - slot * ROW_GAP)
+	local slate = UI.slate()
+	row:SetPoint("TOPLEFT", self.rule, "BOTTOMLEFT", column * (COLUMN_WIDTH + COLUMN_GAP), (slate and SLATE_ROW_TOP or -6) - slot * (slate and SLATE_ROW_GAP or ROW_GAP))
 	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	local label = UI.text(row, "sans", Stoa.typeSize.body, "muted")
 	label:SetPoint("LEFT")
@@ -869,6 +874,7 @@ function Tally:Build(console)
 	local rule = UI.line(page)
 	rule:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -6)
 	rule:SetPoint("RIGHT", page, "RIGHT")
+	if UI.slate() then rule:SetAlpha(0) end
 	-- Where you are, quietly, after the heading.
 	local where = UI.text(page, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	where:SetPoint("LEFT", heading, "RIGHT", 8, 0)
@@ -917,7 +923,8 @@ function Tally:Refresh()
 			row.value:SetTextColor(Stoa:Color(warn and "danger" or "text"))
 			row.pin:SetShown(self:IsPinned(key))
 			self:DrawFigure(row, key)
-			row:Show()
+			-- Slate: a line that newly appears fades in.
+			if UI.slate() then UI.softShow(row, true) else row:Show() end
 		else
 			row:Hide()
 		end
@@ -944,6 +951,17 @@ function Tally:DrawFigure(row, key)
 		if name ~= kind then figure:Hide() end
 	end
 	local valueWidth = plain(row.value:GetStringWidth()) or 30
+	-- The label comes first: where a long value leaves no room for both
+	-- the whole label and the figure ("Gold rate" read "Gold..."), the
+	-- figure steps aside.
+	if FIGURES[kind] then
+		row.label:SetWidth(0)
+		local need = plain(row.label:GetStringWidth()) or 0
+		if need > COLUMN_WIDTH - valueWidth - 8 - FIGURE_WIDTH - 6 then
+			if row.figures[kind] then row.figures[kind]:Hide() end
+			kind = nil
+		end
+	end
 	if not FIGURES[kind] then
 		row.label:SetWidth(COLUMN_WIDTH - valueWidth - 8)
 		return

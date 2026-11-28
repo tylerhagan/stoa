@@ -39,7 +39,8 @@ local accountDefaults = {
 	ornament = "plain",
 	-- What STOA is made of: "leather" (leather, brass and stone) or
 	-- "matte", moulded black hardware with a grain ("satin", "soft", "smooth",
-	-- "fine") on the console and windows.
+	-- "fine") on the console and windows, or "slate", flat and modern:
+	-- rounded panels, Inter for every word and the console as cards.
 	material = "leather",
 	grain = "soft",
 	-- Items marked as junk, by itemID, sold with the greys.

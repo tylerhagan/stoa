@@ -31,17 +31,25 @@ local EPIC = (Enum and Enum.ItemQuality and Enum.ItemQuality.Epic) or 4
 local COMMON = (Enum and Enum.ItemQuality and Enum.ItemQuality.Common) or 1
 
 -- Quality colour for an edge, or nil for grey and white (they keep the
--- plain hairline).
+-- plain hairline). Slate takes the game's pure green and blue a step
+-- toward the text colour, so they sit with the rest of the type.
+local SLATE_QUALITY_SOFTEN = 0.28
+local function soften(r, g, b)
+	if not UI.slate() then return r, g, b end
+	local tr, tg, tb = Stoa:Color("text")
+	local k = SLATE_QUALITY_SOFTEN
+	return r + (tr - r) * k, g + (tg - g) * k, b + (tb - b) * k
+end
 function Item.qualityColour(quality)
 	quality = Stoa:PlainNumber(quality)
 	if not quality or quality <= COMMON then return nil end
 	if C_Item and C_Item.GetItemQualityColor then
 		local ok, r, g, b = pcall(C_Item.GetItemQualityColor, quality)
-		if ok and type(r) == "number" then return r, g, b end
+		if ok and type(r) == "number" then return soften(r, g, b) end
 	end
 	local colours = ITEM_QUALITY_COLORS
 	local c = type(colours) == "table" and colours[quality]
-	if type(c) == "table" and type(c.r) == "number" then return c.r, c.g, c.b end
+	if type(c) == "table" and type(c.r) == "number" then return soften(c.r, c.g, c.b) end
 end
 
 -- Effective item level of a link, only for things you can wear or wield.
@@ -56,6 +64,9 @@ local function hideSquareArt(button)
 		local art = button[key]
 		if art and art.SetAlpha then art:SetAlpha(0) end
 	end
+	-- Slate: the character sheet's carved slot rim goes too (its gold
+	-- corners read as the old style beside the flat window).
+	if UI.slate() and button.BorderFrame and button.BorderFrame.SetAlpha then button.BorderFrame:SetAlpha(0) end
 	local normal = button.GetNormalTexture and button:GetNormalTexture()
 	if normal then normal:SetAlpha(0) end
 end
@@ -117,7 +128,8 @@ function Item.markSlot(button, quality, level)
 	if not parts then return end
 	hideSquareArt(button)
 	local r, g, b = Item.qualityColour(quality)
-	if r then parts.edge:Set(r, g, b, 1) else parts.edge:Clear() end
+	-- Slate: the quality is a quiet edge, the name and pips carry it.
+	if r then parts.edge:Set(r, g, b, UI.slate() and 0.4 or 1) else parts.edge:Clear() end
 	quality = Stoa:PlainNumber(quality) or 0
 	local pips = quality > EPIC and 2 or quality == EPIC and 1 or 0
 	for i, pip in ipairs(parts.pips) do
@@ -279,6 +291,7 @@ local function decorateButton(button)
 		return
 	end
 	markJunkWord(button, info.itemID)
+	button.stoaItemID = info.itemID
 	local link = info.hyperlink
 	-- Reading the level costs a lookup, so an unchanged slot is left alone.
 	if button.stoaLink ~= link or button.stoaQuality ~= info.quality then
@@ -293,7 +306,7 @@ local function decorateButton(button)
 		parts.edge:Set(Stoa:Color("accent"))
 	end
 	-- Another addon's gear planner marks upgrades in bags already (Core/Companions.lua).
-	Item.markUpgrade(button, parts, button.stoaUpgrade and not Stoa:SharedBy("bagUpgrade"))
+	Item.markUpgrade(button, parts, button.stoaUpgrade and not Bags.upgradeShared)
 end
 
 -- Gold, silver and copper with the game's coin icons, as the hover shows them.
@@ -346,6 +359,9 @@ end
 local function updateFooter(frame)
 	local parts = frame.stoaBag
 	if not parts then return end
+	-- Seated in the combined bag as a section (sectionLook), a bag has no
+	-- footer of its own: showing its words again would double them there.
+	if frame.stoaHidden and next(frame.stoaHidden) then return end
 	local free, size = freeSlots(frame)
 	if free then
 		local text = size and (free .. " of " .. size .. " free") or (free .. " free")
@@ -391,8 +407,8 @@ local function moneyTooltip(owner)
 	local myName = me and select(2, alts.me())
 	for _, entry in ipairs(list) do
 		local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[entry.class or ""]
+		-- Names only: the realm made a long line and says little here.
 		local name = entry.name or "?"
-		if entry.realm and realm and entry.realm ~= realm then name = name .. " - " .. entry.realm end
 		local r, g, b = 1, 1, 1
 		if color then r, g, b = color.r, color.g, color.b end
 		-- The character you are on: its sum in the accent, the rest quieter.
@@ -442,6 +458,8 @@ end
 
 local function decorateFrame(frame)
 	if not frame or not frame.stoaBag then return end
+	-- Asked once for the whole bag, not once a slot.
+	Bags.upgradeShared = Stoa:SharedBy("bagUpgrade") and true or false
 	for _, button in ipairs(items(frame)) do
 		guarded(decorateButton, button)
 		if Bags.junkMode then guarded(junkOverlay, button, true) end
@@ -490,6 +508,25 @@ end
 local function refreshShown()
 	for _, frame in ipairs(allFrames()) do
 		if frame and frame.IsShown and frame:IsShown() then guarded(decorateFrame, frame) end
+	end
+end
+
+-- Events come in bursts (an item loading, a quest log update for every
+-- kill): one pass a moment later answers the lot.
+local refreshWaits
+local function refreshSoon()
+	if refreshWaits then return end
+	refreshWaits = true
+	C_Timer.After(0.05, function()
+		refreshWaits = nil
+		refreshShown()
+	end)
+end
+
+-- Coins and currencies change the footer only.
+local function footersShown()
+	for _, frame in ipairs(allFrames()) do
+		if frame and frame.stoaBag and frame.IsShown and frame:IsShown() then guarded(updateFooter, frame) end
 	end
 end
 
@@ -746,7 +783,13 @@ function Bags:LayOutSections()
 	local buttons = items(combined)
 	if not money or #buttons == 0 then return end
 	if InCombatLockdown() and (combined:IsProtected() or buttons[1]:IsProtected()) then
-		Stoa:AfterCombat(function() Bags:LayOutSections() end)
+		if not self.layWaits then
+			self.layWaits = true
+			Stoa:AfterCombat(function()
+				Bags.layWaits = nil
+				Bags:LayOutSections()
+			end)
+		end
 		return
 	end
 	self.laying = true
@@ -994,11 +1037,14 @@ function Bags:OnEnable()
 	for _, frame in ipairs(allFrames()) do
 		if frame then guarded(self.Dress, self, frame) end
 	end
-	Stoa:On("BAG_UPDATE_DELAYED", refreshShown)
+	Stoa:On("BAG_UPDATE_DELAYED", refreshSoon)
 	-- The search box runs the bag's full width, up to the clean-up button.
 	local function placeSearch(frame)
 		local box = BagItemSearchBox
 		if not (box and box.anchorBag == frame) then return end
+		-- Slate: the dark field the spellbook's search has, not the tan one.
+		local windows = Stoa.modules.Windows
+		if UI.slate() and windows and windows.DressSearch then guarded(windows.DressSearch, box) end
 		box:ClearAllPoints()
 		box:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -37)
 		local clean = BagItemAutoSortButton
@@ -1050,15 +1096,15 @@ function Bags:OnEnable()
 		end
 	end
 	Stoa:On("BAG_UPDATE_DELAYED", function() if dockWanted() then dock() end end)
-	Stoa:On("STOA_JUNK_CHANGED", refreshShown)
-	Stoa:On("STOA_QUEST_NEEDS_CHANGED", refreshShown)
+	Stoa:On("STOA_JUNK_CHANGED", refreshSoon)
+	Stoa:On("STOA_QUEST_NEEDS_CHANGED", refreshSoon)
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Bags:SetJunkMode(false) end)
-	Stoa:On("PLAYER_MONEY", refreshShown)
-	Stoa:On("CURRENCY_DISPLAY_UPDATE", refreshShown)
+	Stoa:On("PLAYER_MONEY", footersShown)
+	Stoa:On("CURRENCY_DISPLAY_UPDATE", footersShown)
 	-- Ticking "Show on Backpack" fires no event, so follow the call itself.
 	for _, name in ipairs({ "SetCurrencyBackpack", "SetCurrencyBackpackByID" }) do
 		if C_CurrencyInfo and C_CurrencyInfo[name] then
-			hooksecurefunc(C_CurrencyInfo, name, function() C_Timer.After(0, refreshShown) end)
+			hooksecurefunc(C_CurrencyInfo, name, function() C_Timer.After(0, footersShown) end)
 		end
 	end
 	-- What counts as an upgrade moves with your gear and your role.
@@ -1076,14 +1122,18 @@ function Bags:OnEnable()
 	Stoa:On("STOA_ROLE_CHANGED", rescore)
 	Stoa:On("PLAYER_LEVEL_UP", function() C_Timer.After(1, rescore) end)
 	-- Item links load a moment after the bag does.
-	Stoa:On("GET_ITEM_INFO_RECEIVED", function()
+	-- Only the slots holding the item that loaded are read again.
+	Stoa:On("GET_ITEM_INFO_RECEIVED", function(itemID)
+		local any = false
 		for _, frame in ipairs(allFrames()) do
 			if frame and frame.stoaBag and frame.IsShown and frame:IsShown() then
 				guarded(function()
-					for _, button in ipairs(items(frame)) do button.stoaLink = nil end
+					for _, button in ipairs(items(frame)) do
+						if button.stoaItemID == itemID then button.stoaLink, any = nil, true end
+					end
 				end)
 			end
 		end
-		refreshShown()
+		if any then refreshSoon() end
 	end)
 end

@@ -612,6 +612,7 @@ local function buildBar()
 
 	local lock = UI.button(bar, "Lock", 80, function() Stoa:ToggleMovers() end)
 	lock:SetPoint("BOTTOMRIGHT", -12, 10)
+	lock:SetMain()
 
 	-- Reset asks twice; the second click within a few seconds does it.
 	local armed = 0

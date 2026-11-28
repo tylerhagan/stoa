@@ -17,7 +17,7 @@ local RAIL = 190
 local PAD = Stoa.space.xl
 local STEP_ORDER = { "start", "specs", "look", "combat", "preset", "frames", "addons", "ready" }
 local CLASS_DEFAULT_WORD = "  (class default)"
-local WELCOME_THEMES = { "Bone", "Tide", "Graphite", "Matte", "Class" }
+local WELCOME_THEMES = { "Bone", "Tide", "Graphite", "Matte", "Ice", "Ember", "Class" }
 local WELCOME_THEME_SET = {}
 for _, name in ipairs(WELCOME_THEMES) do WELCOME_THEME_SET[name] = true end
 
@@ -392,12 +392,51 @@ function builders.specs(self, step)
 	self.healerWords = { label, clicks }
 end
 
+-- Slate's preview: the console as separate rounded cards over the world,
+-- a plain round portrait, and the same window and target, flat.
+local function slatePreview(view, palette, piece, skin, words)
+	for i, spec in ipairs({ { 92, "BOTTOMLEFT", 10 }, { 70, "BOTTOM", 0 }, { 92, "BOTTOMRIGHT", -10 } }) do
+		local cardPiece = piece(spec[1], 28, spec[2], spec[3], 8)
+		skin(cardPiece, "BACKGROUND", "CardFill.tga", nil, palette.panel, 0.94)
+		skin(cardPiece, "BORDER", "CardEdge.tga", nil, palette.text, 0.14)
+		if i ~= 2 then
+			local row = cardPiece:CreateTexture(nil, "ARTWORK")
+			row:SetSize(spec[1] - 30, 3)
+			row:SetPoint("LEFT", 10, 0)
+			row:SetColorTexture(palette.muted[1], palette.muted[2], palette.muted[3], 0.45)
+		end
+	end
+	local disc = UI.circle(view, "ARTWORK", 2, 26)
+	disc:SetPoint("BOTTOM", 0, 26)
+	disc:SetColorTexture(palette.accent[1], palette.accent[2], palette.accent[3], 0.5)
+	local window = piece(126, 76, "TOPLEFT", 12, -12)
+	skin(window, "BACKGROUND", "WindowFill.tga", 12, palette.panel, 1)
+	skin(window, "BORDER", "WindowEdge.tga", 12, palette.text, 0.14)
+	local title = words(window, "sans", 12, "Character", palette.text)
+	title:SetPoint("TOPLEFT", 12, -10)
+	for i = 1, 2 do
+		local row = window:CreateTexture(nil, "ARTWORK")
+		row:SetSize(i == 1 and 90 or 64, 3)
+		row:SetPoint("TOPLEFT", 12, -28 - i * 13)
+		row:SetColorTexture(palette.muted[1], palette.muted[2], palette.muted[3], 0.45)
+	end
+	local target = piece(126, 44, "TOPRIGHT", -12, -28)
+	skin(target, "BACKGROUND", "CardFill.tga", nil, palette.panel, 0.97)
+	skin(target, "BORDER", "CardEdge.tga", nil, palette.text, 0.14)
+	local name = words(target, "sans", 10, "Plains Buzzard", palette.text)
+	name:SetPoint("TOPLEFT", 10, -8)
+	local bar = piece(98, 9, "BOTTOMLEFT", target, "BOTTOMLEFT", 10, 9)
+	skin(bar, "ARTWORK", "PlateFill.tga", 5, palette.hostile, 1)
+	return view
+end
+
 -- A look drawn small from the art STOA already ships (no screenshot): a
--- window, a target and a strip of console in Leather or in Matte black.
--- Its colours are the look's own, whatever theme is on.
-local function lookPreview(parent, matte)
+-- window, a target and a strip of console in Leather, Matte black or
+-- Slate. Its colours are the look's own, whatever theme is on.
+local function lookPreview(parent, kind)
+	local matte = kind == "matte"
 	local view = CreateFrame("Frame", nil, parent)
-	local palette = Stoa.themes[matte and "Matte" or "Bone"]
+	local palette = Stoa.themes[matte and "Matte" or kind == "slate" and "Ice" or "Bone"]
 	local function piece(width, height, ...)
 		local frame = CreateFrame("Frame", nil, view)
 		frame:SetSize(width, height)
@@ -419,6 +458,7 @@ local function lookPreview(parent, matte)
 	local world = view:CreateTexture(nil, "BACKGROUND", nil, -8)
 	world:SetAllPoints()
 	world:SetColorTexture(0.17, 0.20, 0.21, 1)
+	if kind == "slate" then return slatePreview(view, palette, piece, skin, words) end
 
 	-- The console: leather under a brass line, or grained black under a
 	-- fine light.
@@ -522,30 +562,42 @@ local function lookPreview(parent, matte)
 end
 
 local MATERIALS = {
-	{ "leather", "Leather", "Tooled leather and brass, round corners, stone behind windows." },
-	{ "matte", "Matte black", "Moulded black hardware: sharp corners, fine lines, no gloss." },
+	{ "leather", "Leather", "Tooled leather and brass, warm round corners." },
+	{ "matte", "Matte black", "Moulded black hardware, sharp corners." },
+	{ "slate", "Slate", "Flat and modern: rounded cards, one sans." },
 }
+-- The previews are drawn for a half-width card and scaled into a third.
+local PREVIEW_W = 290
 local GRAINS = { { "satin", "Satin" }, { "soft", "Soft" }, { "smooth", "Smooth" }, { "fine", "Fine" } }
 local PREVIEW_H = 150
 
 -- `picked(material)` runs after a card sets the look.
 materialCards = function(self, step, top, picked)
-	local half = math.floor((BODY_W - GAP) / 2)
+	local half = math.floor((BODY_W - GAP * (#MATERIALS - 1)) / #MATERIALS)
 	local cards = {}
 	for i, entry in ipairs(MATERIALS) do
 		local button = card(step, half, PREVIEW_H + 70, entry[2], function()
 			Stoa.db.material = entry[1]
-			-- Matte black hides the painted frames, and its own theme suits it.
-			if entry[1] == "matte" and WELCOME_THEME_SET[Stoa.db.theme] and Stoa.db.theme ~= "Class" then Stoa:SetTheme("Matte") end
-			if entry[1] == "leather" and Stoa.db.theme == "Matte" then Stoa:SetTheme("Bone") end
+			-- Matte black hides the painted frames, and its own theme suits
+			-- it; Slate takes Ice and the Halo's thin arcs.
+			local stock = WELCOME_THEME_SET[Stoa.db.theme] and Stoa.db.theme ~= "Class"
+			if entry[1] == "matte" and stock then Stoa:SetTheme("Matte") end
+			if entry[1] == "slate" and stock and Stoa.db.theme ~= "Ember" then Stoa:SetTheme("Ice") end
+			if entry[1] == "slate" then
+				local halo = Stoa.modules.Halo and Stoa.modules.Halo.db
+				if halo then halo.arcStyle = "line" end
+			end
+			if entry[1] == "leather" and (Stoa.db.theme == "Matte" or Stoa.db.theme == "Ice" or Stoa.db.theme == "Ember") then Stoa:SetTheme("Bone") end
 			if picked then picked(entry[1]) end
 			self:Refresh()
 		end)
 		button:SetPoint("TOPLEFT", (i - 1) * (half + GAP), top)
-		local view = lookPreview(button, entry[1] == "matte")
-		view:SetPoint("TOPLEFT", 8, -8)
-		view:SetPoint("TOPRIGHT", -8, -8)
-		view:SetHeight(PREVIEW_H)
+		button.sub:SetWordWrap(true)
+		local view = lookPreview(button, entry[1])
+		local scale = (half - 16) / PREVIEW_W
+		view:SetScale(scale)
+		view:SetSize(PREVIEW_W, PREVIEW_H)
+		view:SetPoint("TOPLEFT", 8 / scale, -8 / scale)
 		button.text:ClearAllPoints()
 		button.text:SetPoint("TOPLEFT", 14, -(PREVIEW_H + 16))
 		button.text:SetPoint("RIGHT", -14, 0)
@@ -559,7 +611,7 @@ materialCards = function(self, step, top, picked)
 end
 
 function builders.look(self, step)
-	-- The two looks, always side by side.
+	-- The three looks, always side by side.
 	self.materialCards = materialCards(self, step, 0)
 	local top = -(PREVIEW_H + 70 + 14)
 
@@ -1414,9 +1466,9 @@ function Welcome:Summary()
 		local role = slotRole(slot)
 		add(slot == 1 and "First spec" or "Second spec", Stoa.ROLE_LABELS[role] or role)
 	end
-	add("Look", Stoa.db.material == "matte" and "Matte black" or "Leather")
+	add("Look", Stoa.db.material == "matte" and "Matte black" or Stoa.db.material == "slate" and "Slate" or "Leather")
 	add("Theme", themeWord(Stoa.db.theme or "Bone"))
-	if Stoa.db.material ~= "matte" then add("Ornament", Stoa.db.ornament == "painted" and "Painted" or "Plain") end
+	if (Stoa.db.material or "leather") == "leather" then add("Ornament", Stoa.db.ornament == "painted" and "Painted" or "Plain") end
 	add("Colour vision", VISION_WORDS[Stoa.db.vision or "Standard"] or "Standard")
 	local choice = combatChoice()
 	add("In combat", choice == "fold" and ("Fold, " .. (Stoa.db.calm or "5") .. " s" .. (Stoa.db.calmGroup ~= false and ", waits for group" or ""))
@@ -1485,10 +1537,13 @@ function Welcome:Refresh()
 		for _, part in ipairs(self.healerWords or {}) do part:SetShown(heals) end
 	elseif current == "look" then
 		local matte = Stoa.db.material == "matte"
-		choose(self.materialCards, matte and "matte" or "leather")
+		local slate = Stoa.db.material == "slate"
+		choose(self.materialCards, matte and "matte" or slate and "slate" or "leather")
 		choose(self.themeButtons, Stoa.db.theme)
+		-- Slate has neither ornament nor grain.
 		self.finishLabel:SetText(matte and "GRAIN" or "ORNAMENT")
-		for _, button in pairs(self.ornamentButtons) do button:SetShown(not matte) end
+		self.finishLabel:SetShown(not slate)
+		for _, button in pairs(self.ornamentButtons) do button:SetShown(not matte and not slate) end
 		for _, button in pairs(self.grainButtons) do button:SetShown(matte) end
 		choose(self.ornamentButtons, Stoa.db.ornament == "painted" and "painted" or "plain")
 		choose(self.grainButtons, self.grainButtons[Stoa.db.grain] and Stoa.db.grain or "soft")
@@ -1546,7 +1601,7 @@ function Welcome:Refresh()
 	self.next:SetReloads(current == "ready")
 	self.next.text:SetText(word)
 	self.next:SetWidth(math.max(120, math.ceil(self.next.text:GetStringWidth()) + 36))
-	self.next:SetSelected(true)
+	self.next:SetMain()
 end
 
 -- `mode` "update": the version 2 card for someone who already plays with

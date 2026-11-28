@@ -42,6 +42,13 @@ local Halo = Stoa:NewModule("Halo", {
 	restFade = false,
 	-- The arcs' drawing: an ARC_STYLES key.
 	arcStyle = "tube",
+	-- How health and power are drawn round you in a fight: "arcs" (the two
+	-- tall arcs) or "line" (two straight bars on one line under you, either
+	-- side of the cooldown slot).
+	shape = "arcs",
+	-- Ground line: a bar and its number go away while full (or, for rage,
+	-- empty) and come back the moment that changes.
+	lineQuiet = false,
 	-- Set once the one-time move from Line to Tube (2.0) has been looked at.
 	arcTube = false,
 })
@@ -176,6 +183,136 @@ local function arc(parent, side, token)
 	return sb
 end
 
+-- The ground line: two straight bars on the Halo's bottom line, health
+-- left of the cooldown slot and power right of it. Health empties toward
+-- the slot's side last, so both bars are fullest where they meet.
+-- Two shapes share this geometry. "line": the bars are the frame, numbers
+-- at their outer ends. "numbers": the numbers are the frame, large over a
+-- hairline bar each, and the coins move past the power bar's outer end
+-- (top is the room the shape takes above its bars; below says the coins
+-- can't sit over the bar).
+local LINES = {
+	line = { width = 120, height = 8, gap = 28, y = 8, top = 4 },
+	numbers = { width = 84, height = 3, gap = 28, y = 8, top = 34, below = true, numbers = true },
+}
+Halo.LINE = {}
+for key, value in pairs(LINES.line) do Halo.LINE[key] = value end
+local LINE = Halo.LINE
+
+function Halo:Line()
+	return LINES[self.db.shape] ~= nil
+end
+
+-- Called before anything is built, so every piece reads the chosen shape.
+function Halo:PickLine()
+	local spec = LINES[self.db.shape]
+	if not spec then return end
+	for key in pairs(LINE) do LINE[key] = nil end
+	for key, value in pairs(spec) do LINE[key] = value end
+end
+
+local LINE_ALPHA = 0.82
+
+-- The side rail: both bars as short uprights together on your left (the
+-- target docks on the right), with the numbers and coins beyond them. x
+-- and bottom are from the Halo's centre; the health rail is the nearer.
+Halo.RAIL = { x = 74, bottom = -52, width = 10, height = 48, gap = 6 }
+local RAIL = Halo.RAIL
+
+function Halo:Rail()
+	return self.db.shape == "rail"
+end
+
+local RAIL_ALPHA = 0.8
+local function railBar(parent, token, index)
+	local sb = CreateFrame("StatusBar", nil, parent)
+	sb:SetSize(RAIL.width, RAIL.height)
+	sb:SetOrientation("VERTICAL")
+	sb:SetStatusBarTexture(UI.WHITE)
+	if UI.slate() then UI.barShade(sb) end
+	UI.paint(sb, token)
+	local track = sb:CreateTexture(nil, "BACKGROUND")
+	-- Uprights stand against whatever is behind you (green on jungle,
+	-- blue on sky), so they get a dark seat.
+	track:SetPoint("TOPLEFT", -2, 2)
+	track:SetPoint("BOTTOMRIGHT", 2, -2)
+	track:SetColorTexture(0.03, 0.04, 0.05, 0.6)
+	sb:SetAlpha(RAIL_ALPHA)
+	sb.stoaAlpha = RAIL_ALPHA
+	sb:SetMinMaxValues(0, 1)
+	sb:SetValue(1)
+	sb:SetPoint("BOTTOMRIGHT", parent, "CENTER", -(RAIL.x + (index - 1) * (RAIL.width + RAIL.gap)), RAIL.bottom)
+	return sb
+end
+
+-- Slate's ground line swells toward the signature and ends in a bite that
+-- follows it at the gap the flat ends kept (LineFlareLeft/Right.tga,
+-- Tools/art/line_flare.py: a 128x16 space flush with the bar's outer
+-- end). The bar reaches FLARE.reach closer than LINE.gap and stands
+-- FLARE.tall, so the mask has the room; everything placed from LINE's own
+-- numbers stays where it was. A hairline is too thin to flare.
+local FLARE = { tall = 12, reach = 6, art = { 128, 16 }, seat = 128 }
+local function flared()
+	return UI.slate() and LINE.height >= 6
+end
+Halo.LineFlared = flared
+
+local function lineBar(parent, token, reverse)
+	local sb = CreateFrame("StatusBar", nil, parent)
+	local flare = flared()
+	local reach = flare and FLARE.reach or 0
+	sb:SetSize(LINE.width + reach, flare and FLARE.tall or LINE.height)
+	sb:SetStatusBarTexture(UI.WHITE)
+	if UI.slate() then UI.barShade(sb) end
+	UI.paint(sb, token)
+	if reverse and sb.SetReverseFill then sb:SetReverseFill(true) end
+	-- A dark groove a pixel proud of the bar, so it reads over snow and
+	-- bright sky as well as over dark ground.
+	local track = sb:CreateTexture(nil, "BACKGROUND")
+	track:SetPoint("TOPLEFT", -1, 1)
+	track:SetPoint("BOTTOMRIGHT", 1, -1)
+	-- Flared, the groove is the bar's outline: darker, so the whole shape
+	-- holds when the bar is part empty.
+	track:SetColorTexture(0.04, 0.05, 0.06, flare and 0.85 or 0.6)
+	if flare then
+		local outer = reverse and "LEFT" or "RIGHT"
+		local artW, artH = FLARE.art[1], FLARE.art[2]
+		for _, piece in ipairs({ { sb:GetStatusBarTexture(), 0 }, { track, 1 } }) do
+			local tex, proud = piece[1], piece[2]
+			local mask = sb:CreateMaskTexture()
+			-- A mask doesn't flip by its texture coordinates, so each side
+			-- has its own art.
+			mask:SetTexture(UI.MEDIA .. "Textures\\LineFlare" .. (reverse and "Left" or "Right"), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			mask:SetSize(artW + 2 * proud, artH + 2 * proud)
+			mask:SetPoint(outer, sb, outer, reverse and -proud or proud, 0)
+			tex:AddMaskTexture(mask)
+		end
+	end
+	-- A little of the world shows through, like the console's own bars.
+	sb:SetAlpha(LINE_ALPHA)
+	sb:SetMinMaxValues(0, 1)
+	sb:SetValue(1)
+	if reverse then
+		sb:SetPoint("RIGHT", parent, "BOTTOM", -(LINE.gap - reach), LINE.y)
+	else
+		sb:SetPoint("LEFT", parent, "BOTTOM", LINE.gap - reach, LINE.y)
+	end
+	return sb
+end
+
+-- Hide while full: a bar that is full (rage: empty) says nothing, so it and
+-- its number go clear. A hidden value counts as not full.
+local function quiet(self, bar, text, current, max, emptyIsRest)
+	if not ((self:Line() or self:Rail()) and self.db.lineQuiet) then return end
+	local known = not Stoa:IsSecret(current) and not Stoa:IsSecret(max) and type(current) == "number" and type(max) == "number" and max > 0
+	local resting = known and ((emptyIsRest and current <= 0) or (not emptyIsRest and current >= max))
+	local alpha = resting and 0 or 1
+	if bar.stoaQuiet == alpha then return end
+	bar.stoaQuiet = alpha
+	UI.fade(bar, alpha * (bar.stoaAlpha or LINE_ALPHA), 0.15)
+	text:SetAlpha(alpha)
+end
+
 function Halo:Build()
 	local frame = CreateFrame("Frame", "StoaHalo", UIParent)
 	frame:SetSize(SIZE, SIZE)
@@ -186,19 +323,49 @@ function Halo:Build()
 	frame:SetAlpha(0)
 	self.frame = frame
 
-	local health = arc(frame, "Left", "health")
-	health:SetPoint("LEFT")
-	local mana = arc(frame, "Right", "mana")
-	mana:SetPoint("RIGHT")
+	self:PickLine()
+	local line = self:Line()
+	local rail = self:Rail()
+	local health, mana
+	if rail then
+		health = railBar(frame, "health", 1)
+		mana = railBar(frame, "mana", 2)
+	elseif line then
+		health = lineBar(frame, "health", true)
+		mana = lineBar(frame, "mana")
+	else
+		health = arc(frame, "Left", "health")
+		health:SetPoint("LEFT")
+		mana = arc(frame, "Right", "mana")
+		mana:SetPoint("RIGHT")
+	end
 	self.health, self.mana = health, mana
 
-	local healthText = UI.text(frame, "serif", Stoa.typeSize.title, "text", "RIGHT")
-	healthText:SetPoint("BOTTOMRIGHT", frame, "BOTTOM", -SIZE * 0.3, 6)
-	local manaText = UI.text(frame, "serif", Stoa.typeSize.title, "mana", "LEFT")
-	manaText:SetPoint("BOTTOMLEFT", frame, "BOTTOM", SIZE * 0.3, 6)
+	local numberSize = line and LINE.numbers and Stoa.typeSize.display or Stoa.typeSize.title
+	-- Beside the tapered bars the numbers step down, so neither outweighs the other.
+	if line and not LINE.numbers and flared() then numberSize = Stoa.typeSize.page end
+	local healthText = UI.text(frame, "serif", numberSize, "text", "RIGHT")
+	local manaText = UI.text(frame, "serif", numberSize, "mana", "LEFT")
+	if rail then
+		-- Beside the rails, at their foot: health over power.
+		manaText:SetJustifyH("RIGHT")
+		manaText:SetPoint("BOTTOMRIGHT", mana, "BOTTOMLEFT", -8, -2)
+		healthText:SetPoint("BOTTOMRIGHT", manaText, "TOPRIGHT", 0, 4)
+	elseif line and LINE.numbers then
+		-- The numbers are the frame: large, each over its hairline.
+		healthText:SetPoint("BOTTOMRIGHT", health, "TOPRIGHT", 0, 5)
+		manaText:SetPoint("BOTTOMLEFT", mana, "TOPLEFT", 0, 5)
+	elseif line then
+		-- The numbers stand at the bars' outer ends.
+		healthText:SetPoint("RIGHT", health, "LEFT", -10, 0)
+		manaText:SetPoint("LEFT", mana, "RIGHT", 10, 0)
+	else
+		healthText:SetPoint("BOTTOMRIGHT", frame, "BOTTOM", -SIZE * 0.3, 6)
+		manaText:SetPoint("BOTTOMLEFT", frame, "BOTTOM", SIZE * 0.3, 6)
+	end
 	-- The numbers are what you read mid-fight, so they get a fine outline.
-	Stoa:SetFont(healthText, "serif", Stoa.typeSize.title, "OUTLINE")
-	Stoa:SetFont(manaText, "serif", Stoa.typeSize.title, "OUTLINE")
+	Stoa:SetFont(healthText, "serif", numberSize, "OUTLINE")
+	Stoa:SetFont(manaText, "serif", numberSize, "OUTLINE")
 	self.healthText, self.manaText = healthText, manaText
 	self:BuildManaPlay(frame, mana, manaText)
 
@@ -248,6 +415,48 @@ function Halo:BuildManaPlay(frame, arcBar, manaText)
 	number:SetPoint("TOPLEFT", form, "BOTTOMLEFT", 0, -3)
 	form:Hide()
 	local db = self.db
+	if self:Rail() then
+		-- On the upright bar: a fraction along it is a height from its foot.
+		self.manaPlay = Stoa.Power.dress(arcBar, {
+			enabled = function(key) return db[key] end,
+			place = function(tex, f)
+				tex:ClearAllPoints()
+				tex:SetPoint("CENTER", arcBar, "BOTTOM", 0, f * RAIL.height)
+			end,
+			shade = function(tex, from, to)
+				tex:ClearAllPoints()
+				tex:SetPoint("BOTTOMLEFT", arcBar, "BOTTOMLEFT", 0, from * RAIL.height)
+				tex:SetPoint("TOPRIGHT", arcBar, "BOTTOMRIGHT", 0, to * RAIL.height)
+			end,
+			form = {
+				bar = form,
+				show = function(_, raw) number:SetText(raw) number:Show() end,
+				hide = function() number:Hide() end,
+			},
+		})
+		return
+	end
+	if self:Line() then
+		-- On the straight bar: a fraction along it is a distance from its left.
+		self.manaPlay = Stoa.Power.dress(arcBar, {
+			enabled = function(key) return db[key] end,
+			place = function(tex, f)
+				tex:ClearAllPoints()
+				tex:SetPoint("CENTER", arcBar, "LEFT", f * arcBar:GetWidth(), 0)
+			end,
+			shade = function(tex, from, to)
+				tex:ClearAllPoints()
+				tex:SetPoint("TOPLEFT", arcBar, "TOPLEFT", from * arcBar:GetWidth(), 0)
+				tex:SetPoint("BOTTOMRIGHT", arcBar, "BOTTOMLEFT", to * arcBar:GetWidth(), 0)
+			end,
+			form = {
+				bar = form,
+				show = function(_, raw) number:SetText(raw) number:Show() end,
+				hide = function() number:Hide() end,
+			},
+		})
+		return
+	end
 	self.manaPlay = Stoa.Power.dress(arcBar, {
 		texture = arcFile("Right"),
 		enabled = function(key) return db[key] end,
@@ -279,6 +488,18 @@ function Halo:BuildSignature(frame)
 	slot:SetPoint("CENTER", frame, "BOTTOM", 0, 8)
 	self.signature = slot
 
+	-- The tapered ground line runs in under a dark seat in the groove's
+	-- tone, which makes the bars and the signature one object.
+	if self:Line() and not LINE.numbers and flared() then
+		-- On the Halo itself, so it lies behind the bars: a disc and two
+		-- fading bands (LineSeat.tga), and the bars start at the disc's edge.
+		local seat = frame:CreateTexture(nil, "BACKGROUND")
+		seat:SetTexture(UI.MEDIA .. "Textures\\LineSeat")
+		seat:SetVertexColor(0.04, 0.05, 0.06)
+		seat:SetSize(FLARE.seat, FLARE.seat)
+		seat:SetPoint("CENTER", slot, "CENTER")
+		slot.seat = seat
+	end
 	local ring = UI.circle(slot, "BORDER", 0, SIGNATURE_SIZE + 4, "accent")
 	ring:SetPoint("CENTER")
 	local gap = UI.circle(slot, "BORDER", 1, SIGNATURE_SIZE + 2, "panel")
@@ -339,6 +560,9 @@ local SLAB_WIDTH, SLAB_HEIGHT, SLAB_PAD = 244, 50, 11
 local SLAB_BAR_W = SLAB_WIDTH - SLAB_PAD * 2
 local SLAB_BAR_H = 8
 local SLAB_NAME_W = SLAB_BAR_W - 30
+-- The most the type words take on the block's top line, so the name
+-- beside them always shows.
+local SLAB_CUE_MOST = 96
 -- Room at the bar's right end for the numbers.
 local SLAB_NUM_W = 84
 local FULL_MATTE_BAR_H = 10
@@ -375,6 +599,15 @@ local TARGET_DOCK_TEXT = 60
 -- Without the console's art there's no medallion to fit round: the plaque
 -- rests a little above the console instead.
 local TARGET_REST_Y = 14
+-- Slate, resting: a twin of your card. The name over the race and class
+-- on the left, the health bar (its power line under it) on the right with
+-- the numbers below.
+local TWIN_W, TWIN_NAME_W, TWIN_GAP = 340, 124, 12
+-- Its target's target is a line inside it, under the bar, left of the numbers.
+local TWIN_TOT_W, TWIN_TOT_H = 104, 14
+local TWIN_BAR_Y, TWIN_NUM_Y = -13, -37
+local SLATE_REST_GAP = 10   -- Slate: from your card to the target
+local TWIN_W_LEAST, TWIN_W_MOST = 260, 440
 
 -- The aura row hangs under the plaque at the Halo, and sits on top of it
 -- while it rests on the console, where under it would run over the gold
@@ -408,6 +641,15 @@ function Halo:PlaceTargetAuras()
 	icons.placed = true
 end
 
+-- The twin runs from your card to the right end of the bars' card under
+-- it, so the two cards' ends line up.
+function Halo:TwinWidth()
+	local console = Stoa.modules.Grimoire
+	local right, you = console and console.barsCardRight, console and console.YOU_CARD
+	if not (right and you) then return TWIN_W end
+	return math.floor(math.max(TWIN_W_LEAST, math.min(TWIN_W_MOST, right - you.width / 2 - SLATE_REST_GAP)) + 0.5)
+end
+
 function Halo:PlaceTarget()
 	local target, frame = self.target, self.frame
 	if not target or InCombatLockdown() then return end
@@ -424,6 +666,7 @@ function Halo:PlaceTarget()
 	end
 	local console = Stoa.modules.Grimoire
 	local edge = console and console.enabled and console.frame
+	self.targetTwin = false
 	target:ClearAllPoints()
 	-- In a group the cards sit under the Halo, over the resting spot, so
 	-- the plaque keeps its Halo spot there in and out of combat.
@@ -440,6 +683,13 @@ function Halo:PlaceTarget()
 		if self.targetDocks then
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", matte and console.MATTE_DOCK_X or UI.PLAQUE_SOCKET_X, console:OpenHeight() + TARGET_DOCK_Y)
 			self.targetTextLeft = matte and console.MATTE_DOCK_TEXT or TARGET_DOCK_TEXT
+		elseif console.youCard and console.YOU_CARD then
+			-- Slate: a twin of your card, on its line, right beside it (the
+			-- form chips stand on the card's other side).
+			local you = console.YOU_CARD
+			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", you.width / 2 + SLATE_REST_GAP, console:OpenHeight() + you.y - you.height / 2)
+			self.targetTextLeft = nil
+			self.targetTwin = self:SlabWanted()
 		else
 			local gap = 150 * (console.ART_SCALE or 0.556) + 22
 			target:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", gap, console:OpenHeight() + TARGET_REST_Y)
@@ -482,30 +732,39 @@ function Halo:LayoutTarget(curve)
 	if not (target and target.hp) then return end
 	local docked = curve ~= nil
 	local slab = not docked and self.targetSlab or false
-	if docked == target.laidDocked and slab == target.laidSlab and (not docked or curve == target.laidCurve) then return end
-	target.laidDocked, target.laidCurve, target.laidSlab = docked, curve, slab
+	local twin = slab and self.targetTwin and self:TwinWidth() or false
+	local twinW = twin or TWIN_W
+	if docked == target.laidDocked and slab == target.laidSlab and twin == target.laidTwin and (not docked or curve == target.laidCurve) then return end
+	target.laidDocked, target.laidCurve, target.laidSlab, target.laidTwin = docked, curve, slab, twin
 	for _, part in ipairs({ target.caption, target.cue, target.name, target.hp }) do part:ClearAllPoints() end
+	target.cue:SetJustifyH(twin and "LEFT" or "RIGHT")
+	target.cue:SetWidth(twin and TWIN_NAME_W or 0)
+	target.cue:SetWordWrap(false)
 	-- Slim: the slab's rows, at the Halo or docked in Matte.
 	local slim = slab or docked and self:DockSlim() or false
 	local left = docked and self.targetTextLeft or SLAB_PAD
-	local barW = slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
-	target.nameWidth = slab and SLAB_NAME_W or TARGET_BAR_W
+	local twinBar = twinW - SLAB_PAD * 2 - TWIN_NAME_W - TWIN_GAP
+	local barW = twin and twinW - SLAB_PAD * 2 or slab and SLAB_BAR_W or slim and DOCK_SLIM_BAR_W or TARGET_BAR_W
+	target.nameWidth = twin and TWIN_NAME_W - 22 or slab and SLAB_NAME_W or TARGET_BAR_W
 	-- Matte's full plaque: a slimmer square bar with its numbers beside it.
 	local beside = not slim and target.hp.square or false
 	local short = slim or beside
-	target.hp:SetSize(short and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or beside and FULL_MATTE_BAR_H or TARGET_BAR_H)
+	target.hp:SetSize(twin and twinBar or short and barW - SLAB_NUM_W or barW, slim and SLAB_BAR_H or beside and FULL_MATTE_BAR_H or TARGET_BAR_H)
 	if target.hp.rim then target.hp.rim:SetShown(not slim) end
 	-- Leather's rounded bar: its ends keep their shape at either size.
 	if target.hp.fitMask then target.hp:fitMask() end
 	-- On the slab the power line runs the health line's full length.
-	target.power:SetWidth(short and barW - SLAB_NUM_W or barW - 16)
+	target.power:SetWidth(twin and twinBar or short and barW - SLAB_NUM_W or barW - 16)
 	target.power:ClearAllPoints()
 	target.power:SetPoint("TOP", target.hp, "BOTTOM", 0, slim and -3 or -4)
 	-- The numbers: inside the bar, or beside the name over the slim one.
 	local percent, amount = target.hp.percent, target.hp.amount
 	percent:ClearAllPoints()
 	amount:ClearAllPoints()
-	if slim then
+	if twin then
+		percent:SetPoint("RIGHT", target, "TOPLEFT", left + barW, TWIN_NUM_Y)
+		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
+	elseif slim then
 		percent:SetPoint("RIGHT", target, "TOPLEFT", left + barW, (slab and -29 or DOCK_SLIM_BAR_Y) - 4)
 		amount:SetPoint("RIGHT", percent, "LEFT", -6, 0)
 	elseif beside then
@@ -540,7 +799,13 @@ function Halo:LayoutTarget(curve)
 	-- docked (where that corner is behind the dial) over the bar's end.
 	target.markCorner = slab and 2 or slim and left + barW or false
 	if target.mark then self:PlaceTargetMark() end
-	if slab then
+	if twin then
+		target:SetSize(twinW, SLAB_HEIGHT)
+		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -10)
+		target.name:SetPoint("LEFT", target.caption, "RIGHT", 6, 0)
+		target.cue:SetPoint("TOPLEFT", SLAB_PAD, -30)
+		target.hp:SetPoint("TOPLEFT", SLAB_PAD + TWIN_NAME_W + TWIN_GAP, TWIN_BAR_Y)
+	elseif slab then
 		target:SetSize(SLAB_WIDTH, SLAB_HEIGHT)
 		-- The level leads the line, the name beside it, the cue at the end.
 		target.caption:SetPoint("TOPLEFT", SLAB_PAD, -10)
@@ -610,6 +875,13 @@ function Halo:BuildTarget(frame)
 	local theirs = Stoa.Conflicts and Stoa.Conflicts:SteppedAside("Target")
 	RegisterStateDriver(target, "visibility", theirs and "hide" or "[@target,exists] show; hide")
 	self.target = target
+	-- A friendly target's debuffs you can remove: the game draws their
+	-- marks just above the plaque's top left corner, in a fight too (see
+	-- Party:BuildDispelBox).
+	local party = Stoa.modules.Party
+	if party and party.BuildDispelBox then
+		xpcall(party.BuildDispelBox, Stoa.catch, party, target, "target", "TOPLEFT", 22, 17, 1.6)
+	end
 	-- The medallion faces away from the Halo, balancing the card.
 	local plaque = UI.plaque(target, "RIGHT", { medallion = true })
 	target.plaque = plaque
@@ -861,10 +1133,148 @@ end
 
 -- Updates -------------------------------------------------------------------
 
+-- The straight shapes are small, so the corner of your eye gets colour and
+-- movement instead of size: health turns amber under half and red under a
+-- quarter (bar and number), and a hit for an eighth of your health or more
+-- flashes the bar once. Unreadable health leaves everything as it was.
+local HIT_SHARE = 0.12
+local function healthToken(share)
+	if share <= 0.25 then return "hostile" end
+	if share <= 0.5 then return "danger" end
+	return "health"
+end
+
+function Halo:HealthHit()
+	local bar = self.health
+	local flash = bar.stoaFlash
+	if not flash then
+		flash = bar:CreateTexture(nil, "OVERLAY")
+		flash:SetPoint("TOPLEFT", -3, 3)
+		flash:SetPoint("BOTTOMRIGHT", 3, -3)
+		flash:SetColorTexture(1, 1, 1, 1)
+		flash:SetBlendMode("ADD")
+		flash:SetAlpha(0)
+		local group = flash:CreateAnimationGroup()
+		local fade = group:CreateAnimation("Alpha")
+		fade:SetFromAlpha(0.8)
+		fade:SetToAlpha(0)
+		fade:SetDuration(0.3)
+		flash.group = group
+		bar.stoaFlash = flash
+	end
+	flash.group:Stop()
+	flash.group:Play()
+end
+
+function Halo:HealthMood()
+	if not (self:Line() or self:Rail()) then return end
+	local health, max = UnitHealth("player"), UnitHealthMax("player")
+	if Stoa:IsSecret(health) or Stoa:IsSecret(max) or type(health) ~= "number" or type(max) ~= "number" or max <= 0 then return end
+	local share = health / max
+	local token = healthToken(share)
+	if token ~= self.healthToken then
+		self.healthToken = token
+		self.health:SetStatusBarColor(Stoa:Color(token))
+		self.healthText:SetTextColor(Stoa:Color(token == "health" and "text" or token))
+	end
+	self:SeatMood()
+	local last = self.healthShare
+	self.healthShare = share
+	if last and last - share >= HIT_SHARE then self:HealthHit() end
+end
+
+-- The dark seat under the signature (the tapered ground line) carries
+-- danger: red under a quarter health, amber while an enemy is on you in a
+-- group (a tank holding one is the calm case), its own dark tone otherwise. Dead or
+-- a ghost, the danger is over: the seat goes back to dark.
+function Halo:SeatMood()
+	local seat = self.signature and self.signature.seat
+	if not seat then return end
+	local token
+	if UnitIsDeadOrGhost and Stoa.safe.plain(UnitIsDeadOrGhost("player")) then
+		token = nil
+	elseif self.healthToken == "hostile" then
+		token = "hostile"
+	elseif self.seatAggro then
+		token = "danger"
+	end
+	if token == self.seatToken then return end
+	self.seatToken = token
+	if token then
+		local r, g, b = Stoa:Color(token)
+		seat:SetVertexColor(r, g, b)
+	else
+		seat:SetVertexColor(0.04, 0.05, 0.06)
+	end
+	-- The new tone comes up out of a brief dip rather than snapping. An
+	-- animation's alpha lets go when it ends, so the seat can't stay faint.
+	local ease = seat.stoaEase
+	if not ease then
+		ease = seat:CreateAnimationGroup()
+		local fade = ease:CreateAnimation("Alpha")
+		fade:SetFromAlpha(0.35)
+		fade:SetToAlpha(1)
+		fade:SetDuration(UI.MOTION.grow)
+		fade:SetSmoothing("OUT")
+		seat.stoaEase = ease
+	end
+	ease:Stop()
+	ease:Play()
+end
+
+-- A form's look (Forms.lua: Shadowform) breathes round the seat: the ring
+-- glow in the form's smoke, slowly rising and falling. The only standing
+-- motion on the ground line, so it stays low and slow.
+local SEAT_BREATH, SEAT_BREATH_LOW = 1.8, 0.3
+function Halo:SeatForm(look)
+	local slot = self.signature
+	if not (slot and slot.seat) then return end
+	local smoke = slot.seatSmoke
+	local shade = type(look) == "table" and look.shade
+	if not shade then
+		if smoke then
+			smoke.breath:Stop()
+			smoke:Hide()
+		end
+		return
+	end
+	if not smoke then
+		smoke = self.frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+		smoke:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
+		-- The glow peaks 55/77 of the way out: set that just past the
+		-- signature's ring.
+		local size = (SIGNATURE_SIZE / 2 + 14) / (55 / 77) * 2
+		smoke:SetSize(size, size)
+		smoke:SetPoint("CENTER", slot, "CENTER")
+		local breath = smoke:CreateAnimationGroup()
+		breath:SetLooping("BOUNCE")
+		local fade = breath:CreateAnimation("Alpha")
+		fade:SetFromAlpha(SEAT_BREATH_LOW)
+		fade:SetToAlpha(1)
+		fade:SetDuration(SEAT_BREATH)
+		fade:SetSmoothing("IN_OUT")
+		smoke.breath = breath
+		slot.seatSmoke = smoke
+	end
+	smoke:SetVertexColor(shade[1], shade[2], shade[3])
+	smoke:Show()
+	if not smoke.breath:IsPlaying() then smoke.breath:Play() end
+end
+
+function Halo:SeatThreat()
+	local status = InCombatLockdown() and UnitThreatSituation and UnitThreatSituation("player")
+	if Stoa:IsSecret(status) then status = nil end
+	-- Only in a group: alone, every enemy is on you and the amber says nothing.
+	self.seatAggro = status == 3 and Stoa:GetRole() ~= "TANK" and IsInGroup and IsInGroup() or nil
+	self:SeatMood()
+end
+
 function Halo:UpdateHealth()
 	UI.setUnitBar(self.health, "player", "health")
 	if self.rest then UI.setUnitBar(self.rest.health, "player", "health") end
 	self.healthText:SetText(UnitHealth("player"))
+	self:HealthMood()
+	quiet(self, self.health, self.healthText, UnitHealth("player"), UnitHealthMax("player"))
 end
 
 -- The right arc is whatever your power is: mana in its own colour, energy
@@ -883,6 +1293,8 @@ function Halo:UpdatePower()
 		if self.rest then self.rest.mana:SetStatusBarColor(Stoa:Color(token)) end
 		self.manaText:SetTextColor(Stoa:Color(token))
 	end
+	-- Rage rests empty; everything else rests full.
+	quiet(self, self.mana, self.manaText, UnitPower("player"), UnitPowerMax("player"), kind == 1)
 end
 
 function Halo:UpdateSignature()
@@ -1067,7 +1479,12 @@ function Halo:PlaceTargetOfTarget(curve)
 		chip.label:SetPoint("TOPLEFT", textLeft, self:SlabWanted() and -11 or -6)
 	else
 		chip:SetFrameStrata("LOW")
-		if self.targetSlab then
+		if self.targetSlab and self.targetTwin then
+			chip:SetSize(TWIN_TOT_W, TWIN_TOT_H)
+			chip:SetPoint("TOPLEFT", target, "TOPLEFT", SLAB_PAD + TWIN_NAME_W + TWIN_GAP, TWIN_NUM_Y + TWIN_TOT_H / 2)
+			chip:SetFrameLevel(target:GetFrameLevel() + 5)
+			chip.label:SetPoint("LEFT")
+		elseif self.targetSlab then
 			-- Its panel reaches 10 past each edge: level with the slab's
 			-- top and foot, a small gap between the two blocks.
 			chip:SetSize(TOT_TIGHT_W, SLAB_HEIGHT - 20)
@@ -1081,11 +1498,17 @@ function Halo:PlaceTargetOfTarget(curve)
 	end
 	-- Matte: one line over the health line, docked or beside the slab.
 	chip:SetTight(docked and self:SlabWanted() or not docked and self.targetSlab or false)
+	-- Slate's twin: just a mark and the name, on the target's own card.
+	local inside = not docked and self.targetSlab and self.targetTwin or false
+	chip.said = chip.said or chip.label:GetText()
+	chip.label:SetText(inside and ">" or chip.said)
+	chip.hp:SetAlpha(inside and 0 or 1)
+	if inside then chip.name:SetWidth(TWIN_TOT_W - 14) end
 	if chip.slab then chip.slab:SetShown(docked) end
 	if chip.fill then
-		chip.fill:SetShown(not docked)
+		chip.fill:SetShown(not docked and not inside)
 		if chip.stoaMould then chip.stoaMould:SetShown(not docked) end
-		if docked or UI.matte() then chip.edge:Clear() else chip.edge:Set(Stoa:Color("hairline")) end
+		if docked or inside or UI.matte() then chip.edge:Clear() else chip.edge:Set(Stoa:Color("hairline")) end
 	end
 end
 
@@ -1186,6 +1609,11 @@ function Halo:UpdateTarget()
 	local target = self.target
 	-- Showing and hiding is the unit watch's job, as the frame is secure.
 	if not UnitExists("target") then return end
+	-- The removable-debuff marks are for someone you can help. On an
+	-- enemy the game would mark your own magic and disease effects there.
+	-- By alpha, never Show or Hide: the box holds the game's own protected
+	-- marks, and showing or hiding it in a fight is a blocked action.
+	if target.dispelBox then target.dispelBox:SetAlpha(Stoa.safe.plain(UnitCanAttack("player", "target")) == false and 1 or 0) end
 	local name = UnitName("target")
 	target.name:SetText(name)
 	-- The first time the serif face is drawn the game may not have loaded
@@ -1250,7 +1678,7 @@ function Halo:UpdateTarget()
 	elseif kind and not unspecified then
 		words[#words + 1] = kind:upper()
 	end
-	local slabKind
+	local slabKind, slabLast
 	if slab then
 		local marks = {}
 		if rank == "rare" or rank == "rareelite" then marks[#marks + 1] = slabWord("RARE", Stoa.silver) end
@@ -1260,6 +1688,7 @@ function Halo:UpdateTarget()
 		-- The trailing gap keeps KICK, which follows it, a word away.
 		target.rankWord:SetText(#marks > 0 and table.concat(marks, " ") .. "   " or "")
 		slabKind = UI.join({ unpack(words, 2) })
+		slabLast = #words > 2 and words[#words] or nil
 		words = { words[1] }
 	else
 		target.rankWord:SetText("")
@@ -1287,6 +1716,13 @@ function Halo:UpdateTarget()
 	if slab and not dead then cue = slabKind or "" end
 	if quiet and not dead then cue = flags and "PVP" or "" end
 	target.cue:SetText(cue)
+	-- On the block the name keeps its room: a long race and class drops
+	-- to the class alone, and anything still too long is cut short.
+	if slab and not self.targetTwin and not dead then
+		target.cue:SetWidth(0)
+		if (target.cue:GetStringWidth() or 0) > SLAB_CUE_MOST and slabLast then target.cue:SetText(slabLast) end
+		if (target.cue:GetStringWidth() or 0) > SLAB_CUE_MOST then target.cue:SetWidth(SLAB_CUE_MOST) end
+	end
 	if quiet and cue == "PVP" then
 		target.cue:SetTextColor(Stoa:Color("danger"))
 	else
@@ -1333,8 +1769,8 @@ function Halo:UpdateTargetPower()
 	power:SetShown(Stoa:IsSecret(dead) or not dead)
 end
 
--- Your Shield, Renew and the like on a friendly target, as the same tags
--- the party cards carry. Nothing on an enemy or the dead.
+-- A debuff you can dispel, your Shield, Renew and the like on a friendly
+-- target, as the same tags the party cards carry. Nothing on an enemy or the dead.
 function Halo:UpdateTargetPips()
 	local row = self.target and self.target.pips
 	if not row then return end
@@ -1346,7 +1782,12 @@ function Halo:UpdateTargetPips()
 		if Stoa:IsSecret(dead) then dead = false end
 		-- Docked, there's no room under the bar: it's on the rim.
 		local docked = self.target.plaque.docked
-		if not hostile and not dead and not docked then party:AuraPips("target", pips) end
+		if not hostile and not dead and not docked then
+			-- A debuff you can remove leads, as on the party cards.
+			local dispel = party.DispelFor and party:DispelFor("target")
+			if dispel then pips[1] = { dispel.word, dispel.token } end
+			party:AuraPips("target", pips)
+		end
 	end
 	UI.setPips(row, pips)
 end
@@ -1397,10 +1838,12 @@ function Halo:UpdateTargetAuras()
 			icon.count:SetText("")
 			pcall(function()
 				local n = aura.applications
+				if Stoa:IsSecret(n) then return end
 				icon.count:SetText(n and n > 1 and n or "")
 			end)
 			icon.cooldown:Clear()
 			pcall(function()
+				if Stoa:IsSecret(aura.duration) or Stoa:IsSecret(aura.expirationTime) then return end
 				if aura.duration and aura.duration > 0 then
 					icon.cooldown:SetCooldown(aura.expirationTime - aura.duration, aura.duration)
 				end
@@ -1629,10 +2072,18 @@ function Halo:BuildRest()
 	rest:SetScale(self.db.scale)
 	rest:SetFrameStrata("LOW")
 	rest:EnableMouse(false)
-	rest.health = arc(rest, "Left", "health")
-	rest.health:SetPoint("LEFT")
-	rest.mana = arc(rest, "Right", "mana")
-	rest.mana:SetPoint("RIGHT")
+	if self:Rail() then
+		rest.health = railBar(rest, "health", 1)
+		rest.mana = railBar(rest, "mana", 2)
+	elseif self:Line() then
+		rest.health = lineBar(rest, "health", true)
+		rest.mana = lineBar(rest, "mana")
+	else
+		rest.health = arc(rest, "Left", "health")
+		rest.health:SetPoint("LEFT")
+		rest.mana = arc(rest, "Right", "mana")
+		rest.mana:SetPoint("RIGHT")
+	end
 	rest:SetAlpha(Stoa:GetState() == Stoa.STATE_COMBAT and 0 or REST_ARCS)
 	self.rest = rest
 	UI.applyTheme()
@@ -1737,8 +2188,14 @@ function Halo:OnEnable()
 	end)
 	Stoa:On("STOA_THEME_CHANGED", function()
 		self.powerToken = nil
+		self.healthToken = nil
 		self:UpdatePower()
+		self:UpdateHealth()
 		self:UpdateTarget()
+		-- The seat's tone is a theme colour too; false matches no tone,
+		-- so it is painted again.
+		self.seatToken = false
+		self:SeatMood()
 	end)
 	Stoa:OnUnit("UNIT_AURA", { "player", "target" }, function(unit)
 		if unit == "player" then self:UpdateReminders() end
@@ -1838,7 +2295,16 @@ function Halo:OnEnable()
 	Stoa:OnUnit("UNIT_NAME_UPDATE", { "target" }, function(unit)
 		if unit == "target" then self:UpdateTarget() end
 	end)
-	Stoa:On("UNIT_THREAT_SITUATION_UPDATE", function() self:UpdateThreat() end)
+	Stoa:On("UNIT_THREAT_SITUATION_UPDATE", function()
+		self:UpdateThreat()
+		self:SeatThreat()
+	end)
+	Stoa:On("PLAYER_REGEN_ENABLED", function() self:SeatThreat() end)
+	Stoa:On("STOA_FORM_LOOK", function(look) self:SeatForm(look) end)
+	self:SeatForm(Stoa.Forms and Stoa.Forms.look)
+	for _, event in ipairs({ "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST" }) do
+		Stoa:On(event, function() self:SeatMood() end)
+	end
 	Stoa:OnUnit("UNIT_THREAT_LIST_UPDATE", { "target" }, function() self:UpdateThreat() end)
 
 	local function onCast(channel)

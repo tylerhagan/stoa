@@ -59,6 +59,53 @@ end
 
 -- Build ---------------------------------------------------------------------
 
+-- In a fight the game refuses every aura read an addon makes, so STOA
+-- can't know a party member carries a debuff you could remove. The game's
+-- own raid frames don't read auras either: they hand the game a frame and
+-- some settings, and the game draws into it. This does the same with a
+-- small box, asking only for the mark of each kind of debuff this
+-- character can dispel (magic, disease, ...). STOA never learns what is
+-- drawn there. Out of a fight the DISEASE or MAGIC word still shows as
+-- before, next to the mark.
+-- The game puts the marks 3 in and 2 down from the box's top right, 14
+-- across each, the next to the left. x and y place the box's top right
+-- from the owner's `corner`, in the box's own (scaled) units.
+local MARK_BOX_W, MARK_BOX_H = 48, 18
+
+function Party:BuildDispelBox(card, unit, corner, x, y, scale)
+	local auras, kinds = C_UnitAuras, Enum
+	if not (auras and auras.AddPrivateAuraAnchor and kinds.RaidDispelDisplayType and kinds.RaidAuraOrganizationType) then return end
+	local box = CreateFrame("Frame", nil, card)
+	box:SetSize(MARK_BOX_W, MARK_BOX_H)
+	box:SetScale(scale)
+	box:SetPoint("TOPRIGHT", card, corner, x, y)
+	box:SetFrameLevel(card:GetFrameLevel() + 6)
+	box:EnableMouse(false)
+	local settings = {
+		["max-buffs"] = 0, ["max-debuffs"] = 0, ["max-dispel-debuffs"] = 3,
+		["aura-organization-type"] = kinds.RaidAuraOrganizationType.Legacy,
+		["dispel-indicator-option"] = kinds.RaidDispelDisplayType.DispellableByMe,
+		["display-only-dispellable-debuffs"] = true,
+		["ignore-buffs"] = true, ["ignore-debuffs"] = true, ["ignore-dispel-debuffs"] = false,
+		["display-larger-role-specific-debuffs"] = false,
+		["dispel-indicator-overlay-animation"] = false, ["dispel-indicator-animated-border"] = false,
+		["show-big-defensive"] = false, ["big-defensive-size"] = 14,
+		["debuff-size"] = 14, ["buff-size"] = 14, ["debuff-border-scale"] = 1, ["buff-border-scale"] = 1,
+		["always-hide-duration"] = true, ["set-aura-size-to-icon-size"] = true,
+		["power-bar-used-height"] = 0,
+	}
+	for key, value in pairs(settings) do box:SetAttribute(key, value) end
+	local ok, id = pcall(auras.AddPrivateAuraAnchor, {
+		unitToken = unit, auraIndex = 1, parent = box, isContainer = true,
+		showCooldownFrame = false, showCooldownEdge = false, showCountdownNumbers = false, showDispelIcon = false,
+		iconInfo = {
+			iconAnchor = { point = "CENTER", relativeTo = box, relativePoint = "CENTER", offsetX = 0, offsetY = 0 },
+			iconWidth = 14, iconHeight = 14, borderScale = 1,
+		},
+	})
+	card.dispelBox, card.dispelAnchor = box, ok and id or nil
+end
+
 function Party:BuildCard(index, unit)
 	local card = CreateFrame("Button", "StoaPartyCard" .. index, self.frame, "SecureUnitButtonTemplate")
 	card:SetAttribute("unit", unit)
@@ -84,6 +131,9 @@ function Party:BuildCard(index, unit)
 		button.hover = nil
 		self:UpdateCard(button)
 	end)
+
+	-- Inside the card's bottom right corner, about 21 across.
+	xpcall(self.BuildDispelBox, Stoa.catch, self, card, unit, "BOTTOMRIGHT", -2, 19, 1.5)
 
 	if unit == "player" then
 		-- Your own card only shows in a group; alone the Halo covers you.
@@ -439,10 +489,43 @@ function Party:UpdateMark(card)
 	end
 end
 
+-- Slate: the thin mana line under a card's health, in the power's colour
+-- (rage and energy read as text and accent), gone for the dead.
+local CARD_POWER = { [1] = "text", [3] = "accent" }
+function Party:UpdatePower(card)
+	local mp = card.mp
+	if not mp or not (card.style and card.style.slateBar) then return end
+	local unit = card.unit
+	if card.preview or not unit or not UnitExists(unit) then return end
+	local max = UnitPowerMax(unit)
+	local has = Stoa:IsSecret(max) or ((Stoa:PlainNumber(max) or 0) > 0)
+	if not has or not flag(UnitIsConnected(unit)) or flag(UnitIsDeadOrGhost(unit)) then
+		mp:Hide()
+		return
+	end
+	UI.setUnitBar(mp, unit, "power")
+	local kind = UnitPowerType and Stoa:PlainNumber((UnitPowerType(unit)))
+	mp:SetStatusBarColor(Stoa:Color(kind and CARD_POWER[kind] or "mana"))
+	mp:Show()
+end
+
+-- Slate: a small chip after the name for a tank or a healer.
+local ROLE_CHIP = { TANK = { "Tank", "accent" }, HEALER = { "Healer", "health" } }
+function Party:UpdateRole(card)
+	local chip = card.role
+	if not chip or not (card.style and card.style.slateBar) then return end
+	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(card.unit)
+	local entry = not Stoa:IsSecret(role) and ROLE_CHIP[role]
+	if entry then chip:Set(entry[1], entry[2]) else chip:Hide() end
+	card.name:SetPoint("RIGHT", entry and chip or card.percent, "LEFT", -6, 0)
+end
+
 function Party:UpdateCard(card)
 	local unit = card.unit
 	-- Cards showing the /stoa test preview keep their sample data.
 	if card.preview or not unit or not UnitExists(unit) then return end
+	self:UpdatePower(card)
+	self:UpdateRole(card)
 
 	self:UpdateMark(card)
 	card.name:SetText(UnitName(unit))
@@ -498,9 +581,11 @@ function Party:UpdateCard(card)
 	UI.setPips(card, pips)
 
 	-- Bar and percent turn amber when low, and the border says why.
-	local r, g, b = Stoa:Color(low and "danger" or "health")
+	-- Slate: red, as its health is green.
+	local lowToken = UI.slate() and "hostile" or "danger"
+	local r, g, b = Stoa:Color(low and lowToken or "health")
 	card.hp:SetStatusBarColor(r, g, b)
-	card.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+	card.percent:SetTextColor(Stoa:Color(low and lowToken or "text"))
 	if ready then
 		UI.cellWord(card, ready[1], readyToken)
 	elseif coming then
@@ -510,7 +595,7 @@ function Party:UpdateCard(card)
 	elseif dispel then
 		UI.cellWord(card, dispel.word, dispel.token)
 	elseif low then
-		UI.cellWord(card, "LOW", "danger")
+		UI.cellWord(card, "LOW", lowToken)
 	end
 
 	card.glow:Clear()
@@ -518,15 +603,21 @@ function Party:UpdateCard(card)
 	-- A strip rests faint while its player is fine. Health the game keeps
 	-- secret in a fight can't be judged, so the strip stays at full strength.
 	if UI.stripRest(card, fraction and not (gone or dispel or low or ready or isTarget or card.hover)) then
-		if low then card.name:SetTextColor(Stoa:Color("danger")) end
+		if low then card.name:SetTextColor(Stoa:Color(lowToken)) end
 	elseif dispel then
 		local dr, dg, db = Stoa:Color(dispel.token)
 		card.state:Set(dr, dg, db)
 		card.glow:Set(dr, dg, db, 0.22)
 	elseif low then
-		card.state:Set(Stoa:Color("danger"))
+		card.state:Set(Stoa:Color(lowToken))
 	elseif flag(UnitIsUnit(unit, "target")) then
-		card.state:Set(Stoa:Color("text"))
+		-- Slate marks your target in the accent, quietly: no white outline.
+		if UI.slate() then
+			local ar, ag, ab = Stoa:Color("accent")
+			card.state:Set(ar, ag, ab, 0.4)
+		else
+			card.state:Set(Stoa:Color("text"))
+		end
 	else
 		card.state:Clear()
 	end
@@ -676,14 +767,38 @@ local DISPEL_CUES = {
 }
 
 -- The first debuff you can remove, if any. The RAID filter asks the game
--- for debuffs this character can dispel.
-function Party:DispelFor(unit)
-	if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return nil end
-	local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, 1, "HARMFUL|RAID")
-	if not ok or not aura then return nil end
+-- for debuffs this character can dispel. In a fight the game can keep an
+-- aura's details from addons, and then the indexed read may come back
+-- empty though the debuff is there; the list of aura ids isn't kept back,
+-- so it is asked second. A debuff whose kind can't be read says DISPEL.
+local DISPEL_FILTER = "HARMFUL|RAID"
+local DISPEL_ANY = { word = "DISPEL", token = "accent" }
+local function dispelCue(aura)
 	local kind = aura.dispelName
 	if Stoa:IsSecret(kind) then kind = nil end
-	return DISPEL_CUES[kind] or { word = "DISPEL", token = "accent" }
+	return DISPEL_CUES[kind] or DISPEL_ANY
+end
+
+function Party:DispelFor(unit)
+	local auras = C_UnitAuras
+	if not (auras and auras.GetAuraDataByIndex) then return nil end
+	local ok, aura = pcall(auras.GetAuraDataByIndex, unit, 1, DISPEL_FILTER)
+	if ok and type(aura) == "table" then
+		local read, cue = pcall(dispelCue, aura)
+		return read and cue or DISPEL_ANY
+	end
+	if not auras.GetUnitAuraInstanceIDs then return nil end
+	local listed, ids = pcall(auras.GetUnitAuraInstanceIDs, unit, DISPEL_FILTER, 1)
+	local id = listed and type(ids) == "table" and ids[1]
+	if not id then return nil end
+	if auras.GetAuraDataByAuraInstanceID then
+		ok, aura = pcall(auras.GetAuraDataByAuraInstanceID, unit, id)
+		if ok and type(aura) == "table" then
+			local read, cue = pcall(dispelCue, aura)
+			if read and cue then return cue end
+		end
+	end
+	return DISPEL_ANY
 end
 
 -- Range can be secret; newer clients let a secret boolean set alpha directly.
@@ -991,8 +1106,9 @@ function Party:UpdateWatch()
 	UI.setHealthPercent(watch.percent, unit, fraction, true)
 	UI.setHealthAmount(watch.amount, unit)
 	local low = word == "LOW"
-	watch.hp:SetStatusBarColor(Stoa:Color(low and "danger" or "health"))
-	watch.percent:SetTextColor(Stoa:Color(low and "danger" or "text"))
+	local lowToken = UI.slate() and "hostile" or "danger"
+	watch.hp:SetStatusBarColor(Stoa:Color(low and lowToken or "health"))
+	watch.percent:SetTextColor(Stoa:Color(low and lowToken or "text"))
 	local level = Stoa.safe.plain(UnitLevel(unit))
 	watch.plaque:SetLevel(not watch.slab and level and (level < 0 and "??" or tostring(level)) or nil)
 	self:UpdateWatchPower(unit)
@@ -1123,6 +1239,10 @@ function Party:OnEnable()
 
 	for _, event in ipairs({ "UNIT_POWER_UPDATE", "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER" }) do
 		Stoa:On(event, function(unit)
+			if UI.slate() then
+				local card = cardFor(self, unit)
+				if card then self:UpdatePower(card) end
+			end
 			if unit and self.watch and self.watch.shown and self.watchedUnit and flag(UnitIsUnit(unit, self.watchedUnit)) then
 				self:UpdateWatchPower()
 			end
@@ -1147,3 +1267,124 @@ end
 Stoa:On("STOA_SPEC_SETTINGS", function()
 	if Party.grid then Party:SetGridMode(Party.db.clickGrid) end
 end)
+
+-- /stoa dispel: a probe of what the game hands addons about debuffs, for
+-- you and your party. Typing it prints the state now and starts a watch:
+-- through each fight it notes every different answer the game gives, and
+-- prints them when the fight ends. Typing it again stops the watch. It
+-- does nothing until typed, and a /reload ends it.
+local PROBE_FILTERS = { "HARMFUL", "HARMFUL|RAID", "HARMFUL|RAID_PLAYER_DISPELLABLE" }
+local PROBE_LABELS = { "ALL", "MINE", "PARTY" }
+local PROBE_UNITS = { player = true, party1 = true, party2 = true, party3 = true, party4 = true }
+local PROBE_MOST = 24
+local probeOn, probeHooked, probeSeen, probeNotes = false, false, {}, {}
+
+local function probeWord(ok, value)
+	if not ok then return "error" end
+	if Stoa:IsSecret(value) then return "secret" end
+	return type(value)
+end
+
+local function probeLine(unit)
+	local auras = C_UnitAuras
+	local parts = {}
+	for i, filter in ipairs(PROBE_FILTERS) do
+		local ok, aura = pcall(auras.GetAuraDataByIndex, unit, 1, filter)
+		local first = probeWord(ok, aura)
+		if first == "table" then
+			local read, kind = pcall(function() return aura.dispelName end)
+			first = "table/" .. (not read and "error" or Stoa:IsSecret(kind) and "secret" or tostring(kind))
+		end
+		local count = "-"
+		if auras.GetUnitAuraInstanceIDs then
+			local listed, ids = pcall(auras.GetUnitAuraInstanceIDs, unit, filter)
+			count = probeWord(listed, ids)
+			if count == "table" then
+				local sized, n = pcall(function() return #ids end)
+				count = sized and (Stoa:IsSecret(n) and "secret" or tostring(n)) or "error"
+			end
+		end
+		parts[#parts + 1] = PROBE_LABELS[i] .. " " .. first .. " ids " .. count
+	end
+	return unit .. ": " .. table.concat(parts, "  /  ")
+end
+
+-- What the notice itself carries: the game sends, with each change, the
+-- effects added and the ids of those changed. Each field is named as
+-- plain, secret or unreadable; a plain dispel kind is printed.
+local PROBE_FIELDS = { "isHarmful", "dispelName", "spellId", "auraInstanceID" }
+local function probeField(aura, key)
+	local read, value = pcall(function() return aura[key] end)
+	if not read then return key .. "=error" end
+	if Stoa:IsSecret(value) then return key .. "=secret" end
+	if key == "dispelName" or key == "isHarmful" then return key .. "=" .. tostring(value) end
+	return key .. "=" .. type(value)
+end
+
+local function probeSize(list)
+	if list == nil then return "none" end
+	if Stoa:IsSecret(list) then return "secret" end
+	if type(list) ~= "table" then return type(list) end
+	local sized, n = pcall(function() return #list end)
+	return sized and (Stoa:IsSecret(n) and "secret" or tostring(n)) or "error"
+end
+
+local function probeNotice(unit, info)
+	if info == nil then return unit .. " notice: nothing sent" end
+	if Stoa:IsSecret(info) then return unit .. " notice: secret" end
+	if type(info) ~= "table" then return unit .. " notice: " .. type(info) end
+	local parts = { "added " .. probeSize(info.addedAuras), "changed " .. probeSize(info.updatedAuraInstanceIDs) }
+	local first = type(info.addedAuras) == "table" and not Stoa:IsSecret(info.addedAuras) and info.addedAuras[1]
+	if first ~= nil and first ~= false then
+		if Stoa:IsSecret(first) then
+			parts[#parts + 1] = "first secret"
+		elseif type(first) == "table" then
+			for _, key in ipairs(PROBE_FIELDS) do parts[#parts + 1] = probeField(first, key) end
+		end
+	end
+	local ids = info.updatedAuraInstanceIDs
+	local id = type(ids) == "table" and not Stoa:IsSecret(ids) and ids[1]
+	if id and C_UnitAuras.GetAuraDataByAuraInstanceID then
+		local ok, aura = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, id)
+		parts[#parts + 1] = "by id " .. probeWord(ok, aura)
+	end
+	return unit .. " notice: " .. table.concat(parts, " · ")
+end
+
+local function probeKeep(line)
+	if probeSeen[line] or #probeNotes >= PROBE_MOST then return end
+	probeSeen[line] = true
+	probeNotes[#probeNotes + 1] = line
+end
+
+local function probeNote(unit, info)
+	if not (probeOn and PROBE_UNITS[unit] and InCombatLockdown()) then return end
+	local ok, line = pcall(probeLine, unit)
+	probeKeep(ok and line or (unit .. ": probe error"))
+	local read, notice = pcall(probeNotice, unit, info)
+	probeKeep(read and notice or (unit .. " notice: probe error"))
+end
+
+Stoa.commands.dispel = function()
+	if not C_UnitAuras then return end
+	if probeOn then
+		probeOn = false
+		Stoa:Print("Debuff probe stopped.")
+		return
+	end
+	probeOn = true
+	Stoa:Print("Debuff probe on: it prints after each fight. /stoa dispel again stops it. Now:")
+	for unit in pairs(PROBE_UNITS) do
+		if UnitExists(unit) then Stoa:Print(probeLine(unit)) end
+	end
+	if probeHooked then return end
+	probeHooked = true
+	Stoa:On("UNIT_AURA", function(unit, info) probeNote(unit, info) end)
+	Stoa:On("PLAYER_REGEN_ENABLED", function()
+		if not probeOn or #probeNotes == 0 then return end
+		Stoa:Print("Debuff probe, this fight:")
+		for _, line in ipairs(probeNotes) do Stoa:Print(line) end
+		wipe(probeNotes)
+		wipe(probeSeen)
+	end)
+end

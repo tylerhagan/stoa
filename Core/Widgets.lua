@@ -12,6 +12,8 @@ UI.WHITE = "Interface\\Buttons\\WHITE8x8"
 UI.MEDIA = "Interface\\AddOns\\Stoa\\Media\\"
 
 local themed = {}
+-- How far down the list the last pass painted.
+local painted = 0
 
 -- Hairlines in whole screen pixels. A line one unit tall can land between
 -- two pixels at most UI scales and blur, or vanish; these keep their size in
@@ -64,7 +66,10 @@ end
 -- Drops a region from the theme passes, for one its owner colours itself.
 function UI.unpaint(region)
 	for i = #themed, 1, -1 do
-		if themed[i].region == region then table.remove(themed, i) end
+		if themed[i].region == region then
+			table.remove(themed, i)
+			if i <= painted then painted = painted - 1 end
+		end
 	end
 end
 
@@ -89,6 +94,15 @@ end
 
 function UI.applyTheme()
 	for _, entry in ipairs(themed) do paintOne(entry) end
+	painted = #themed
+end
+
+-- Paints only what has been made since the last pass. The builders below
+-- use this: a full pass after every new panel or item slot repainted the
+-- whole list, which grows all session.
+function UI.paintNew()
+	for i = painted + 1, #themed do paintOne(themed[i]) end
+	painted = #themed
 end
 
 -- Sets a region's alpha so that a later theme pass keeps it.
@@ -121,15 +135,20 @@ end
 
 -- Tints a texture that has its own image (not a flat colour) with a token.
 function UI.tint(tex, token, alpha)
-	table.insert(themed, { region = tex, token = token, alpha = alpha, vertex = true })
+	local entry = { region = tex, token = token, alpha = alpha, vertex = true }
+	table.insert(themed, entry)
+	-- At once as well: a part built late (a list row on first open) would
+	-- otherwise stay white until the next theme pass.
+	if Stoa.db then paintOne(entry) end
 	return tex
 end
 
 -- The Painted ornament (Stoa.db.ornament): leather and brass frames on the
 -- few one-of-a-kind pieces instead of fine lines.
 function UI.ornate()
-	-- Matte has no leather or brass: it wears its own moulded pieces.
-	return Stoa.db and Stoa.db.ornament == "painted" and Stoa.db.material ~= "matte"
+	-- Matte and Slate have no leather or brass: Matte wears its own
+	-- moulded pieces, Slate only flat panels and fine lines.
+	return Stoa.db and Stoa.db.ornament == "painted" and (Stoa.db.material or "leather") == "leather"
 end
 
 -- Draws a texture exactly where it lies rather than on the nearest pixel,
@@ -143,8 +162,11 @@ end
 -- or window is only a whisper (the console's rim wears the same), where
 -- the other materials draw the theme's hairline.
 local MATTE_EDGE = 0.07
+-- Slate: a fine light edge, never a white line (its header tops too).
+local SLATE_EDGE = 0.06
 function UI.edgeAlpha()
-	return Stoa.db ~= nil and Stoa.db.material == "matte" and MATTE_EDGE or nil
+	local material = Stoa.db ~= nil and Stoa.db.material
+	return material == "matte" and MATTE_EDGE or material == "slate" and SLATE_EDGE or nil
 end
 
 -- A small leather and brass ring (Tools/art/coin_frame.py) round a circle
@@ -213,7 +235,7 @@ end
 
 -- An upright seam like the console's own: a line strongest in the middle
 -- and clear at both ends, a dark crease to its left for depth. Leather
--- draws it in the accent; Matte as a moulded groove with a faint lit edge.
+-- draws it in the accent (a quiet one in Slate is a faint white line); Matte as a moulded groove with a faint lit edge.
 -- `quiet` is for scroll rails, which sit beside their own thumb.
 local seams = setmetatable({}, { __mode = "k" })
 
@@ -222,6 +244,7 @@ local function paintSeam(seam)
 	local r, g, b = Stoa:Color("accent")
 	local lineAlpha, creaseAlpha = seam.quiet and 0.22 or 0.4, seam.quiet and 0.3 or 0.5
 	if matte then r, g, b, lineAlpha, creaseAlpha = 1, 1, 1, seam.quiet and 0.04 or 0.06, seam.quiet and 0.45 or 0.6 end
+	if seam.quiet and UI.slate() then r, g, b, lineAlpha = 1, 1, 1, 0.08 end
 	seam.creaseUp:SetWidth(matte and 2 or 1)
 	seam.creaseDown:SetWidth(matte and 2 or 1)
 	local gradient = CreateColor and seam.upper.SetGradient
@@ -326,6 +349,18 @@ if CreateFrame then
 	end)
 end
 
+-- The same remedy for words that do change (a name, a number): draw what
+-- the string holds once more in a freshly loaded face. Its owner calls
+-- this a moment after a loading screen. A hidden value is left alone.
+function UI.redraw(fs)
+	if not (fs and fs.GetFont) then return end
+	refont(fs)
+	local words = fs:GetText()
+	if words == nil or Stoa:IsSecret(words) then return end
+	fs:SetText("")
+	fs:SetText(words)
+end
+
 function UI.settleText(fs, words, tries)
 	settled[fs] = words
 	fs:SetText("")
@@ -383,10 +418,112 @@ function UI.caption(parent, label)
 	return fs
 end
 
+-- A card's heading: the caption, muted.
+function UI.eyebrow(parent, label)
+	return UI.caption(parent, label)
+end
+
+-- Slate: a bar's fill is never one flat colour. It runs from a deeper
+-- shade at its start to a lighter one at its end, as on the mock-up
+-- (health #3fa86a to #5cc487). Whatever colours the bar afterwards keeps
+-- the shading, since it rides on SetStatusBarColor itself.
+local SHADE_FROM, SHADE_TO = 0.8, 1.14
+function UI.barShade(sb)
+	local set = sb.SetStatusBarColor
+	if not (set and CreateColor) then return end
+	sb.SetStatusBarColor = function(self, r, g, b, a)
+		set(self, r, g, b, a)
+		local tex = self:GetStatusBarTexture()
+		if not (tex and tex.SetGradient) or type(r) ~= "number" or Stoa:IsSecret(r) then return end
+		local upright = self.GetOrientation and self:GetOrientation() == "VERTICAL"
+		a = a or 1
+		pcall(tex.SetGradient, tex, upright and "VERTICAL" or "HORIZONTAL",
+			CreateColor(r * SHADE_FROM, g * SHADE_FROM, b * SHADE_FROM, a),
+			CreateColor(math.min(1, r * SHADE_TO), math.min(1, g * SHADE_TO), math.min(1, b * SHADE_TO), a))
+	end
+end
+
+-- Slate: light falls on the top of a card. A faint wash along its top
+-- edge that fades out down it (the mock-up's panels run from a lighter
+-- top to the panel colour, with a breath of the accent on windows).
+-- It spans the card's upper half, whatever the card's size, so it can
+-- never reach past a small one.
+local LIGHT_INSET = 1
+-- { inset from each side, the depth the row ends at }: a 6px corner.
+local LIGHT_STEPS = { { 3, 2 }, { 2, 3 }, { 1.5, 4 } }
+local FOOT_SHADE = 0.22
+local LIGHT_SHARE = 0.55
+function UI.topLight(frame, token, alpha, anchor)
+	if not (frame and frame.CreateTexture) then return nil end
+	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+	if not tex then return nil end
+	tex:SetTexture(UI.WHITE)
+	anchor = anchor or frame
+	-- The light meets the card's sides. A square can't follow the round
+	-- corners, so its first rows step in with the curve (LIGHT_STEPS) and
+	-- the fade below them runs edge to edge.
+	local depth = LIGHT_STEPS[#LIGHT_STEPS][2]
+	tex:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -LIGHT_INSET, -depth)
+	tex:SetPoint("BOTTOMLEFT", anchor, "LEFT", LIGHT_INSET, 0)
+	-- Kept well short of a gloss: a lit top, never a shine.
+	token, alpha = token or "text", (alpha or 0.07) * LIGHT_SHARE
+	UI.gradient(tex, token, alpha, "VERTICAL", 0, 1)
+	local r, g, b = Stoa:Color(token)
+	UI.setGradient(tex, { "VERTICAL", 0, 1 }, r, g, b, alpha)
+	-- And shade gathers at its foot, so the card reads as a lit surface
+	-- rather than a flat black shape. It shows and hides with the light.
+	local foot = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+	foot:SetTexture(UI.WHITE)
+	foot:SetPoint("TOPLEFT", anchor, "LEFT", LIGHT_INSET, 0)
+	foot:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -LIGHT_INSET, depth)
+	UI.setGradient(foot, { "VERTICAL", 1, 0 }, 0, 0, 0, FOOT_SHADE)
+	tex.stoaFoot = foot
+	local parts = { foot }
+	local from = 1
+	for _, step in ipairs(LIGHT_STEPS) do
+		local inset, to = step[1], step[2]
+		local cap = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+		cap:SetTexture(UI.WHITE)
+		cap:SetPoint("TOPLEFT", anchor, "TOPLEFT", inset, -from)
+		cap:SetPoint("BOTTOMRIGHT", anchor, "TOPRIGHT", -inset, -to)
+		UI.paint(cap, token, alpha)
+		cap.stoaCap = true
+		local toe = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+		toe:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", inset, from)
+		toe:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", -inset, to)
+		toe:SetColorTexture(0, 0, 0, FOOT_SHADE)
+		parts[#parts + 1], parts[#parts + 2] = cap, toe
+		from = to
+	end
+	for _, method in ipairs({ "SetShown", "Show", "Hide" }) do
+		hooksecurefunc(tex, method, function(self)
+			for _, part in ipairs(parts) do part:SetShown(self:IsShown() and not part.stoaDropped) end
+		end)
+	end
+	-- A window with a header band: the light falls on the content under
+	-- the band, so the band stays one even tone from top to bottom (a
+	-- raised band otherwise showed dark above the frame's top and lit
+	-- below it).
+	tex.stoaUnder = function(band)
+		tex:ClearAllPoints()
+		tex:SetPoint("TOPRIGHT", band, "BOTTOMRIGHT", -LIGHT_INSET, 0)
+		tex:SetPoint("LEFT", anchor, "LEFT", LIGHT_INSET, 0)
+		tex:SetPoint("BOTTOM", anchor, "LEFT", 0, 0)
+		for _, part in ipairs(parts) do
+			if part.stoaCap then
+				part.stoaDropped = true
+				part:Hide()
+			end
+		end
+	end
+	return tex
+end
+
 function UI.bar(parent, width, height, token)
 	local sb = CreateFrame("StatusBar", nil, parent)
 	sb:SetSize(width, height)
 	sb:SetStatusBarTexture(UI.WHITE)
+	if UI.slate() then UI.barShade(sb) end
 	UI.paint(sb, token)
 	local track = sb:CreateTexture(nil, "BACKGROUND")
 	track:SetAllPoints()
@@ -592,8 +729,10 @@ end
 -- Party:UpdateCard fills them in.
 
 UI.CARD_STYLES = {
-	party = { pad = 9, name = 16, bar = 12, pip = 16, pipFont = 11, gap = 6 },
-	compact = { pad = 7, name = 14, bar = 8, pip = 14, pipFont = 10, gap = 5 },
+	-- slateBar: Slate's health bar, a touch slimmer to make room for the
+	-- thin mana line it hangs under it (card.mp, there only under Slate).
+	party = { pad = 9, name = 16, bar = 12, slateBar = 10, pip = 16, pipFont = 11, gap = 6 },
+	compact = { pad = 7, name = 14, bar = 8, slateBar = 7, pip = 14, pipFont = 10, gap = 5 },
 	raid = { pad = 7, name = 15, bar = 9, pip = 14, pipFont = 10, gap = 5 },
 	-- The compact raid cell: health fills the cell behind the name, and one
 	-- word or the percent sits on the right.
@@ -958,6 +1097,19 @@ end
 
 UI.sliced = sliced
 
+-- The same nine-slice on a texture someone else made (a game menu hands
+-- out its own textures and takes them back when it closes).
+function UI.slice(tex, file)
+	if not (tex and tex.SetTextureSliceMargins) then return false end
+	if SHARP[file] and UI.matte() then file = SHARP[file] end
+	tex:SetTexture(UI.MEDIA .. "Textures\\" .. file)
+	tex:SetTextureSliceMargins(CARD_SLICE, CARD_SLICE, CARD_SLICE, CARD_SLICE)
+	if tex.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
+		tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+	end
+	return true
+end
+
 -- A rounded border with the same Set and Clear as UI.border, falling back
 -- to it where slicing isn't available.
 function UI.roundBorder(frame, file, size, outset)
@@ -1061,8 +1213,13 @@ function UI.roundPanel(frame, alpha, kind)
 	end
 	frame.stoaPanelEdge = edge
 	frame.stoaPanelBg = bg
+	-- Slate: a breath of light at the top of a window.
+	if kind == "window" and UI.slate() and (alpha or 1) > 0 then
+		frame.stoaTopLight = UI.topLight(frame, "text", 0.07)
+		if frame.stoaHeader then frame.stoaTopLight.stoaUnder(frame.stoaHeader) end
+	end
 	UI.mould(frame)
-	UI.applyTheme()
+	UI.paintNew()
 	return bg
 end
 
@@ -1079,7 +1236,7 @@ function UI.fadeRule(parent, token, alpha)
 		tex:SetPoint(i == 1 and "RIGHT" or "LEFT", rule, "CENTER")
 		UI.gradient(tex, token or "text", alpha or 0.28, "HORIZONTAL", i == 1 and 0 or 1, i == 1 and 1 or 0)
 	end
-	UI.applyTheme()
+	UI.paintNew()
 	return rule
 end
 
@@ -1118,6 +1275,14 @@ local GRAIN_ALPHA = { satin = 0, soft = 0.035, smooth = 0.07, fine = 0.105 }
 
 function UI.matte()
 	return Stoa.db ~= nil and Stoa.db.material == "matte"
+end
+
+-- The Slate material: modern and flat. Leather's rounded panels without
+-- the leather, brass or shine, Inter for every word (Tokens.lua), and the
+-- console split into separate rounded cards (Console:BuildSlate). It adds
+-- no art of its own.
+function UI.slate()
+	return Stoa.db ~= nil and Stoa.db.material == "slate"
 end
 
 function UI.grainAlpha()
@@ -1286,11 +1451,13 @@ function UI.band(frame, size, family, plain)
 		frame.stoaPlainHeader = true
 		UI.emboss(frame, header)
 	else
+		if family == "trade" and UI.slate() then family = "plain" end
 		local tint = UI.WINDOW_FAMILIES[family or "plain"] or UI.WINDOW_FAMILIES.plain
 		UI.tint(header, tint.token, tint.alpha)
 		UI.shadowLine(frame, header)
 	end
-	UI.applyTheme()
+	if frame.stoaTopLight and frame.stoaTopLight.stoaUnder then frame.stoaTopLight.stoaUnder(header) end
+	UI.paintNew()
 	return header
 end
 
@@ -1315,7 +1482,8 @@ function UI.emboss(frame, header)
 	sheen:SetDrawLayer("BACKGROUND", -4)
 	-- Matte has no shine: the header is the same moulded block as the
 	-- rest, with only a trace of light at its top.
-	UI.gradient(sheen, "text", UI.matte() and 0.02 or 0.07, "VERTICAL", 0, 1)
+	-- Slate is flat: a breath of light, no more.
+	UI.gradient(sheen, "text", UI.matte() and 0.02 or UI.slate() and 0.035 or 0.07, "VERTICAL", 0, 1)
 	local top = frame:CreateTexture(nil, "BORDER", nil, 3)
 	top:SetTexture(UI.WHITE)
 	UI.pixel(top, "height")
@@ -1392,9 +1560,13 @@ function UI.surface(frame, kind, opts)
 		UI.mould(frame, outset)
 	end
 	if spec.stone and not opts.noStone then UI.stone(frame, frame.stoaHeader, frame.stoaFooter) end
+	if spec.edge and UI.slate() then
+		frame.stoaTopLight = UI.topLight(frame, "text", 0.07)
+		if frame.stoaTopLight and frame.stoaHeader then frame.stoaTopLight.stoaUnder(frame.stoaHeader) end
+	end
 	frame.stoaSurface = fill
 	frame.stoaSurfaceKind = kind
-	UI.applyTheme()
+	UI.paintNew()
 	return fill
 end
 
@@ -1413,7 +1585,7 @@ function UI.windowPanel(frame, alpha, opts)
 	if opts.header then header = UI.band(frame, opts.header, opts.family, opts.plainHeader) end
 	if opts.footer and not opts.bare then footer = UI.tray(frame, opts.footer) end
 	if not opts.bare then UI.stone(frame, header, footer) end
-	UI.applyTheme()
+	UI.paintNew()
 	return bg
 end
 
@@ -1446,6 +1618,14 @@ function UI.badge(parent, word, token)
 	end
 	fill:SetVertexColor(0, 0, 0, UI.BADGE.alpha)
 	badge.fill = fill
+	-- Slate: a chip, the word's own colour washed faintly over the pill.
+	local wash = UI.slate() and sliced(badge, "BACKGROUND", "PlateFill.tga", 0, 5)
+	if wash then
+		wash:SetDrawLayer("BACKGROUND", 1)
+		badge.wash = wash
+		-- And a fine edge in the same colour, as the mock-up's chips have.
+		badge.edge = UI.pillEdge(badge, 0)
+	end
 	local text = badge:CreateFontString(nil, "OVERLAY")
 	Stoa:SetFont(text, "sans", Stoa.typeSize.caption)
 	text:SetPoint("CENTER", 0, 0)
@@ -1457,7 +1637,10 @@ function UI.badge(parent, word, token)
 			return
 		end
 		text:SetText(newWord:upper())
-		text:SetTextColor(Stoa:Color(newToken or Stoa:StateToken(newWord)))
+		local r, g, b = Stoa:Color(newToken or Stoa:StateToken(newWord))
+		text:SetTextColor(r, g, b)
+		if self.wash then self.wash:SetVertexColor(r, g, b, 0.16) end
+		if self.edge then self.edge:Set(r, g, b, 0.38) end
 		local width = text:GetStringWidth()
 		if Stoa:IsSecret(width) or not width or width <= 0 then width = #newWord * 7 end
 		self:SetWidth(math.floor(width + UI.BADGE.pad * 2 + 0.5))
@@ -1474,8 +1657,11 @@ end
 -- blocks that match it, unless the full plaques were chosen (Halo's
 -- targetFull). Read at build time; the choice reloads.
 function UI.slabCards()
-	if not UI.matte() then return false end
 	local halo = Stoa.modules and Stoa.modules.Halo
+	-- Slate: the tank watch and pet block go compact with the target
+	-- (Settings: Target, Compact), so the three match.
+	if UI.slate() then return (halo and halo.db and halo.db.targetCompact) and true or false end
+	if not UI.matte() then return false end
 	return not (halo and halo.db and halo.db.targetFull)
 end
 
@@ -1517,21 +1703,93 @@ function UI.button(parent, label, width, onClick, reloads)
 	local button = CreateFrame("Button", nil, parent, reloads and "SecureActionButtonTemplate" or nil)
 	button:SetSize(width or 110, 26)
 	UI.roundPanel(button, 0.95)
+	-- Slate: a plate over the face. Raised grey under the mouse or when
+	-- chosen, the full accent on a window's main button.
+	local slate = UI.slate()
+	local wash = slate and sliced(button, "BACKGROUND", "CardFill.tga")
+	if wash then
+		wash:SetDrawLayer("BACKGROUND", 2)
+		wash:Hide()
+	end
 	local glow = UI.roundBorder(button, "CardEdge.tga", 1)
 	local text = button:CreateFontString(nil, "OVERLAY")
 	Stoa:SetFont(text, "sans", Stoa.typeSize.body)
 	text:SetPoint("CENTER")
 	text:SetText(label)
 	button.text = text
+	-- Slate's chosen mark: one small round dot in the accent, the only
+	-- accent a chosen button carries there.
+	local mark
+	local function showMark(on)
+		if not on or button.dot then
+			if mark then mark:Hide() end
+			return
+		end
+		local wide, tall = button:GetWidth() or 0, button:GetHeight() or 0
+		local left = text:GetJustifyH() == "LEFT"
+		if not left and (wide - (tonumber(text:GetStringWidth()) or wide)) / 2 < 18 then
+			if mark then mark:Hide() end
+			return
+		end
+		if not mark then
+			mark = UI.circle(button, "ARTWORK", 2, 6)
+			mark:SetColorTexture(1, 1, 1, 1)
+		end
+		mark:ClearAllPoints()
+		if tall > 30 then mark:SetPoint("TOPRIGHT", -14, -14) else mark:SetPoint("RIGHT", -10, 0) end
+		mark:SetVertexColor(Stoa:Color("accent"))
+		mark:Show()
+	end
+	-- Slate's looks: an outlined plain button, raised grey when hovered or
+	-- chosen (words stay in the text colour), and the main button filled
+	-- with the accent under dark words ("risk": the warning colour).
+	local function slateColour()
+		local enabled = button:IsEnabled()
+		local over = enabled and button:IsMouseOver()
+		local tr, tg, tb = Stoa:Color("text")
+		if button.washIn and not over then button.washIn:Stop() end
+		if button.main and enabled then
+			local r, g, b = Stoa:Color(button.main == "risk" and "hostile" or "accent")
+			local k = over and 0.12 or 0
+			wash:SetVertexColor(r + (1 - r) * k, g + (1 - g) * k, b + (1 - b) * k, 1)
+			wash:Show()
+			glow:Clear()
+			if button.main == "risk" then
+				text:SetTextColor(1, 1, 1)
+			else
+				local pr, pg, pb = Stoa:Color("panel")
+				text:SetTextColor(pr, pg, pb)
+			end
+			showMark(false)
+			return
+		end
+		text:SetTextColor(Stoa:Color(enabled and "text" or "muted"))
+		local lit = enabled and (button.selected or over)
+		if wash then
+			wash:SetVertexColor(tr, tg, tb, button.selected and 0.1 or 0.06)
+			wash:SetShown(lit and true or false)
+			-- The plate warms in under the mouse; not on a reload button,
+			-- which is a secure one.
+			if over and not button.wasOver and not button.selected and not reloads and button:IsVisible() then
+				wash.stoaRestAlpha = 0.06
+				button.washIn = button.washIn or UI.fadeIn(wash, UI.MOTION.quick)
+				button.washIn:Play()
+			end
+		end
+		button.wasOver = over
+		glow:Set(tr, tg, tb, not enabled and 0.06 or lit and 0.2 or 0.12)
+		showMark(enabled and button.selected)
+	end
 	-- Four looks: plain, lit (hovered or selected: accent word and edge),
 	-- pressed (the word sinks a pixel), and disabled (muted word, no edge).
 	local function colour()
+		if slate then return slateColour() end
 		if not button:IsEnabled() then
 			text:SetTextColor(Stoa:Color("muted"))
 			glow:Clear()
 			return
 		end
-		local lit = button.selected or button:IsMouseOver()
+		local lit = button.selected or button.main or button:IsMouseOver()
 		text:SetTextColor(Stoa:Color(lit and "accent" or "text"))
 		if lit then
 			glow:Set(Stoa:Color("accent"))
@@ -1556,6 +1814,13 @@ function UI.button(parent, label, width, onClick, reloads)
 		end
 		button.lit = lit
 	end
+	-- The one button a window is there for (Next, Save, Reload). Slate fills
+	-- it with the accent; the other styles keep it lit. "risk" is for a
+	-- step that can't be taken back.
+	function button:SetMain(kind)
+		self.main = kind == nil and "main" or kind or nil
+		colour()
+	end
 	function button:SetSelected(selected)
 		self.selected = selected and true or false
 		colour()
@@ -1565,6 +1830,7 @@ function UI.button(parent, label, width, onClick, reloads)
 	-- Coming into view, any fade cut short by the hide is put to rest.
 	button:HookScript("OnShow", function()
 		for _, group in ipairs(button.glowIn or {}) do group:Stop() end
+		if button.washIn then button.washIn:Stop() end
 		colour()
 	end)
 	button:SetScript("OnMouseDown", function(self)
@@ -1610,6 +1876,156 @@ function UI.button(parent, label, width, onClick, reloads)
 	Stoa:On("STOA_THEME_CHANGED", colour)
 	colour()
 	return button
+end
+
+-- Window pieces ------------------------------------------------------------
+-- Small shared parts of STOA's own windows: word tabs, section bands,
+-- toolbar plates and empty states.
+
+-- A tab drawn as a word over a fine accent line when chosen, with an
+-- optional count beside it.
+function UI.wordTab(parent, label, onClick)
+	local tab = CreateFrame("Button", nil, parent)
+	tab:SetHeight(24)
+	local text = UI.text(tab, "sans", Stoa.typeSize.label, "muted", "LEFT")
+	text:SetPoint("LEFT")
+	text:SetText(label)
+	local count = UI.text(tab, "sans", Stoa.typeSize.caption, "muted", "LEFT")
+	count:SetPoint("LEFT", text, "RIGHT", 6, 0)
+	count:SetAlpha(0.7)
+	local mark = UI.line(tab, "accent")
+	mark:SetPoint("BOTTOMLEFT", 0, 0)
+	mark:SetPoint("BOTTOMRIGHT", 0, 0)
+	tab.text, tab.mark = text, mark
+	local grow = UI.growIn(mark)
+	local function fit()
+		local wide = (tonumber(text:GetStringWidth()) or 60) + 2
+		local words = count:GetText()
+		if words and words ~= "" then wide = wide + 6 + (tonumber(count:GetStringWidth()) or 8) end
+		tab:SetWidth(math.max(40, wide))
+	end
+	function tab:SetSelected(on)
+		if on and not self.on then grow:Play() end
+		self.on = on
+		mark:SetShown(on and true or false)
+		text:SetTextColor(Stoa:Color(on and "text" or "muted"))
+	end
+	function tab:SetCount(n)
+		count:SetText(n and tostring(n) or "")
+		fit()
+	end
+	tab:SetScript("OnClick", onClick)
+	tab:SetScript("OnEnter", function() text:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
+	tab:SetScript("OnLeave", function() tab:SetSelected(tab.on) end)
+	fit()
+	tab:SetSelected(false)
+	return tab
+end
+
+-- A list's section heading as a band: its name in small capitals, a fine
+-- rule, and how many it holds at the right.
+UI.BAND_HEIGHT = 22
+function UI.sectionBand(parent)
+	local band = CreateFrame("Frame", nil, parent)
+	band:SetHeight(UI.BAND_HEIGHT)
+	if UI.slate() then
+		local fill = band:CreateTexture(nil, "BACKGROUND")
+		fill:SetAllPoints()
+		UI.paint(fill, "text", 0.03)
+	end
+	local label = UI.text(band, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
+	label:SetPoint("LEFT", 8, 0)
+	local count = UI.text(band, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
+	count:SetPoint("RIGHT", -8, 0)
+	count:SetAlpha(0.7)
+	local rule = UI.line(band, "hairline")
+	rule:SetPoint("LEFT", label, "RIGHT", 10, 0)
+	rule:SetPoint("RIGHT", count, "LEFT", -10, 0)
+	band.label, band.count = label, count
+	function band:Set(name, n)
+		label:SetText(name and name:upper() or "")
+		count:SetText(n and tostring(n) or "")
+	end
+	return band
+end
+
+-- Slate: one quiet plate behind a window's filters, search and action.
+function UI.toolbarPlate(frame, outset)
+	if not UI.slate() or frame.stoaToolbar then return end
+	local fill = sliced(frame, "BACKGROUND", "CardFill.tga", outset or 0)
+	if not fill then return end
+	fill:SetDrawLayer("BACKGROUND", -6)
+	fill:SetVertexColor(0, 0, 0, 0.22)
+	local edge = UI.roundBorder(frame, "CardEdge.tga", 1, outset or 0)
+	local r, g, b = Stoa:Color("text")
+	edge:Set(r, g, b, 0.07)
+	frame.stoaToolbar = fill
+	return fill
+end
+
+-- A dotted line: one row (or column) of the hatch art's stripes, repeated
+-- along the line's length.
+local DOT_PITCH = 16
+local function dotted(parent, upright)
+	local tex = parent:CreateTexture(nil, "BORDER")
+	tex:SetTexture(UI.MEDIA .. "Textures\\Hatch", "REPEAT", "REPEAT")
+	UI.pixel(tex, upright and "width" or "height")
+	function tex:Fit(length)
+		local runs = math.max(1, (tonumber(length) or 0) / DOT_PITCH)
+		if upright then
+			self:SetTexCoord(1 / 16, 2 / 16, 0, runs)
+		else
+			self:SetTexCoord(0, runs, 0, 1 / 16)
+		end
+	end
+	return tex
+end
+
+-- An empty list: one line and one hint. Slate draws them inside a dotted
+-- outline under a small box glyph; the other styles keep the quiet italic
+-- line.
+function UI.emptyState(parent)
+	local box = CreateFrame("Frame", nil, parent)
+	local slate = UI.slate()
+	box:SetHeight(slate and 104 or 48)
+	local line = UI.text(box, slate and "sans" or "italic", Stoa.typeSize.label, slate and "text" or "muted", "CENTER")
+	local hint = UI.text(box, "sans", Stoa.typeSize.caption, "muted", "CENTER")
+	hint:SetPoint("TOP", line, "BOTTOM", 0, -5)
+	if slate then
+		local glyph = UI.glyph(box, "Box", 18, "muted")
+		glyph:SetPoint("TOP", 0, -20)
+		glyph:SetAlpha(0.7)
+		line:SetPoint("TOP", glyph, "BOTTOM", 0, -10)
+		local sides = { dotted(box), dotted(box), dotted(box, true), dotted(box, true) }
+		sides[1]:SetPoint("TOPLEFT")
+		sides[1]:SetPoint("TOPRIGHT")
+		sides[2]:SetPoint("BOTTOMLEFT")
+		sides[2]:SetPoint("BOTTOMRIGHT")
+		sides[3]:SetPoint("TOPLEFT")
+		sides[3]:SetPoint("BOTTOMLEFT")
+		sides[4]:SetPoint("TOPRIGHT")
+		sides[4]:SetPoint("BOTTOMRIGHT")
+		for _, side in ipairs(sides) do UI.paint(side, "text", 0.22) end
+		local function fit()
+			local wide, tall = box:GetSize()
+			if Stoa:IsSecret(wide) or Stoa:IsSecret(tall) then return end
+			sides[1]:Fit(wide)
+			sides[2]:Fit(wide)
+			sides[3]:Fit(tall)
+			sides[4]:Fit(tall)
+		end
+		box:SetScript("OnSizeChanged", fit)
+		box:HookScript("OnShow", fit)
+	else
+		line:SetPoint("TOP", 0, -8)
+	end
+	function box:Set(words, more)
+		line:SetText(words or "")
+		hint:SetText(more or "")
+		self:SetShown(words ~= nil and words ~= "")
+	end
+	box:Hide()
+	return box
 end
 
 -- A secure button that uses an item: the rounded slot of the bags, a count
@@ -1728,7 +2144,7 @@ function UI.unitCard(card, styleName)
 			end,
 			Clear = function() ring:Hide() end,
 		}
-		UI.applyTheme()
+		UI.paintNew()
 	else
 		UI.surface(card, "card", { alpha = 0.96 })
 		card.state = UI.roundBorder(card, "CardState.tga", 2)
@@ -1748,7 +2164,8 @@ function UI.unitCard(card, styleName)
 
 	local hp = UI.bar(card, 10, 10, "health")
 	card.hp = hp
-	if plate then UI.softCorners(hp) end
+	-- Slate rounds the bar's ends too (the card's colour over its corners).
+	if plate or UI.slate() then UI.softCorners(hp) end
 	UI.halvedStripes(hp)
 
 	-- Shields sit on the empty end of the health bar, starting where health
@@ -1760,6 +2177,17 @@ function UI.unitCard(card, styleName)
 	absorb:SetValue(0)
 	if hp.SetClipsChildren then hp:SetClipsChildren(true) end
 	card.absorb = absorb
+
+	-- Slate: a thin mana line under health and a small role chip after the
+	-- name (Tank, Healer). Whoever owns the card fills and shows them.
+	if UI.slate() then
+		local mp = UI.bar(card, 10, 3, "mana")
+		mp:Hide()
+		card.mp = mp
+		local role = UI.badge(card, nil, "muted")
+		role:Hide()
+		card.role = role
+	end
 
 	card.pips = {}
 	for i = 1, MAX_PIPS do card.pips[i] = makePip(card) end
@@ -1773,7 +2201,7 @@ function UI.unitCard(card, styleName)
 	card.mark:SetPoint("CENTER")
 
 	UI.styleCard(card, styleName)
-	UI.applyTheme()
+	UI.paintNew()
 end
 
 -- A plaque: the target, tank watch and pet cards. A solid card in the
@@ -2422,12 +2850,17 @@ function UI.styleCard(card, styleName)
 	local pad = style.pad
 	-- A strip has no panel or edge; every other style gets them back.
 	if card.stoaSurface then card.stoaSurface:SetShown(not style.strip) end
+	if card.stoaTopLight then card.stoaTopLight:SetShown(not style.strip) end
 	if card.stoaKeyLines then card.stoaKeyLines:SetShown(not style.strip) end
 	if card.stoaPanelEdge then
 		for _, tex in ipairs(card.stoaPanelEdge.edges or {}) do tex:SetShown(not style.strip) end
 	end
 	if not style.strip then
 		for _, part in ipairs({ card.name, card.percent, card.hp }) do part:SetAlpha(1) end
+	end
+	if card.mp and not style.slateBar then
+		card.mp:Hide()
+		card.role:Hide()
 	end
 	if style.strip then
 		Stoa:SetFont(card.name, "sans", style.name, "OUTLINE")
@@ -2483,13 +2916,21 @@ function UI.styleCard(card, styleName)
 	card.hp:ClearAllPoints()
 	card.hp:SetPoint("TOPLEFT", pad, -(pad + style.name + 3))
 	card.hp:SetPoint("TOPRIGHT", -pad, -(pad + style.name + 3))
-	card.hp:SetHeight(style.bar)
+	local mana = card.mp and style.slateBar
+	card.hp:SetHeight(mana and style.slateBar or style.bar)
 	card.absorb:SetWidth(math.max(1, (card:GetWidth() or 100) - pad * 2))
+	if mana then
+		card.mp:ClearAllPoints()
+		card.mp:SetPoint("TOPLEFT", card.hp, "BOTTOMLEFT", 0, -2)
+		card.mp:SetPoint("TOPRIGHT", card.hp, "BOTTOMRIGHT", 0, -2)
+		card.role:ClearAllPoints()
+		card.role:SetPoint("RIGHT", card.percent, "LEFT", -6, 0)
+	end
 
 	for i, pip in ipairs(card.pips) do
 		pip:ClearAllPoints()
 		if i == 1 then
-			pip:SetPoint("TOPLEFT", card.hp, "BOTTOMLEFT", 0, -style.gap)
+			pip:SetPoint("TOPLEFT", mana and card.mp or card.hp, "BOTTOMLEFT", 0, -style.gap + (mana and 1 or 0))
 		else
 			pip:SetPoint("LEFT", card.pips[i - 1], "RIGHT", 4, 0)
 		end

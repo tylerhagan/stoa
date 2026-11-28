@@ -25,7 +25,7 @@ Stoa.Options = Options
 
 Options.PAGES = {
 	{ "parts", "Build your STOA", "Start here. Pick a layout (Full, Slim or None), then switch on only the parts you want: anything you switch off goes back to the game's own. This page is the quick start; each part's finer settings are on its own page in the list on the left.", "Quick start" },
-	{ "look", "Look", "The style (Leather or Matte black), then theme and colour. These change everything else, so they come first." },
+	{ "look", "Look", "The style (Leather, Matte black or Slate), then theme and colour. These change everything else, so they come first." },
 	{ "console", "Console", "The console along the bottom of the screen and what it holds." },
 	{ "combat", "Combat", "What happens when a fight starts: the Halo, the combat bar and what they show." },
 	{ "group", "Group", "Party and raid cards, healing clicks, and tools for tanks and leaders." },
@@ -262,10 +262,23 @@ local function build()
 	-- Look
 	page = "look"
 	group = "Style"
-	choice(db, "material", "Style", "The whole design, and the biggest change on this page. It switches the console, windows, target and party frames, nameplates and minimap together. Leather is tooled leather and brass on the console, with warm rounded panels. Matte black is moulded black hardware: sharp corners, flat plates and a fine grain, and it loads far less art. Theme below then picks the colours; the Matte theme suits Matte black, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" } }, { reload = true, words = "material look design matte black hardware plastic texture grain leather v2" })
+	choice(db, "material", "Style", "The whole design, and the biggest change on this page. It switches the console, windows, target and party frames, nameplates and minimap together. Leather is tooled leather and brass on the console, with warm rounded panels. Matte black is moulded black hardware: sharp corners, flat plates and a fine grain, and it loads far less art. Slate is flat and modern: rounded panels, one sans for every word, and the full console split into separate cards. Theme below then picks the colours; the Matte theme suits Matte black, Ice and Ember suit Slate, and any theme's accent works as its light.", "leather", { { "leather", "Leather" }, { "matte", "Matte black" }, { "slate", "Slate" } }, {
+		reload = true, words = "material look design matte black hardware plastic texture grain leather slate modern flat v2",
+		-- Picking Slate brings its colours with it, unless a theme of your
+		-- own is already chosen.
+		change = function(_, v)
+			local theme = Stoa.db.theme or "Bone"
+			local stock = theme == "Bone" or theme == "Tide" or theme == "Graphite" or theme == "Matte"
+			if v == "slate" then
+				if stock then Stoa:SetTheme("Ice") end
+			elseif v == "leather" and (theme == "Ice" or theme == "Ember") then
+				Stoa:SetTheme("Bone")
+			end
+		end,
+	})
 	-- Leather's own choice: Matte black has no painted pieces, so the
 	-- setting is only there under Leather.
-	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return db().material ~= "matte" end, words = "brass frame leather fancy" })
+	choice(db, "ornament", "Ornament", "Plain keeps STOA's fine lines. Painted puts leather and brass frames on the one-of-a-kind pieces: the minimap, the portrait coins on your target and tank plaques, and the Halo's signature slot. The brass takes your theme's accent.", "plain", { { "plain", "Plain" }, { "painted", "Painted" } }, { reload = true, under = "material", showWhen = function() return (db().material or "leather") == "leather" end, words = "brass frame leather fancy" })
 	-- Part of the Style choice: tucked under it, there once Matte black
 	-- is picked (even before the reload that brings the material in).
 	choice(db, "grain", "Matte grain", "How much texture the Matte black surface has. Satin is flat, with no grain, like a matte speaker. Soft is a hint of texture.", "soft", { { "satin", "Satin" }, { "soft", "Soft" }, { "smooth", "Smooth" }, { "fine", "Fine" } }, {
@@ -277,7 +290,7 @@ local function build()
 	for _, name in ipairs(Stoa.themeOrder) do
 		themes[#themes + 1] = { name, name == "Class" and "Your class" or name, swatch = name }
 	end
-	choice(db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Matte is black hardware with white print. Each class has its own, and Your class follows whoever you log in.", "Bone", themes, {
+	choice(db, "theme", "Theme", "Bone is warm and class-tinted. Tide is all blues. Graphite is greyscale with one amber accent. Matte is black hardware with white print. Ice and Ember are flat near-black with a pale frost or a warm orange accent, made for Slate. Each class has its own, and Your class follows whoever you log in.", "Bone", themes, {
 		list = true, words = "colour color palette class skin",
 		change = function(_, v) Stoa:SetTheme(v) end,
 	})
@@ -330,8 +343,9 @@ local function build()
 	})
 	toggle(console, "art", "Leather console", "Tooled leather with lines in your theme's accent. Off gives a plain dark panel.", true, {
 		-- Leather's own choice: Matte black has its moulded console and no leather to switch.
-		id = "consoleArt", reload = true, showWhen = function() return db().material ~= "matte" end,
+		id = "consoleArt", reload = true, showWhen = function() return (db().material or "leather") == "leather" end,
 	})
+	toggle(console, "daylight", "Light from the time of day", "The console's gold catches the sky's colour from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk, moonlit blue at night, with a faint glass reflection on your portrait. Off keeps the gold as it is. Leather only: Matte black and Slate have no gold to light. /stoa daylight 23 previews an hour.", true, { under = "consoleArt", showWhen = function() return (db().material or "leather") == "leather" end, words = "time of day daylight night dusk dawn leather", change = function() local c = Stoa.modules.Grimoire; if c and c.UpdateDaylight then c:UpdateDaylight() end end })
 	toggle(console, "houseChat", "Hold chat in the console", "Chat sits on the console's left page and STOA's notes appear in chat.", true, { reload = true, words = "chat window" })
 	toggle(console, "freeRight", "Leave the console's right side free", "Hides the Ready, Journey and Company pages together, leaving it bare right of the action bars for a window of your own, such as another addon's damage meter. The full console only.", false, { words = "ready journey company hide empty space meter right pages", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	-- The right side's three slots: wells and page tiles (Window's slots
@@ -341,8 +355,7 @@ local function build()
 		desc = "Three slots, left to right. Pick a slot, then what it holds; choosing something another slot holds swaps the two. On the console itself, a click on a page's caption does the same. Meter 1 to 3 are the game's own meter windows (open more from the meter's menu, for healing or interrupts, say). Details 1 and 2 are Details' windows, when you run it. Empty leaves bare console for anything else. On a narrow screen the right-hand slots drop first. Usually Ready, Journey, Company. The full console only.",
 		words = "slots modular right side meter details ready journey company empty arrange reputation cooldowns lockouts week pages",
 	})
-	toggle(console, "dividers", "Lines between the console's sections", "A faint line between chat, At a glance, the action bars and the Ready, Journey and Company pages.", true, { words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
-	toggle(console, "daylight", "Light from the time of day", "The console's gold catches the sky's colour from above as the game's clock turns: rose at dawn, your own colour at midday, amber at dusk, moonlit blue at night, with a faint glass reflection on your portrait. Off keeps the gold as it is. /stoa daylight 23 previews an hour.", true, { words = "time of day daylight night dusk dawn", change = function() local c = Stoa.modules.Grimoire; if c and c.UpdateDaylight then c:UpdateDaylight() end end })
+	toggle(console, "dividers", "Lines between the console's sections", "A faint line between chat, At a glance, the action bars and the Ready, Journey and Company pages. Slate's cards are apart already, so it has none.", true, { showWhen = function() return db().material ~= "slate" end, words = "separators dividers sections", change = function() local c = Stoa.modules.Grimoire; if c and c.FitPages then c:FitPages() end end })
 	toggle(console, "riding", "Travel line while riding", "On a mount or a flight, out of a fight, the console folds to a slim line with your speed, the zone, and how far the quest you follow is. Chat stays as it is, above the line, and the action bars fade. A fight or getting off brings the full console back. Not on the Slim console. /stoa ride previews it.", true, { words = "mount mounted riding travel flight taxi speed", cmd = "/stoa ride", change = function() local c = Stoa.modules.Grimoire; if c and c.CheckRiding then c:CheckRiding() end end })
 	toggle(console, "houseMenu", "Bags and menu in the console corner", "The bag slots and game menu sit in the console's bottom-right corner without their stone frames, quiet until you mouse over them.", true, { reload = true, words = "micro menu bag bar" })
 	group = "At a glance"
@@ -376,6 +389,8 @@ local function build()
 	toggle(halo, "hidePlayerFrame", "Hide Blizzard's player frame", "The medallion and the Halo show the same. Also hides Blizzard's cast bar.", true, { reload = true, words = "unit frame" })
 	toggle(halo, "targetOfTarget", "Target of target", "Who your target is targeting: a name and a thin health line to the right of the target plaque. Says YOU when it is you. Click it to target them.", true, { reload = true, words = "tot assist aggro" })
 	toggle(halo, "focusFrame", "Focus", "Your focus as a small block under the target of target, with or without a target. Off brings back Blizzard's focus frame. Move it with /stoa move.", true, { reload = true, words = "focus unit frame" })
+	choice(halo, "shape", "Health and power in a fight", "Arcs wraps your character in the Halo's two tall arcs. Ground line draws two straight bars on one line under you instead, health on the left and power on the right of the cooldown slot, with the numbers at their outer ends. Numbers first makes the two numbers large, each over a hairline bar, with the coins beside the power bar. Side rail stands both bars upright together on your left, numbers and coins beside them. To see any of them without a fight, type /stoa combat.", "arcs", { { "arcs", "Arcs" }, { "line", "Ground line" }, { "numbers", "Numbers first" }, { "rail", "Side rail" } }, { id = "haloShape", reload = true, words = "halo arc arcs bars line shape under character readable health mana numbers" })
+	toggle(halo, "lineQuiet", "Other shapes: hide while full", "On any shape but Arcs, a bar and its number go away while full (rage: while empty) and come back the moment that changes.", false, { id = "haloLineQuiet", words = "hide full quiet bars line health mana" })
 	choice(halo, "arcStyle", "Arc style", "How the Halo's health and power arcs are drawn, shown small on each choice. Tube is a bright line on a wide faint band. Gauge is square: a straight bar inside a bracket. Line is the even half circle. Blade swells in the middle and thins to points. Visor bends as if on curved glass, with a gloss line inside. To see one without a fight, type /stoa combat.", "tube", { { "tube", "Tube" }, { "gauge", "Gauge" }, { "line", "Line" }, { "blade", "Blade" }, { "visor", "Visor" } }, { reload = true, words = "arc arcs shape style health mana ring", pictures = function(value)
 		local file = Stoa.UI.MEDIA .. "Textures\\HaloArc" .. (value == "line" and "" or (value:gsub("^%l", string.upper)))
 		return file .. "Left", file .. "Right"

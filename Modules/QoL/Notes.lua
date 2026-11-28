@@ -206,6 +206,7 @@ function Notes:BuildCard()
 
 	local save = UI.button(card, "Save", 84, function() self:Save() end)
 	save:SetPoint("BOTTOMRIGHT", -PAD, 12)
+	save:SetMain()
 	local remove = CreateFrame("Button", nil, card)
 	remove:SetHeight(26)
 	local removeText = UI.text(remove, "sans", Stoa.typeSize.body, "muted", "RIGHT")
@@ -541,8 +542,9 @@ function Notes:BuildPane(pane)
 		pane.rows[i] = row
 	end
 
-	local empty = UI.text(pane, "italic", Stoa.typeSize.label, "muted")
-	empty:SetPoint("CENTER", 0, 0)
+	local empty = UI.emptyState(pane)
+	empty:SetPoint("LEFT", 40, 0)
+	empty:SetPoint("RIGHT", -40, 0)
 	pane.empty = empty
 
 	pane:EnableMouseWheel(true)
@@ -597,9 +599,9 @@ function Notes:FillPane()
 		end
 	end
 	if counts.all == 0 then
-		pane.empty:SetText("No notes yet. Right-click a player and choose STOA note.")
+		pane.empty:Set("No notes yet", "Right-click a player and choose STOA note.")
 	else
-		pane.empty:SetText("Nobody matches.")
+		pane.empty:Set("Nobody matches", "Clear the search to see everyone you've noted.")
 	end
 	pane.empty:SetShown(#list == 0)
 	if pane.onCount then pane.onCount(#list, counts.all) end
