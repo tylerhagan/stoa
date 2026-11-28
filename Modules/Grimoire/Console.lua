@@ -795,7 +795,7 @@ function Console:BuildSeal(frame)
 	-- Halo's settings; slim leaves them to the Halo).
 	local halo = Stoa.modules.Halo
 	if not slim and halo and halo.db then
-		local crest = art and 29 or matteSeal and CREST_SOCKET_MARK or you and YOU_CREST or 22
+		local crest = art and 24 or matteSeal and CREST_SOCKET_MARK or you and YOU_CREST or 22
 		self.crestSize, self.crestPortrait = crest, portrait
 		if matteSeal then
 			-- A small round socket for each, set in the shell between the
@@ -853,6 +853,9 @@ function Console:BuildSeal(frame)
 
 	if art then
 		self:BuildResources(frame)
+		-- The crest stands at the bars' outer ends, so place it again now
+		-- they're built.
+		self:PlaceCrest()
 		return
 	end
 
@@ -1740,13 +1743,14 @@ function Console:BuildFellowship(frame, space)
 	open:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
--- The crest: the shield and the class mark. With the art they flank the
--- level at the portrait's foot, shield left and mark right (both sides of
--- the medallion are taken by the docked target and pet). Without the art
--- they sit at the top of the ring, their feet in the band between the
--- portrait and the ring. CREST_UNDER is from the portrait's bottom,
--- level with the level's plate.
-local CREST_UNDER_X, CREST_UNDER_Y = 36, -6
+-- The crest: the shield and the class mark. With the art they stand at
+-- the outer ends of the resource row, the shield before HEALTH and the
+-- mark after MANA (both sides of the medallion are taken by the docked
+-- target and pet), CREST_OUT past the bars' ends and CREST_LIFT above
+-- the bars, level with the caption over them. Without the art they sit at
+-- the top of the ring, their feet in the band between the portrait and
+-- the ring.
+local CREST_OUT, CREST_LIFT = 10, 7
 local CREST_FOOT = 3
 
 -- Hovering the shield or the mark says what it is and what's left.
@@ -1810,9 +1814,9 @@ function Console:PlaceCrest()
 		self:PlaceYouBars(n)
 		return
 	end
-	if self:Art() then
-		if shield then shield:SetPoint("CENTER", self.crestPortrait, "BOTTOM", -CREST_UNDER_X + nudge, CREST_UNDER_Y + nudge) end
-		if mark then mark:SetPoint("CENTER", self.crestPortrait, "BOTTOM", CREST_UNDER_X + nudge, CREST_UNDER_Y + nudge) end
+	if self:Art() and self.health and self.mana then
+		if shield then shield:SetPoint("RIGHT", self.health, "LEFT", -CREST_OUT + nudge, CREST_LIFT + nudge) end
+		if mark then mark:SetPoint("LEFT", self.mana, "RIGHT", CREST_OUT + nudge, CREST_LIFT + nudge) end
 		return
 	end
 	if self:Matte() then
