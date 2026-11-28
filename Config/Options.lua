@@ -463,7 +463,7 @@ local function build()
 	group = "Your pet"
 	local pet = of("Pet")
 	local petRefresh = function() if Stoa.Pet and Stoa.Pet.enabled then Stoa.Pet:UpdateAll() end end
-	toggle(pet, "plaque", "Pet plaque", "In a fight, a plaque like the target's at the Halo's upper left: your pet's mood, health, power, stance and what it's attacking. Under the tank watch when you heal.", true, { id = "petPlaque", classes = PETS, reload = true, words = "hunter warlock demon minion" })
+	toggle(pet, "plaque", "Pet ring", "In a fight, your pet as a small ring on the Halo: its portrait, red when it's low, with its name, health and what it's attacking beside it.", true, { id = "petPlaque", classes = PETS, reload = true, words = "hunter warlock demon minion" })
 	toggle(pet, "arc", "Pet health on the Halo", "A thin arc inside your own health with the pet's.", true, { id = "petArc", classes = PETS, reload = true, words = "hunter warlock" })
 	toggle(pet, "row", "Pet row under the combat bar", "Your pet's buttons, smaller, under the combat bar in a fight. Right-click one to switch its autocast. Out of a fight the game's pet bar stays where it is, in STOA's dress.", true, { id = "petRow", classes = PETS, reload = true, words = "pet bar autocast stance" })
 	toggle(pet, "coin", "Pet coin on the medallion", "Out of a fight, a small coin off the medallion with your pet's health as a ring and its mood under it. Click it to feed it food from your bags when it isn't happy; right-click targets it.", true, { id = "petCoin", classes = PETS, reload = true, words = "feed happiness hunter" })
