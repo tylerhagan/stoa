@@ -196,6 +196,7 @@ function WhatsNew:Build()
 	page.tour = tour
 	local done = UI.button(page, "Got it", 110, function() page:Hide() end)
 	done:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
+	done:SetMain()
 	-- Earlier and Later page through the notes kept in NOTES.
 	local later = UI.button(page, "Later", 76, function() WhatsNew:Paint(page.index - 1) end)
 	later:SetPoint("RIGHT", done, "LEFT", -10, 0)

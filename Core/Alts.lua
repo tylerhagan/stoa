@@ -515,7 +515,7 @@ local function tabWord(page, label, onClick)
 		text:SetTextColor(Stoa:Color(on and "text" or "muted"))
 	end
 	tab:SetScript("OnClick", onClick)
-	tab:SetScript("OnEnter", function() text:SetTextColor(Stoa:Color("accent")) end)
+	tab:SetScript("OnEnter", function() text:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
 	tab:SetScript("OnLeave", function() tab:SetSelected(tab.on) end)
 	return tab
 end

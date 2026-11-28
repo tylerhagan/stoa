@@ -97,6 +97,7 @@ function Logging:Build()
 
 	frame.start = UI.button(frame, "Start logging", 130, function() Logging:Start() end)
 	frame.start:SetPoint("BOTTOMLEFT", 18, 14)
+	frame.start:SetMain()
 	frame.later = UI.button(frame, "Not now", 90, function() Logging:Hide() end)
 	frame.later:SetPoint("LEFT", frame.start, "RIGHT", 8, 0)
 	local never = CreateFrame("Button", nil, frame)

@@ -1601,7 +1601,7 @@ function Welcome:Refresh()
 	self.next:SetReloads(current == "ready")
 	self.next.text:SetText(word)
 	self.next:SetWidth(math.max(120, math.ceil(self.next.text:GetStringWidth()) + 36))
-	self.next:SetSelected(true)
+	self.next:SetMain()
 end
 
 -- `mode` "update": the version 2 card for someone who already plays with

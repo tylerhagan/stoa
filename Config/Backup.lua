@@ -352,6 +352,7 @@ function Backup:Build()
 		if not ok then say(why, "danger") end
 	end)
 	import:SetPoint("LEFT", clear, "RIGHT", 8, 0)
+	import:SetMain()
 	local close = UI.button(page, "Close", 80, function() page:Hide() end)
 	close:SetPoint("BOTTOMRIGHT", -PAD, PAD - 8)
 	-- Another character's setup, saved when it last logged out (Config/Setups.lua).

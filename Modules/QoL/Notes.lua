@@ -206,6 +206,7 @@ function Notes:BuildCard()
 
 	local save = UI.button(card, "Save", 84, function() self:Save() end)
 	save:SetPoint("BOTTOMRIGHT", -PAD, 12)
+	save:SetMain()
 	local remove = CreateFrame("Button", nil, card)
 	remove:SetHeight(26)
 	local removeText = UI.text(remove, "sans", Stoa.typeSize.body, "muted", "RIGHT")

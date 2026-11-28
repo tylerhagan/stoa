@@ -485,6 +485,7 @@ function Conflicts:BuildList()
 
 	page.done = UI.button(page, "Done", 170, function(button) self:AnswerAll(button) end, true)
 	page.done:SetPoint("BOTTOMRIGHT", -PAD, PAD - 10)
+	page.done:SetMain()
 	page.rows = {}
 	self.list = page
 end

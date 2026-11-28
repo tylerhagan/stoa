@@ -1703,8 +1703,10 @@ function UI.button(parent, label, width, onClick, reloads)
 	local button = CreateFrame("Button", nil, parent, reloads and "SecureActionButtonTemplate" or nil)
 	button:SetSize(width or 110, 26)
 	UI.roundPanel(button, 0.95)
-	-- Slate: a lit button is washed in the accent as well as edged.
-	local wash = UI.slate() and sliced(button, "BACKGROUND", "CardFill.tga")
+	-- Slate: a plate over the face. Raised grey under the mouse or when
+	-- chosen, the full accent on a window's main button.
+	local slate = UI.slate()
+	local wash = slate and sliced(button, "BACKGROUND", "CardFill.tga")
 	if wash then
 		wash:SetDrawLayer("BACKGROUND", 2)
 		wash:Hide()
@@ -1715,25 +1717,80 @@ function UI.button(parent, label, width, onClick, reloads)
 	text:SetPoint("CENTER")
 	text:SetText(label)
 	button.text = text
+	-- Slate's chosen mark: one small round dot in the accent, the only
+	-- accent a chosen button carries there.
+	local mark
+	local function showMark(on)
+		if not on or button.dot then
+			if mark then mark:Hide() end
+			return
+		end
+		local wide, tall = button:GetWidth() or 0, button:GetHeight() or 0
+		local left = text:GetJustifyH() == "LEFT"
+		if not left and (wide - (tonumber(text:GetStringWidth()) or wide)) / 2 < 18 then
+			if mark then mark:Hide() end
+			return
+		end
+		if not mark then
+			mark = UI.circle(button, "ARTWORK", 2, 6)
+			mark:SetColorTexture(1, 1, 1, 1)
+		end
+		mark:ClearAllPoints()
+		if tall > 30 then mark:SetPoint("TOPRIGHT", -14, -14) else mark:SetPoint("RIGHT", -10, 0) end
+		mark:SetVertexColor(Stoa:Color("accent"))
+		mark:Show()
+	end
+	-- Slate's looks: an outlined plain button, raised grey when hovered or
+	-- chosen (words stay in the text colour), and the main button filled
+	-- with the accent under dark words ("risk": the warning colour).
+	local function slateColour()
+		local enabled = button:IsEnabled()
+		local over = enabled and button:IsMouseOver()
+		local tr, tg, tb = Stoa:Color("text")
+		if button.washIn and not over then button.washIn:Stop() end
+		if button.main and enabled then
+			local r, g, b = Stoa:Color(button.main == "risk" and "hostile" or "accent")
+			local k = over and 0.12 or 0
+			wash:SetVertexColor(r + (1 - r) * k, g + (1 - g) * k, b + (1 - b) * k, 1)
+			wash:Show()
+			glow:Clear()
+			if button.main == "risk" then
+				text:SetTextColor(1, 1, 1)
+			else
+				local pr, pg, pb = Stoa:Color("panel")
+				text:SetTextColor(pr, pg, pb)
+			end
+			showMark(false)
+			return
+		end
+		text:SetTextColor(Stoa:Color(enabled and "text" or "muted"))
+		local lit = enabled and (button.selected or over)
+		if wash then
+			wash:SetVertexColor(tr, tg, tb, button.selected and 0.1 or 0.06)
+			wash:SetShown(lit and true or false)
+			-- The plate warms in under the mouse; not on a reload button,
+			-- which is a secure one.
+			if over and not button.wasOver and not button.selected and not reloads and button:IsVisible() then
+				wash.stoaRestAlpha = 0.06
+				button.washIn = button.washIn or UI.fadeIn(wash, UI.MOTION.quick)
+				button.washIn:Play()
+			end
+		end
+		button.wasOver = over
+		glow:Set(tr, tg, tb, not enabled and 0.06 or lit and 0.2 or 0.12)
+		showMark(enabled and button.selected)
+	end
 	-- Four looks: plain, lit (hovered or selected: accent word and edge),
 	-- pressed (the word sinks a pixel), and disabled (muted word, no edge).
 	local function colour()
+		if slate then return slateColour() end
 		if not button:IsEnabled() then
 			text:SetTextColor(Stoa:Color("muted"))
 			glow:Clear()
-			if wash then wash:Hide() end
 			return
 		end
-		local lit = button.selected or button:IsMouseOver()
+		local lit = button.selected or button.main or button:IsMouseOver()
 		text:SetTextColor(Stoa:Color(lit and "accent" or "text"))
-		if wash then
-			local r, g, b = Stoa:Color("accent")
-			local rest = button.selected and 0.16 or 0.1
-			wash:SetVertexColor(r, g, b, rest)
-			-- Where its hover fade ends: the wash is stronger when selected.
-			wash.stoaRestAlpha = rest
-			wash:SetShown(lit and true or false)
-		end
 		if lit then
 			glow:Set(Stoa:Color("accent"))
 			-- The edge warms in rather than snapping on.
@@ -1745,27 +1802,24 @@ function UI.button(parent, label, width, onClick, reloads)
 					button.glowIn[i] = button.glowIn[i] or UI.fadeIn(tex, UI.MOTION.quick)
 					button.glowIn[i]:Play()
 				end
-				-- Slate's wash warms in with it; not on a reload button,
-				-- which is a secure one.
-				if wash and not reloads then
-					button.washIn = button.washIn or UI.fadeIn(wash, UI.MOTION.quick)
-					button.washIn:Play()
-				end
 			elseif not button:IsMouseOver() then
 				-- Selected: the edge is simply there. Only a hover warms in.
 				for i, group in ipairs(button.glowIn or {}) do
 					group:Stop()
 					glow.edges[i]:SetAlpha(glow.edges[i].stoaRestAlpha or 1)
 				end
-				if button.washIn then
-					button.washIn:Stop()
-					wash:SetAlpha(wash.stoaRestAlpha or 1)
-				end
 			end
 		else
 			glow:Clear()
 		end
 		button.lit = lit
+	end
+	-- The one button a window is there for (Next, Save, Reload). Slate fills
+	-- it with the accent; the other styles keep it lit. "risk" is for a
+	-- step that can't be taken back.
+	function button:SetMain(kind)
+		self.main = kind == nil and "main" or kind or nil
+		colour()
 	end
 	function button:SetSelected(selected)
 		self.selected = selected and true or false

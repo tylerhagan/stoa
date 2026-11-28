@@ -146,9 +146,18 @@ local function dressButton(button)
 	local function colour(over)
 		if text then
 			local enabled = not button.IsEnabled or button:IsEnabled()
-			text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+			text:SetTextColor(Stoa:Color(not enabled and "muted" or over and not UI.slate() and "accent" or "text"))
 		end
-		if over then glow:Set(Stoa:Color("accent")) else glow:Clear() end
+		if UI.slate() then
+			-- Slate: an outlined key whose edge lifts under the mouse; no
+			-- accent on a plain button.
+			local r, g, b = Stoa:Color("text")
+			glow:Set(r, g, b, over and 0.22 or 0.1)
+		elseif over then
+			glow:Set(Stoa:Color("accent"))
+		else
+			glow:Clear()
+		end
 	end
 	button:HookScript("OnEnter", function() colour(true) end)
 	button:HookScript("OnLeave", function() colour(false) end)
@@ -165,7 +174,7 @@ local function dressClose(button)
 	button:HookScript("OnShow", plainTextures)
 	local cross = Stoa.UI.glyph(button, "Cross", 16, "muted")
 	cross:SetPoint("CENTER", 0, 0)
-	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("accent")) end)
+	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
 	button:HookScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
 end
 
@@ -181,7 +190,7 @@ local function dressMaxMin(holder)
 			button:HookScript("OnShow", plainTextures)
 			local glyph = Stoa.UI.glyph(button, glyphName, 14, "muted")
 			glyph:SetPoint("CENTER", 0, 0)
-			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color("accent")) end)
+			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
 			button:HookScript("OnLeave", function() glyph:SetVertexColor(Stoa:Color("muted")) end)
 		end
 	end
@@ -445,12 +454,11 @@ local function colourTabs(frame)
 				text:SetPoint("CENTER", tab, "CENTER", 0, -(tab.stoaWordDrop or 0))
 			end
 		elseif tab.stoaShade and UI.slate() then
-			-- Slate: the chosen tab washed in the accent, its word in the
-			-- accent, no underline (the mock-up's segmented control).
+			-- Slate: the chosen tab is a raised grey plate with its word
+			-- in the text colour, no underline (the segmented control).
 			if selected then
-				local r, g, b = Stoa:Color("accent")
-				tab.stoaShade:SetVertexColor(r, g, b, 0.14)
-				if text then text:SetTextColor(r, g, b) end
+				local r, g, b = Stoa:Color("text")
+				tab.stoaShade:SetVertexColor(r, g, b, 0.1)
 			else
 				tab.stoaShade:SetVertexColor(0, 0, 0, TAB_SHADE.other)
 			end

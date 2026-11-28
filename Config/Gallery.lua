@@ -188,6 +188,9 @@ local function buildStates(page, x, y)
 	local chosen = UI.button(page, "Chosen", 110)
 	chosen:SetPoint("LEFT", plain, "RIGHT", S.s, 0)
 	chosen:SetSelected(true)
+	local main = UI.button(page, "Main", 110)
+	main:SetPoint("LEFT", chosen, "RIGHT", S.s, 0)
+	main:SetMain()
 	local bars = { { "health", 0.8 }, { "mana", 0.55 }, { "danger", 0.3 } }
 	local above = plain
 	for _, spec in ipairs(bars) do
