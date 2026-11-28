@@ -286,7 +286,6 @@ end
 
 function ClickCast:OnEnable()
 	Stoa.commands.clicks = function() self:TogglePage() end
-	Stoa.commands.bind = Stoa.commands.clicks
 	Stoa:On("STOA_ROLE_CHANGED", function()
 		self:Apply()
 		if self.page and self.page:IsShown() then self:Refresh() end

@@ -358,6 +358,7 @@ if Stoa.modules.Bind and Stoa.modules.Bind.enabled then
 			if button == _G.StoaFormChip1 then found = button end
 		end
 		assert(found and found.stoaBindCommand == "CLICK StoaFormChip1:LeftButton", "form chip bindable")
+		assert(Stoa.commands.bind ~= Stoa.commands.clicks, "/stoa bind opens keybinding, not click bindings")
 		B:Start()
 		B:Stop(true)
 		if made then _G.StoaFormChip1 = nil end
