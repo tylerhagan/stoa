@@ -929,8 +929,8 @@ local function fillCap(block)
 	cap.same, cap.boss, cap.hit = same, boss, hit
 end
 
--- A tile is narrow, so a small mark says the kind (flame for spell,
--- dagger for melee, bow for ranged, shield for defence) and a short word follows it;
+-- A tile is narrow, so a small mark says the kind (star for spell,
+-- sword for melee, bow for ranged, shield for defence) and a short word follows it;
 -- the tooltip and the menu keep the full name.
 local TILE_WORD = {
 	spellPower = "Power", spellHit = "Hit", spellCrit = "Crit",
@@ -938,8 +938,8 @@ local TILE_WORD = {
 	ranged = "Power", rangedHit = "Hit", rangedCrit = "Crit", regen = "MP5",
 }
 local TILE_MARK = {
-	spellPower = "MarkFlame", spellHit = "MarkFlame", spellCrit = "MarkFlame", healing = "MarkFlame",
-	attack = "MarkDagger", hit = "MarkDagger", crit = "MarkDagger",
+	spellPower = "MarkStar", spellHit = "MarkStar", spellCrit = "MarkStar", healing = "MarkStar",
+	attack = "MarkSword", hit = "MarkSword", crit = "MarkSword",
 	ranged = "MarkBow", rangedHit = "MarkBow", rangedCrit = "MarkBow",
 	armor = "MarkShield", dodge = "MarkShield", parry = "MarkShield",
 }
