@@ -2393,7 +2393,46 @@ local function dressLoot(frame)
 	UI.applyTheme()
 end
 
+-- Right-click and dropdown menus (on a player, a bag item, the minimap,
+-- a filter): the game's grey stone ground becomes STOA's panel with a
+-- fine edge. A menu frame is borrowed from a pool and wiped when it
+-- closes, so the look is put on each time one is built, with textures
+-- the menu itself hands out; nothing of STOA's stays on it.
+local MENU_OUT_X, MENU_OUT_Y = 8, 2
+local function dressMenu(menu)
+	if type(menu) ~= "table" or forbidden(menu) or type(menu.AttachTexture) ~= "function" or not menu.GetRegions then return end
+	for _, region in ipairs({ menu:GetRegions() }) do
+		if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
+	end
+	local fill, edge = menu:AttachTexture(), menu:AttachTexture()
+	if not (fill and edge) then return end
+	for _, tex in ipairs({ fill, edge }) do
+		tex:SetPoint("TOPLEFT", -MENU_OUT_X, MENU_OUT_Y)
+		tex:SetPoint("BOTTOMRIGHT", MENU_OUT_X, -MENU_OUT_Y)
+	end
+	fill:SetDrawLayer("BACKGROUND", 0)
+	edge:SetDrawLayer("BORDER", 0)
+	local r, g, b = Stoa:Color("panel")
+	if UI.slice(fill, "CardFill.tga") and UI.slice(edge, "CardEdge.tga") then
+		fill:SetVertexColor(r, g, b, 0.98)
+		local er, eg, eb, ea = Stoa:Color("hairline")
+		edge:SetVertexColor(er, eg, eb, ea or 1)
+	else
+		fill:SetColorTexture(r, g, b, 0.98)
+		edge:SetAlpha(0)
+	end
+	fill:Show()
+	edge:Show()
+end
+
+local function dressMenus()
+	local style = rawget(_G, "MenuStyle1Mixin")
+	if type(style) ~= "table" or type(style.Generate) ~= "function" then return end
+	Stoa.SafeHook(style, "Generate", dressMenu)
+end
+
 function More:OnEnable()
+	xpcall(dressMenus, Stoa.catch)
 	tryAll()
 	dressRolls()
 	xpcall(dressLoot, Stoa.catch, rawget(_G, "LootFrame"))

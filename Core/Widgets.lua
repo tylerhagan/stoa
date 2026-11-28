@@ -1097,6 +1097,19 @@ end
 
 UI.sliced = sliced
 
+-- The same nine-slice on a texture someone else made (a game menu hands
+-- out its own textures and takes them back when it closes).
+function UI.slice(tex, file)
+	if not (tex and tex.SetTextureSliceMargins) then return false end
+	if SHARP[file] and UI.matte() then file = SHARP[file] end
+	tex:SetTexture(UI.MEDIA .. "Textures\\" .. file)
+	tex:SetTextureSliceMargins(CARD_SLICE, CARD_SLICE, CARD_SLICE, CARD_SLICE)
+	if tex.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
+		tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+	end
+	return true
+end
+
 -- A rounded border with the same Set and Clear as UI.border, falling back
 -- to it where slicing isn't available.
 function UI.roundBorder(frame, file, size, outset)
