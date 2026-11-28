@@ -779,7 +779,13 @@ local ILVL_H = 44
 -- STOA's own figures, read from the game's stat functions; the game's list
 -- below is not reordered (doing that from addon code tainted it).
 local TILE_H, TILE_GAP, TILES_TOP = 36, 4, 8
-local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + 8
+-- Under the tiles: how far your hit chance is toward never missing a raid
+-- boss (a skull, three levels up), with a tick where an enemy of your own
+-- level stops being missed. Forever's caps: spells 4% and 17%, attacks 5%
+-- and 8%, two weapons 24% and 29%. Healers have no gauge: heals can't miss.
+local CAP_H = 26
+local TILES_H = TILES_TOP + TILE_H * 2 + TILE_GAP + 8 + CAP_H
+local HIT_CAPS = { spell = { 4, 17 }, attack = { 5, 8 }, dual = { 24, 29 } }
 
 local function plainOf(fn, ...)
 	if type(fn) ~= "function" then return nil end
@@ -849,8 +855,52 @@ local function figureSet()
 	return { "spellPower", "spellHit", "spellCrit", "mana" }
 end
 
+-- Your hit chance and which caps it is measured against, or nil (healers).
+local function hitToward()
+	local role = Stoa.GetRole and Stoa:GetRole()
+	local _, class = UnitClass("player")
+	if role == "HEALER" then return nil end
+	if role == "RANGED" and class ~= "HUNTER" then
+		return sumOf(rating("CR_HIT_SPELL"), (plainOf(rawget(_G, "GetSpellHitModifier")))) or 0, HIT_CAPS.spell
+	end
+	if class == "HUNTER" then
+		return sumOf(rating("CR_HIT_RANGED"), (plainOf(rawget(_G, "GetHitModifier")))) or 0, HIT_CAPS.attack
+	end
+	local both = rawget(_G, "IsDualWielding")
+	local ok, dual = pcall(both or tostring)
+	dual = both and ok and Stoa.safe.plain(dual) == true
+	return sumOf(rating("CR_HIT_MELEE"), (plainOf(rawget(_G, "GetHitModifier")))) or 0, dual and HIT_CAPS.dual or HIT_CAPS.attack, dual
+end
+
+local function fillCap(block)
+	local cap = block.cap
+	if not cap then return end
+	local hit, caps, dual = hitToward()
+	cap:SetShown(hit ~= nil)
+	if not hit then return end
+	local same, boss = caps[1], caps[2]
+	local wide = tonumber(cap.track:GetWidth()) or 0
+	if Stoa:IsSecret(wide) or wide <= 0 then wide = 160 end
+	local share = math.max(0, math.min(hit / boss, 1))
+	cap.fill:SetShown(share > 0)
+	cap.fill:SetWidth(math.max(wide * share, 0.001))
+	cap.tick:ClearAllPoints()
+	cap.tick:SetPoint("CENTER", cap.track, "LEFT", wide * same / boss, 0)
+	local reached = hit >= boss
+	UI.paint(cap.fill, reached and "health" or "text", reached and 0.8 or 0.5)
+	cap.label:SetText(dual and "HIT, TWO WEAPONS" or "HIT")
+	if reached then
+		cap.words:SetText("Boss cap reached")
+	else
+		cap.words:SetText(("%.1f%% to boss cap"):format(boss - hit))
+	end
+	cap.words:SetTextColor(Stoa:Color(reached and "muted" or "text"))
+	cap.same, cap.boss, cap.hit = same, boss, hit
+end
+
 local function fillTiles(block)
 	if not (block and block.tiles and block:IsVisible()) then return end
+	guarded(fillCap, block)
 	local set = figureSet()
 	for i, tile in ipairs(block.tiles) do
 		local figure = FIGURES[set[i]]
@@ -886,6 +936,41 @@ local function buildTiles(block)
 		tile.value:SetWordWrap(false)
 		block.tiles[i] = tile
 	end
+	local cap = CreateFrame("Frame", nil, block)
+	cap:SetHeight(CAP_H)
+	cap:SetPoint("TOPLEFT", block, "TOPLEFT", 12, -ILVL_H - TILES_TOP - TILE_H * 2 - TILE_GAP - 4)
+	cap:SetPoint("RIGHT", block, "RIGHT", -10, 0)
+	cap.label = UI.text(cap, "sans", Stoa.typeSize.micro, "muted", "LEFT")
+	cap.label:SetPoint("TOPLEFT", 2, -2)
+	cap.words = UI.text(cap, "sans", Stoa.typeSize.micro, "text", "RIGHT")
+	cap.words:SetPoint("TOPRIGHT", -2, -2)
+	cap.track = cap:CreateTexture(nil, "BACKGROUND")
+	cap.track:SetTexture(UI.WHITE)
+	cap.track:SetVertexColor(0, 0, 0, 0.4)
+	cap.track:SetHeight(3)
+	cap.track:SetPoint("BOTTOMLEFT", 2, 4)
+	cap.track:SetPoint("BOTTOMRIGHT", -2, 4)
+	cap.fill = cap:CreateTexture(nil, "BORDER")
+	cap.fill:SetTexture(UI.WHITE)
+	cap.fill:SetHeight(3)
+	cap.fill:SetPoint("LEFT", cap.track, "LEFT", 0, 0)
+	cap.tick = cap:CreateTexture(nil, "ARTWORK")
+	cap.tick:SetTexture(UI.WHITE)
+	cap.tick:SetSize(1, 9)
+	UI.paint(cap.tick, "muted", 0.9)
+	cap:EnableMouse(true)
+	cap:SetScript("OnEnter", function(self)
+		if not (self.boss and GameTooltip) then return end
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText("Hit chance")
+		GameTooltip:AddLine(("Yours is %.2f%%."):format(self.hit or 0), 1, 1, 1, true)
+		GameTooltip:AddLine(("%d%% never misses an enemy of your level (the tick)."):format(self.same), 1, 1, 1, true)
+		GameTooltip:AddLine(("%d%% never misses a raid boss."):format(self.boss), 1, 1, 1, true)
+		GameTooltip:AddLine("Talents that add hit to some spells are not counted here, and a low weapon skill misses more.", Stoa:Color("muted"))
+		GameTooltip:Show()
+	end)
+	cap:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+	block.cap = cap
 	block:HookScript("OnShow", function() guarded(fillTiles, block) end)
 	local function later() guarded(fillTiles, block) end
 	for _, event in ipairs({ "UNIT_STATS", "PLAYER_EQUIPMENT_CHANGED", "COMBAT_RATING_UPDATE", "UNIT_MAXPOWER", "UNIT_MAXHEALTH", "UNIT_ATTACK_POWER", "PLAYER_DAMAGE_DONE_MODS" }) do
