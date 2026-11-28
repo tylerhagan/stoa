@@ -249,6 +249,28 @@ if DoesItDie and Stoa.modules.Lethal then
 	UnitExists = realExists
 	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "DoesItDie: " .. e end
 end
+-- Shadow Word: Death: the reach line on the plaque, worked out from the rank table.
+if Stoa.modules.Death and Stoa.modules.Death.driver and select(2, UnitClass("player")) == "PRIEST" then
+	local real = { UnitExists, UnitCanAttack, IsPlayerSpell }
+	UnitExists = function(u) return u == "player" or u == "target" end
+	UnitCanAttack = function() return true end
+	IsPlayerSpell = function(id) return id == 1309595 end
+	local shadow, death = Stoa.modules.Shadow, Stoa.modules.Death
+	local active = shadow.Active
+	shadow.Active = function() return true end
+	local ok, e = xpcall(function()
+		death:Refresh()
+		local hit = death:SafeHit()
+		if not (hit and hit > 200 and hit < 1000) then SIM_ERRORS[#SIM_ERRORS + 1] = "Death: odd safe hit " .. tostring(hit) end
+		if Stoa.modules.Halo and Stoa.modules.Halo.target and not (death.plaque and death.plaque.clip:IsShown()) then SIM_ERRORS[#SIM_ERRORS + 1] = "Death: plaque line not shown" end
+		IsPlayerSpell = function() return false end
+		death:Refresh()
+		if death.plaque and death.plaque.clip:IsShown() then SIM_ERRORS[#SIM_ERRORS + 1] = "Death: line shown without the spell" end
+	end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+	shadow.Active = active
+	UnitExists, UnitCanAttack, IsPlayerSpell = real[1], real[2], real[3]
+	if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Death: " .. e end
+end
 -- Game settings: Stoa's change is noted and put back; the player's own change stays.
 do
 	local ok, e = xpcall(function()

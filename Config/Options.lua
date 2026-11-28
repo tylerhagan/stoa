@@ -443,6 +443,12 @@ local function build()
 	toggle(of("Lethal"), "skull", "Skull when they'll kill it", "A skull slides over the target's portrait once your DoTs will finish it off.", true, { id = "lethalSkull", needs = "Needs the DoesItDie addon", addonGlobal = "DoesItDie", change = refresh("Lethal", "Update") })
 	group = "Shadow priest"
 	toggle(of("Shadow"), "followSequence", "Follow a cast sequence macro", "With a /castsequence macro on your bars, the next-press outline follows it: the macro lights up, and so does the spell button its next step will cast. Off goes back to STOA's own order (DoTs, Mind Blast, Death, Mind Flay).", true, { id = "shadowSequence", classes = setOf("PRIEST"), words = "castsequence macro rotation priority", change = refresh("Shadow", "UpdateNext") })
+	local death = of("Death")
+	local deathRefresh = refresh("Death", "Refresh")
+	toggle(death, "plaque", "Death's reach on the target bar", "A fine line on the target plaque's health bar where Shadow Word: Death's smallest hit ends, and the health left inside it tinted. Once Death will finish the target, its whole health is tinted, and you take no backlash.", true, { id = "deathPlaque", classes = setOf("PRIEST"), words = "shadow word death execute kill backlash finisher", change = deathRefresh })
+	toggle(death, "plates", "Death's reach on nameplates", "The same line and tint on each enemy's nameplate.", true, { id = "deathPlates", classes = setOf("PRIEST"), words = "shadow word death execute kill nameplate", change = deathRefresh })
+	toggle(death, "button", "Ring the Death button when it will kill", "A ring round Shadow Word: Death on the combat bar while it will finish your target.", true, { id = "deathButton", classes = setOf("PRIEST"), words = "shadow word death execute kill combat bar", change = deathRefresh })
+	toggle(death, "weaving", "Count Shadow Weaving", "Reckon Death's hit with 5 stacks of Shadow Weaving on the target (10% more). Turn on when a Shadow priest keeps the stacks up, as you do in a long fight.", false, { id = "deathWeaving", classes = setOf("PRIEST"), words = "shadow weaving stacks death", change = deathRefresh })
 	group = "Your pet"
 	local pet = of("Pet")
 	local petRefresh = function() if Stoa.Pet and Stoa.Pet.enabled then Stoa.Pet:UpdateAll() end end
