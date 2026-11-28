@@ -1227,7 +1227,7 @@ end
 -- form's shade rises over the coin's face from below, slowly breathing.
 -- The only standing motion on the Halo, so it stays low and slow. Stepping
 -- in, the smoke also drifts briefly out along the bars and clears.
-local SEAT_BREATH, SEAT_BREATH_LOW = 1.8, 0.45
+local SEAT_BREATH, SEAT_BREATH_LOW, SEAT_BREATH_HIGH = 1.8, 0.35, 0.8
 local FACE_SMOKE = { 0.85, 0.15 }  -- bottom and top of the face
 local BAR_SMOKE = { alpha = 0.55, rise = 0.4, hold = 1.0, clear = 1.4 }
 
@@ -1239,7 +1239,7 @@ local function barSmoke(bar, shade, nearRight)
 	local smoke = bar.stoaFormSmoke
 	if not smoke then
 		smoke = bar:CreateTexture(nil, "ARTWORK", nil, 7)
-		smoke:SetTexture(UI.WHITE)
+		smoke:SetColorTexture(1, 1, 1, 1)
 		smoke:SetAllPoints(fill)
 		if bar.stoaFillMask then smoke:AddMaskTexture(bar.stoaFillMask) end
 		local drift = smoke:CreateAnimationGroup()
@@ -1263,6 +1263,9 @@ local function barSmoke(bar, shade, nearRight)
 		smoke.drift = drift
 		bar.stoaFormSmoke = smoke
 	end
+	-- The colour goes on the texture itself too, so if the gradient doesn't
+	-- take, the worst case is the shade, never white.
+	smoke:SetColorTexture(shade[1], shade[2], shade[3], 1)
 	UI.setGradient(smoke, { "HORIZONTAL", nearRight and 0 or 1, nearRight and 1 or 0 }, shade[1], shade[2], shade[3], BAR_SMOKE.alpha)
 	smoke.drift:Stop()
 	smoke:Show()
@@ -1285,18 +1288,19 @@ function Halo:SeatForm(look)
 	end
 	if not smoke then
 		smoke = UI.circle(slot, "ARTWORK", 7, SIGNATURE_SIZE)
-		smoke:SetTexture(UI.WHITE)
+		smoke:SetColorTexture(1, 1, 1, 1)
 		smoke:SetPoint("CENTER", slot.icon, "CENTER")
 		local breath = smoke:CreateAnimationGroup()
 		breath:SetLooping("BOUNCE")
 		local fade = breath:CreateAnimation("Alpha")
 		fade:SetFromAlpha(SEAT_BREATH_LOW)
-		fade:SetToAlpha(1)
+		fade:SetToAlpha(SEAT_BREATH_HIGH)
 		fade:SetDuration(SEAT_BREATH)
 		fade:SetSmoothing("IN_OUT")
 		smoke.breath = breath
 		slot.faceSmoke = smoke
 	end
+	smoke:SetColorTexture(shade[1], shade[2], shade[3], 1)
 	UI.setGradient(smoke, { "VERTICAL", FACE_SMOKE[1], FACE_SMOKE[2] }, shade[1], shade[2], shade[3], 1)
 	smoke:Show()
 	if not smoke.breath:IsPlaying() then smoke.breath:Play() end
