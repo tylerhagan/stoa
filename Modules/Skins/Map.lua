@@ -378,10 +378,9 @@ local function dressFilter(button)
 	paint(false)
 end
 
--- Slate: the map's two filter buttons (over the map, and beside the quest
--- log's search box) lose the game's gold and take the theme's ink.
+-- The map's two filter buttons (over the map, and beside the quest log's
+-- search box) lose the game's gold and take the theme's ink.
 function Map:DressFilter()
-	if not Stoa.UI.slate() then return end
 	dressFilter(WorldMapFrame and WorldMapFrame.WorldMapTrackingOptionsButton)
 	local scroll = rawget(_G, "QuestScrollFrame")
 	dressFilter(scroll and scroll.SettingsDropdown)
