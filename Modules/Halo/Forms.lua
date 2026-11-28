@@ -1,0 +1,514 @@
+-- Stoa: forms. Some forms change who you are, so STOA changes with them.
+--
+--   * A look per form (only Shadowform has one so far): while you're in it
+--     the console seal's ring and dial and the Halo's signature ring take
+--     the form's colour, its smoke breathes round the seal, and a haze of
+--     it sits behind the Halo. Entering sends a wave of smoke out from the
+--     seal to the console's ends; leaving snaps everything back at once.
+--   * A row of form chips off the medallion's lower right (the pet coin
+--     sits lower left): one round chip per form, lit while you're in it.
+--     Click to shift in or out, right-click to leave. Built so paladin
+--     auras and druid forms can use the same row in the stance bar's place;
+--     for now only the classes in CHIPS get it.
+--
+-- A medallion that wants the chips elsewhere calls Forms:SetChipSpot.
+--
+-- Other pieces can wear the look too: STOA_FORM_LOOK fires with the look
+-- (its `ring` and `shade` colours) on the way in and with nil on the way
+-- out, and Stoa.Forms.look holds the one on now. The Slate player card
+-- (which has no round seal to dress) is meant to tint its class mark and
+-- accent from it.
+--
+-- Everything here is laid over the console and the Halo, never into them:
+-- their own colours and art are untouched, so a theme change or a new
+-- medallion keeps working, and turning this off leaves no trace.
+local _, ns = ...
+local Stoa = ns.Stoa
+local UI = Stoa.UI
+
+local Forms = Stoa:NewModule("Forms", {
+	looks = true,
+	chips = true,
+})
+Stoa.Forms = Forms
+
+-- The looks, by the form's spell. `ring` is the bright colour (rings and
+-- the dial's lit ticks, the breath and the wave), `shade` a dark one for
+-- pieces that wash over (Slate's player card).
+local LOOKS = {
+	[15473] = { -- Shadowform
+		-- Smoke: pale ash on the rings, near-black smoke round them, the
+		-- faintest cool tint so it reads as shadow, not as grey.
+		ring = { 0.62, 0.60, 0.68 },
+		shade = { 0.03, 0.02, 0.05 },
+	},
+}
+
+-- Which classes get the chip row, and their forms when the game's form bar
+-- doesn't list them.
+local CHIPS = {
+	PRIEST = { 15473 },
+}
+
+local CHIP = 30
+local BREATH = 1.8       -- seconds each way
+local BREATH_LOW, BREATH_HIGH = 0.35, 1
+-- The entering wave: two bands of smoke running out from the seal
+-- to the console's ends.
+local WAVE = 0.45
+local WAVE_W = 260
+local WAVE_ALPHA = 0.7
+-- RingGlow.tga's light peaks this far out from its centre (Tools/art/ring_glow.py).
+local GLOW_PEAK = 55 / 77
+local SEAL_SHADE_OUT = 24   -- the smoke's peak, beyond the face's edge
+local HALO_HAZE_ALPHA = 0.5
+-- How far up and down from the middle the Halo's haze reaches, as a share
+-- of its texture: about where the arcs end.
+local HAZE_REACH = 0.29
+-- On the ground line the smoke is a stretched soft dot, so it needs more.
+local LINE_HAZE_ALPHA = 0.9
+-- The Halo's smoke breathes between this and full.
+local HAZE_BREATH_LOW = 0.6
+
+local function knows(spellID)
+	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
+	return IsSpellKnown and IsSpellKnown(spellID) or false
+end
+
+-- Whether you're in the form `spellID`: its aura on you, or the game's form
+-- bar saying so when the aura can't be read.
+local function inForm(spellID)
+	if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+		local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
+		if ok and aura then return true end
+	end
+	if GetShapeshiftForm and GetShapeshiftFormInfo then
+		local index = GetShapeshiftForm()
+		if not Stoa:IsSecret(index) and index and index > 0 then
+			local _, active, _, id = GetShapeshiftFormInfo(index)
+			if id == spellID and active ~= false then return true end
+		end
+	end
+	return false
+end
+
+-- The look you're wearing now, or nil.
+local function currentLook()
+	for spellID, look in pairs(LOOKS) do
+		if knows(spellID) and inForm(spellID) then return spellID, look end
+	end
+end
+
+-- Look ----------------------------------------------------------------------
+
+-- A ring band in the form's colour: a disc just under the face, so only
+-- the band round it shows, over the ring it stands in for.
+local function band(parent, face, extra)
+	local size = face:GetWidth() + extra
+	local tex = UI.circle(parent, "ARTWORK", -2, size)
+	tex:SetPoint("CENTER", face, "CENTER")
+	tex:Hide()
+	return tex
+end
+
+local function breathe(tex, low, high)
+	local group = tex:CreateAnimationGroup()
+	group:SetLooping("BOUNCE")
+	local fade = group:CreateAnimation("Alpha")
+	fade:SetFromAlpha(low or BREATH_LOW)
+	fade:SetToAlpha(high or BREATH_HIGH)
+	fade:SetDuration(BREATH)
+	fade:SetSmoothing("IN_OUT")
+	return group
+end
+
+function Forms:BuildLook()
+	local parts = {}
+	local console = Stoa.modules.Grimoire
+	-- Slate's medallion is a flat player card with no round seal: it takes
+	-- the look from STOA_FORM_LOOK instead.
+	local slate = Stoa.db and Stoa.db.material == "slate"
+	if console and console.enabled and console.seal and console.portrait and not slate then
+		local seal, face = console.seal, console.portrait
+		parts.sealBand = band(seal, face, 4)
+		-- The breath round the seal: the ring glow's soft halo in the form's
+		-- smoke.
+		local shade = seal:CreateTexture(nil, "BORDER", nil, 3)
+		shade:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
+		local size = (face:GetWidth() / 2 + SEAL_SHADE_OUT) / GLOW_PEAK * 2
+		shade:SetSize(size, size)
+		shade:SetPoint("CENTER", face, "CENTER")
+		shade:SetBlendMode("BLEND")
+		shade:SetAlpha(0)
+		shade:Hide()
+		parts.sealShade, parts.breath = shade, breathe(shade)
+		-- The dial's lit ticks follow the look after every redraw.
+		hooksecurefunc(console, "UpdateRing", function() self:PaintTicks() end)
+		parts.console = console
+
+		-- The wave: two bands of the form's smoke leave the seal and run out
+		-- to either end of the console, fading as they go. Clipped to the
+		-- console so they never spill over the world.
+		local veil = CreateFrame("Frame", nil, console.frame)
+		veil:SetAllPoints()
+		veil:SetFrameLevel(console.frame:GetFrameLevel() + 2)
+		veil:SetClipsChildren(true)
+		veil:EnableMouse(false)
+		local bands, moves = {}, {}
+		for _, sign in ipairs({ -1, 1 }) do
+			local holder = CreateFrame("Frame", nil, veil)
+			holder:SetSize(WAVE_W, 1)
+			holder:SetPoint("TOP", veil, "TOP", -sign * WAVE_W / 2, 0)
+			holder:SetPoint("BOTTOM", veil, "BOTTOM", -sign * WAVE_W / 2, 0)
+			holder:SetAlpha(0)
+			local light = holder:CreateTexture(nil, "OVERLAY")
+			light:SetAllPoints()
+			light:SetTexture(UI.WHITE)
+			light:SetBlendMode("BLEND")
+			light.sign = sign
+			local group = holder:CreateAnimationGroup()
+			local fade = group:CreateAnimation("Alpha")
+			fade:SetFromAlpha(1)
+			fade:SetToAlpha(0)
+			fade:SetStartDelay(WAVE * 0.4)
+			fade:SetDuration(WAVE * 0.6)
+			local move = group:CreateAnimation("Translation")
+			move:SetDuration(WAVE)
+			move:SetSmoothing("OUT")
+			group:SetScript("OnFinished", function() holder:SetAlpha(0) end)
+			bands[#bands + 1] = { light = light, group = group, holder = holder }
+			moves[#moves + 1] = { anim = move, sign = sign }
+		end
+		local pulse = {}
+		function pulse.Play()
+			local reach = veil:GetWidth() / 2 + WAVE_W
+			for i, band in ipairs(bands) do
+				moves[i].anim:SetOffset(moves[i].sign * reach, 0)
+				band.holder:SetAlpha(1)
+				band.group:Play()
+			end
+		end
+		function pulse.Stop()
+			for _, band in ipairs(bands) do band.group:Stop() band.holder:SetAlpha(0) end
+		end
+		parts.veil, parts.waveBands, parts.pulse = veil, bands, pulse
+	end
+
+	local halo = Stoa.modules.Halo
+	if halo and halo.enabled and halo.frame then
+		local slot = halo.signature
+		if slot and slot.icon and not UI.ornate() then
+			parts.haloBand = band(slot, slot.icon, 4)
+		end
+		-- A haze of the form's smoke along the Halo's arcs, and only there:
+		-- the ring glow cut into four quarters that fade out towards the
+		-- arcs' ends, so the top and the bottom stay open.
+		local haze = CreateFrame("Frame", nil, halo.frame)
+		haze:SetAllPoints()
+		haze:SetFrameLevel(halo.frame:GetFrameLevel())
+		haze.pieces = {}
+		local line = halo.Line and halo:Line()
+		local rail = halo.Rail and halo:Rail()
+		-- The ground line (Slate's Halo shapes): a soft smoke lying along
+		-- each bar. The rail goes without.
+		local spec = line and halo.LINE
+		if spec then
+			for _, sign in ipairs({ -1, 1 }) do
+				-- Over the line's seat (the Halo frame's own BACKGROUND art),
+				-- under the bars (their own frames), and wide and tall
+				-- enough that the soft dot's core reaches past the bar.
+				local piece = haze:CreateTexture(nil, "BORDER", nil, 0)
+				piece:SetTexture(UI.MEDIA .. "Textures\\SparkleGlow")
+				piece:SetSize(spec.width * 1.7, 72)
+				piece.alpha = LINE_HAZE_ALPHA
+				piece:SetPoint("CENTER", haze, "BOTTOM", sign * (spec.gap + spec.width / 2), spec.y)
+				haze.pieces[#haze.pieces + 1] = piece
+			end
+		end
+		-- It peaks on the arcs, just inside the frame's edge.
+		local size = halo.frame:GetWidth() * 0.96 / GLOW_PEAK
+		local reach = HAZE_REACH
+		for _, q in ipairs((line or rail) and {} or {
+			{ "BOTTOMRIGHT", 0, 0.5, 0.5 - reach, 0.5, 1, 0 },
+			{ "TOPRIGHT", 0, 0.5, 0.5, 0.5 + reach, 0, 1 },
+			{ "BOTTOMLEFT", 0.5, 1, 0.5 - reach, 0.5, 1, 0 },
+			{ "TOPLEFT", 0.5, 1, 0.5, 0.5 + reach, 0, 1 },
+		}) do
+			local piece = haze:CreateTexture(nil, "BACKGROUND", nil, -8)
+			piece:SetTexture(UI.MEDIA .. "Textures\\RingGlow")
+			piece:SetTexCoord(q[2], q[3], q[4], q[5])
+			piece:SetSize(size / 2, size * reach)
+			piece:SetPoint(q[1], haze, "CENTER")
+			piece.fade = { "VERTICAL", q[6], q[7] }
+			haze.pieces[#haze.pieces + 1] = piece
+		end
+		haze:Hide()
+		-- The Halo's smoke breathes too, gently: it never thins out.
+		parts.haloHaze, parts.hazeBreath = haze, breathe(haze, HAZE_BREATH_LOW, 1)
+	end
+	self.parts = parts
+end
+
+-- Recolours the dial's ticks that are lit in the accent (the experience
+-- done) in the look's colour; the rested and empty ones keep theirs.
+function Forms:PaintTicks()
+	local look = self.look
+	local console = self.parts and self.parts.console
+	if not (look and console and console.ringTicks) then return end
+	local ar, ag, ab = Stoa:Color("accent")
+	local r, g, b = unpack(look.ring)
+	for _, tick in ipairs(console.ringTicks) do
+		local tr, tg, tb, ta = tick:GetVertexColor()
+		if math.abs(tr - ar) < 0.02 and math.abs(tg - ag) < 0.02 and math.abs(tb - ab) < 0.02 then
+			tick:SetVertexColor(r, g, b, ta)
+		end
+	end
+end
+
+function Forms:ApplyLook(look, entering)
+	local parts = self.parts
+	if not parts then return end
+	local was = self.look
+	self.look = look
+	if look then
+		local r, g, b = unpack(look.ring)
+		for _, key in ipairs({ "sealBand", "haloBand" }) do
+			local tex = parts[key]
+			if tex then
+				tex:SetColorTexture(r, g, b, 1)
+				tex:Show()
+			end
+		end
+		if parts.sealShade then
+			parts.sealShade:SetVertexColor(unpack(look.shade))
+			parts.sealShade:Show()
+			if not parts.breath:IsPlaying() then parts.breath:Play() end
+		end
+		if parts.haloHaze then
+			local sr, sg, sb = unpack(look.shade)
+			for _, piece in ipairs(parts.haloHaze.pieces) do
+				if piece.fade then
+					UI.setGradient(piece, piece.fade, sr, sg, sb, HALO_HAZE_ALPHA)
+				else
+					piece:SetVertexColor(sr, sg, sb, piece.alpha or HALO_HAZE_ALPHA)
+				end
+			end
+			parts.haloHaze:Show()
+			if not parts.hazeBreath:IsPlaying() then parts.hazeBreath:Play() end
+		end
+		for _, band in ipairs(parts.waveBands or {}) do
+			-- The leading edge bright, trailing off towards the seal.
+			local light = band.light
+			UI.setGradient(light, { "HORIZONTAL", light.sign > 0 and 0 or 1, light.sign > 0 and 1 or 0 }, look.shade[1], look.shade[2], look.shade[3], WAVE_ALPHA)
+		end
+		self:PaintTicks()
+		-- The pulse only marks the moment you step in, and only where it
+		-- can be seen: the console open on screen.
+		if entering and not was and parts.pulse and parts.veil:IsVisible() then
+			parts.pulse.Stop()
+			parts.pulse.Play()
+		end
+	else
+		-- Leaving snaps back: no fade.
+		for _, key in ipairs({ "sealBand", "haloBand", "sealShade", "haloHaze" }) do
+			if parts[key] then parts[key]:Hide() end
+		end
+		if parts.breath then parts.breath:Stop() end
+		if parts.hazeBreath then parts.hazeBreath:Stop() end
+		if was and parts.console and parts.console.UpdateRing then parts.console:UpdateRing() end
+	end
+	if look ~= was then Stoa:Fire("STOA_FORM_LOOK", look) end
+end
+
+function Forms:UpdateLook(entering)
+	if not self.db.looks then
+		if self.look then self:ApplyLook(nil) end
+		return
+	end
+	local _, look = currentLook()
+	if look == self.look then return end
+	self:ApplyLook(look, entering)
+end
+
+-- Chips ---------------------------------------------------------------------
+
+-- The forms this character's row shows: the game's form bar where it lists
+-- them, else the class's own list. Only learned ones.
+local function chipForms()
+	local _, classFile = UnitClass("player")
+	local fallback = CHIPS[classFile]
+	if not fallback then return {} end
+	local list = {}
+	local count = GetNumShapeshiftForms and GetNumShapeshiftForms() or 0
+	for i = 1, (Stoa:IsSecret(count) and 0 or count or 0) do
+		local _, _, _, spellID = GetShapeshiftFormInfo(i)
+		if spellID and not Stoa:IsSecret(spellID) then list[#list + 1] = spellID end
+	end
+	if #list == 0 then
+		for _, spellID in ipairs(fallback) do
+			if knows(spellID) then list[#list + 1] = spellID end
+		end
+	end
+	return list
+end
+
+function Forms:BuildChip(i)
+	local chip = CreateFrame("Button", "StoaFormChip" .. i, UIParent, "SecureActionButtonTemplate")
+	chip:SetSize(CHIP, CHIP)
+	chip:SetFrameStrata("LOW")
+	-- Secure buttons act on press or release by the game's own setting, so
+	-- both are taken; the template acts on the one that matches.
+	chip:RegisterForClicks("AnyUp", "AnyDown")
+	chip:SetAttribute("type1", "spell")
+	chip:SetAttribute("type2", "cancelaura")
+
+	local gap = UI.circle(chip, "BACKGROUND", 0, CHIP)
+	gap:SetPoint("CENTER")
+	UI.paint(gap, "panel", 1)
+	local ring = UI.circle(chip, "BORDER", 0, CHIP - 2)
+	ring:SetPoint("CENTER")
+	local inset = UI.circle(chip, "BORDER", 1, CHIP - 5)
+	inset:SetPoint("CENTER")
+	UI.paint(inset, "panel", 1)
+	local icon = UI.circle(chip, "ARTWORK", 0, CHIP - 8)
+	icon:SetPoint("CENTER")
+	icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+	-- The hover lift: the ring brightens, nothing moves.
+	chip:SetScript("OnEnter", function(own)
+		own.hover = true
+		self:PaintChip(own)
+		GameTooltip:SetOwner(own, "ANCHOR_TOP")
+		local name = own.spellID and C_Spell.GetSpellName(own.spellID) or ""
+		GameTooltip:AddLine(name)
+		local mr, mg, mb = Stoa:Color("muted")
+		GameTooltip:AddLine(own.lit and "Click or right-click to leave it." or "Click to shift into it.", mr, mg, mb)
+		GameTooltip:Show()
+	end)
+	chip:SetScript("OnLeave", function(own)
+		own.hover = nil
+		self:PaintChip(own)
+		GameTooltip:Hide()
+	end)
+	chip.ring, chip.icon = ring, icon
+	return chip
+end
+
+function Forms:PaintChip(chip)
+	local look = chip.spellID and LOOKS[chip.spellID]
+	local r, g, b
+	if look then r, g, b = unpack(look.ring) else r, g, b = Stoa:Color("accent") end
+	if chip.lit then
+		chip.ring:SetColorTexture(r, g, b, 1)
+		chip.icon:SetDesaturated(false)
+		chip.icon:SetVertexColor(1, 1, 1, 1)
+	else
+		local tr, tg, tb = Stoa:Color("text")
+		chip.ring:SetColorTexture(tr, tg, tb, chip.hover and 0.45 or 0.18)
+		chip.icon:SetDesaturated(true)
+		chip.icon:SetVertexColor(1, 1, 1, chip.hover and 0.9 or 0.6)
+	end
+end
+
+-- Sets the row's forms. Attributes can only change out of a fight, so a
+-- change in one waits for it to end.
+function Forms:LayoutChips()
+	if not self.db.chips then return end
+	if InCombatLockdown() then
+		self.chipsPending = true
+		return
+	end
+	self.chipsPending = nil
+	local console = Stoa.modules.Grimoire
+	local anchor = _G.StoaSealButton
+	if not (console and console.enabled and anchor) then return end
+	local forms = chipForms()
+	self.chips = self.chips or {}
+	for i, spellID in ipairs(forms) do
+		local chip = self.chips[i] or self:BuildChip(i)
+		self.chips[i] = chip
+		local name = C_Spell.GetSpellName(spellID)
+		chip.spellID = spellID
+		chip:SetAttribute("spell", name)
+		chip.icon:SetTexture(C_Spell.GetSpellTexture(spellID))
+		chip:ClearAllPoints()
+		local spot = self.chipSpot
+		local card = console.youCard and console.YOU_CARD
+		if spot then
+			-- Placed by the medallion's owner (Slate's player card).
+			chip:SetPoint("CENTER", spot.frame, spot.point, spot.x + (i - 1) * spot.step, spot.y)
+		elseif card and console.OpenHeight then
+			-- Slate's player card: just right of the card, on its centre
+			-- line. Pinned to the screen, not to the card, which fades in
+			-- a fight (the chips hide then anyway).
+			chip:SetPoint("CENTER", UIParent, "BOTTOM", card.width / 2 + 8 + CHIP / 2 + (i - 1) * (CHIP + 6), console:OpenHeight() + card.y)
+		else
+			-- Off the seal's lower right, mirroring the pet coin, running out.
+			chip:SetPoint("CENTER", anchor, "BOTTOMRIGHT", (i - 1) * (CHIP + 6), 12)
+		end
+		chip:SetFrameLevel(console.seal:GetFrameLevel() + 6)
+		-- The console folds in a fight and the chips go with it.
+		RegisterStateDriver(chip, "visibility", "[combat] hide; show")
+	end
+	for i = #forms + 1, #self.chips do
+		local chip = self.chips[i]
+		chip.spellID = nil
+		UnregisterStateDriver(chip, "visibility")
+		chip:Hide()
+	end
+	self:UpdateChips()
+end
+
+-- Where the chip row sits, for a medallion that wants it somewhere else
+-- (Slate's player card): the first chip's centre on `point` of `frame`,
+-- offset x, y, each next one `step` further along x (negative runs left).
+-- Pass nil to go back to the seal's lower right. Takes effect out of a
+-- fight, like every change to the chips.
+function Forms:SetChipSpot(frame, point, x, y, step)
+	self.chipSpot = frame and { frame = frame, point = point or "CENTER", x = x or 0, y = y or 0, step = step or (CHIP + 6) } or nil
+	if self.enabled or self.chips then self:LayoutChips() end
+end
+Forms.CHIP_SIZE = CHIP
+
+function Forms:UpdateChips()
+	for _, chip in ipairs(self.chips or {}) do
+		if chip.spellID then
+			chip.lit = inForm(chip.spellID)
+			self:PaintChip(chip)
+		end
+	end
+end
+
+-- Lifecycle -----------------------------------------------------------------
+
+function Forms:Refresh(entering)
+	self:UpdateLook(entering)
+	self:UpdateChips()
+end
+
+function Forms:OnEnable()
+	self:BuildLook()
+	self:LayoutChips()
+
+	local function changed()
+		xpcall(self.Refresh, Stoa.catch, self, true)
+	end
+	Stoa:On("UPDATE_SHAPESHIFT_FORM", changed)
+	Stoa:On("UNIT_AURA", function(unit)
+		if unit == "player" then changed() end
+	end)
+	local function relayout()
+		xpcall(self.LayoutChips, Stoa.catch, self)
+	end
+	Stoa:On("UPDATE_SHAPESHIFT_FORMS", relayout)
+	Stoa:On("SPELLS_CHANGED", relayout)
+	Stoa:On("PLAYER_REGEN_ENABLED", function()
+		if self.chipsPending then relayout() end
+	end)
+	-- A theme change repaints the dial in the accent; the look goes back on.
+	Stoa:On("STOA_THEME_CHANGED", function()
+		if self.look then self:PaintTicks() end
+		self:UpdateChips()
+	end)
+	-- Already in form at login or a reload: the look, without the pulse.
+	xpcall(self.Refresh, Stoa.catch, self, false)
+end
