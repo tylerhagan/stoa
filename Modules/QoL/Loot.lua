@@ -223,7 +223,6 @@ function Loot:OnEnable()
 		tally:Register("goldHour", {
 			label = "Gold an hour",
 			short = "Gold rate",
-			speaks = true,
 			value = function()
 				local rate = perHour()
 				if not rate then return "Counting" end
