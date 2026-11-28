@@ -330,10 +330,11 @@ end
 -- and empty until you have a target, then holds its portrait, wherever the
 -- target's own plaque is showing. It fades with the arch when the console
 -- folds.
-function Console:BuildTargetCone(frame)
+-- `mirror` builds the same tab on the dial's left (the pet's, Pet.lua).
+function Console:BuildCone(frame, mirror)
 	local holder = CreateFrame("Frame", nil, frame)
 	holder:SetSize(MATTE_TAB_W, MATTE_TAB_H)
-	holder:SetPoint("BOTTOMLEFT", frame, "TOP", 0, -1)
+	holder:SetPoint(mirror and "BOTTOMRIGHT" or "BOTTOMLEFT", frame, "TOP", 0, -1)
 	local tab = holder:CreateTexture(nil, "BACKGROUND")
 	tab:SetTexture(UI.MEDIA .. "Textures\\MatteTab")
 	tab:SetAllPoints()
@@ -347,6 +348,10 @@ function Console:BuildTargetCone(frame)
 	-- Unsnapped like the docked block that runs on from it.
 	UI.unsnap(tab)
 	UI.unsnap(lines)
+	if mirror then
+		tab:SetTexCoord(1, 0, 0, 1)
+		lines:SetTexCoord(1, 0, 0, 1)
+	end
 	-- The cone stands on its own frame above the docked target block (a
 	-- LOW button that starts under the cone's right edge), so the block
 	-- runs on beneath the bezel and never cuts it.
@@ -358,7 +363,7 @@ function Console:BuildTargetCone(frame)
 	local bezel = face:CreateTexture(nil, "BORDER")
 	bezel:SetTexture(UI.MEDIA .. "Textures\\MatteBezel")
 	bezel:SetSize(size * BEZEL_SCALE, size * BEZEL_SCALE)
-	bezel:SetPoint("CENTER", holder, "BOTTOMLEFT", CONE_X, CONE_Y + 1)
+	bezel:SetPoint("CENTER", holder, mirror and "BOTTOMRIGHT" or "BOTTOMLEFT", mirror and -CONE_X or CONE_X, CONE_Y + 1)
 	local pit = circle(face, "BORDER", 1, size + 4)
 	pit:SetColorTexture(0, 0, 0, 0.55)
 	pit:SetPoint("CENTER", bezel)
@@ -371,8 +376,12 @@ function Console:BuildTargetCone(frame)
 	round:SetTexture(UI.CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 	round:SetAllPoints(portrait)
 	portrait:AddMaskTexture(round)
-	self.cone = { holder = holder, portrait = portrait, rim = rim }
 	table.insert(self.archParts, holder)
+	return { holder = holder, portrait = portrait, rim = rim }
+end
+
+function Console:BuildTargetCone(frame)
+	self.cone = self:BuildCone(frame)
 	local function update() self:UpdateTargetCone() end
 	Stoa:On("PLAYER_TARGET_CHANGED", update)
 	Stoa:On("PLAYER_ENTERING_WORLD", update)
