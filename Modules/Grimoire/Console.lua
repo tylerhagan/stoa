@@ -1716,6 +1716,9 @@ function Console:Jobs()
 			end
 		end
 	end
+	-- Enough gold and level for the next riding step (QoL/Rider.lua).
+	local riding = Stoa.Rider and Stoa.Rider.Job and Stoa.Rider:Job()
+	if riding then add(riding, "riding trainer") end
 	return list
 end
 

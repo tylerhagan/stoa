@@ -16,6 +16,6 @@ globals = {
 	"Stoa", "StoaDB", "StoaCharDB",
 	"SLASH_STOA1", "SlashCmdList",
 	"Stoa_OnCompartmentClick", "Stoa_OnCompartmentEnter", "Stoa_OnCompartmentLeave",
-	"BINDING_HEADER_STOA", "BINDING_NAME_STOA_CHARACTERS",
+	"BINDING_HEADER_STOA", "BINDING_NAME_STOA_CHARACTERS", "BINDING_NAME_STOA_MOUNT",
 	"StoaRaidButton_OnLoad", "StoaRaidCard_OnLoad", "StoaRaidCell_OnLoad", "StoaRaidTiny_OnLoad",
 }

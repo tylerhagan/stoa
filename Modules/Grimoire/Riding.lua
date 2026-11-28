@@ -4,7 +4,9 @@
 -- it is and a bar filling as you close in. Chat stays as it is, standing
 -- above the line as it does over the folded console. The action bars and
 -- pages fade back. A fight, getting off or landing brings the full console
--- back.
+-- back. With arrival times on (Settings > Comforts > Riding), the stop
+-- also says how long it is at this speed, and the zone line names how far
+-- the nearest flight master is.
 --
 -- Lean: one check on the mount and taxi events, and a speed and distance
 -- read twice a second only while riding. The full console only; Slim is a
@@ -59,7 +61,7 @@ function Console:BuildRide()
 	stop:SetPoint("RIGHT", band, "RIGHT", -inset, -2)
 	local title = UI.text(stop, "sans", Stoa.typeSize.caption, "text", "LEFT")
 	title:SetPoint("TOPLEFT")
-	title:SetPoint("TOPRIGHT", -52, 0)
+	title:SetPoint("TOPRIGHT", -92, 0)
 	title:SetWordWrap(false)
 	local far = UI.text(stop, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	far:SetPoint("TOPRIGHT")
@@ -83,6 +85,64 @@ function Console:BuildRide()
 	band.speed, band.zone, band.sub = speed, zone, sub
 	band.stop, band.title, band.far, band.fill, band.mark = stop, title, far, fill, mark
 	self.ride = band
+end
+
+-- How long a distance takes at this speed: "0:42", "12:05".
+local function clock(seconds)
+	seconds = math.floor(seconds + 0.5)
+	if seconds >= 3600 then return ("%d:%02d:%02d"):format(seconds / 3600, seconds / 60 % 60, seconds % 60) end
+	return ("%d:%02d"):format(seconds / 60, seconds % 60)
+end
+
+local function yardsText(yards)
+	return yards >= 1000 and ("%.1f km"):format(yards * 0.9144 / 1000) or ("%d yd"):format(math.floor(yards + 0.5))
+end
+
+local function arrivals()
+	local rider = Stoa.modules.Rider
+	return rider and rider.db and rider.db.arrival ~= false
+end
+
+-- The nearest flight master on this map for your side, from the map's own
+-- list (the one its pins come from), turned into world yards once a map.
+local nodeCache = {}
+local function flightMasters(mapID)
+	if nodeCache[mapID] then return nodeCache[mapID] end
+	local list = {}
+	local taxi, map = C_TaxiMap, C_Map
+	if taxi and taxi.GetTaxiNodesForMap and map and map.GetWorldPosFromMapPos then
+		local side = UnitFactionGroup and UnitFactionGroup("player")
+		local factions = Enum and Enum.FlightPathFaction or {}
+		for _, node in ipairs(Stoa.safe.call(taxi.GetTaxiNodesForMap, mapID) or {}) do
+			local mine = not ((node.faction == factions.Horde and side ~= "Horde") or (node.faction == factions.Alliance and side ~= "Alliance"))
+			if mine and node.position then
+				local _, world = Stoa.safe.call(map.GetWorldPosFromMapPos, mapID, node.position)
+				if world and world.x then list[#list + 1] = { name = node.name, x = world.x, y = world.y, new = node.isUndiscovered } end
+			end
+		end
+	end
+	nodeCache[mapID] = list
+	return list
+end
+
+local function nearestFlight()
+	local map = C_Map
+	if not (map and map.GetBestMapForUnit and map.GetPlayerMapPosition and map.GetWorldPosFromMapPos) then return end
+	local mapID = plain(Stoa.safe.call(map.GetBestMapForUnit, "player"))
+	if not mapID then return end
+	local list = flightMasters(mapID)
+	if #list == 0 then return end
+	local here = Stoa.safe.call(map.GetPlayerMapPosition, mapID, "player")
+	if not here then return end
+	local _, world = Stoa.safe.call(map.GetWorldPosFromMapPos, mapID, here)
+	if not (world and world.x) then return end
+	local best, far
+	for _, node in ipairs(list) do
+		local dx, dy = node.x - world.x, node.y - world.y
+		local d = math.sqrt(dx * dx + dy * dy)
+		if not far or d < far then best, far = node, d end
+	end
+	return best, far
 end
 
 -- The quest you follow (the one the map points at, else the first tracked)
@@ -112,7 +172,18 @@ function Console:FillRide()
 	band.zone:SetText(GetZoneText and GetZoneText() or "")
 	local onTaxi = UnitOnTaxi and plain(UnitOnTaxi("player"))
 	local sub = GetSubZoneText and GetSubZoneText() or ""
-	band.sub:SetText(onTaxi and "On a flight" or sub)
+	local timed = arrivals()
+	if onTaxi then
+		sub = "On a flight"
+	elseif timed then
+		-- The nearest flight master, and how long to it at this pace.
+		local node, yards = nearestFlight()
+		if node and yards > 30 then
+			local away = moving > 0.5 and clock(yards / moving) or yardsText(yards)
+			sub = (sub ~= "" and (sub .. "  ·  ") or "") .. ("Flight master %s"):format(away)
+		end
+	end
+	band.sub:SetText(sub)
 
 	local id, title, yards = nextStop()
 	band.stop:SetShown(id ~= nil)
@@ -121,7 +192,10 @@ function Console:FillRide()
 	-- The bar runs from where you were when this stop came up to the stop.
 	if band.stopID ~= id or yards > (band.stopFrom or 0) then band.stopID, band.stopFrom = id, math.max(yards, 1) end
 	band.title:SetText(title)
-	band.far:SetText(yards >= 1000 and ("%.1f km"):format(yards * 0.9144 / 1000) or ("%d yd"):format(math.floor(yards + 0.5)))
+	-- With arrival times: how long at this speed, the distance beside it.
+	local far = yardsText(yards)
+	if timed and moving > 0.5 then far = ("%s  %s%s|r"):format(far, Stoa:Hex("text"), clock(yards / moving)) end
+	band.far:SetText(far)
 	local share = 1 - math.min(yards / band.stopFrom, 1)
 	band.fill:SetWidth(math.max(1, TRACK_WIDTH * share))
 end
@@ -173,10 +247,83 @@ function Console:CheckRiding()
 	xpcall(function() self:SetRiding(self:RidingWanted()) end, Stoa.catch)
 end
 
+-- The summoning: while a mount is being called, the medallion's bezel
+-- fills clockwise in the accent over the cast, the mount's name on the
+-- level plate, and the ring glows once as it arrives. Only during the
+-- cast; the bezel goes back to your experience after.
+local mountOfSpell = {}
+local function mountName(spellID)
+	spellID = plain(spellID)
+	if not spellID then return end
+	if mountOfSpell[spellID] == nil then
+		local mj = C_MountJournal
+		local id = mj and mj.GetMountFromSpell and plain(Stoa.safe.call(mj.GetMountFromSpell, spellID))
+		local name = id and mj.GetMountInfoByID and Stoa.safe.call(mj.GetMountInfoByID, id)
+		mountOfSpell[spellID] = (type(name) == "string" and not Stoa:IsSecret(name)) and name or false
+	end
+	return mountOfSpell[spellID] or nil
+end
+
+local function sweeping()
+	local rider = Stoa.modules.Rider
+	return rider and rider.db and rider.db.summon ~= false
+end
+
+function Console:StartSweep(name)
+	local ticks = self.ringTicks
+	if not ticks then return end
+	local _, _, _, from, to = UnitCastingInfo("player")
+	from, to = plain(from), plain(to)
+	if not (from and to and to > from) then return end
+	from, to = from / 1000, to / 1000
+	if self.levelPlate then self.levelPlate:Set(name, "accent") end
+	self.sweeper = self.sweeper or CreateFrame("Frame")
+	local count = #ticks
+	local ar, ag, ab = Stoa:Color("accent")
+	local tr, tg, tb = Stoa:Color("text")
+	self.sweeper:SetScript("OnUpdate", function()
+		local done = math.min(1, math.max(0, (GetTime() - from) / (to - from)))
+		local lead = done * count
+		for i, tick in ipairs(ticks) do
+			if i <= lead then
+				tick:SetVertexColor(ar, ag, ab, 1)
+			elseif i - 1 < lead then
+				-- The leading tick brightens as the sweep reaches it.
+				tick:SetVertexColor(1, 1, 1, 0.5 + (lead - i + 1) * 0.5)
+			else
+				tick:SetVertexColor(tr, tg, tb, 0.1)
+			end
+		end
+	end)
+	self.sweeping = true
+end
+
+function Console:EndSweep(arrived)
+	if not self.sweeping then return end
+	self.sweeping = nil
+	if self.sweeper then self.sweeper:SetScript("OnUpdate", nil) end
+	self:UpdateRing()
+	if arrived then self:Moment("mount", 1) end
+end
+
 Stoa:On("STOA_READY", function()
 	if not Console.frame then return end
 	for _, event in ipairs({ "PLAYER_MOUNT_DISPLAY_CHANGED", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED", "PLAYER_ENTERING_WORLD", "STOA_STATE_CHANGED" }) do
 		Stoa:On(event, function() Console:CheckRiding() end)
+	end
+	-- The summoning sweep on the medallion.
+	Stoa:OnUnit("UNIT_SPELLCAST_START", { "player" }, function(_, _, spellID)
+		if not sweeping() or Console.db.slim or Console.bare then return end
+		local name = mountName(spellID)
+		if name then Console:StartSweep(name) end
+	end)
+	Stoa:OnUnit("UNIT_SPELLCAST_SUCCEEDED", { "player" }, function() Console:EndSweep(true) end)
+	-- A cast's stop can come just before its success: wait a moment.
+	Stoa:OnUnit("UNIT_SPELLCAST_STOP", { "player" }, function()
+		if Console.sweeping then C_Timer.After(0.1, function() Console:EndSweep(false) end) end
+	end)
+	for _, event in ipairs({ "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED" }) do
+		Stoa:OnUnit(event, { "player" }, function() Console:EndSweep(false) end)
 	end
 	-- A fight takes the travel line away before anything else.
 	Stoa:On("PLAYER_REGEN_DISABLED", function() Console:SetRiding(false) end)

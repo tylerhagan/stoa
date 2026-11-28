@@ -411,7 +411,14 @@ local ENTRIES = {
 			end
 		end
 	end, open = "bags" },
-	gold = { label = "Gold", group = "Kit", value = money, detail = function(add)
+	gold = { label = "Gold", group = "Kit", value = money, figure = function()
+		-- Saving for riding (QoL/Rider.lua): how close you are, as a bar.
+		local rider = Stoa.Rider
+		if not (rider and rider.Goal) then return end
+		local step, have, cost = rider:Goal()
+		if step then return "bar", math.min(1, have / cost), "accent" end
+	end, detail = function(add)
+		if Stoa.Rider and Stoa.Rider.Detail then Stoa.Rider:Detail(add) end
 		local copper = plain(call(GetMoney))
 		if copper and session.money then add("This session", moneyText(copper - session.money)) end
 		local alts = Stoa.Alts

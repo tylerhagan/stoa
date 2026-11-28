@@ -1485,7 +1485,8 @@ do
 			assert(console.riding, "mounting didn't start riding")
 			assert(console.ride and console.ride:IsShown(), "the travel line is hidden")
 			assert(console.ride.speed:GetText() == "200", "speed reads " .. tostring(console.ride.speed:GetText()))
-			assert(console.ride.far:GetText() == "400 yd", "distance reads " .. tostring(console.ride.far:GetText()))
+			local far = tostring(console.ride.far:GetText())
+			assert(far:find("^400 yd") and far:find("0:29", 1, true), "distance reads " .. far)
 			assert(bar:GetAlpha() == 0, "the bars stayed up")
 			local halo = Stoa.modules.Halo
 			if halo and halo.target and not IsInGroup() then
@@ -1509,6 +1510,105 @@ do
 			console:SetOpen(true, true)
 		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
 		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Riding: " .. e end
+	end
+end
+-- The rider: the mount key's pick (favourites, swimmers, never twice
+-- running, Shift's everyday mount), getting off, the wheel's choice by
+-- cursor angle, the summoning sweep, and saving for riding.
+do
+	local rider = Stoa.Rider
+	if rider and rider.enabled then
+		local ok, e = xpcall(function()
+			local real = { C_MountJournal, IsMounted, IsSwimming, IsFlyableArea, GetCursorPosition, GetMoney, UnitLevel, IsPlayerSpell, C_SkillInfo }
+			local summoned, dismissed
+			local mounts = {
+				[1] = { "Brown Horse", 101, 1, false, true, 0, true, false, nil, false, true, 1, kind = 230 },
+				[2] = { "Pinto", 102, 2, false, true, 0, true, false, nil, false, true, 2, kind = 230 },
+				[3] = { "Riding Turtle", 103, 3, false, true, 0, true, false, nil, false, true, 3, kind = 231 },
+				[4] = { "Black Stallion", 104, 4, false, true, 0, false, false, nil, false, true, 4, kind = 230 },
+				[5] = { "Not Owned", 105, 5, false, false, 0, false, false, nil, false, false, 5, kind = 230 },
+			}
+			C_MountJournal = {
+				GetMountIDs = function() return { 1, 2, 3, 4, 5 } end,
+				GetMountInfoByID = function(id) return unpack(mounts[id], 1, 12) end,
+				GetMountInfoExtraByID = function(id) return 0, "", "", false, mounts[id].kind end,
+				GetMountFromSpell = function(spell) return spell - 100 end,
+				SummonByID = function(id) summoned = id end,
+				Dismiss = function() dismissed = true end,
+			}
+			IsMounted = function() return false end
+			IsSwimming = function() return false end
+			IsFlyableArea = function() return false end
+			local list = rider:Mounts()
+			assert(#list == 3, "favourites: expected 3, got " .. #list)
+			for _ = 1, 20 do
+				local m = rider:Pick(false)
+				assert(m and (m.id == 1 or m.id == 2), "on land picked " .. tostring(m and m.name))
+				assert(m.id ~= rider.last, "picked the same mount twice running")
+				rider.last = m.id
+			end
+			IsSwimming = function() return true end
+			assert(rider:Pick(false).id == 3, "in water didn't pick the turtle")
+			IsSwimming = function() return false end
+			rider.db.everyday = 4
+			assert(rider:Pick(true).id == 4, "Shift didn't pick the everyday mount")
+			rider:Tap(false)
+			assert(summoned == 1 or summoned == 2, "a tap summoned " .. tostring(summoned))
+			IsMounted = function() return true end
+			rider:Key(true)
+			assert(dismissed, "the key didn't get you off")
+			IsMounted = function() return false end
+			-- The wheel: everyday first at the top, then by name, clockwise.
+			GetCursorPosition = function() return 500, 400 end
+			rider:OpenWheel()
+			local wheel = rider.wheel
+			assert(wheel and wheel:IsShown() and wheel.count == 4, "the wheel didn't open with 4 slots")
+			assert(wheel.slots[1].mount.id == 4, "the everyday mount isn't first")
+			wheel.GetCenter = function() return 500, 400 end
+			wheel.GetEffectiveScale = function() return 1 end
+			assert(rider:WheelChoice() == "random", "the middle isn't random")
+			GetCursorPosition = function() return 500, 480 end
+			assert(rider:WheelChoice() == wheel.slots[1], "straight up isn't the first slot")
+			GetCursorPosition = function() return 500, 900 end
+			assert(rider:WheelChoice() == nil, "far off the ring didn't cancel")
+			GetCursorPosition = function() return 500, 480 end
+			rider:TrackWheel()
+			assert(wheel.hub.name:GetText() == "Black Stallion", "the hub reads " .. tostring(wheel.hub.name:GetText()))
+			summoned = nil
+			rider:ReleaseWheel()
+			assert(not wheel:IsShown() and summoned == 4, "letting go summoned " .. tostring(summoned))
+			rider.db.everyday = nil
+			-- Saving for riding.
+			IsPlayerSpell = function() return false end
+			C_SkillInfo = nil
+			UnitLevel = function() return 36 end
+			GetMoney = function() return 61 * 10000 end
+			local step, have, cost = rider:Goal()
+			assert(step and step.short == "Apprentice" and have == 610000 and cost == 1000000, "saving goal wrong")
+			assert(not rider:Job(), "a job before level 40")
+			UnitLevel = function() return 40 end
+			GetMoney = function() return 120 * 10000 end
+			assert(rider:Job() == "Apprentice Riding can be trained", "no training job: " .. tostring(rider:Job()))
+			IsPlayerSpell = function(id) return id == 33388 end
+			UnitLevel = function() return 45 end
+			assert(not rider:Goal(), "a goal between Apprentice and level 50")
+			UnitLevel = function() return 52 end
+			assert(rider:Goal().short == "Journeyman", "no Journeyman goal at 52")
+			-- The summoning sweep.
+			local console = Stoa.modules.Grimoire
+			if console and console.StartSweep and console.ringTicks then
+				local realCast = UnitCastingInfo
+				UnitCastingInfo = function() local t = GetTime() * 1000 return "Brown Horse", "", 1, t - 750, t + 750 end
+				console:StartSweep("Brown Horse")
+				assert(console.sweeping, "the sweep didn't start")
+				console.sweeper:GetScript("OnUpdate")()
+				console:EndSweep(true)
+				assert(not console.sweeping and console.sweeper:GetScript("OnUpdate") == nil, "the sweep didn't end")
+				UnitCastingInfo = realCast
+			end
+			C_MountJournal, IsMounted, IsSwimming, IsFlyableArea, GetCursorPosition, GetMoney, UnitLevel, IsPlayerSpell, C_SkillInfo = unpack(real, 1, 9)
+		end, function(e) return tostring(e) .. "\n" .. debug.traceback() end)
+		if not ok then SIM_ERRORS[#SIM_ERRORS + 1] = "Rider: " .. e end
 	end
 end
 -- Player notes: writing one from the card, reading it back by name and by

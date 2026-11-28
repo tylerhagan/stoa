@@ -2,4 +2,7 @@
 	<Binding name="STOA_CHARACTERS" header="STOA" category="ADDONS">
 		if Stoa and Stoa.Alts then Stoa.Alts:Toggle() end
 	</Binding>
+	<Binding name="STOA_MOUNT" category="ADDONS" runOnUp="true">
+		if Stoa and Stoa.Rider then Stoa.Rider:Key(keystate == "down") end
+	</Binding>
 </Bindings>
