@@ -1479,9 +1479,16 @@ local function dressSpellButton(button)
 	end
 end
 
+local CARD_ART = 0.3
 local function dressProfessionCard(card)
 	if type(card) ~= "table" or forbidden(card) then return end
-	alphaOff(card.Background)
+	-- The game's painting of the craft stays as a grey watermark on the
+	-- tile, so the page is not five plain blocks.
+	local art = card.Background
+	if type(art) == "table" and art.SetDesaturated then
+		art:SetDesaturated(true)
+		art:SetAlpha(CARD_ART)
+	end
 	professionWords(card.ProfessionName, "text")
 	professionWords(card.missingHeader, "text")
 	professionWords(card.missingText, "muted")
