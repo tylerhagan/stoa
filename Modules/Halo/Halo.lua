@@ -1609,6 +1609,9 @@ function Halo:UpdateTarget()
 	local target = self.target
 	-- Showing and hiding is the unit watch's job, as the frame is secure.
 	if not UnitExists("target") then return end
+	-- The removable-debuff marks are for someone you can help. On an
+	-- enemy the game would mark your own magic and disease effects there.
+	if target.dispelBox then target.dispelBox:SetShown(plain(UnitCanAttack("player", "target")) == false) end
 	local name = UnitName("target")
 	target.name:SetText(name)
 	-- The first time the serif face is drawn the game may not have loaded
