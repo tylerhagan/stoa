@@ -103,6 +103,8 @@ Modules\Halo\SelfBuffs.lua
 Modules\Halo\Procs.lua
 Modules\Halo\Lethal.lua
 Modules\Halo\Death.lua
+Modules\Halo\Soul.lua
+Modules\Halo\Cures.lua
 Modules\Halo\Pet.lua
 Modules\QoL\Logging.lua
 
