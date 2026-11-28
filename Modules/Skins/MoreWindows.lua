@@ -2416,6 +2416,11 @@ local function dressMenu(menu)
 	if UI.slice(fill, "CardFill.tga") and UI.slice(edge, "CardEdge.tga") then
 		fill:SetVertexColor(r, g, b, 0.98)
 		local er, eg, eb, ea = Stoa:Color("hairline")
+		-- Leather and Matte: a fine accent edge, as STOA's own lists have.
+		if UI.tooled() then
+			er, eg, eb = Stoa:Color("accent")
+			ea = 0.2
+		end
 		edge:SetVertexColor(er, eg, eb, ea or 1)
 	else
 		fill:SetColorTexture(r, g, b, 0.98)

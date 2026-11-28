@@ -341,7 +341,7 @@ function Sign.buildCoins(halo)
 		local face = CreateFrame("Frame", nil, coin)
 		face:SetAllPoints()
 		face:SetFrameLevel(cooldown:GetFrameLevel() + 2)
-		local letter = UI.text(face, "serif", Stoa.typeSize.label, "text", "CENTER")
+		local letter = UI.text(face, "mark", Stoa.typeSize.label, "text", "CENTER")
 		letter:SetPoint("CENTER", 0, 1)
 		UI.legible(letter)
 		coin.ring, coin.cooldown, coin.letter = ring, cooldown, letter

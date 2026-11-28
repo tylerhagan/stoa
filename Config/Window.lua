@@ -65,8 +65,20 @@ local function makeToggle(parent, entry)
 	-- Slate: a full pill (two round ends and the stretch between them)
 	-- with a pale knob, as on its mock-up. Solid colours, since the three
 	-- pieces overlap.
-	local pill
-	if UI.slate() then
+	local pill, track
+	if UI.tooled() then
+		-- Leather and Matte: a track pressed into the material, warming
+		-- with the accent when on, and a lit accent knob with a shadow.
+		fill:Hide()
+		track = UI.pressIn(button, "PlateFill.tga")
+		track.warm = UI.pillFill(button, 0)
+		track.warm:SetDrawLayer("BACKGROUND", -6)
+		track.knobShadow = UI.circle(button, "ARTWORK", 0, 16)
+		track.knobShadow:SetColorTexture(0, 0, 0, 0.55)
+		track.knobLight = UI.circle(button, "ARTWORK", 2, 8)
+		track.knobLight:SetColorTexture(1, 1, 1, 1)
+		track.knobLight:SetPoint("CENTER", knob, "CENTER", -1, 2)
+	elseif UI.slate() then
 		fill:Hide()
 		pill = { UI.circle(button, "BACKGROUND", 0, 20), UI.circle(button, "BACKGROUND", 0, 20), button:CreateTexture(nil, "BACKGROUND") }
 		pill[1]:SetPoint("LEFT")
@@ -77,6 +89,18 @@ local function makeToggle(parent, entry)
 	end
 	function button:Refresh()
 		local on = Options.value(entry) and true or false
+		if track then
+			edge:Clear()
+			colour(track.warm, "accent", on and 0.2 or 0)
+			track.warm:SetShown(on)
+			if on then colour(knob, "accent", 1) else colour(knob, "muted", 0.75) end
+			track.knobLight:SetVertexColor(1, 1, 1, on and 0.35 or 0.12)
+			knob:ClearAllPoints()
+			knob:SetPoint(on and "RIGHT" or "LEFT", on and -3 or 3, 0)
+			track.knobShadow:ClearAllPoints()
+			track.knobShadow:SetPoint("CENTER", knob, "CENTER", 0, -1)
+			return
+		end
 		if pill then
 			local r, g, b = Stoa:Color(on and "accent" or "text")
 			-- Off: a dim grey with a grey knob. On: the track holds a
@@ -109,6 +133,13 @@ local function makeSegments(parent, entry)
 	local back = UI.pillFill(holder, 0)
 	back:SetVertexColor(0, 0, 0, 0.35)
 	local edge = UI.pillEdge(holder, 0)
+	-- Leather and Matte: one groove pressed into the material, the chosen
+	-- part a raised plate standing in it.
+	local tooled = UI.tooled()
+	if tooled then
+		back:Hide()
+		UI.pressIn(holder, "PlateFill.tga")
+	end
 	holder.buttons = {}
 	local x = 2
 	for i, option in ipairs(entry.options) do
@@ -120,7 +151,7 @@ local function makeSegments(parent, entry)
 		button:SetSize(w, 22)
 		button:SetPoint("LEFT", x, 0)
 		x = x + w + 2
-		button.lift = UI.pillFill(button, 0)
+		button.lift = tooled and UI.raisePlate(button) or UI.pillFill(button, 0)
 		button.edge = UI.pillEdge(button, 0)
 		button.text, button.value = text, option[1]
 		button:SetScript("OnClick", function() Options.set(entry, option[1]) end)
@@ -131,8 +162,18 @@ local function makeSegments(parent, entry)
 	end
 	holder:SetSize(x, 26)
 	function holder:Refresh()
-		edge:Set(Stoa:Color("hairline"))
 		local v = Options.value(entry)
+		if tooled then
+			edge:Clear()
+			for _, button in ipairs(self.buttons) do
+				button.chosen = button.value == v
+				button.lift:SetShown(button.chosen)
+				button.edge:Clear()
+				colour(button.text, button.chosen and "text" or "muted")
+			end
+			return
+		end
+		edge:Set(Stoa:Color("hairline"))
 		for _, button in ipairs(self.buttons) do
 			button.chosen = button.value == v
 			button.lift:SetShown(button.chosen)
@@ -193,7 +234,14 @@ local function makeTiles(parent, entry)
 			local lit = chosen or button.over
 			button.chosen = chosen
 			local slate = UI.slate()
-			if slate and chosen then
+			local tooled = not slate
+			if tooled and chosen then
+				-- Leather and Matte: raised and edged in the text colour;
+				-- the accent stays in the picture.
+				colour(button.back, "text", 0.07)
+				local er, eg, eb = Stoa:Color("text")
+				button.edge:Set(er, eg, eb, 0.22)
+			elseif slate and chosen then
 				-- Slate: raised grey with a fine edge; the accent stays in
 				-- the picture.
 				colour(button.back, "text", 0.08)
@@ -205,7 +253,7 @@ local function makeTiles(parent, entry)
 			end
 			colour(button.left, "text", lit and 0.95 or 0.5)
 			colour(button.right, (lit or not UI.slate()) and "accent" or "muted", lit and 0.95 or 0.5)
-			colour(button.text, chosen and (slate and "text" or "accent") or button.over and "text" or "muted")
+			colour(button.text, (chosen or button.over) and "text" or "muted")
 		end
 	end
 	return holder
@@ -268,15 +316,23 @@ local function buildMenu()
 	end)
 	function menu:Paint()
 		local v = Options.value(self.entry)
+		-- Leather and Matte: a fine accent edge round the list.
+		if UI.tooled() and self.stoaPanelEdge then
+			local r, g, b = Stoa:Color("accent")
+			self.stoaPanelEdge:Set(r, g, b, 0.2)
+		end
 		for i, row in ipairs(self.rows) do
 			if row:IsShown() then
 				local chosen = row.value == v
-				-- Slate: the dot alone marks the chosen line.
-				colour(row.text, chosen and not UI.slate() and "accent" or "text")
-				row.dot:SetShown(chosen)
+				-- The mark alone (Slate's dot, the others' diamond) shows the
+				-- chosen line; its word stays in the text colour.
+				colour(row.text, "text")
+				row.dot:SetShown(chosen and UI.slate())
 				colour(row.dot, "accent")
+				row.diamond:SetShown(chosen and UI.tooled())
 				row.glow:SetShown(i == self.focus)
-				colour(row.glow, "text", 0.08)
+				-- Leather and Matte: the line under the mouse sits pressed in.
+				if UI.tooled() then row.glow:SetVertexColor(0, 0, 0, 0.35) else colour(row.glow, "text", 0.08) end
 			end
 		end
 	end
@@ -304,6 +360,8 @@ local function openMenu(owner, entry, above)
 			row.dot = UI.circle(row, "ARTWORK", 1, 6)
 			row.dot:SetColorTexture(1, 1, 1, 1)
 			row.dot:SetPoint("RIGHT", -12, 0)
+			row.diamond = UI.chosenMark(row, 8)
+			row.diamond:SetPoint("RIGHT", -11, 0)
 			row:SetScript("OnEnter", function(self) menu.focus = self.index menu:Paint() end)
 			row:SetScript("OnClick", function(self)
 				Options.set(menu.entry, self.value)
@@ -556,6 +614,11 @@ function builders.words(row, entry)
 	local back = UI.pillFill(box, 0)
 	back:SetVertexColor(0, 0, 0, 0.4)
 	local edge = UI.pillEdge(box, 0)
+	-- Leather and Matte: a field pressed into the material.
+	if UI.tooled() then
+		back:Hide()
+		UI.pressIn(box, "PlateFill.tga")
+	end
 	local hint = UI.text(box, "sans", Stoa.typeSize.body, "muted")
 	hint:SetPoint("LEFT", 10, 0)
 	hint:SetText(entry.placeholder or "Type, then Enter")
@@ -564,7 +627,9 @@ function builders.words(row, entry)
 	said:SetPoint("RIGHT", row, "RIGHT")
 	local function paintBox()
 		hint:SetShown(box:GetText() == "" and not box:HasFocus())
-		edge:Set(Stoa:Color(box:HasFocus() and "accent" or "hairline"))
+		if UI.tooled() and not box:HasFocus() then edge:Clear() return end
+		local r, g, b, a = Stoa:Color(box:HasFocus() and "accent" or "hairline")
+		edge:Set(r, g, b, UI.tooled() and 0.5 or a)
 	end
 	local function take(text)
 		text = strtrim(text or "")
@@ -821,13 +886,15 @@ function builders.glance(row, entry)
 			for _, button in ipairs(self.places.buttons) do
 				button.chosen = button.value == place
 				button.lift:SetShown(button.chosen)
-				if button.chosen then
+				if UI.tooled() then
+					button.edge:Clear()
+				elseif button.chosen then
 				local er, eg, eb = Stoa:Color("accent")
 				button.edge:Set(er, eg, eb, UI.slate() and 0.6 or 1)
 			else
 				button.edge:Clear()
 			end
-				colour(button.text, button.chosen and "accent" or "muted")
+				colour(button.text, button.chosen and (UI.tooled() and "text" or "accent") or "muted")
 			end
 			y = y - 34
 		end
@@ -968,9 +1035,10 @@ function Window:Draw(keep)
 	end
 	self.drawn = shown
 	self.title:SetText(title or "")
-	-- Slate: the header says where you are, the page's name in the accent.
-	if self.crumb and UI.slate() then
-		local here = title and title ~= "" and ("  /  " .. Stoa:Hex("accent") .. title:upper() .. "|r") or ""
+	-- The header says where you are: Slate names the page in the accent,
+	-- Leather and Matte in the caption's own quiet colour.
+	if self.crumb then
+		local here = title and title ~= "" and ("  /  " .. (UI.slate() and (Stoa:Hex("accent") .. title:upper() .. "|r") or title:upper())) or ""
 		self.crumb:SetText("SETTINGS" .. here)
 	end
 	self.intro:SetText(intro or "")
@@ -1084,10 +1152,12 @@ function Window:Nav()
 		-- follows (the mark's motion) may leave it untinted.
 		-- Slate: a raised grey plate, the word in the text colour; the
 		-- small mark beside it keeps the accent.
+		-- Leather and Matte: the chosen line sits pressed in, its word in
+		-- the text colour, an accent diamond at its left.
 		local slate = UI.slate()
-		colour(button.lift, "text", slate and 0.08 or 0.06)
+		if slate then colour(button.lift, "text", 0.08) else button.lift:SetVertexColor(0, 0, 0, 0.35) end
 		button.lift:SetShown(chosen)
-		colour(button.text, chosen and (slate and "text" or "accent") or (button:IsMouseOver() and "text" or "muted"))
+		colour(button.text, chosen and "text" or (button:IsMouseOver() and "text" or "muted"))
 		colour(button.mark, "accent")
 		colour(button.count, "muted", 0.7)
 		if button.id == "changed" then button.count:SetText(#Options.changed()) end
@@ -1095,7 +1165,7 @@ function Window:Nav()
 		if chosen and not button.wasChosen then
 			button.wasChosen = true
 			pcall(function()
-				button.markIn = button.markIn or UI.growIn(button.mark, "y")
+				button.markIn = button.markIn or UI.growIn(button.mark, UI.slate() and "y" or nil)
 				button.markIn:Play()
 			end)
 		end
@@ -1182,7 +1252,7 @@ function Window:Build()
 	self.page = page
 
 	-- Header: name, search, close.
-	local mark = UI.text(page, "serif", Stoa.typeSize.title, "accent")
+	local mark = UI.text(page, "serif", Stoa.typeSize.title, "text")
 	mark:SetPoint("TOPLEFT", PAD, -20)
 	mark:SetText("STOA")
 	local sub = UI.caption(page, "Settings")
@@ -1195,7 +1265,7 @@ function Window:Build()
 	local cross = UI.glyph(close, "Cross", 16, "muted")
 	cross:SetPoint("CENTER")
 	close:SetScript("OnClick", function() page:Hide() end)
-	close:SetScript("OnEnter", function() colour(cross, "accent") end)
+	close:SetScript("OnEnter", function() colour(cross, "text") end)
 	close:SetScript("OnLeave", function() colour(cross, "muted") end)
 
 	local search = CreateFrame("EditBox", "StoaSettingsSearch", page)
@@ -1208,6 +1278,11 @@ function Window:Build()
 	search:SetTextColor(Stoa:Color("text"))
 	local searchBack = UI.pillFill(search, 0)
 	searchBack:SetVertexColor(0, 0, 0, 0.4)
+	-- Leather and Matte: a field pressed into the material.
+	if UI.tooled() then
+		searchBack:Hide()
+		UI.pressIn(search, "PlateFill.tga")
+	end
 	local searchEdge = UI.pillEdge(search, 0)
 	local searchHint = UI.text(search, "sans", Stoa.typeSize.body, "muted")
 	searchHint:SetPoint("LEFT", 12, 0)
@@ -1226,6 +1301,12 @@ function Window:Build()
 		local r, g, b, a = Stoa:Color(focus and "accent" or "hairline")
 		-- Slate: a resting edge that only just shows, not an outline.
 		if not focus and UI.slate() then a = (a or 1) * 0.4 end
+		-- Leather and Matte: no outline at rest (the field is pressed in);
+		-- a soft accent edge while typing.
+		if UI.tooled() then
+			if focus then searchEdge:Set(r, g, b, 0.5) else searchEdge:Clear() end
+			return
+		end
 		searchEdge:Set(r, g, b, a)
 	end
 	search:SetScript("OnTextChanged", function(box)
@@ -1247,7 +1328,7 @@ function Window:Build()
 	local y = -HEADER - 14
 	for i, info in ipairs(Options.PAGES) do
 		if info[1] == "setup" then
-			local rule = UI.line(page, "hairline")
+			local rule = UI.tooled() and UI.crease(page) or UI.line(page, "hairline")
 			rule:SetPoint("TOPLEFT", PAD, y - 6)
 			rule:SetWidth(NAV - 12)
 			y = y - 14
@@ -1259,10 +1340,15 @@ function Window:Build()
 		button.lift = UI.pillFill(button, 0)
 		colour(button.lift, "text", 0.06)
 		button.lift:Hide()
-		button.mark = button:CreateTexture(nil, "ARTWORK")
-		button.mark:SetTexture(UI.WHITE)
-		button.mark:SetSize(2, 16)
-		button.mark:SetPoint("LEFT", 2, 0)
+		if UI.tooled() then
+			button.mark = UI.chosenMark(button, 7)
+			button.mark:SetPoint("LEFT", 4, 0)
+		else
+			button.mark = button:CreateTexture(nil, "ARTWORK")
+			button.mark:SetTexture(UI.WHITE)
+			button.mark:SetSize(2, 16)
+			button.mark:SetPoint("LEFT", 2, 0)
+		end
 		button.text = UI.text(button, "sans", Stoa.typeSize.label, "muted")
 		button.text:SetPoint("LEFT", 14, 0)
 		button.text:SetText(info[4] or info[2])

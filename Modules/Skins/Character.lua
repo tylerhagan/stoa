@@ -384,10 +384,11 @@ function Character:PaintSidebarWords()
 			previous = word
 			local on = tab.GetChecked and tab:GetChecked()
 			local usable = not tab.IsEnabled or tab:IsEnabled()
-			word.text:SetTextColor(Stoa:Color(on and "accent" or "muted"))
+			word.text:SetTextColor(Stoa:Color(on and "text" or "muted"))
 			word:SetAlpha(usable and 1 or 0.4)
 			word.under:SetVertexColor(Stoa:Color("accent"))
 			word.under:SetShown(on and true or false)
+			if word.gem then word.gem:SetShown(on and true or false) end
 		end
 	end
 end
@@ -410,6 +411,10 @@ local function sidebarWords(bar)
 			under:SetPoint("BOTTOMRIGHT", 0, 4)
 			under:SetColorTexture(1, 1, 1)
 			word.under = under
+			if UI.tooled() then
+				word.gem = UI.chosenMark(word, 6)
+				word.gem:SetPoint("CENTER", under, "CENTER", 0, -1)
+			end
 			word:SetScript("OnClick", function(self)
 				if not self.tab.IsEnabled or self.tab:IsEnabled() then self.tab:Click() end
 			end)
@@ -521,7 +526,7 @@ function Character:PaintTabs()
 	for _, tab in ipairs(tabs or {}) do
 		if tab.stoaWord then
 			local on = Character.TabOn(tab)
-			tab.stoaWord:SetTextColor(Stoa:Color(on and "accent" or "muted"))
+			tab.stoaWord:SetTextColor(Stoa:Color((on and (tab.stoaChip and "accent" or "text")) or "muted"))
 			tab.stoaUnder:SetVertexColor(Stoa:Color("accent"))
 			tab.stoaUnder:SetShown(on and not tab.stoaChip and true or false)
 			if tab.stoaChip then
@@ -666,7 +671,7 @@ local function dressStatRow(row)
 	hide(row.Background)
 	if row.Title then
 		Stoa:SetFont(row.Title, "sans", Stoa.typeSize.caption)
-		row.Title:SetTextColor(Stoa:Color("accent"))
+		row.Title:SetTextColor(Stoa:Color("muted"))
 		row.Title:ClearAllPoints()
 		row.Title:SetPoint("BOTTOMLEFT", 11, 6)
 	end
@@ -923,11 +928,17 @@ local function buildTiles(block)
 			tile:SetPoint("TOPRIGHT", block, "TOPRIGHT", -10, y)
 			tile:SetPoint("LEFT", block, "CENTER", TILE_GAP / 2, 0)
 		end
-		local fill = UI.sliced(tile, "BACKGROUND", "CardFill.tga")
-		if fill then fill:SetVertexColor(0, 0, 0, 0.24) end
-		local edge = UI.roundBorder(tile, "CardEdge.tga", 1)
-		local r, g, b = Stoa:Color("text")
-		edge:Set(r, g, b, 0.07)
+		-- Leather and Matte: a well pressed into the material. Slate: a
+		-- flat dark tile with a fine edge.
+		if UI.tooled() then
+			UI.pressIn(tile, "CardFill.tga")
+		else
+			local fill = UI.sliced(tile, "BACKGROUND", "CardFill.tga")
+			if fill then fill:SetVertexColor(0, 0, 0, 0.24) end
+			local edge = UI.roundBorder(tile, "CardEdge.tga", 1)
+			local r, g, b = Stoa:Color("text")
+			edge:Set(r, g, b, 0.07)
+		end
 		tile.label = UI.text(tile, "sans", Stoa.typeSize.micro, "muted", "LEFT")
 		tile.label:SetPoint("TOPLEFT", 9, -6)
 		tile.value = UI.text(tile, "sans", Stoa.typeSize.label, "text", "LEFT")
@@ -950,6 +961,16 @@ local function buildTiles(block)
 	cap.track:SetHeight(3)
 	cap.track:SetPoint("BOTTOMLEFT", 2, 4)
 	cap.track:SetPoint("BOTTOMRIGHT", -2, 4)
+	-- Leather and Matte: the track is pressed in, a catch of light under it.
+	if UI.tooled() then
+		cap.track:SetVertexColor(0, 0, 0, 0.55)
+		local catch = cap:CreateTexture(nil, "BACKGROUND")
+		catch:SetTexture(UI.WHITE)
+		UI.pixel(catch, "height")
+		catch:SetPoint("TOPLEFT", cap.track, "BOTTOMLEFT")
+		catch:SetPoint("TOPRIGHT", cap.track, "BOTTOMRIGHT")
+		UI.paint(catch, "text", UI.TOOLED.catch)
+	end
 	cap.fill = cap:CreateTexture(nil, "BORDER")
 	cap.fill:SetTexture(UI.WHITE)
 	cap.fill:SetHeight(3)
@@ -987,18 +1008,24 @@ local function levelBlock()
 	block:SetHeight(ILVL_H + TILES_H)
 	block:SetPoint("BOTTOMLEFT", pane, "TOPLEFT", 0, 0)
 	block:SetPoint("BOTTOMRIGHT", pane.ScrollBox or pane, "TOPRIGHT", 0, 0)
-	local heading = UI.text(block, "sans", Stoa.typeSize.caption, UI.slate() and "muted" or "accent", "LEFT")
+	local heading = UI.text(block, "sans", Stoa.typeSize.caption, "muted", "LEFT")
 	heading:SetPoint("LEFT", block, "TOPLEFT", ILVL_LEFT, -ILVL_H / 2)
 	heading:SetText(rawget(_G, "STAT_AVERAGE_ITEM_LEVEL") or "Item Level")
-	block.number = UI.text(block, "serif", Stoa.typeSize.title, "text", "RIGHT")
+	-- The sheet's one key figure: in the accent under Leather and Matte.
+	block.number = UI.text(block, "serif", Stoa.typeSize.title, UI.tooled() and "accent" or "text", "RIGHT")
 	block.number:SetPoint("RIGHT", block, "TOPRIGHT", -10, -ILVL_H / 2)
 	block.worn = UI.text(block, "sans", Stoa.typeSize.caption, "muted", "RIGHT")
 	block.worn:SetPoint("RIGHT", block.number, "LEFT", -10, 0)
-	local rule = block:CreateTexture(nil, "ARTWORK")
-	rule:SetHeight(1)
+	local rule
+	if UI.tooled() then
+		rule = UI.crease(block)
+	else
+		rule = block:CreateTexture(nil, "ARTWORK")
+		rule:SetHeight(1)
+		rule:SetColorTexture(1, 1, 1, 0.08)
+	end
 	rule:SetPoint("TOPLEFT", ILVL_LEFT, -ILVL_H)
 	rule:SetPoint("TOPRIGHT", -10, -ILVL_H)
-	rule:SetColorTexture(1, 1, 1, 0.08)
 	guarded(buildTiles, block)
 	pane.stoaLevel = block
 	return block
@@ -1090,7 +1117,7 @@ local function dressListRow(row, token)
 		end
 		if row.Name then
 			Stoa:SetFont(row.Name, "sans", Stoa.typeSize.caption)
-			row.Name:SetTextColor(Stoa:Color(UI.slate() and "muted" or "accent"))
+			row.Name:SetTextColor(Stoa:Color("muted"))
 			row.Name:ClearAllPoints()
 			row.Name:SetPoint("BOTTOMLEFT", 4, 8)
 		end

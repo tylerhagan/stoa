@@ -146,17 +146,18 @@ local function dressButton(button)
 	local function colour(over)
 		if text then
 			local enabled = not button.IsEnabled or button:IsEnabled()
-			text:SetTextColor(Stoa:Color(not enabled and "muted" or over and not UI.slate() and "accent" or "text"))
+			text:SetTextColor(Stoa:Color(not enabled and "muted" or "text"))
 		end
 		if UI.slate() then
 			-- Slate: an outlined key whose edge lifts under the mouse; no
 			-- accent on a plain button.
 			local r, g, b = Stoa:Color("text")
 			glow:Set(r, g, b, over and 0.22 or 0.1)
-		elseif over then
-			glow:Set(Stoa:Color("accent"))
 		else
-			glow:Clear()
+			-- Leather and Matte: an outlined key whose edge warms to the
+			-- accent under the mouse; the word stays in the text colour.
+			local r, g, b = Stoa:Color(over and "accent" or "text")
+			glow:Set(r, g, b, over and 0.5 or 0.12)
 		end
 	end
 	button:HookScript("OnEnter", function() colour(true) end)
@@ -174,7 +175,7 @@ local function dressClose(button)
 	button:HookScript("OnShow", plainTextures)
 	local cross = Stoa.UI.glyph(button, "Cross", 16, "muted")
 	cross:SetPoint("CENTER", 0, 0)
-	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
+	button:HookScript("OnEnter", function() cross:SetVertexColor(Stoa:Color("text")) end)
 	button:HookScript("OnLeave", function() cross:SetVertexColor(Stoa:Color("muted")) end)
 end
 
@@ -190,7 +191,7 @@ local function dressMaxMin(holder)
 			button:HookScript("OnShow", plainTextures)
 			local glyph = Stoa.UI.glyph(button, glyphName, 14, "muted")
 			glyph:SetPoint("CENTER", 0, 0)
-			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color(UI.slate() and "text" or "accent")) end)
+			button:HookScript("OnEnter", function() glyph:SetVertexColor(Stoa:Color("text")) end)
 			button:HookScript("OnLeave", function() glyph:SetVertexColor(Stoa:Color("muted")) end)
 		end
 	end
@@ -359,8 +360,9 @@ local function dressArrowDropdown(button)
 	chevron:SetPoint("CENTER", 0, 0)
 	chevron:SetRotation(-math.pi / 2)
 	button:HookScript("OnEnter", function()
-		glow:Set(Stoa:Color("accent"))
-		chevron:SetVertexColor(Stoa:Color("accent"))
+		local r, g, b = Stoa:Color("accent")
+		glow:Set(r, g, b, 0.5)
+		chevron:SetVertexColor(Stoa:Color("text"))
 	end)
 	button:HookScript("OnLeave", function()
 		glow:Clear()
@@ -531,7 +533,7 @@ local function dressTabs(frame)
 		xpcall(tabArt, Stoa.catch, tab)
 		tab:HookScript("OnEnter", function(self)
 			local words = self.Text or (self.GetFontString and self:GetFontString())
-			if words and not tabSelected(self) then words:SetTextColor(Stoa:Color("accent")) end
+			if words and not tabSelected(self) then words:SetTextColor(Stoa:Color("text")) end
 		end)
 		tab:HookScript("OnLeave", function() colourTabs(frame) end)
 		if tab.Icon and tab.SetChecked then hooksecurefunc(tab, "SetChecked", function() colourTabs(frame) end) end
@@ -797,7 +799,7 @@ end
 local function light(fs, title)
 	if not (fs and fs.SetTextColor) then return end
 	if title then
-		fs:SetTextColor(Stoa:Color(UI.slate() and "text" or "accent"))
+		fs:SetTextColor(Stoa:Color("text"))
 	else
 		fs:SetTextColor(Stoa:Color("text"))
 	end
@@ -1138,9 +1140,9 @@ local function dressDropdownButton(dropdown)
 			text:SetJustifyH("RIGHT")
 			text:ClearAllPoints()
 			text:SetPoint("RIGHT", chevron, "LEFT", -5, 0)
-			text:SetTextColor(Stoa:Color(over and "accent" or "muted"))
+			text:SetTextColor(Stoa:Color(over and "text" or "muted"))
 		end
-		chevron:SetTextColor(Stoa:Color(over and "accent" or "muted"))
+		chevron:SetTextColor(Stoa:Color(over and "text" or "muted"))
 	end
 	dropdown:HookScript("OnEnter", function() paint(true) end)
 	dropdown:HookScript("OnLeave", function() paint(false) end)
@@ -1323,13 +1325,13 @@ local function paintMenuKey(button, over)
 	if text then
 		Stoa:SetFont(text, "sans", Stoa.typeSize.label)
 		text:SetShadowOffset(0, 0)
-		text:SetTextColor(Stoa:Color(not enabled and "muted" or over and "accent" or "text"))
+		text:SetTextColor(Stoa:Color(not enabled and "muted" or "text"))
 	end
 	local hot = over and enabled
 	key.lift:SetShown(hot)
 	if key.edge then
 		local r, g, b = Stoa:Color("accent")
-		key.edge:SetVertexColor(r, g, b, 0.85)
+		key.edge:SetVertexColor(r, g, b, 0.5)
 		key.edge:SetShown(hot)
 	end
 end
